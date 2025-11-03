@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤖 AI Team - Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header-left h1 {
+            font-size: 2.5em;
+            margin-bottom: 5px;
+        }
+
+        .header-left p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .header-right {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .user-info {
+            background: rgba(255,255,255,0.2);
+            padding: 10px 20px;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+
+        .logout-btn {
+            background: rgba(255,255,255,0.3);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255,255,255,0.4);
+        }
+
+        .main-screen {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: #f8f9fa;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .agents-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .agent-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 3px solid transparent;
+        }
+
+        .agent-card:hover {
+            background: #e9ecef;
+            transform: translateY(-2px);
+        }
+
+        .agent-card.active {
+            border-color: #667eea;
+            background: #e7e9ff;
+        }
+
+        .agent-emoji {
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+
+        .agent-image {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 50%;
+            margin-bottom: 8px;
+            border: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .agent-card:hover .agent-image {
+            transform: scale(1.1);
+            border-color: #667eea;
+        }
+
+        .agent-card.active .agent-image {
+            border-color: #667eea;
+            box-shadow: 0 0 15px rgba(102, 126, 234, 0.5);
+        }
+
+        .agent-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .agent-role {
+            font-size: 0.8em;
+            color: #666;
+        }
+
+        .chat-container {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            height: 400px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            text-align: right;
+        }
+
+        .message-content {
+            display: inline-block;
+            padding: 12px 16px;
+            border-radius: 12px;
+            max-width: 80%;
+            text-align: left;
+        }
+
+        .message.user .message-content {
+            background: #667eea;
+            color: white;
+        }
+
+        .message.agent .message-content {
+            background: white;
+            color: #333;
+            border: 2px solid #e0e0e0;
+        }
+
+        .message-header {
+            font-weight: 600;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+
+        .message.agent .message-header {
+            color: #667eea;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-container input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+
+        .input-container input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 0.9em;
+        }
+
+        .context-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .context-section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .context-item {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .context-item input {
+            padding: 8px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 0.9em;
+        }
+
+        .context-item input:first-child {
+            flex: 1;
+        }
+
+        .context-item input:last-child {
+            flex: 2;
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .alert-error {
+            background: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+        }
+
+        .alert-success {
+            background: #efe;
+            color: #3c3;
+            border: 1px solid #cfc;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-left">
+                <h1>🤖 AI Team</h1>
+                <p>Your intelligent assistant team</p>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    👤 {{ user.username }}
+                </div>
+                <button class="logout-btn" onclick="window.location.href='/logout'">Logout</button>
+            </div>
+        </div>
+
+        <div class="main-screen">
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('chat')">💬 Chat</button>
+                <button class="tab" onclick="switchTab('context')">⚙️ Context</button>
+                <button class="tab" onclick="switchTab('history')">📜 History</button>
+                <button class="tab" onclick="switchTab('usage')">📊 Usage</button>
+            </div>
+
+            <!-- Chat Tab -->
+            <div id="chatTab" class="tab-content active">
+                <h3 style="color: #667eea; margin-bottom: 15px;">Choose Your Agent</h3>
+                <div class="agents-grid" id="agentsGrid">
+                    <div class="agent-card active" onclick="selectAgent('auto')">
+                        <div class="agent-emoji">🎯</div>
+                        <div class="agent-name">Auto</div>
+                        <div class="agent-role">Let me choose</div>
+                    </div>
+                    <div class="agent-card" onclick="selectAgent('luna')">
+                        <img src="/static/images/luna.jpg" alt="Luna" class="agent-image">
+                        <div class="agent-name">Luna</div>
+                        <div class="agent-role">Strategy</div>
+                    </div>
+                    <div class="agent-card" onclick="selectAgent('mila')">
+                        <img src="/static/images/mila.jpg" alt="Mila" class="agent-image">
+                        <div class="agent-name">Mila</div>
+                        <div class="agent-role">Social Media</div>
+                    </div>
+                    <div class="agent-card" onclick="selectAgent('sage')">
+                        <img src="/static/images/sage.jpg" alt="Sage" class="agent-image">
+                        <div class="agent-name">Sage</div>
+                        <div class="agent-role">Editor</div>
+                    </div>
+                    <div class="agent-card" onclick="selectAgent('ember')">
+                        <img src="/static/images/ember.jpg" alt="Ember" class="agent-image">
+                        <div class="agent-name">Ember</div>
+                        <div class="agent-role">Creative</div>
+                    </div>
+                    <div class="agent-card" onclick="selectAgent('sol')">
+                        <img src="/static/images/sol.jpg" alt="Sol" class="agent-image">
+                        <div class="agent-name">Sol</div>
+                        <div class="agent-role">Project Manager</div>
+                    </div>
+                    <div class="agent-card" onclick="selectAgent('nova')">
+                        <img src="/static/images/nova.jpg" alt="Nova" class="agent-image">
+                        <div class="agent-name">Nova</div>
+                        <div class="agent-role">Research</div>
+                    </div>
+                    <div class="agent-card" onclick="selectAgent('theo')">
+                        <img src="/static/images/theo.jpg" alt="Theo" class="agent-image">
+                        <div class="agent-name">Theo</div>
+                        <div class="agent-role">Technical</div>
+                    </div>
+                </div>
+
+                <div class="chat-container" id="chatContainer">
+                    <div style="text-align: center; color: #666; padding: 40px 20px;">
+                        <p style="font-size: 1.2em; margin-bottom: 10px;">👋 Welcome, {{ user.username }}!</p>
+                        <p>Select an agent above or let me auto-route, then type your message below.</p>
+                    </div>
+                </div>
+
+                <div class="input-container">
+                    <input type="text" id="messageInput" placeholder="Type your message..." onkeypress="handleKeyPress(event)">
+                    <button class="btn" onclick="sendMessage()">Send</button>
+                </div>
+            </div>
+
+            <!-- Context Tab -->
+            <div id="contextTab" class="tab-content">
+                <div class="context-section">
+                    <h3>Set Context</h3>
+                    <p style="color: #666; margin-bottom: 15px;">Add information that all agents can use</p>
+                    
+                    <div class="context-item">
+                        <input type="text" id="contextKey" placeholder="Key (e.g., brand_name)">
+                        <input type="text" id="contextValue" placeholder="Value (e.g., TechCorp)">
+                        <button class="btn btn-small" onclick="addContext()">Add</button>
+                    </div>
+
+                    <div id="contextError" class="alert alert-error hidden"></div>
+                    <div id="contextSuccess" class="alert alert-success hidden"></div>
+
+                    <h3 style="margin-top: 30px; margin-bottom: 15px;">Current Context</h3>
+                    <div id="contextList">
+                        <p style="color: #666;">Loading...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Tab -->
+            <div id="historyTab" class="tab-content">
+                <div class="context-section">
+                    <h3>Recent Work</h3>
+                    <button class="btn btn-small" onclick="loadHistory()" style="margin-bottom: 15px;">Refresh</button>
+                    <div id="historyList">
+                        <p style="color: #666;">Loading...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Usage Tab -->
+            <div id="usageTab" class="tab-content">
+                <div class="context-section">
+                    <h3>Your Usage Statistics</h3>
+                    <button class="btn btn-small" onclick="loadUsage()" style="margin-bottom: 15px;">Refresh</button>
+                    <div id="usageList">
+                        <p style="color: #666;">Loading...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedAgent = 'auto';
+        let isProcessing = false;
+        let teamInitialized = false;
+
+        // Initialize team on page load
+        async function initTeam() {
+            try {
+                const response = await fetch('/api/init', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    teamInitialized = true;
+                    console.log('Team initialized successfully');
+                }
+            } catch (error) {
+                console.error('Failed to initialize team:', error);
+            }
+        }
+
+        // Initialize on load
+        initTeam();
+        loadContext();
+        loadHistory();
+        loadUsage();
+
+        function selectAgent(agentKey) {
+            selectedAgent = agentKey;
+            document.querySelectorAll('.agent-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !isProcessing) {
+                sendMessage();
+            }
+        }
+
+        async function sendMessage() {
+            if (isProcessing) return;
+
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+
+            isProcessing = true;
+            input.value = '';
+            input.disabled = true;
+
+            addMessage('You', message, 'user');
+
+            try {
+                console.log('Sending message:', message);
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: message,
+                        agent: selectedAgent
+                    })
+                });
+
+                console.log('Response status:', response.status);
+                const data = await response.json();
+                console.log('Response data:', data);
+
+                if (data.success) {
+                    console.log('Success! Responses:', data.responses);
+                    for (const [agentKey, responseText] of Object.entries(data.responses)) {
+                        const agentName = agentKey.charAt(0).toUpperCase() + agentKey.slice(1);
+                        console.log('Adding message from:', agentName);
+                        addMessage(agentName, responseText, 'agent');
+                    }
+                } else {
+                    console.error('API returned error:', data.error);
+                    throw new Error(data.error || 'Failed to process message');
+                }
+            } catch (error) {
+                console.error('Error in sendMessage:', error);
+                addMessage('Error', error.message, 'agent');
+            }
+
+            isProcessing = false;
+            input.disabled = false;
+            input.focus();
+        }
+
+        function addMessage(sender, content, type) {
+            console.log('addMessage called:', sender, 'Type:', type, 'Content length:', content.length);
+            const container = document.getElementById('chatContainer');
+            console.log('Chat container found:', !!container);
+            
+            if (container.querySelector('div[style*="text-align: center"]')) {
+                console.log('Clearing welcome message');
+                container.innerHTML = '';
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            
+            const header = document.createElement('div');
+            header.className = 'message-header';
+            header.textContent = sender;
+            
+            const text = document.createElement('div');
+            text.innerHTML = content.replace(/\n/g, '<br>');
+            
+            contentDiv.appendChild(header);
+            contentDiv.appendChild(text);
+            messageDiv.appendChild(contentDiv);
+            container.appendChild(messageDiv);
+            
+            console.log('Message added to container. Total messages:', container.children.length);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function addContext() {
+            const key = document.getElementById('contextKey').value.trim();
+            const value = document.getElementById('contextValue').value.trim();
+            const errorDiv = document.getElementById('contextError');
+            const successDiv = document.getElementById('contextSuccess');
+
+            errorDiv.classList.add('hidden');
+            successDiv.classList.add('hidden');
+
+            if (!key || !value) {
+                errorDiv.textContent = 'Please enter both key and value';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/context', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key, value })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    successDiv.textContent = 'Context added successfully!';
+                    successDiv.classList.remove('hidden');
+                    document.getElementById('contextKey').value = '';
+                    document.getElementById('contextValue').value = '';
+                    loadContext();
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (error) {
+                errorDiv.textContent = error.message;
+                errorDiv.classList.remove('hidden');
+            }
+        }
+
+        async function loadContext() {
+            try {
+                const response = await fetch('/api/context');
+                const data = await response.json();
+
+                if (data.success) {
+                    const listDiv = document.getElementById('contextList');
+                    const context = data.context;
+
+                    if (Object.keys(context).length === 0) {
+                        listDiv.innerHTML = '<p style="color: #666;">No context set yet</p>';
+                    } else {
+                        listDiv.innerHTML = '';
+                        for (const [key, value] of Object.entries(context)) {
+                            listDiv.innerHTML += `
+                                <div style="background: white; padding: 10px; border-radius: 6px; margin-bottom: 8px;">
+                                    <strong>${key}:</strong> ${value}
+                                </div>
+                            `;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load context:', error);
+            }
+        }
+
+        async function loadHistory() {
+            const listDiv = document.getElementById('historyList');
+            listDiv.innerHTML = '<p style="color: #666;">Loading...</p>';
+
+            try {
+                const response = await fetch('/api/history');
+                const data = await response.json();
+
+                if (data.success) {
+                    const history = data.history;
+
+                    if (history.length === 0) {
+                        listDiv.innerHTML = '<p style="color: #666;">No work history yet</p>';
+                    } else {
+                        listDiv.innerHTML = '';
+                        history.forEach(item => {
+                            listDiv.innerHTML += `
+                                <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+                                    <div style="color: #667eea; font-weight: 600; margin-bottom: 5px;">
+                                        ${item.agent} - ${item.timestamp}
+                                    </div>
+                                    <div style="color: #333;">
+                                        ${item.content.substring(0, 200)}${item.content.length > 200 ? '...' : ''}
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    }
+                }
+            } catch (error) {
+                listDiv.innerHTML = '<p style="color: #c33;">Failed to load history</p>';
+            }
+        }
+
+        async function loadUsage() {
+            const listDiv = document.getElementById('usageList');
+            listDiv.innerHTML = '<p style="color: #666;">Loading...</p>';
+
+            try {
+                const response = await fetch('/api/usage');
+                const data = await response.json();
+
+                if (data.success) {
+                    const usage = data.usage;
+
+                    if (usage.length === 0) {
+                        listDiv.innerHTML = '<p style="color: #666;">No usage data yet. Start chatting!</p>';
+                    } else {
+                        listDiv.innerHTML = '<div style="background: white; padding: 20px; border-radius: 8px;">';
+                        
+                        let totalRequests = 0;
+                        usage.forEach(item => {
+                            totalRequests += item.count;
+                            listDiv.innerHTML += `
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 10px; background: #f8f9fa; border-radius: 6px;">
+                                    <span style="font-weight: 600; color: #667eea;">${item.agent}</span>
+                                    <span style="background: #667eea; color: white; padding: 4px 12px; border-radius: 20px; font-weight: 600;">${item.count} requests</span>
+                                </div>
+                            `;
+                        });
+                        
+                        listDiv.innerHTML += `
+                            <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #e0e0e0;">
+                                <div style="text-align: center;">
+                                    <div style="font-size: 2em; font-weight: 600; color: #667eea;">${totalRequests}</div>
+                                    <div style="color: #666;">Total Requests (Last 30 Days)</div>
+                                </div>
+                            </div>
+                        </div>`;
+                    }
+                }
+            } catch (error) {
+                listDiv.innerHTML = '<p style="color: #c33;">Failed to load usage</p>';
+            }
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(tabName + 'Tab').classList.add('active');
+
+            if (tabName === 'context') {
+                loadContext();
+            } else if (tabName === 'history') {
+                loadHistory();
+            } else if (tabName === 'usage') {
+                loadUsage();
+            }
+        }
+    </script>
+</body>
+</html>
