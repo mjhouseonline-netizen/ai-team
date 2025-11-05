@@ -7,6 +7,7 @@ from flask import Flask, render_template, request, jsonify, session, redirect, u
 from flask_login import login_user, logout_user, login_required, current_user
 import os
 import secrets
+import sqlite3
 from ai_team import AITeam
 from auth import setup_login_manager, AuthManager
 
@@ -120,6 +121,17 @@ def chat():
     """Process a chat request"""
     global team
     
+    # Check message limit
+    can_send, limit_message = auth_manager.check_message_limit(current_user.id)
+    if not can_send:
+        subscription = auth_manager.get_user_subscription(current_user.id)
+        return jsonify({
+            'error': 'limit_reached',
+            'message': limit_message,
+            'tier': subscription['tier'],
+            'messages_today': subscription['messages_today']
+        }), 429
+    
     if team is None:
         # Initialize with central API key
         api_key = os.environ.get('ANTHROPIC_API_KEY')
@@ -142,6 +154,9 @@ def chat():
             specific_agent=agent if agent and agent != 'auto' else None,
             project_id=project_id
         )
+        
+        # Increment message count
+        auth_manager.increment_message_count(current_user.id)
         
         # Track usage
         for agent_name in result.keys():
@@ -249,6 +264,114 @@ def profile():
         return jsonify({'success': True, 'message': 'API key saved'})
     
     return jsonify({'success': True})
+
+@app.route('/api/subscription', methods=['GET'])
+@login_required
+def get_subscription():
+    """Get user's subscription details"""
+    subscription = auth_manager.get_user_subscription(current_user.id)
+    
+    # Calculate limits
+    limits = {
+        'free': 10,
+        'pro': 100,
+        'business': 999999
+    }
+    
+    return jsonify({
+        'success': True,
+        'tier': subscription['tier'],
+        'messages_today': subscription['messages_today'],
+        'limit': limits[subscription['tier']],
+        'percentage': (subscription['messages_today'] / limits[subscription['tier']]) * 100
+    })
+
+@app.route('/pricing')
+def pricing():
+    """Pricing page"""
+    return render_template('pricing.html')
+
+@app.route('/api/create-checkout-session', methods=['POST'])
+@login_required
+def create_checkout_session():
+    """Create Stripe checkout session"""
+    try:
+        data = request.json
+        tier = data.get('tier', 'pro')
+        
+        # Stripe prices (you'll need to set these up in Stripe Dashboard)
+        prices = {
+            'pro': os.environ.get('STRIPE_PRO_PRICE_ID', 'price_pro'),
+            'business': os.environ.get('STRIPE_BUSINESS_PRICE_ID', 'price_business')
+        }
+        
+        import stripe
+        stripe.api_key = os.environ.get('STRIPE_SECRET_KEY')
+        
+        checkout_session = stripe.checkout.Session.create(
+            customer_email=current_user.email,
+            payment_method_types=['card'],
+            line_items=[{
+                'price': prices[tier],
+                'quantity': 1,
+            }],
+            mode='subscription',
+            success_url=url_for('dashboard', _external=True) + '?upgraded=true',
+            cancel_url=url_for('pricing', _external=True),
+            metadata={
+                'user_id': current_user.id,
+                'tier': tier
+            }
+        )
+        
+        return jsonify({'checkout_url': checkout_session.url})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/stripe-webhook', methods=['POST'])
+def stripe_webhook():
+    """Handle Stripe webhooks"""
+    import stripe
+    
+    payload = request.data
+    sig_header = request.headers.get('Stripe-Signature')
+    webhook_secret = os.environ.get('STRIPE_WEBHOOK_SECRET')
+    
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, webhook_secret
+        )
+        
+        # Handle successful subscription
+        if event['type'] == 'checkout.session.completed':
+            session = event['data']['object']
+            user_id = session['metadata']['user_id']
+            tier = session['metadata']['tier']
+            
+            # Update user's subscription
+            auth_manager.update_subscription(
+                user_id=user_id,
+                tier=tier,
+                stripe_customer_id=session['customer'],
+                stripe_subscription_id=session['subscription']
+            )
+        
+        # Handle subscription cancellation
+        elif event['type'] == 'customer.subscription.deleted':
+            subscription = event['data']['object']
+            # Find user by stripe_subscription_id and downgrade to free
+            conn = sqlite3.connect(auth_manager.db_path)
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE users SET subscription_tier = 'free' WHERE stripe_subscription_id = ?",
+                (subscription['id'],)
+            )
+            conn.commit()
+            conn.close()
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
 if __name__ == '__main__':
     print("\n🚀 Starting AI Team Web Interface...")

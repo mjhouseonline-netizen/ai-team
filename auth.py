@@ -11,10 +11,11 @@ import secrets
 
 class User(UserMixin):
     """User model for authentication"""
-    def __init__(self, id, email, username, api_key=None):
+    def __init__(self, id, email, username, subscription_tier='free', api_key=None):
         self.id = id
         self.email = email
         self.username = username
+        self.subscription_tier = subscription_tier
         self.api_key = api_key
 
 class AuthManager:
@@ -37,6 +38,11 @@ class AuthManager:
                 email TEXT UNIQUE NOT NULL,
                 password_hash TEXT NOT NULL,
                 api_key TEXT,
+                subscription_tier TEXT DEFAULT 'free',
+                stripe_customer_id TEXT,
+                stripe_subscription_id TEXT,
+                messages_today INTEGER DEFAULT 0,
+                last_message_reset TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 last_login TIMESTAMP,
                 is_active BOOLEAN DEFAULT 1
@@ -98,7 +104,7 @@ class AuthManager:
         cursor = conn.cursor()
         
         cursor.execute(
-            "SELECT id, username, email, api_key FROM users WHERE email = ? AND is_active = 1",
+            "SELECT id, username, email, subscription_tier, api_key FROM users WHERE email = ? AND is_active = 1",
             (email,)
         )
         
@@ -106,7 +112,7 @@ class AuthManager:
         conn.close()
         
         if result:
-            return User(id=result[0], username=result[1], email=result[2], api_key=result[3])
+            return User(id=result[0], username=result[1], email=result[2], subscription_tier=result[3], api_key=result[4])
         return None
     
     def get_user_by_id(self, user_id):
@@ -115,7 +121,7 @@ class AuthManager:
         cursor = conn.cursor()
         
         cursor.execute(
-            "SELECT id, username, email, api_key FROM users WHERE id = ? AND is_active = 1",
+            "SELECT id, username, email, subscription_tier, api_key FROM users WHERE id = ? AND is_active = 1",
             (user_id,)
         )
         
@@ -123,7 +129,7 @@ class AuthManager:
         conn.close()
         
         if result:
-            return User(id=result[0], username=result[1], email=result[2], api_key=result[3])
+            return User(id=result[0], username=result[1], email=result[2], subscription_tier=result[3], api_key=result[4])
         return None
     
     def verify_password(self, email, password):
@@ -233,6 +239,105 @@ class AuthManager:
         conn.close()
         
         return [{"agent": r[0], "count": r[1]} for r in results]
+    
+    def check_message_limit(self, user_id):
+        """Check if user can send a message based on their tier"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute(
+            "SELECT subscription_tier, messages_today, last_message_reset FROM users WHERE id = ?",
+            (user_id,)
+        )
+        
+        result = cursor.fetchone()
+        conn.close()
+        
+        if not result:
+            return False, "User not found"
+        
+        tier, messages_today, last_reset = result
+        
+        # Reset counter if it's a new day
+        if last_reset:
+            last_reset_date = datetime.strptime(last_reset, '%Y-%m-%d %H:%M:%S').date()
+            if last_reset_date < datetime.now().date():
+                self.reset_daily_messages(user_id)
+                messages_today = 0
+        
+        # Check tier limits
+        limits = {
+            'free': 10,
+            'pro': 100,
+            'business': 999999  # Unlimited
+        }
+        
+        if messages_today >= limits.get(tier, 10):
+            return False, f"Daily limit reached for {tier} tier"
+        
+        return True, "OK"
+    
+    def increment_message_count(self, user_id):
+        """Increment user's daily message count"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute(
+            "UPDATE users SET messages_today = messages_today + 1 WHERE id = ?",
+            (user_id,)
+        )
+        
+        conn.commit()
+        conn.close()
+    
+    def reset_daily_messages(self, user_id):
+        """Reset daily message count"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute(
+            "UPDATE users SET messages_today = 0, last_message_reset = ? WHERE id = ?",
+            (datetime.now(), user_id)
+        )
+        
+        conn.commit()
+        conn.close()
+    
+    def get_user_subscription(self, user_id):
+        """Get user's subscription details"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute(
+            "SELECT subscription_tier, messages_today, stripe_customer_id FROM users WHERE id = ?",
+            (user_id,)
+        )
+        
+        result = cursor.fetchone()
+        conn.close()
+        
+        if result:
+            return {
+                'tier': result[0],
+                'messages_today': result[1],
+                'stripe_customer_id': result[2]
+            }
+        return None
+    
+    def update_subscription(self, user_id, tier, stripe_customer_id=None, stripe_subscription_id=None):
+        """Update user's subscription tier"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute(
+            """UPDATE users 
+               SET subscription_tier = ?, stripe_customer_id = ?, stripe_subscription_id = ? 
+               WHERE id = ?""",
+            (tier, stripe_customer_id, stripe_subscription_id, user_id)
+        )
+        
+        conn.commit()
+        conn.close()
 
 def setup_login_manager(app):
     """Configure Flask-Login"""
