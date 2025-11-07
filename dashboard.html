@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌴 AI Team - Rainforest</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(180deg, #1a4d2e 0%, #0f2818 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Animated Rainforest Background */
+        .rainforest-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                linear-gradient(180deg, rgba(26, 77, 46, 0.9) 0%, rgba(15, 40, 24, 0.9) 100%),
+                url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800"><defs><radialGradient id="leaf"><stop offset="0%25" stop-color="%2334a853"/><stop offset="100%25" stop-color="%231a4d2e"/></radialGradient></defs><ellipse cx="100" cy="50" rx="80" ry="40" fill="url(%23leaf)" opacity="0.3"/><ellipse cx="300" cy="100" rx="100" ry="50" fill="url(%23leaf)" opacity="0.4"/><ellipse cx="500" cy="80" rx="90" ry="45" fill="url(%23leaf)" opacity="0.3"/><ellipse cx="700" cy="120" rx="85" ry="42" fill="url(%23leaf)" opacity="0.35"/><ellipse cx="900" cy="70" rx="95" ry="48" fill="url(%23leaf)" opacity="0.4"/><ellipse cx="1100" cy="110" rx="88" ry="44" fill="url(%23leaf)" opacity="0.3"/></svg>');
+            background-size: cover;
+            z-index: -1;
+            animation: sway 20s ease-in-out infinite;
+        }
+
+        @keyframes sway {
+            0%, 100% { transform: translateX(0) rotate(0deg); }
+            50% { transform: translateX(10px) rotate(0.5deg); }
+        }
+
+        /* Floating leaves */
+        .leaf {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: #34a853;
+            opacity: 0.3;
+            border-radius: 0 100% 0 100%;
+            animation: float 15s infinite ease-in-out;
+        }
+
+        .leaf:nth-child(1) { left: 10%; animation-delay: 0s; }
+        .leaf:nth-child(2) { left: 30%; animation-delay: 3s; }
+        .leaf:nth-child(3) { left: 50%; animation-delay: 6s; }
+        .leaf:nth-child(4) { left: 70%; animation-delay: 9s; }
+        .leaf:nth-child(5) { left: 90%; animation-delay: 12s; }
+
+        @keyframes float {
+            0% { top: -50px; transform: rotate(0deg); opacity: 0; }
+            10% { opacity: 0.3; }
+            90% { opacity: 0.3; }
+            100% { top: 100vh; transform: rotate(360deg); opacity: 0; }
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            margin-bottom: 20px;
+            border: 2px solid rgba(52, 168, 83, 0.3);
+        }
+
+        .logo {
+            font-size: 2em;
+            color: #fff;
+            font-weight: 700;
+            text-shadow: 0 0 20px rgba(52, 168, 83, 0.8);
+        }
+
+        .user-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .tier-badge {
+            background: rgba(52, 168, 83, 0.3);
+            padding: 10px 20px;
+            border-radius: 10px;
+            color: #fff;
+            font-weight: 600;
+            border: 2px solid rgba(52, 168, 83, 0.5);
+        }
+
+        .logout-btn {
+            padding: 10px 20px;
+            background: rgba(255, 77, 77, 0.3);
+            color: #fff;
+            border: 2px solid rgba(255, 77, 77, 0.5);
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255, 77, 77, 0.5);
+            transform: scale(1.05);
+        }
+
+        /* Character Line-up */
+        .characters-lineup {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 20px;
+            padding: 40px 20px;
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            margin-bottom: 20px;
+            border: 2px solid rgba(52, 168, 83, 0.3);
+            min-height: 200px;
+            position: relative;
+            overflow: visible;
+        }
+
+        /* Character Button */
+        .character {
+            position: relative;
+            cursor: pointer;
+            transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            filter: grayscale(100%) brightness(0.5);
+            opacity: 0.6;
+        }
+
+        .character img {
+            width: 100px;
+            height: 100px;
+            object-fit: contain;
+            display: block;
+            transition: all 0.3s;
+        }
+
+        .character img.error {
+            display: none;
+        }
+
+        .character .emoji-fallback {
+            display: none;
+            font-size: 100px;
+            line-height: 100px;
+        }
+
+        .character img.error + .emoji-fallback {
+            display: block;
+        }
+
+        .character-name {
+            text-align: center;
+            color: #fff;
+            font-size: 0.9em;
+            margin-top: 5px;
+            opacity: 0.7;
+        }
+
+        /* Sleeping character */
+        .character.sleeping::after {
+            content: 'Zzz';
+            position: absolute;
+            top: -20px;
+            right: -10px;
+            font-size: 1.5em;
+            color: rgba(255, 255, 255, 0.5);
+            animation: zzz 2s ease-in-out infinite;
+        }
+
+        @keyframes zzz {
+            0%, 100% { opacity: 0.3; transform: translateY(0); }
+            50% { opacity: 0.7; transform: translateY(-10px); }
+        }
+
+        /* Active/Awake character */
+        .character.active {
+            filter: grayscale(0%) brightness(1.2);
+            opacity: 1;
+            transform: scale(1.8) translateY(-30px);
+            z-index: 10;
+            animation: bounce 2s ease-in-out infinite;
+        }
+
+        .character.active img {
+            filter: drop-shadow(0 0 30px rgba(52, 168, 83, 0.8));
+        }
+
+        .character.active .character-name {
+            opacity: 1;
+            font-weight: 700;
+            font-size: 1.1em;
+            text-shadow: 0 0 10px rgba(52, 168, 83, 0.8);
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: scale(1.8) translateY(-30px); }
+            50% { transform: scale(1.8) translateY(-40px); }
+        }
+
+        /* Hover effect */
+        .character:hover {
+            filter: grayscale(50%) brightness(0.8);
+            opacity: 0.8;
+            transform: scale(1.1);
+        }
+
+        .character.active:hover {
+            filter: grayscale(0%) brightness(1.2);
+            opacity: 1;
+        }
+
+        /* Chat Area */
+        .chat-container {
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 30px;
+            border: 2px solid rgba(52, 168, 83, 0.3);
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 15px;
+            min-height: 300px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 15px;
+            border-radius: 15px;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            background: rgba(102, 126, 234, 0.3);
+            border: 1px solid rgba(102, 126, 234, 0.5);
+            margin-left: 20%;
+            color: #fff;
+        }
+
+        .message.agent {
+            background: rgba(52, 168, 83, 0.3);
+            border: 1px solid rgba(52, 168, 83, 0.5);
+            margin-right: 20%;
+            color: #fff;
+        }
+
+        .message-sender {
+            font-weight: 700;
+            margin-bottom: 5px;
+            color: #34a853;
+        }
+
+        .message.user .message-sender {
+            color: #667eea;
+        }
+
+        /* Input Area */
+        .chat-input {
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(52, 168, 83, 0.5);
+            border-radius: 15px;
+            color: #fff;
+            font-size: 1em;
+        }
+
+        .chat-input input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .chat-input input:focus {
+            outline: none;
+            border-color: #34a853;
+            box-shadow: 0 0 20px rgba(52, 168, 83, 0.3);
+        }
+
+        .send-btn {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #34a853 0%, #1a4d2e 100%);
+            color: #fff;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: all 0.3s;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(52, 168, 83, 0.5);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Welcome message */
+        .welcome-msg {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            padding: 40px;
+            font-size: 1.2em;
+        }
+
+        .welcome-msg strong {
+            color: #34a853;
+            text-shadow: 0 0 10px rgba(52, 168, 83, 0.5);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(52, 168, 83, 0.3);
+            border-radius: 10px;
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab:hover {
+            background: rgba(52, 168, 83, 0.2);
+            color: #fff;
+        }
+
+        .tab.active {
+            background: rgba(52, 168, 83, 0.4);
+            border-color: #34a853;
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Upgrade Modal */
+        .upgrade-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .upgrade-modal-content {
+            background: linear-gradient(135deg, #1a4d2e 0%, #0f2818 100%);
+            border: 3px solid #34a853;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            text-align: center;
+            color: #fff;
+        }
+
+        .upgrade-modal h2 {
+            color: #34a853;
+            margin-bottom: 20px;
+            font-size: 2em;
+        }
+
+        .btn-large {
+            padding: 15px 40px;
+            margin: 10px;
+            background: linear-gradient(135deg, #34a853 0%, #1a4d2e 100%);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-large:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(52, 168, 83, 0.5);
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="rainforest-bg"></div>
+    <div class="leaf"></div>
+    <div class="leaf"></div>
+    <div class="leaf"></div>
+    <div class="leaf"></div>
+    <div class="leaf"></div>
+
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">🌴 AI Team</div>
+            <div class="user-controls">
+                <div class="tier-badge" id="tierBadge">
+                    <span id="tierIcon">🆓</span>
+                    <span id="tierText">Free</span>
+                    <span id="messageCount">0/10</span>
+                </div>
+                <div style="color: #fff;">👤 {{ user.username }}</div>
+                <button class="logout-btn" onclick="window.location.href='/logout'">Logout</button>
+            </div>
+        </div>
+
+        <!-- Character Line-up -->
+        <div class="characters-lineup" id="charactersLineup">
+            <div class="character sleeping" data-agent="luna" onclick="selectCharacter('luna')">
+                <img src="/static/images/luna.jpg" alt="Luna" onerror="this.classList.add('error')">
+                <div class="emoji-fallback">🌙</div>
+                <div class="character-name">Luna</div>
+            </div>
+            <div class="character sleeping" data-agent="mila" onclick="selectCharacter('mila')">
+                <img src="/static/images/mila.jpg" alt="Mila" onerror="this.classList.add('error')">
+                <div class="emoji-fallback">🐉</div>
+                <div class="character-name">Mila</div>
+            </div>
+            <div class="character sleeping" data-agent="sage" onclick="selectCharacter('sage')">
+                <img src="/static/images/sage.jpg" alt="Sage" onerror="this.classList.add('error')">
+                <div class="emoji-fallback">🦉</div>
+                <div class="character-name">Sage</div>
+            </div>
+            <div class="character active" data-agent="ember" onclick="selectCharacter('ember')">
+                <img src="/static/images/ember.jpg" alt="Ember" onerror="this.classList.add('error')">
+                <div class="emoji-fallback">🦁</div>
+                <div class="character-name">Ember</div>
+            </div>
+            <div class="character sleeping" data-agent="sol" onclick="selectCharacter('sol')">
+                <img src="/static/images/sol.jpg" alt="Sol" onerror="this.classList.add('error')">
+                <div class="emoji-fallback">🐤</div>
+                <div class="character-name">Sol</div>
+            </div>
+            <div class="character sleeping" data-agent="nova" onclick="selectCharacter('nova')">
+                <img src="/static/images/nova.jpg" alt="Nova" onerror="this.classList.add('error')">
+                <div class="emoji-fallback">🌌</div>
+                <div class="character-name">Nova</div>
+            </div>
+            <div class="character sleeping" data-agent="theo" onclick="selectCharacter('theo')">
+                <img src="/static/images/theo.jpg" alt="Theo" onerror="this.classList.add('error')">
+                <div class="emoji-fallback">🐰</div>
+                <div class="character-name">Theo</div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('chat')">💬 Chat</button>
+            <button class="tab" onclick="switchTab('usage')">📊 Usage</button>
+        </div>
+
+        <!-- Chat Tab -->
+        <div id="chatTab" class="tab-content active">
+            <div class="chat-container">
+                <div class="chat-messages" id="chatMessages">
+                    <div class="welcome-msg">
+                        👋 Welcome to the <strong>Rainforest AI Team</strong>!<br>
+                        Click on any character above to wake them up and start chatting!
+                    </div>
+                </div>
+                <div class="chat-input">
+                    <input type="text" id="messageInput" placeholder="Type your message..." 
+                           onkeypress="handleKeyPress(event)">
+                    <button class="send-btn" onclick="sendMessage()" id="sendBtn">Send 🚀</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Usage Tab -->
+        <div id="usageTab" class="tab-content">
+            <div class="chat-container">
+                <h2 style="color: #34a853; margin-bottom: 20px;">Your Usage Stats</h2>
+                <div id="usageContent" style="color: #fff;">
+                    <p>Loading usage data...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedAgent = 'ember';
+        let isProcessing = false;
+
+        // Select character
+        function selectCharacter(agent) {
+            selectedAgent = agent;
+            
+            // Remove active class from all
+            document.querySelectorAll('.character').forEach(char => {
+                char.classList.remove('active');
+                char.classList.add('sleeping');
+            });
+            
+            // Add active class to selected
+            const selected = document.querySelector(`[data-agent="${agent}"]`);
+            selected.classList.add('active');
+            selected.classList.remove('sleeping');
+            
+            console.log(`Woke up ${agent}!`);
+        }
+
+        // Switch tabs
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tab + 'Tab').classList.add('active');
+            
+            if (tab === 'usage') {
+                loadUsage();
+            }
+        }
+
+        // Send message
+        async function sendMessage() {
+            if (isProcessing) return;
+            
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            isProcessing = true;
+            input.value = '';
+            input.disabled = true;
+            document.getElementById('sendBtn').disabled = true;
+            
+            addMessage('You', message, 'user');
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: message,
+                        agent: selectedAgent
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.status === 429) {
+                    showUpgradeModal(data.tier, data.messages_today);
+                    return;
+                }
+                
+                if (data.success) {
+                    for (const [agentKey, responseText] of Object.entries(data.responses)) {
+                        const agentName = agentKey.charAt(0).toUpperCase() + agentKey.slice(1);
+                        addMessage(agentName, responseText, 'agent');
+                    }
+                    loadSubscription();
+                } else {
+                    throw new Error(data.error || 'Failed to process message');
+                }
+            } catch (error) {
+                addMessage('Error', error.message, 'agent');
+            }
+            
+            isProcessing = false;
+            input.disabled = false;
+            document.getElementById('sendBtn').disabled = false;
+            input.focus();
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !isProcessing) {
+                sendMessage();
+            }
+        }
+
+        function addMessage(sender, content, type) {
+            const messagesDiv = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.innerHTML = `
+                <div class="message-sender">${sender}</div>
+                <div>${content}</div>
+            `;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        // Load subscription
+        async function loadSubscription() {
+            try {
+                const response = await fetch('/api/subscription');
+                
+                if (!response.ok) {
+                    console.log('Subscription endpoint not available yet');
+                    // Set defaults
+                    document.getElementById('tierIcon').textContent = '🆓';
+                    document.getElementById('tierText').textContent = 'Free';
+                    document.getElementById('messageCount').textContent = '0/10';
+                    return;
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateTierBadge(data);
+                }
+            } catch (error) {
+                console.log('Subscription not loaded:', error);
+                // Set defaults
+                document.getElementById('tierIcon').textContent = '🆓';
+                document.getElementById('tierText').textContent = 'Free';
+                document.getElementById('messageCount').textContent = '0/10';
+            }
+        }
+
+        function updateTierBadge(subscription) {
+            const tierIcons = {
+                'free': '🆓',
+                'pro': '💎',
+                'business': '🚀'
+            };
+            
+            const tierNames = {
+                'free': 'Free',
+                'pro': 'Pro',
+                'business': 'Business'
+            };
+            
+            document.getElementById('tierIcon').textContent = tierIcons[subscription.tier];
+            document.getElementById('tierText').textContent = tierNames[subscription.tier];
+            
+            if (subscription.tier === 'business') {
+                document.getElementById('messageCount').textContent = '♾️ Unlimited';
+            } else {
+                document.getElementById('messageCount').textContent = 
+                    `${subscription.messages_today}/${subscription.limit}`;
+            }
+        }
+
+        function showUpgradeModal(tier, messagesUsed) {
+            const modal = document.createElement('div');
+            modal.className = 'upgrade-modal';
+            modal.id = 'upgradeModal';
+            
+            modal.innerHTML = `
+                <div class="upgrade-modal-content">
+                    <h2>🚫 Daily Limit Reached</h2>
+                    <p style="font-size: 1.2em; margin: 20px 0;">
+                        You've used all ${messagesUsed} messages today!
+                    </p>
+                    <p style="font-size: 1.3em; margin: 20px 0;">
+                        Upgrade to <strong>Pro</strong> for 100 messages/day!
+                    </p>
+                    <button class="btn-large" onclick="window.location.href='/pricing'">
+                        💎 Upgrade to Pro - $30/month
+                    </button>
+                    <button class="btn-large" onclick="closeUpgradeModal()" 
+                            style="background: rgba(255,255,255,0.2);">
+                        Maybe Later
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+        }
+
+        function closeUpgradeModal() {
+            const modal = document.getElementById('upgradeModal');
+            if (modal) modal.remove();
+        }
+
+        // Load usage
+        async function loadUsage() {
+            try {
+                const response = await fetch('/api/usage');
+                const data = await response.json();
+                
+                const usageDiv = document.getElementById('usageContent');
+                if (data.length === 0) {
+                    usageDiv.innerHTML = '<p>No usage data yet. Start chatting!</p>';
+                } else {
+                    let html = '<div style="display: grid; gap: 15px;">';
+                    data.forEach(item => {
+                        html += `
+                            <div style="background: rgba(52, 168, 83, 0.2); padding: 15px; border-radius: 10px; border: 1px solid rgba(52, 168, 83, 0.4);">
+                                <strong>${item.agent}</strong>: ${item.count} messages
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                    usageDiv.innerHTML = html;
+                }
+            } catch (error) {
+                console.error('Failed to load usage:', error);
+            }
+        }
+
+        // Initialize
+        loadSubscription();
+    </script>
+</body>
+</html>
