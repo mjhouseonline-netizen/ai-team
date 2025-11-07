@@ -17,6 +17,15 @@ app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(16))
 # Setup authentication
 auth_manager = setup_login_manager(app)
 
+# Run database migration on startup
+print("🔧 Running database migration...")
+try:
+    import migrate_db
+    migrate_db.migrate_database()
+    print("✅ Database migration complete!")
+except Exception as e:
+    print(f"⚠️ Migration error: {e}")
+
 # Global team instance
 team = None
 
