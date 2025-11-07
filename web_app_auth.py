@@ -375,6 +375,15 @@ def stripe_webhook():
 
 if __name__ == '__main__':
     print("\n🚀 Starting AI Team Web Interface...")
+    
+    # Run database migration
+    print("🔧 Checking database schema...")
+    try:
+        import migrate_db
+        migrate_db.migrate_database()
+    except Exception as e:
+        print(f"⚠️ Migration warning: {e}")
+    
     print("📱 Opening in your browser...")
     print("\n⚠️  To stop: Press Ctrl+C in this window\n")
     
