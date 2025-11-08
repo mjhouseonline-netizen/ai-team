@@ -292,7 +292,7 @@ def google_callback():
             # Update existing
             integration.access_token = hash_token(access_token)
             integration.token_expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
-            integration.metadata = user_info
+            integration.provider_data = user_info
         else:
             # Create new
             integration = Integration(
@@ -300,7 +300,7 @@ def google_callback():
                 provider='google',
                 access_token=hash_token(access_token),
                 token_expires_at=datetime.utcnow() + timedelta(seconds=expires_in),
-                metadata=user_info
+                provider_data=user_info
             )
             db.session.add(integration)
         
@@ -416,13 +416,13 @@ def slack_callback():
         
         if integration:
             integration.access_token = hash_token(access_token)
-            integration.metadata = team_info
+            integration.provider_data = team_info
         else:
             integration = Integration(
                 user_id=user.id,
                 provider='slack',
                 access_token=hash_token(access_token),
-                metadata=team_info
+                provider_data=team_info
             )
             db.session.add(integration)
         
@@ -460,7 +460,7 @@ def get_integrations():
                 'provider': i.provider,
                 'connected': i.is_active,
                 'connected_at': i.created_at.isoformat(),
-                'metadata': i.metadata
+                'provider_data': i.provider_data
             } for i in integrations]
         }), 200
 

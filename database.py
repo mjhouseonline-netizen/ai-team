@@ -58,7 +58,7 @@ class Integration(db.Model):
     provider = db.Column(db.String(50), nullable=False, index=True)  # 'google', 'slack', etc.
     access_token = db.Column(db.Text, nullable=False)  # Hashed token
     token_expires_at = db.Column(db.DateTime)
-    metadata = db.Column(db.JSON)  # Additional provider-specific data
+    provider_data = db.Column(db.JSON)  # Additional provider-specific data
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -85,7 +85,7 @@ class Integration(db.Model):
             'is_active': self.is_active,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat(),
-            'metadata': self.metadata,
+            'provider_data': self.provider_data,
             'token_expired': self.is_token_expired()
         }
     
