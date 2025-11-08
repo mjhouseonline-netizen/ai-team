@@ -456,6 +456,127 @@
         .hidden {
             display: none;
         }
+        
+        /* Integration Buttons */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn-image {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(240, 147, 251, 0.3);
+        }
+        
+        .btn-image:hover {
+            transform: scale(1.05);
+        }
+        
+        .btn-social {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+        }
+        
+        .btn-social:hover {
+            transform: scale(1.05);
+        }
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        .modal-header {
+            font-size: 1.5em;
+            color: #1b5e20;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+        
+        .modal-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid rgba(76, 175, 80, 0.3);
+            border-radius: 10px;
+            font-size: 1em;
+            margin-bottom: 15px;
+        }
+        
+        .modal-textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid rgba(76, 175, 80, 0.3);
+            border-radius: 10px;
+            font-size: 1em;
+            margin-bottom: 15px;
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        
+        .modal-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .modal-btn-primary {
+            background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+            color: white;
+        }
+        
+        .modal-btn-secondary {
+            background: #e0e0e0;
+            color: #666;
+        }
+        
+        .generated-image {
+            width: 100%;
+            border-radius: 15px;
+            margin: 15px 0;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #2e7d32;
+        }
     </style>
 </head>
 <body>
@@ -475,6 +596,7 @@
         <div class="header">
             <div class="logo">🌴 AI Team</div>
             <div class="user-controls">
+                <a href="/integrations" style="padding: 10px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; border-radius: 10px; text-decoration: none; font-weight: 600; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">🔌 Integrations</a>
                 <div style="color: #2e7d32; font-weight: 600;">👤 {{ user.username }}</div>
                 <button class="logout-btn" onclick="window.location.href='/logout'">Logout</button>
             </div>
@@ -483,37 +605,37 @@
         <!-- Character Line-up -->
         <div class="characters-lineup" id="charactersLineup">
             <div class="character sleeping" data-agent="luna" onclick="selectCharacter('luna')">
-                <img src="/static/images/luna.jpg" alt="Luna" onerror="this.classList.add('error')">
+                <img src="/static/images/luna.png" alt="Luna" onerror="this.classList.add('error')">
                 <div class="emoji-fallback">🌙</div>
                 <div class="character-name">Luna</div>
             </div>
             <div class="character sleeping" data-agent="mila" onclick="selectCharacter('mila')">
-                <img src="/static/images/mila.jpg" alt="Mila" onerror="this.classList.add('error')">
+                <img src="/static/images/mila.png" alt="Mila" onerror="this.classList.add('error')">
                 <div class="emoji-fallback">🐉</div>
                 <div class="character-name">Mila</div>
             </div>
             <div class="character sleeping" data-agent="sage" onclick="selectCharacter('sage')">
-                <img src="/static/images/sage.jpg" alt="Sage" onerror="this.classList.add('error')">
+                <img src="/static/images/sage.png" alt="Sage" onerror="this.classList.add('error')">
                 <div class="emoji-fallback">🦉</div>
                 <div class="character-name">Sage</div>
             </div>
             <div class="character active" data-agent="ember" onclick="selectCharacter('ember')">
-                <img src="/static/images/ember.jpg" alt="Ember" onerror="this.classList.add('error')">
+                <img src="/static/images/ember.png" alt="Ember" onerror="this.classList.add('error')">
                 <div class="emoji-fallback">🦁</div>
                 <div class="character-name">Ember</div>
             </div>
             <div class="character sleeping" data-agent="sol" onclick="selectCharacter('sol')">
-                <img src="/static/images/sol.jpg" alt="Sol" onerror="this.classList.add('error')">
+                <img src="/static/images/sol.png" alt="Sol" onerror="this.classList.add('error')">
                 <div class="emoji-fallback">🐤</div>
                 <div class="character-name">Sol</div>
             </div>
             <div class="character sleeping" data-agent="nova" onclick="selectCharacter('nova')">
-                <img src="/static/images/nova.jpg" alt="Nova" onerror="this.classList.add('error')">
+                <img src="/static/images/nova.png" alt="Nova" onerror="this.classList.add('error')">
                 <div class="emoji-fallback">🌌</div>
                 <div class="character-name">Nova</div>
             </div>
             <div class="character sleeping" data-agent="theo" onclick="selectCharacter('theo')">
-                <img src="/static/images/theo.jpg" alt="Theo" onerror="this.classList.add('error')">
+                <img src="/static/images/theo.png" alt="Theo" onerror="this.classList.add('error')">
                 <div class="emoji-fallback">🐰</div>
                 <div class="character-name">Theo</div>
             </div>
@@ -528,11 +650,56 @@
                         Click on any character above to wake them up and start chatting!
                     </div>
                 </div>
+                
+                <!-- Integration Controls -->
+                <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+                    <button class="btn btn-image" onclick="showImageGenerator()" title="Generate image with DALL-E">
+                        🎨 Generate Image
+                    </button>
+                    <button class="btn btn-social" onclick="showSocialPost()" title="Post to social media">
+                        📱 Post to Social
+                    </button>
+                </div>
+                
                 <div class="chat-input">
                     <input type="text" id="messageInput" placeholder="Type your message..." 
                            onkeypress="handleKeyPress(event)">
                     <button class="send-btn" onclick="sendMessage()" id="sendBtn">Send 🚀</button>
                 </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Image Generation Modal -->
+    <div class="modal" id="imageModal">
+        <div class="modal-content">
+            <div class="modal-header">🎨 Generate Image</div>
+            <input type="text" class="modal-input" id="imagePrompt" placeholder="Describe the image you want to generate...">
+            <div id="imageLoading" class="loading hidden">🎨 Generating your image...</div>
+            <div id="imageResult" class="hidden">
+                <img id="generatedImage" class="generated-image">
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-secondary" onclick="closeImageModal()">Cancel</button>
+                <button class="modal-btn modal-btn-primary" onclick="generateImage()">Generate</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Social Post Modal -->
+    <div class="modal" id="socialModal">
+        <div class="modal-content">
+            <div class="modal-header">📱 Post to Social Media</div>
+            <select class="modal-input" id="socialPlatform">
+                <option value="facebook">Facebook</option>
+                <option value="instagram">Instagram</option>
+            </select>
+            <textarea class="modal-textarea" id="socialMessage" placeholder="Write your post..."></textarea>
+            <input type="text" class="modal-input" id="socialImageUrl" placeholder="Image URL (optional for Facebook, required for Instagram)">
+            <div id="socialLoading" class="loading hidden">📱 Posting...</div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-secondary" onclick="closeSocialModal()">Cancel</button>
+                <button class="modal-btn modal-btn-primary" onclick="postToSocial()">Post</button>
             </div>
         </div>
     </div>
@@ -630,6 +797,126 @@
 
         // Initialize
         console.log('AI Team Dashboard loaded!');
+        
+        // ==================== IMAGE GENERATION ====================
+        
+        function showImageGenerator() {
+            document.getElementById('imageModal').classList.add('active');
+            document.getElementById('imagePrompt').focus();
+        }
+        
+        function closeImageModal() {
+            document.getElementById('imageModal').classList.remove('active');
+            document.getElementById('imagePrompt').value = '';
+            document.getElementById('imageResult').classList.add('hidden');
+        }
+        
+        async function generateImage() {
+            const prompt = document.getElementById('imagePrompt').value.trim();
+            if (!prompt) {
+                alert('Please enter a description');
+                return;
+            }
+            
+            const loading = document.getElementById('imageLoading');
+            const result = document.getElementById('imageResult');
+            
+            loading.classList.remove('hidden');
+            result.classList.add('hidden');
+            
+            try {
+                const response = await fetch('/api/integrations/generate-image', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: prompt })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('generatedImage').src = data.image_url;
+                    result.classList.remove('hidden');
+                    
+                    // Add to chat
+                    addMessage('DALL-E', `Generated image: "${prompt}"`, 'agent');
+                    const imageMsg = document.createElement('div');
+                    imageMsg.className = 'message agent';
+                    imageMsg.innerHTML = `<img src="${data.image_url}" style="max-width: 100%; border-radius: 10px;">`;
+                    document.getElementById('chatMessages').appendChild(imageMsg);
+                    
+                    // Offer to post to social
+                    document.getElementById('socialImageUrl').value = data.image_url;
+                } else {
+                    alert(data.error || 'Failed to generate image. Make sure OpenAI is connected in Integrations.');
+                }
+            } catch (error) {
+                alert('Failed to generate image');
+            }
+            
+            loading.classList.add('hidden');
+        }
+        
+        // ==================== SOCIAL MEDIA POSTING ====================
+        
+        function showSocialPost() {
+            document.getElementById('socialModal').classList.add('active');
+        }
+        
+        function closeSocialModal() {
+            document.getElementById('socialModal').classList.remove('active');
+            document.getElementById('socialMessage').value = '';
+            document.getElementById('socialImageUrl').value = '';
+        }
+        
+        async function postToSocial() {
+            const platform = document.getElementById('socialPlatform').value;
+            const message = document.getElementById('socialMessage').value.trim();
+            const imageUrl = document.getElementById('socialImageUrl').value.trim();
+            
+            if (!message && platform === 'facebook') {
+                alert('Please write a message');
+                return;
+            }
+            
+            if (platform === 'instagram' && !imageUrl) {
+                alert('Instagram requires an image URL');
+                return;
+            }
+            
+            const loading = document.getElementById('socialLoading');
+            loading.classList.remove('hidden');
+            
+            try {
+                const endpoint = platform === 'facebook' ? '/api/integrations/post-facebook' : '/api/integrations/post-instagram';
+                const payload = platform === 'facebook' ? 
+                    { message: message, image_url: imageUrl || null } :
+                    { image_url: imageUrl, caption: message };
+                
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(`Posted to ${capitalize(platform)} successfully! 🎉`);
+                    addMessage('System', `✅ Posted to ${capitalize(platform)}!`, 'agent');
+                    closeSocialModal();
+                } else {
+                    alert(data.error || `Failed to post. Make sure ${capitalize(platform)} is connected in Integrations.`);
+                }
+            } catch (error) {
+                alert('Failed to post');
+            }
+            
+            loading.classList.add('hidden');
+        }
+        
+        function capitalize(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
     </script>
 </body>
 </html>
