@@ -1,845 +1,549 @@
 """
-AI Team Web Application with Authentication
-Includes user signup, login, and session management
+Gunicorn WSGI Auth Application
+Handles authentication, user management, and third-party integrations
 """
 
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
-from flask_login import login_user, logout_user, login_required, current_user
 import os
+import sys
+from datetime import datetime, timedelta
 import secrets
-import sqlite3
-from ai_team import AITeam
-from auth import setup_login_manager, AuthManager
-from integrations import integrations_manager
+import hashlib
+from functools import wraps
 
+from flask import Flask, request, jsonify, session, redirect, url_for
+from flask_cors import CORS
+import requests
+
+# Add project root to path
+sys.path.insert(0, '/opt/render/project/src')
+
+# Import database models and utilities
+from gunicorn.app.base import BaseApplication
+from database import (
+    db, User, Integration, RefreshToken, 
+    init_db, create_tables
+)
+
+# Initialize Flask app
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(16))
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Setup authentication
-auth_manager = setup_login_manager(app)
+# Enable CORS
+CORS(app, supports_credentials=True, origins=['*'])
 
-# Run database migration on startup
-print("🔧 Running database migration...")
-try:
-    import migrate_db
-    migrate_db.migrate_database()
-    print("✅ Database migration complete!")
-except Exception as e:
-    print(f"⚠️ Migration error: {e}")
+# Initialize database
+db.init_app(app)
 
-# Global team instance
-team = None
+# OAuth Configuration
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
+GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
+SLACK_CLIENT_ID = os.environ.get('SLACK_CLIENT_ID')
+SLACK_CLIENT_SECRET = os.environ.get('SLACK_CLIENT_SECRET')
 
-@app.route('/')
-def index():
-    """Home page - redirect based on auth status"""
-    if current_user.is_authenticated:
-        return render_template('dashboard.html', user=current_user)
-    return redirect(url_for('login'))
+# OAuth URLs
+GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
+GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
+GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v2/userinfo'
 
-@app.route('/login', methods=['GET', 'POST'])
+SLACK_AUTH_URL = 'https://slack.com/oauth/v2/authorize'
+SLACK_TOKEN_URL = 'https://slack.com/api/oauth.v2.access'
+
+# ============================================================================
+# UTILITY FUNCTIONS
+# ============================================================================
+
+def require_auth(f):
+    """Decorator to require authentication for routes"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'error': 'Authentication required'}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def get_current_user():
+    """Get current authenticated user"""
+    if 'user_id' not in session:
+        return None
+    return User.query.get(session['user_id'])
+
+
+def hash_token(token):
+    """Hash a token for secure storage"""
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+# ============================================================================
+# AUTHENTICATION ROUTES
+# ============================================================================
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint"""
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.utcnow().isoformat(),
+        'service': 'auth'
+    }), 200
+
+
+@app.route('/api/auth/register', methods=['POST'])
+def register():
+    """Register a new user"""
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        password = data.get('password')
+        name = data.get('name')
+
+        if not email or not password:
+            return jsonify({'error': 'Email and password required'}), 400
+
+        # Check if user exists
+        if User.query.filter_by(email=email).first():
+            return jsonify({'error': 'User already exists'}), 400
+
+        # Create new user
+        user = User(email=email, name=name)
+        user.set_password(password)
+        
+        db.session.add(user)
+        db.session.commit()
+
+        # Create session
+        session['user_id'] = user.id
+        
+        return jsonify({
+            'message': 'User created successfully',
+            'user': {
+                'id': user.id,
+                'email': user.email,
+                'name': user.name
+            }
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/auth/login', methods=['POST'])
 def login():
-    """Login page"""
-    if current_user.is_authenticated:
-        return redirect(url_for('index'))
-    
-    if request.method == 'POST':
-        data = request.json
+    """Login user"""
+    try:
+        data = request.get_json()
         email = data.get('email')
         password = data.get('password')
-        remember = data.get('remember', False)
-        
-        if auth_manager.verify_password(email, password):
-            user = auth_manager.get_user_by_email(email)
-            if user:
-                login_user(user, remember=remember)
-                auth_manager.update_last_login(user.id)
-                return jsonify({'success': True, 'redirect': url_for('index')})
-        
-        return jsonify({'success': False, 'error': 'Invalid email or password'}), 401
-    
-    return render_template('login.html')
 
-@app.route('/signup', methods=['GET', 'POST'])
-def signup():
-    """Signup page"""
-    if current_user.is_authenticated:
-        return redirect(url_for('index'))
-    
-    if request.method == 'POST':
-        data = request.json
-        username = data.get('username')
-        email = data.get('email')
-        password = data.get('password')
-        
-        # Validation
-        if not username or not email or not password:
-            return jsonify({'success': False, 'error': 'All fields are required'}), 400
-        
-        if len(password) < 8:
-            return jsonify({'success': False, 'error': 'Password must be at least 8 characters'}), 400
-        
-        # Create user
-        user_id = auth_manager.create_user(username, email, password)
-        
-        if user_id:
-            return jsonify({'success': True, 'redirect': url_for('login')})
-        else:
-            return jsonify({'success': False, 'error': 'Email already registered'}), 400
-    
-    return render_template('signup.html')
+        if not email or not password:
+            return jsonify({'error': 'Email and password required'}), 400
 
-@app.route('/logout')
-@login_required
+        # Find user
+        user = User.query.filter_by(email=email).first()
+        
+        if not user or not user.check_password(password):
+            return jsonify({'error': 'Invalid credentials'}), 401
+
+        # Update last login
+        user.last_login = datetime.utcnow()
+        db.session.commit()
+
+        # Create session
+        session['user_id'] = user.id
+        
+        return jsonify({
+            'message': 'Login successful',
+            'user': {
+                'id': user.id,
+                'email': user.email,
+                'name': user.name
+            }
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/auth/logout', methods=['POST'])
+@require_auth
 def logout():
     """Logout user"""
-    logout_user()
-    return redirect(url_for('login'))
+    session.clear()
+    return jsonify({'message': 'Logout successful'}), 200
 
-@app.route('/dashboard')
-@login_required
-def dashboard():
-    """User dashboard"""
-    return render_template('dashboard.html', user=current_user)
 
-@app.route('/api/init', methods=['POST'])
-@login_required
-def init_team():
-    """Initialize the AI team with central API key"""
-    global team
+@app.route('/api/auth/me', methods=['GET'])
+@require_auth
+def get_me():
+    """Get current user info"""
+    user = get_current_user()
     
-    # Use central API key from environment variable
-    api_key = os.environ.get('ANTHROPIC_API_KEY')
-    
-    if not api_key:
-        return jsonify({'error': 'Service not configured. Please contact administrator.'}), 500
-    
-    try:
-        team = AITeam(api_key=api_key)
-        
-        agents = team.list_agents()
-        return jsonify({
-            'success': True,
-            'agents': agents
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
 
-@app.route('/api/chat', methods=['POST'])
-@login_required
-def chat():
-    """Process a chat request"""
-    global team
-    
-    # Check message limit
-    can_send, limit_message = auth_manager.check_message_limit(current_user.id)
-    if not can_send:
-        subscription = auth_manager.get_user_subscription(current_user.id)
-        return jsonify({
-            'error': 'limit_reached',
-            'message': limit_message,
-            'tier': subscription['tier'],
-            'messages_today': subscription['messages_today']
-        }), 429
-    
-    if team is None:
-        # Initialize with central API key
-        api_key = os.environ.get('ANTHROPIC_API_KEY')
-        if api_key:
-            team = AITeam(api_key=api_key)
-        else:
-            return jsonify({'error': 'Service not configured. Please contact administrator.'}), 500
-    
-    data = request.json
-    message = data.get('message')
-    agent = data.get('agent')
-    project_id = data.get('project_id')
-    
-    if not message:
-        return jsonify({'error': 'Message required'}), 400
-    
-    try:
-        result = team.process_request(
-            message,
-            specific_agent=agent if agent and agent != 'auto' else None,
-            project_id=project_id
-        )
-        
-        # Increment message count
-        auth_manager.increment_message_count(current_user.id)
-        
-        # Track usage
-        for agent_name in result.keys():
-            auth_manager.track_usage(current_user.id, agent_name)
-        
-        return jsonify({
-            'success': True,
-            'responses': result
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/context', methods=['POST'])
-@login_required
-def set_context():
-    """Set context for the team"""
-    global team
-    
-    if team is None:
-        return jsonify({'error': 'Team not initialized'}), 400
-    
-    data = request.json
-    key = data.get('key')
-    value = data.get('value')
-    
-    if not key or not value:
-        return jsonify({'error': 'Key and value required'}), 400
-    
-    try:
-        team.set_context(key, value, current_user.username)
-        return jsonify({'success': True})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/context', methods=['GET'])
-@login_required
-def get_context():
-    """Get all context"""
-    global team
-    
-    if team is None:
-        return jsonify({'error': 'Team not initialized'}), 400
-    
-    try:
-        context = team.shared_memory.get_all_context()
-        return jsonify({
-            'success': True,
-            'context': context
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/history', methods=['GET'])
-@login_required
-def get_history():
-    """Get recent work history"""
-    global team
-    
-    if team is None:
-        return jsonify({'error': 'Team not initialized'}), 400
-    
-    try:
-        history = team.get_recent_work(limit=10)
-        return jsonify({
-            'success': True,
-            'history': history
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/usage', methods=['GET'])
-@login_required
-def get_usage():
-    """Get user's usage statistics"""
-    try:
-        days = request.args.get('days', 30, type=int)
-        usage = auth_manager.get_user_usage(current_user.id, days)
-        return jsonify({
-            'success': True,
-            'usage': usage
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/profile', methods=['GET', 'POST'])
-@login_required
-def profile():
-    """Get or update user profile"""
-    if request.method == 'GET':
-        return jsonify({
-            'success': True,
-            'user': {
-                'username': current_user.username,
-                'email': current_user.email,
-                'has_api_key': bool(current_user.api_key)
-            }
-        })
-    
-    # POST - update profile
-    data = request.json
-    api_key = data.get('api_key')
-    
-    if api_key:
-        auth_manager.save_api_key(current_user.id, api_key)
-        return jsonify({'success': True, 'message': 'API key saved'})
-    
-    return jsonify({'success': True})
-
-@app.route('/api/subscription', methods=['GET'])
-@login_required
-def get_subscription():
-    """Get user's subscription details"""
-    subscription = auth_manager.get_user_subscription(current_user.id)
-    
-    # Calculate limits
-    limits = {
-        'free': 10,
-        'pro': 100,
-        'business': 999999
-    }
-    
     return jsonify({
-        'success': True,
-        'tier': subscription['tier'],
-        'messages_today': subscription['messages_today'],
-        'limit': limits[subscription['tier']],
-        'percentage': (subscription['messages_today'] / limits[subscription['tier']]) * 100
-    })
+        'user': {
+            'id': user.id,
+            'email': user.email,
+            'name': user.name,
+            'created_at': user.created_at.isoformat(),
+            'last_login': user.last_login.isoformat() if user.last_login else None
+        }
+    }), 200
 
-@app.route('/pricing')
-def pricing():
-    """Pricing page"""
-    return render_template('pricing.html')
 
-@app.route('/api/create-checkout-session', methods=['POST'])
-@login_required
-def create_checkout_session():
-    """Create Stripe checkout session"""
+# ============================================================================
+# GOOGLE OAUTH ROUTES
+# ============================================================================
+
+@app.route('/api/auth/google/authorize', methods=['GET'])
+@require_auth
+def google_authorize():
+    """Initiate Google OAuth flow"""
     try:
-        data = request.json
-        tier = data.get('tier', 'pro')
+        # Build redirect URI
+        redirect_uri = request.args.get('redirect_uri', request.url_root + 'api/auth/google/callback')
         
-        # Stripe prices (you'll need to set these up in Stripe Dashboard)
-        prices = {
-            'pro': os.environ.get('STRIPE_PRO_PRICE_ID', 'price_pro'),
-            'business': os.environ.get('STRIPE_BUSINESS_PRICE_ID', 'price_business')
+        # Scopes for Google Calendar and Drive
+        scopes = [
+            'https://www.googleapis.com/auth/userinfo.email',
+            'https://www.googleapis.com/auth/userinfo.profile',
+            'https://www.googleapis.com/auth/calendar.readonly',
+            'https://www.googleapis.com/auth/drive.readonly'
+        ]
+        
+        # Build authorization URL
+        params = {
+            'client_id': GOOGLE_CLIENT_ID,
+            'redirect_uri': redirect_uri,
+            'scope': ' '.join(scopes),
+            'response_type': 'code',
+            'access_type': 'offline',
+            'prompt': 'consent',
+            'state': secrets.token_urlsafe(32)
         }
         
-        import stripe
-        stripe.api_key = os.environ.get('STRIPE_SECRET_KEY')
+        # Store state in session
+        session['google_oauth_state'] = params['state']
         
-        checkout_session = stripe.checkout.Session.create(
-            customer_email=current_user.email,
-            payment_method_types=['card'],
-            line_items=[{
-                'price': prices[tier],
-                'quantity': 1,
-            }],
-            mode='subscription',
-            success_url=url_for('dashboard', _external=True) + '?upgraded=true',
-            cancel_url=url_for('pricing', _external=True),
-            metadata={
-                'user_id': current_user.id,
-                'tier': tier
-            }
-        )
+        auth_url = f"{GOOGLE_AUTH_URL}?{'&'.join(f'{k}={v}' for k, v in params.items())}"
         
-        return jsonify({'checkout_url': checkout_session.url})
+        return jsonify({'authorization_url': auth_url}), 200
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/stripe-webhook', methods=['POST'])
-def stripe_webhook():
-    """Handle Stripe webhooks"""
-    import stripe
-    
-    payload = request.data
-    sig_header = request.headers.get('Stripe-Signature')
-    webhook_secret = os.environ.get('STRIPE_WEBHOOK_SECRET')
-    
+
+@app.route('/api/auth/google/callback', methods=['GET'])
+@require_auth
+def google_callback():
+    """Handle Google OAuth callback"""
     try:
-        event = stripe.Webhook.construct_event(
-            payload, sig_header, webhook_secret
+        code = request.args.get('code')
+        state = request.args.get('state')
+        
+        # Verify state
+        if state != session.get('google_oauth_state'):
+            return jsonify({'error': 'Invalid state'}), 400
+        
+        # Exchange code for tokens
+        redirect_uri = request.url_root + 'api/auth/google/callback'
+        
+        token_response = requests.post(GOOGLE_TOKEN_URL, data={
+            'code': code,
+            'client_id': GOOGLE_CLIENT_ID,
+            'client_secret': GOOGLE_CLIENT_SECRET,
+            'redirect_uri': redirect_uri,
+            'grant_type': 'authorization_code'
+        })
+        
+        if token_response.status_code != 200:
+            return jsonify({'error': 'Failed to exchange code'}), 400
+        
+        tokens = token_response.json()
+        access_token = tokens.get('access_token')
+        refresh_token = tokens.get('refresh_token')
+        expires_in = tokens.get('expires_in', 3600)
+        
+        # Get user info
+        user_response = requests.get(
+            GOOGLE_USERINFO_URL,
+            headers={'Authorization': f'Bearer {access_token}'}
         )
         
-        # Handle successful subscription
-        if event['type'] == 'checkout.session.completed':
-            session = event['data']['object']
-            user_id = session['metadata']['user_id']
-            tier = session['metadata']['tier']
+        if user_response.status_code != 200:
+            return jsonify({'error': 'Failed to get user info'}), 400
+        
+        user_info = user_response.json()
+        
+        # Store integration
+        user = get_current_user()
+        
+        # Check for existing integration
+        integration = Integration.query.filter_by(
+            user_id=user.id,
+            provider='google'
+        ).first()
+        
+        if integration:
+            # Update existing
+            integration.access_token = hash_token(access_token)
+            integration.token_expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
+            integration.metadata = user_info
+        else:
+            # Create new
+            integration = Integration(
+                user_id=user.id,
+                provider='google',
+                access_token=hash_token(access_token),
+                token_expires_at=datetime.utcnow() + timedelta(seconds=expires_in),
+                metadata=user_info
+            )
+            db.session.add(integration)
+        
+        # Store refresh token if available
+        if refresh_token:
+            refresh_token_obj = RefreshToken.query.filter_by(
+                integration_id=integration.id
+            ).first()
             
-            # Update user's subscription
-            auth_manager.update_subscription(
-                user_id=user_id,
-                tier=tier,
-                stripe_customer_id=session['customer'],
-                stripe_subscription_id=session['subscription']
-            )
+            if refresh_token_obj:
+                refresh_token_obj.token = hash_token(refresh_token)
+            else:
+                refresh_token_obj = RefreshToken(
+                    integration_id=integration.id,
+                    token=hash_token(refresh_token)
+                )
+                db.session.add(refresh_token_obj)
         
-        # Handle subscription cancellation
-        elif event['type'] == 'customer.subscription.deleted':
-            subscription = event['data']['object']
-            # Find user by stripe_subscription_id and downgrade to free
-            conn = sqlite3.connect(auth_manager.db_path)
-            cursor = conn.cursor()
-            cursor.execute(
-                "UPDATE users SET subscription_tier = 'free' WHERE stripe_subscription_id = ?",
-                (subscription['id'],)
-            )
-            conn.commit()
-            conn.close()
+        db.session.commit()
         
-        return jsonify({'success': True})
+        return jsonify({
+            'message': 'Google integration successful',
+            'integration': {
+                'id': integration.id,
+                'provider': integration.provider,
+                'connected': True
+            }
+        }), 200
+
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
-Integration Routes - Add these to web_app_auth.py
-"""
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
-from integrations import integrations_manager
 
-# Import at top of file
-# from integrations import integrations_manager
+# ============================================================================
+# SLACK OAUTH ROUTES
+# ============================================================================
 
-# Add these routes:
+@app.route('/api/auth/slack/authorize', methods=['GET'])
+@require_auth
+def slack_authorize():
+    """Initiate Slack OAuth flow"""
+    try:
+        redirect_uri = request.args.get('redirect_uri', request.url_root + 'api/auth/slack/callback')
+        
+        # Slack scopes
+        scopes = [
+            'channels:history',
+            'channels:read',
+            'groups:history',
+            'groups:read',
+            'im:history',
+            'im:read',
+            'mpim:history',
+            'mpim:read',
+            'users:read'
+        ]
+        
+        params = {
+            'client_id': SLACK_CLIENT_ID,
+            'redirect_uri': redirect_uri,
+            'scope': ','.join(scopes),
+            'state': secrets.token_urlsafe(32)
+        }
+        
+        session['slack_oauth_state'] = params['state']
+        
+        auth_url = f"{SLACK_AUTH_URL}?{'&'.join(f'{k}={v}' for k, v in params.items())}"
+        
+        return jsonify({'authorization_url': auth_url}), 200
 
-@app.route('/integrations')
-@login_required
-def integrations_page():
-    """Integrations settings page"""
-    return render_template('integrations.html', user=current_user)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
-@app.route('/api/integrations')
-@login_required
+
+@app.route('/api/auth/slack/callback', methods=['GET'])
+@require_auth
+def slack_callback():
+    """Handle Slack OAuth callback"""
+    try:
+        code = request.args.get('code')
+        state = request.args.get('state')
+        
+        if state != session.get('slack_oauth_state'):
+            return jsonify({'error': 'Invalid state'}), 400
+        
+        redirect_uri = request.url_root + 'api/auth/slack/callback'
+        
+        token_response = requests.post(SLACK_TOKEN_URL, data={
+            'code': code,
+            'client_id': SLACK_CLIENT_ID,
+            'client_secret': SLACK_CLIENT_SECRET,
+            'redirect_uri': redirect_uri
+        })
+        
+        if token_response.status_code != 200:
+            return jsonify({'error': 'Failed to exchange code'}), 400
+        
+        tokens = token_response.json()
+        
+        if not tokens.get('ok'):
+            return jsonify({'error': tokens.get('error', 'Unknown error')}), 400
+        
+        access_token = tokens.get('access_token')
+        team_info = tokens.get('team', {})
+        
+        user = get_current_user()
+        
+        integration = Integration.query.filter_by(
+            user_id=user.id,
+            provider='slack'
+        ).first()
+        
+        if integration:
+            integration.access_token = hash_token(access_token)
+            integration.metadata = team_info
+        else:
+            integration = Integration(
+                user_id=user.id,
+                provider='slack',
+                access_token=hash_token(access_token),
+                metadata=team_info
+            )
+            db.session.add(integration)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Slack integration successful',
+            'integration': {
+                'id': integration.id,
+                'provider': integration.provider,
+                'connected': True
+            }
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+# ============================================================================
+# INTEGRATION MANAGEMENT ROUTES
+# ============================================================================
+
+@app.route('/api/integrations', methods=['GET'])
+@require_auth
 def get_integrations():
     """Get all user integrations"""
     try:
-        integrations = integrations_manager.get_all_integrations(current_user.id)
+        user = get_current_user()
+        integrations = Integration.query.filter_by(user_id=user.id).all()
+        
         return jsonify({
-            'success': True,
-            'integrations': integrations
-        })
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+            'integrations': [{
+                'id': i.id,
+                'provider': i.provider,
+                'connected': i.is_active,
+                'connected_at': i.created_at.isoformat(),
+                'metadata': i.metadata
+            } for i in integrations]
+        }), 200
 
-@app.route('/api/integrations/save', methods=['POST'])
-@login_required
-def save_integration():
-    """Save integration credentials"""
-    try:
-        data = request.json
-        integration_type = data.get('integration_type')
-        api_key = data.get('api_key')
-        access_token = data.get('access_token')
-        
-        if not integration_type:
-            return jsonify({
-                'success': False,
-                'error': 'Integration type required'
-            }), 400
-        
-        success = integrations_manager.save_integration(
-            user_id=current_user.id,
-            integration_type=integration_type,
-            api_key=api_key,
-            access_token=access_token
-        )
-        
-        if success:
-            return jsonify({'success': True})
-        else:
-            return jsonify({
-                'success': False,
-                'error': 'Failed to save integration'
-            }), 500
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        return jsonify({'error': str(e)}), 500
 
-@app.route('/api/integrations/delete/<integration_type>', methods=['DELETE'])
-@login_required
-def delete_integration(integration_type):
-    """Delete integration"""
-    try:
-        success = integrations_manager.delete_integration(
-            user_id=current_user.id,
-            integration_type=integration_type
-        )
-        
-        if success:
-            return jsonify({'success': True})
-        else:
-            return jsonify({
-                'success': False,
-                'error': 'Failed to delete integration'
-            }), 500
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
 
-@app.route('/api/integrations/generate-image', methods=['POST'])
-@login_required
-def generate_image_api():
-    """Generate image with DALL-E"""
+@app.route('/api/integrations/<int:integration_id>', methods=['DELETE'])
+@require_auth
+def delete_integration(integration_id):
+    """Delete an integration"""
     try:
-        data = request.json
-        prompt = data.get('prompt')
+        user = get_current_user()
+        integration = Integration.query.filter_by(
+            id=integration_id,
+            user_id=user.id
+        ).first()
         
-        if not prompt:
-            return jsonify({
-                'success': False,
-                'error': 'Prompt required'
-            }), 400
+        if not integration:
+            return jsonify({'error': 'Integration not found'}), 404
         
-        image_url = integrations_manager.generate_image(
-            user_id=current_user.id,
-            prompt=prompt
-        )
+        db.session.delete(integration)
+        db.session.commit()
         
-        if image_url:
-            return jsonify({
-                'success': True,
-                'image_url': image_url
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': 'Failed to generate image. Make sure OpenAI is connected.'
-            }), 500
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        return jsonify({'message': 'Integration deleted successfully'}), 200
 
-@app.route('/api/integrations/post-facebook', methods=['POST'])
-@login_required
-def post_facebook_api():
-    """Post to Facebook"""
-    try:
-        data = request.json
-        message = data.get('message')
-        image_url = data.get('image_url')
-        
-        if not message:
-            return jsonify({
-                'success': False,
-                'error': 'Message required'
-            }), 400
-        
-        post_id = integrations_manager.post_to_facebook(
-            user_id=current_user.id,
-            message=message,
-            image_url=image_url
-        )
-        
-        if post_id:
-            return jsonify({
-                'success': True,
-                'post_id': post_id
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': 'Failed to post. Make sure Facebook is connected.'
-            }), 500
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
-@app.route('/api/integrations/post-instagram', methods=['POST'])
-@login_required
-def post_instagram_api():
-    """Post to Instagram"""
-    try:
-        data = request.json
-        image_url = data.get('image_url')
-        caption = data.get('caption')
-        
-        if not image_url or not caption:
-            return jsonify({
-                'success': False,
-                'error': 'Image URL and caption required'
-            }), 400
-        
-        post_id = integrations_manager.post_to_instagram(
-            user_id=current_user.id,
-            image_url=image_url,
-            caption=caption
-        )
-        
-        if post_id:
-            return jsonify({
-                'success': True,
-                'post_id': post_id
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': 'Failed to post. Make sure Instagram is connected.'
-            }), 500
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
 
-@app.route('/api/integrations/usage')
-@login_required
-def get_usage_stats():
-    """Get integration usage stats"""
-    try:
-        stats = integrations_manager.get_usage_stats(current_user.id)
-        return jsonify({
-            'success': True,
-            'stats': stats
-        })
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+# ============================================================================
+# GUNICORN APPLICATION
+# ============================================================================
+
+class StandaloneApplication(BaseApplication):
+    """Custom Gunicorn application"""
+
+    def __init__(self, app, options=None):
+        self.options = options or {}
+        self.application = app
+        super().__init__()
+
+    def load_config(self):
+        """Load Gunicorn configuration"""
+        config = {
+            key: value for key, value in self.options.items()
+            if key in self.cfg.settings and value is not None
+        }
+        for key, value in config.items():
+            self.cfg.set(key.lower(), value)
+
+    def load(self):
+        """Load the Flask application"""
+        return self.application
+
+
+# ============================================================================
+# APPLICATION INITIALIZATION
+# ============================================================================
+
+def create_app():
+    """Create and configure the Flask application"""
+    with app.app_context():
+        # Create tables if they don't exist
+        create_tables()
+    
+    return app
+
 
 if __name__ == '__main__':
-    print("\n🚀 Starting AI Team Web Interface...")
+    # Configuration options
+    options = {
+        'bind': f"0.0.0.0:{os.environ.get('PORT', '10000')}",
+        'workers': int(os.environ.get('WEB_CONCURRENCY', '2')),
+        'worker_class': 'sync',
+        'timeout': 120,
+        'keepalive': 5,
+        'accesslog': '-',
+        'errorlog': '-',
+        'loglevel': 'info'
+    }
     
-    # Run database migration
-    print("🔧 Checking database schema...")
-    try:
-        import migrate_db
-        migrate_db.migrate_database()
-    except Exception as e:
-        print(f"⚠️ Migration warning: {e}")
-    
-    print("📱 Opening in your browser...")
-    print("\n⚠️  To stop: Press Ctrl+C in this window\n")
-    
-    # Get port from environment variable (for deployment) or use 5000 for local
-    port = int(os.environ.get('PORT', 5000))
-    host = '0.0.0.0' if os.environ.get('PORT') else '127.0.0.1'
-    
-    # Only open browser for local development
-    if not os.environ.get('PORT'):
-        import webbrowser
-        import threading
-        
-        def open_browser():
-            import time
-            time.sleep(1.5)
-            webbrowser.open('http://127.0.0.1:5000')
-        
-        threading.Thread(target=open_browser).start()
-    
-    app.run(debug=False, host=host, port=port)
-
-from integrations import integrations_manager
-
-# Import at top of file
-# from integrations import integrations_manager
-
-# Add these routes:
-
-@app.route('/integrations')
-@login_required
-def integrations_page():
-    """Integrations settings page"""
-    return render_template('integrations.html', user=current_user)
-
-@app.route('/api/integrations')
-@login_required
-def get_integrations():
-    """Get all user integrations"""
-    try:
-        integrations = integrations_manager.get_all_integrations(current_user.id)
-        return jsonify({
-            'success': True,
-            'integrations': integrations
-        })
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@app.route('/api/integrations/save', methods=['POST'])
-@login_required
-def save_integration():
-    """Save integration credentials"""
-    try:
-        data = request.json
-        integration_type = data.get('integration_type')
-        api_key = data.get('api_key')
-        access_token = data.get('access_token')
-        
-        if not integration_type:
-            return jsonify({
-                'success': False,
-                'error': 'Integration type required'
-            }), 400
-        
-        success = integrations_manager.save_integration(
-            user_id=current_user.id,
-            integration_type=integration_type,
-            api_key=api_key,
-            access_token=access_token
-        )
-        
-        if success:
-            return jsonify({'success': True})
-        else:
-            return jsonify({
-                'success': False,
-                'error': 'Failed to save integration'
-            }), 500
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@app.route('/api/integrations/delete/<integration_type>', methods=['DELETE'])
-@login_required
-def delete_integration(integration_type):
-    """Delete integration"""
-    try:
-        success = integrations_manager.delete_integration(
-            user_id=current_user.id,
-            integration_type=integration_type
-        )
-        
-        if success:
-            return jsonify({'success': True})
-        else:
-            return jsonify({
-                'success': False,
-                'error': 'Failed to delete integration'
-            }), 500
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@app.route('/api/integrations/generate-image', methods=['POST'])
-@login_required
-def generate_image_api():
-    """Generate image with DALL-E"""
-    try:
-        data = request.json
-        prompt = data.get('prompt')
-        
-        if not prompt:
-            return jsonify({
-                'success': False,
-                'error': 'Prompt required'
-            }), 400
-        
-        image_url = integrations_manager.generate_image(
-            user_id=current_user.id,
-            prompt=prompt
-        )
-        
-        if image_url:
-            return jsonify({
-                'success': True,
-                'image_url': image_url
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': 'Failed to generate image. Make sure OpenAI is connected.'
-            }), 500
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@app.route('/api/integrations/post-facebook', methods=['POST'])
-@login_required
-def post_facebook_api():
-    """Post to Facebook"""
-    try:
-        data = request.json
-        message = data.get('message')
-        image_url = data.get('image_url')
-        
-        if not message:
-            return jsonify({
-                'success': False,
-                'error': 'Message required'
-            }), 400
-        
-        post_id = integrations_manager.post_to_facebook(
-            user_id=current_user.id,
-            message=message,
-            image_url=image_url
-        )
-        
-        if post_id:
-            return jsonify({
-                'success': True,
-                'post_id': post_id
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': 'Failed to post. Make sure Facebook is connected.'
-            }), 500
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@app.route('/api/integrations/post-instagram', methods=['POST'])
-@login_required
-def post_instagram_api():
-    """Post to Instagram"""
-    try:
-        data = request.json
-        image_url = data.get('image_url')
-        caption = data.get('caption')
-        
-        if not image_url or not caption:
-            return jsonify({
-                'success': False,
-                'error': 'Image URL and caption required'
-            }), 400
-        
-        post_id = integrations_manager.post_to_instagram(
-            user_id=current_user.id,
-            image_url=image_url,
-            caption=caption
-        )
-        
-        if post_id:
-            return jsonify({
-                'success': True,
-                'post_id': post_id
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': 'Failed to post. Make sure Instagram is connected.'
-            }), 500
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@app.route('/api/integrations/usage')
-@login_required
-def get_usage_stats():
-    """Get integration usage stats"""
-    try:
-        stats = integrations_manager.get_usage_stats(current_user.id)
-        return jsonify({
-            'success': True,
-            'stats': stats
-        })
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
+    # Create and run application
+    application = create_app()
+    StandaloneApplication(application, options).run()
