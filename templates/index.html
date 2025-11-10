@@ -122,11 +122,14 @@
             height: 120px;
             border-radius: 50%;
             margin: 0 auto 20px;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 3rem;
+            object-fit: cover;
+            border: 4px solid #f0f0f0;
+            transition: all 0.3s;
+        }
+        
+        .agent-card:hover .agent-image {
+            border-color: var(--accent-color);
+            transform: scale(1.1);
         }
         
         .cta-section {
@@ -231,28 +234,28 @@
             <div class="row g-4">
                 <div class="col-md-3">
                     <div class="agent-card">
-                        <div class="agent-image">🦦</div>
+                        <img src="/static/images/luna.jpg" alt="Luna" class="agent-image">
                         <h4>Luna</h4>
                         <p>Research & Analysis</p>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="agent-card">
-                        <div class="agent-image">🐿️</div>
+                        <img src="/static/images/mila.jpg" alt="Mila" class="agent-image">
                         <h4>Mila</h4>
                         <p>Organization & Planning</p>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="agent-card">
-                        <div class="agent-image">🐰</div>
+                        <img src="/static/images/sage.jpg" alt="Sage" class="agent-image">
                         <h4>Sage</h4>
                         <p>Writing & Content</p>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="agent-card">
-                        <div class="agent-image">🦊</div>
+                        <img src="/static/images/ember.jpg" alt="Ember" class="agent-image">
                         <h4>Ember</h4>
                         <p>Creative Direction</p>
                     </div>
@@ -261,21 +264,21 @@
             <div class="row g-4 mt-3">
                 <div class="col-md-4">
                     <div class="agent-card">
-                        <div class="agent-image">🐻</div>
+                        <img src="/static/images/sol.jpg" alt="Sol" class="agent-image">
                         <h4>Sol</h4>
                         <p>Strategic Thinking</p>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="agent-card">
-                        <div class="agent-image">🦉</div>
+                        <img src="/static/images/nova.jpg" alt="Nova" class="agent-image">
                         <h4>Nova</h4>
                         <p>Technical Solutions</p>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="agent-card">
-                        <div class="agent-image">🦫</div>
+                        <img src="/static/images/theo.jpg" alt="Theo" class="agent-image">
                         <h4>Theo</h4>
                         <p>Implementation</p>
                     </div>
