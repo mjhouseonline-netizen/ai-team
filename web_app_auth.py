@@ -10,7 +10,7 @@ import secrets
 import hashlib
 from functools import wraps
 
-from flask import Flask, request, jsonify, session, redirect, url_for
+from flask import Flask, request, jsonify, session, redirect, url_for, render_template
 from flask_cors import CORS
 import requests
 
@@ -97,6 +97,26 @@ def health_check():
         'service': 'auth'
     }), 200
 
+
+# ============================================================================
+# HOMEPAGE & PUBLIC PAGES
+# ============================================================================
+
+@app.route('/')
+def index():
+    """Serve the homepage"""
+    return render_template('index.html')
+
+
+@app.route('/about')
+def about():
+    """Serve the about page"""
+    return render_template('about.html')
+
+
+# ============================================================================
+# USER AUTHENTICATION ROUTES
+# ============================================================================
 
 @app.route('/api/auth/register', methods=['POST'])
 def register():
