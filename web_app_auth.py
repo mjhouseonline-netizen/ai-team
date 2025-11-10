@@ -1,577 +1,341 @@
 """
-Gunicorn WSGI Auth Application
-Handles authentication, user management, and third-party integrations
+AI Team - Complete Web Application
+Includes: Homepage, Authentication, Dashboard, AI Chat
 """
 
 import os
 import sys
-from datetime import datetime, timedelta
-import secrets
-import hashlib
-from functools import wraps
-
+from datetime import datetime
 from flask import Flask, request, jsonify, session, redirect, url_for, render_template
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_cors import CORS
-import requests
-
-# Add project root to path
-sys.path.insert(0, '/opt/render/project/src')
-
-# Import database models and utilities
-from gunicorn.app.base import BaseApplication
-from database import (
-    db, User, Integration, RefreshToken, 
-    init_db, create_tables
-)
+from werkzeug.security import generate_password_hash, check_password_hash
+import sqlite3
+import anthropic
 
 # Initialize Flask app
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
-
-# Configure database URL for psycopg3
-database_url = os.environ.get('DATABASE_URL')
-if database_url and database_url.startswith('postgres://'):
-    database_url = database_url.replace('postgres://', 'postgresql+psycopg://', 1)
-elif database_url and database_url.startswith('postgresql://'):
-    database_url = database_url.replace('postgresql://', 'postgresql+psycopg://', 1)
-
-app.config['SQLALCHEMY_DATABASE_URI'] = database_url
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', os.urandom(24).hex())
+app.config['ANTHROPIC_API_KEY'] = os.environ.get('ANTHROPIC_API_KEY')
 
 # Enable CORS
 CORS(app, supports_credentials=True, origins=['*'])
 
-# Initialize database
-db.init_app(app)
+# Setup Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
 
-# OAuth Configuration
-GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
-GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
-SLACK_CLIENT_ID = os.environ.get('SLACK_CLIENT_ID')
-SLACK_CLIENT_SECRET = os.environ.get('SLACK_CLIENT_SECRET')
+# Database path
+DB_PATH = 'users.db'
 
-# OAuth URLs
-GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
-GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
-GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v2/userinfo'
+# ============================================
+# USER MODEL
+# ============================================
 
-SLACK_AUTH_URL = 'https://slack.com/oauth/v2/authorize'
-SLACK_TOKEN_URL = 'https://slack.com/api/oauth.v2.access'
+class User:
+    def __init__(self, id, username, email, subscription_tier='free'):
+        self.id = id
+        self.username = username
+        self.email = email
+        self.subscription_tier = subscription_tier
+    
+    def is_authenticated(self):
+        return True
+    
+    def is_active(self):
+        return True
+    
+    def is_anonymous(self):
+        return False
+    
+    def get_id(self):
+        return str(self.id)
 
-# ============================================================================
-# UTILITY FUNCTIONS
-# ============================================================================
+@login_manager.user_loader
+def load_user(user_id):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, username, email, subscription_tier FROM users WHERE id = ?", (user_id,))
+    result = cursor.fetchone()
+    conn.close()
+    
+    if result:
+        return User(id=result[0], username=result[1], email=result[2], subscription_tier=result[3])
+    return None
 
-def require_auth(f):
-    """Decorator to require authentication for routes"""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:
-            return jsonify({'error': 'Authentication required'}), 401
-        return f(*args, **kwargs)
-    return decorated_function
+# ============================================
+# DATABASE INITIALIZATION
+# ============================================
 
+def init_database():
+    """Initialize users database"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            subscription_tier TEXT DEFAULT 'free',
+            messages_today INTEGER DEFAULT 0,
+            last_message_reset TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            is_active BOOLEAN DEFAULT 1
+        )
+    """)
+    
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS chat_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            agent_name TEXT NOT NULL,
+            message TEXT NOT NULL,
+            response TEXT NOT NULL,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+    """)
+    
+    conn.commit()
+    conn.close()
 
-def get_current_user():
-    """Get current authenticated user"""
-    if 'user_id' not in session:
-        return None
-    return User.query.get(session['user_id'])
+# Initialize database on startup
+init_database()
 
-
-def hash_token(token):
-    """Hash a token for secure storage"""
-    return hashlib.sha256(token.encode()).hexdigest()
-
-
-# ============================================================================
-# AUTHENTICATION ROUTES
-# ============================================================================
-
-@app.route('/health', methods=['GET'])
-def health_check():
-    """Health check endpoint"""
-    return jsonify({
-        'status': 'healthy',
-        'timestamp': datetime.utcnow().isoformat(),
-        'service': 'auth'
-    }), 200
-
-
-# ============================================================================
-# HOMEPAGE & PUBLIC PAGES
-# ============================================================================
+# ============================================
+# PUBLIC PAGES
+# ============================================
 
 @app.route('/')
 def index():
-    """Serve the homepage"""
+    """Homepage"""
     return render_template('index.html')
-
 
 @app.route('/about')
 def about():
-    """Serve the about page"""
+    """About page"""
     return render_template('about.html')
 
+# ============================================
+# AUTHENTICATION PAGES
+# ============================================
 
-# ============================================================================
-# USER AUTHENTICATION ROUTES
-# ============================================================================
-
-@app.route('/api/auth/register', methods=['POST'])
-def register():
-    """Register a new user"""
-    try:
-        data = request.get_json()
-        email = data.get('email')
-        password = data.get('password')
-        name = data.get('name')
-
-        if not email or not password:
-            return jsonify({'error': 'Email and password required'}), 400
-
-        # Check if user exists
-        if User.query.filter_by(email=email).first():
-            return jsonify({'error': 'User already exists'}), 400
-
-        # Create new user
-        user = User(email=email, name=name)
-        user.set_password(password)
-        
-        db.session.add(user)
-        db.session.commit()
-
-        # Create session
-        session['user_id'] = user.id
-        
-        return jsonify({
-            'message': 'User created successfully',
-            'user': {
-                'id': user.id,
-                'email': user.email,
-                'name': user.name
-            }
-        }), 201
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/api/auth/login', methods=['POST'])
+@app.route('/login')
 def login():
-    """Login user"""
-    try:
-        data = request.get_json()
-        email = data.get('email')
-        password = data.get('password')
+    """Login page"""
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    return render_template('login.html')
 
-        if not email or not password:
-            return jsonify({'error': 'Email and password required'}), 400
+@app.route('/signup')
+def signup():
+    """Signup page"""
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    return render_template('signup.html')
 
-        # Find user
-        user = User.query.filter_by(email=email).first()
-        
-        if not user or not user.check_password(password):
-            return jsonify({'error': 'Invalid credentials'}), 401
-
-        # Update last login
-        user.last_login = datetime.utcnow()
-        db.session.commit()
-
-        # Create session
-        session['user_id'] = user.id
-        
-        return jsonify({
-            'message': 'Login successful',
-            'user': {
-                'id': user.id,
-                'email': user.email,
-                'name': user.name
-            }
-        }), 200
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/api/auth/logout', methods=['POST'])
-@require_auth
+@app.route('/logout')
+@login_required
 def logout():
     """Logout user"""
-    session.clear()
-    return jsonify({'message': 'Logout successful'}), 200
+    logout_user()
+    return redirect(url_for('index'))
 
+# ============================================
+# AUTHENTICATION API
+# ============================================
 
-@app.route('/api/auth/me', methods=['GET'])
-@require_auth
-def get_me():
-    """Get current user info"""
-    user = get_current_user()
-    
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-
-    return jsonify({
-        'user': {
-            'id': user.id,
-            'email': user.email,
-            'name': user.name,
-            'created_at': user.created_at.isoformat(),
-            'last_login': user.last_login.isoformat() if user.last_login else None
-        }
-    }), 200
-
-
-# ============================================================================
-# GOOGLE OAUTH ROUTES
-# ============================================================================
-
-@app.route('/api/auth/google/authorize', methods=['GET'])
-@require_auth
-def google_authorize():
-    """Initiate Google OAuth flow"""
+@app.route('/api/signup', methods=['POST'])
+def api_signup():
+    """Register new user"""
     try:
-        # Build redirect URI
-        redirect_uri = request.args.get('redirect_uri', request.url_root + 'api/auth/google/callback')
+        data = request.json
+        username = data.get('username')
+        email = data.get('email')
+        password = data.get('password')
         
-        # Scopes for Google Calendar and Drive
-        scopes = [
-            'https://www.googleapis.com/auth/userinfo.email',
-            'https://www.googleapis.com/auth/userinfo.profile',
-            'https://www.googleapis.com/auth/calendar.readonly',
-            'https://www.googleapis.com/auth/drive.readonly'
-        ]
+        if not username or not email or not password:
+            return jsonify({'error': 'All fields required'}), 400
         
-        # Build authorization URL
-        params = {
-            'client_id': GOOGLE_CLIENT_ID,
-            'redirect_uri': redirect_uri,
-            'scope': ' '.join(scopes),
-            'response_type': 'code',
-            'access_type': 'offline',
-            'prompt': 'consent',
-            'state': secrets.token_urlsafe(32)
-        }
+        # Hash password
+        password_hash = generate_password_hash(password)
         
-        # Store state in session
-        session['google_oauth_state'] = params['state']
+        # Create user
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
         
-        auth_url = f"{GOOGLE_AUTH_URL}?{'&'.join(f'{k}={v}' for k, v in params.items())}"
-        
-        return jsonify({'authorization_url': auth_url}), 200
-
+        try:
+            cursor.execute(
+                "INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)",
+                (username, email, password_hash)
+            )
+            user_id = cursor.lastrowid
+            conn.commit()
+            
+            # Create user object and login
+            user = User(id=user_id, username=username, email=email)
+            login_user(user)
+            
+            conn.close()
+            return jsonify({'success': True}), 200
+            
+        except sqlite3.IntegrityError:
+            conn.close()
+            return jsonify({'error': 'Username or email already exists'}), 400
+            
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-
-@app.route('/api/auth/google/callback', methods=['GET'])
-@require_auth
-def google_callback():
-    """Handle Google OAuth callback"""
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    """Login user"""
     try:
-        code = request.args.get('code')
-        state = request.args.get('state')
+        data = request.json
+        email = data.get('email')
+        password = data.get('password')
         
-        # Verify state
-        if state != session.get('google_oauth_state'):
-            return jsonify({'error': 'Invalid state'}), 400
+        if not email or not password:
+            return jsonify({'error': 'Email and password required'}), 400
         
-        # Exchange code for tokens
-        redirect_uri = request.url_root + 'api/auth/google/callback'
+        # Get user
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT id, username, email, password_hash, subscription_tier FROM users WHERE email = ? AND is_active = 1",
+            (email,)
+        )
+        result = cursor.fetchone()
+        conn.close()
         
-        token_response = requests.post(GOOGLE_TOKEN_URL, data={
-            'code': code,
-            'client_id': GOOGLE_CLIENT_ID,
-            'client_secret': GOOGLE_CLIENT_SECRET,
-            'redirect_uri': redirect_uri,
-            'grant_type': 'authorization_code'
-        })
+        if not result:
+            return jsonify({'error': 'Invalid email or password'}), 401
         
-        if token_response.status_code != 200:
-            return jsonify({'error': 'Failed to exchange code'}), 400
+        # Verify password
+        if not check_password_hash(result[3], password):
+            return jsonify({'error': 'Invalid email or password'}), 401
         
-        tokens = token_response.json()
-        access_token = tokens.get('access_token')
-        refresh_token = tokens.get('refresh_token')
-        expires_in = tokens.get('expires_in', 3600)
+        # Login user
+        user = User(id=result[0], username=result[1], email=result[2], subscription_tier=result[4])
+        login_user(user)
         
-        # Get user info
-        user_response = requests.get(
-            GOOGLE_USERINFO_URL,
-            headers={'Authorization': f'Bearer {access_token}'}
+        return jsonify({'success': True}), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ============================================
+# DASHBOARD
+# ============================================
+
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    """AI Team Dashboard"""
+    return render_template('dashboard.html', user=current_user)
+
+# ============================================
+# AI CHAT API
+# ============================================
+
+@app.route('/api/chat', methods=['POST'])
+@login_required
+def chat():
+    """Send message to AI agent"""
+    try:
+        data = request.json
+        message = data.get('message')
+        agent = data.get('agent', 'Luna')
+        
+        if not message:
+            return jsonify({'error': 'Message required'}), 400
+        
+        # Get API key
+        api_key = app.config['ANTHROPIC_API_KEY']
+        if not api_key:
+            return jsonify({'error': 'API key not configured'}), 500
+        
+        # Call Anthropic API
+        client = anthropic.Anthropic(api_key=api_key)
+        
+        response = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=1024,
+            messages=[
+                {"role": "user", "content": f"You are {agent}, an AI assistant. {message}"}
+            ]
         )
         
-        if user_response.status_code != 200:
-            return jsonify({'error': 'Failed to get user info'}), 400
+        ai_response = response.content[0].text
         
-        user_info = user_response.json()
-        
-        # Store integration
-        user = get_current_user()
-        
-        # Check for existing integration
-        integration = Integration.query.filter_by(
-            user_id=user.id,
-            provider='google'
-        ).first()
-        
-        if integration:
-            # Update existing
-            integration.access_token = hash_token(access_token)
-            integration.token_expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
-            integration.provider_data = user_info
-        else:
-            # Create new
-            integration = Integration(
-                user_id=user.id,
-                provider='google',
-                access_token=hash_token(access_token),
-                token_expires_at=datetime.utcnow() + timedelta(seconds=expires_in),
-                provider_data=user_info
-            )
-            db.session.add(integration)
-        
-        # Store refresh token if available
-        if refresh_token:
-            refresh_token_obj = RefreshToken.query.filter_by(
-                integration_id=integration.id
-            ).first()
-            
-            if refresh_token_obj:
-                refresh_token_obj.token = hash_token(refresh_token)
-            else:
-                refresh_token_obj = RefreshToken(
-                    integration_id=integration.id,
-                    token=hash_token(refresh_token)
-                )
-                db.session.add(refresh_token_obj)
-        
-        db.session.commit()
+        # Save to chat history
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO chat_history (user_id, agent_name, message, response) VALUES (?, ?, ?, ?)",
+            (current_user.id, agent, message, ai_response)
+        )
+        conn.commit()
+        conn.close()
         
         return jsonify({
-            'message': 'Google integration successful',
-            'integration': {
-                'id': integration.id,
-                'provider': integration.provider,
-                'connected': True
-            }
+            'response': ai_response,
+            'agent': agent
         }), 200
-
+        
     except Exception as e:
-        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-
-# ============================================================================
-# SLACK OAUTH ROUTES
-# ============================================================================
-
-@app.route('/api/auth/slack/authorize', methods=['GET'])
-@require_auth
-def slack_authorize():
-    """Initiate Slack OAuth flow"""
+@app.route('/api/history')
+@login_required
+def get_history():
+    """Get chat history"""
     try:
-        redirect_uri = request.args.get('redirect_uri', request.url_root + 'api/auth/slack/callback')
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT agent_name, message, response, timestamp 
+            FROM chat_history 
+            WHERE user_id = ? 
+            ORDER BY timestamp DESC 
+            LIMIT 50
+        """, (current_user.id,))
         
-        # Slack scopes
-        scopes = [
-            'channels:history',
-            'channels:read',
-            'groups:history',
-            'groups:read',
-            'im:history',
-            'im:read',
-            'mpim:history',
-            'mpim:read',
-            'users:read'
+        results = cursor.fetchall()
+        conn.close()
+        
+        history = [
+            {
+                'agent': row[0],
+                'message': row[1],
+                'response': row[2],
+                'timestamp': row[3]
+            }
+            for row in results
         ]
         
-        params = {
-            'client_id': SLACK_CLIENT_ID,
-            'redirect_uri': redirect_uri,
-            'scope': ','.join(scopes),
-            'state': secrets.token_urlsafe(32)
-        }
+        return jsonify({'history': history}), 200
         
-        session['slack_oauth_state'] = params['state']
-        
-        auth_url = f"{SLACK_AUTH_URL}?{'&'.join(f'{k}={v}' for k, v in params.items())}"
-        
-        return jsonify({'authorization_url': auth_url}), 200
-
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# ============================================
+# HEALTH CHECK
+# ============================================
 
-@app.route('/api/auth/slack/callback', methods=['GET'])
-@require_auth
-def slack_callback():
-    """Handle Slack OAuth callback"""
-    try:
-        code = request.args.get('code')
-        state = request.args.get('state')
-        
-        if state != session.get('slack_oauth_state'):
-            return jsonify({'error': 'Invalid state'}), 400
-        
-        redirect_uri = request.url_root + 'api/auth/slack/callback'
-        
-        token_response = requests.post(SLACK_TOKEN_URL, data={
-            'code': code,
-            'client_id': SLACK_CLIENT_ID,
-            'client_secret': SLACK_CLIENT_SECRET,
-            'redirect_uri': redirect_uri
-        })
-        
-        if token_response.status_code != 200:
-            return jsonify({'error': 'Failed to exchange code'}), 400
-        
-        tokens = token_response.json()
-        
-        if not tokens.get('ok'):
-            return jsonify({'error': tokens.get('error', 'Unknown error')}), 400
-        
-        access_token = tokens.get('access_token')
-        team_info = tokens.get('team', {})
-        
-        user = get_current_user()
-        
-        integration = Integration.query.filter_by(
-            user_id=user.id,
-            provider='slack'
-        ).first()
-        
-        if integration:
-            integration.access_token = hash_token(access_token)
-            integration.provider_data = team_info
-        else:
-            integration = Integration(
-                user_id=user.id,
-                provider='slack',
-                access_token=hash_token(access_token),
-                provider_data=team_info
-            )
-            db.session.add(integration)
-        
-        db.session.commit()
-        
-        return jsonify({
-            'message': 'Slack integration successful',
-            'integration': {
-                'id': integration.id,
-                'provider': integration.provider,
-                'connected': True
-            }
-        }), 200
+@app.route('/health')
+def health():
+    """Health check"""
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.utcnow().isoformat()
+    }), 200
 
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
-
-
-# ============================================================================
-# INTEGRATION MANAGEMENT ROUTES
-# ============================================================================
-
-@app.route('/api/integrations', methods=['GET'])
-@require_auth
-def get_integrations():
-    """Get all user integrations"""
-    try:
-        user = get_current_user()
-        integrations = Integration.query.filter_by(user_id=user.id).all()
-        
-        return jsonify({
-            'integrations': [{
-                'id': i.id,
-                'provider': i.provider,
-                'connected': i.is_active,
-                'connected_at': i.created_at.isoformat(),
-                'provider_data': i.provider_data
-            } for i in integrations]
-        }), 200
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/api/integrations/<int:integration_id>', methods=['DELETE'])
-@require_auth
-def delete_integration(integration_id):
-    """Delete an integration"""
-    try:
-        user = get_current_user()
-        integration = Integration.query.filter_by(
-            id=integration_id,
-            user_id=user.id
-        ).first()
-        
-        if not integration:
-            return jsonify({'error': 'Integration not found'}), 404
-        
-        db.session.delete(integration)
-        db.session.commit()
-        
-        return jsonify({'message': 'Integration deleted successfully'}), 200
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
-
-
-# ============================================================================
-# GUNICORN APPLICATION
-# ============================================================================
-
-class StandaloneApplication(BaseApplication):
-    """Custom Gunicorn application"""
-
-    def __init__(self, app, options=None):
-        self.options = options or {}
-        self.application = app
-        super().__init__()
-
-    def load_config(self):
-        """Load Gunicorn configuration"""
-        config = {
-            key: value for key, value in self.options.items()
-            if key in self.cfg.settings and value is not None
-        }
-        for key, value in config.items():
-            self.cfg.set(key.lower(), value)
-
-    def load(self):
-        """Load the Flask application"""
-        return self.application
-
-
-# ============================================================================
-# APPLICATION INITIALIZATION
-# ============================================================================
-
-def create_app():
-    """Create and configure the Flask application"""
-    with app.app_context():
-        # Create tables if they don't exist
-        create_tables()
-    
-    return app
-
+# ============================================
+# RUN APP
+# ============================================
 
 if __name__ == '__main__':
-    # Configuration options
-    options = {
-        'bind': f"0.0.0.0:{os.environ.get('PORT', '10000')}",
-        'workers': int(os.environ.get('WEB_CONCURRENCY', '2')),
-        'worker_class': 'sync',
-        'timeout': 120,
-        'keepalive': 5,
-        'accesslog': '-',
-        'errorlog': '-',
-        'loglevel': 'info'
-    }
-    
-    # Create and run application
-    application = create_app()
-    StandaloneApplication(application, options).run()
+    app.run(debug=True, host='0.0.0.0', port=5000)

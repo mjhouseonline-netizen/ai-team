@@ -16,51 +16,56 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
-            align-items: center;
             justify-content: center;
+            align-items: center;
             padding: 20px;
         }
 
         .signup-container {
             background: white;
+            padding: 50px 40px;
             border-radius: 20px;
-            padding: 40px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            max-width: 400px;
             width: 100%;
+            max-width: 450px;
         }
 
         .logo {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 40px;
         }
 
         .logo h1 {
-            font-size: 2em;
-            color: #667eea;
+            font-size: 2.5em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             margin-bottom: 10px;
         }
 
         .logo p {
             color: #666;
+            font-size: 1.1em;
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 25px;
         }
 
         .form-group label {
             display: block;
             margin-bottom: 8px;
-            font-weight: 600;
             color: #333;
+            font-weight: 600;
+            font-size: 0.95em;
         }
 
         .form-group input {
             width: 100%;
-            padding: 12px;
+            padding: 15px;
             border: 2px solid #e0e0e0;
-            border-radius: 8px;
+            border-radius: 10px;
             font-size: 1em;
             transition: border-color 0.3s;
         }
@@ -70,87 +75,72 @@
             border-color: #667eea;
         }
 
-        .form-group small {
-            display: block;
-            margin-top: 5px;
-            color: #666;
-            font-size: 0.9em;
-        }
-
-        .btn {
-            width: 100%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            font-size: 1em;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .alert {
+        .error-message {
+            background: #fee;
+            color: #c33;
             padding: 12px;
             border-radius: 8px;
             margin-bottom: 20px;
+            font-size: 0.95em;
             display: none;
         }
 
-        .alert-error {
-            background: #fee;
-            color: #c33;
-            border: 1px solid #fcc;
+        .error-message.show {
+            display: block;
         }
 
-        .alert-success {
-            background: #efe;
-            color: #3c3;
-            border: 1px solid #cfc;
+        .submit-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
         }
 
-        .footer-links {
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .login-link {
             text-align: center;
-            margin-top: 20px;
+            margin-top: 25px;
             color: #666;
         }
 
-        .footer-links a {
+        .login-link a {
             color: #667eea;
             text-decoration: none;
             font-weight: 600;
         }
 
-        .footer-links a:hover {
+        .login-link a:hover {
             text-decoration: underline;
         }
 
-        .password-strength {
-            height: 4px;
-            background: #e0e0e0;
-            border-radius: 2px;
-            margin-top: 8px;
-            overflow: hidden;
+        .home-link {
+            text-align: center;
+            margin-top: 20px;
         }
 
-        .password-strength-bar {
-            height: 100%;
-            width: 0%;
-            transition: width 0.3s, background 0.3s;
+        .home-link a {
+            color: #764ba2;
+            text-decoration: none;
+            font-size: 0.95em;
         }
 
-        .password-strength-bar.weak { background: #f44; width: 33%; }
-        .password-strength-bar.medium { background: #fb4; width: 66%; }
-        .password-strength-bar.strong { background: #4f4; width: 100%; }
+        .home-link a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -160,114 +150,66 @@
             <p>Create your account</p>
         </div>
 
-        <div id="alert" class="alert alert-error"></div>
+        <div class="error-message" id="errorMessage"></div>
 
         <form id="signupForm">
             <div class="form-group">
                 <label for="username">Username</label>
-                <input type="text" id="username" required autocomplete="username">
+                <input type="text" id="username" name="username" required placeholder="Choose a username">
             </div>
 
             <div class="form-group">
                 <label for="email">Email</label>
-                <input type="email" id="email" required autocomplete="email">
+                <input type="email" id="email" name="email" required placeholder="your@email.com">
             </div>
 
             <div class="form-group">
                 <label for="password">Password</label>
-                <input type="password" id="password" required autocomplete="new-password">
-                <div class="password-strength">
-                    <div class="password-strength-bar" id="strengthBar"></div>
-                </div>
-                <small>Must be at least 8 characters</small>
+                <input type="password" id="password" name="password" required placeholder="Choose a strong password" minlength="6">
             </div>
 
-            <div class="form-group">
-                <label for="confirmPassword">Confirm Password</label>
-                <input type="password" id="confirmPassword" required autocomplete="new-password">
-            </div>
-
-            <button type="submit" class="btn" id="signupBtn">Create Account</button>
+            <button type="submit" class="submit-btn">Sign Up</button>
         </form>
 
-        <div class="footer-links">
-            Already have an account? <a href="/login">Sign in</a>
+        <div class="login-link">
+            Already have an account? <a href="/login">Login</a>
+        </div>
+
+        <div class="home-link">
+            <a href="/">← Back to homepage</a>
         </div>
     </div>
 
     <script>
-        const form = document.getElementById('signupForm');
-        const alertDiv = document.getElementById('alert');
-        const signupBtn = document.getElementById('signupBtn');
-        const passwordInput = document.getElementById('password');
-        const strengthBar = document.getElementById('strengthBar');
-
-        // Password strength indicator
-        passwordInput.addEventListener('input', () => {
-            const password = passwordInput.value;
-            let strength = 'weak';
-            
-            if (password.length >= 8) {
-                if (password.length >= 12 && /[A-Z]/.test(password) && /[0-9]/.test(password)) {
-                    strength = 'strong';
-                } else if (password.length >= 10) {
-                    strength = 'medium';
-                }
-            }
-            
-            strengthBar.className = 'password-strength-bar ' + strength;
-        });
-
-        form.addEventListener('submit', async (e) => {
+        document.getElementById('signupForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const username = document.getElementById('username').value;
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-
-            // Validation
-            if (password !== confirmPassword) {
-                alertDiv.textContent = 'Passwords do not match';
-                alertDiv.style.display = 'block';
-                return;
-            }
-
-            if (password.length < 8) {
-                alertDiv.textContent = 'Password must be at least 8 characters';
-                alertDiv.style.display = 'block';
-                return;
-            }
-
-            alertDiv.style.display = 'none';
-            signupBtn.disabled = true;
-            signupBtn.textContent = 'Creating account...';
-
+            const errorMessage = document.getElementById('errorMessage');
+            
             try {
-                const response = await fetch('/signup', {
+                const response = await fetch('/api/signup', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
                     body: JSON.stringify({ username, email, password })
                 });
-
+                
                 const data = await response.json();
-
-                if (data.success) {
-                    alertDiv.className = 'alert alert-success';
-                    alertDiv.textContent = 'Account created! Redirecting to login...';
-                    alertDiv.style.display = 'block';
-                    setTimeout(() => {
-                        window.location.href = data.redirect;
-                    }, 1500);
+                
+                if (response.ok) {
+                    window.location.href = '/dashboard';
                 } else {
-                    throw new Error(data.error || 'Signup failed');
+                    errorMessage.textContent = data.error || 'Signup failed';
+                    errorMessage.classList.add('show');
                 }
             } catch (error) {
-                alertDiv.className = 'alert alert-error';
-                alertDiv.textContent = error.message;
-                alertDiv.style.display = 'block';
-                signupBtn.disabled = false;
-                signupBtn.textContent = 'Create Account';
+                errorMessage.textContent = 'An error occurred. Please try again.';
+                errorMessage.classList.add('show');
             }
         });
     </script>
