@@ -234,28 +234,32 @@
             <div class="row g-4">
                 <div class="col-md-3">
                     <div class="agent-card">
-                        <img src="/static/images/luna.jpg" alt="Luna" class="agent-image">
+                        <img src="{{ url_for('static', filename='images/luna.jpg') }}" alt="Luna" class="agent-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                        <div style="display:none; font-size: 80px;">🌙</div>
                         <h4>Luna</h4>
                         <p>Research & Analysis</p>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="agent-card">
-                        <img src="/static/images/mila.jpg" alt="Mila" class="agent-image">
+                        <img src="{{ url_for('static', filename='images/mila.jpg') }}" alt="Mila" class="agent-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                        <div style="display:none; font-size: 80px;">🐉</div>
                         <h4>Mila</h4>
                         <p>Organization & Planning</p>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="agent-card">
-                        <img src="/static/images/sage.jpg" alt="Sage" class="agent-image">
+                        <img src="{{ url_for('static', filename='images/sage.jpg') }}" alt="Sage" class="agent-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                        <div style="display:none; font-size: 80px;">🦉</div>
                         <h4>Sage</h4>
                         <p>Writing & Content</p>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="agent-card">
-                        <img src="/static/images/ember.jpg" alt="Ember" class="agent-image">
+                        <img src="{{ url_for('static', filename='images/ember.jpg') }}" alt="Ember" class="agent-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                        <div style="display:none; font-size: 80px;">🦁</div>
                         <h4>Ember</h4>
                         <p>Creative Direction</p>
                     </div>
@@ -264,21 +268,24 @@
             <div class="row g-4 mt-3">
                 <div class="col-md-4">
                     <div class="agent-card">
-                        <img src="/static/images/sol.jpg" alt="Sol" class="agent-image">
+                        <img src="{{ url_for('static', filename='images/sol.jpg') }}" alt="Sol" class="agent-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                        <div style="display:none; font-size: 80px;">🐤</div>
                         <h4>Sol</h4>
                         <p>Strategic Thinking</p>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="agent-card">
-                        <img src="/static/images/nova.jpg" alt="Nova" class="agent-image">
+                        <img src="{{ url_for('static', filename='images/nova.jpg') }}" alt="Nova" class="agent-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                        <div style="display:none; font-size: 80px;">🌌</div>
                         <h4>Nova</h4>
                         <p>Technical Solutions</p>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="agent-card">
-                        <img src="/static/images/theo.jpg" alt="Theo" class="agent-image">
+                        <img src="{{ url_for('static', filename='images/theo.jpg') }}" alt="Theo" class="agent-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                        <div style="display:none; font-size: 80px;">🐰</div>
                         <h4>Theo</h4>
                         <p>Implementation</p>
                     </div>
