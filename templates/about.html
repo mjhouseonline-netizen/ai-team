@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About - AI Team</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 80px 40px;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 3.5em;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .hero p {
+            font-size: 1.3em;
+            opacity: 0.95;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .content {
+            padding: 60px 40px;
+        }
+
+        .section {
+            margin-bottom: 60px;
+        }
+
+        .section h2 {
+            font-size: 2.2em;
+            color: #667eea;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .section p {
+            font-size: 1.1em;
+            color: #555;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .feature-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .feature-card h3 {
+            color: #764ba2;
+            font-size: 1.5em;
+            margin-bottom: 15px;
+        }
+
+        .feature-card p {
+            color: #444;
+            font-size: 1em;
+        }
+
+        .agents {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-top: 40px;
+        }
+
+        .agent-card {
+            background: white;
+            border: 2px solid #667eea;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .agent-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .agent-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .agent-card h3 {
+            color: #667eea;
+            font-size: 1.4em;
+            margin-bottom: 10px;
+        }
+
+        .agent-card p {
+            color: #666;
+            font-size: 0.95em;
+        }
+
+        .cta {
+            text-align: center;
+            padding: 60px 40px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .cta h2 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+
+        .cta-button {
+            display: inline-block;
+            padding: 18px 45px;
+            background: white;
+            color: #f5576c;
+            text-decoration: none;
+            border-radius: 50px;
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5em;
+            }
+
+            .hero p {
+                font-size: 1.1em;
+            }
+
+            .content {
+                padding: 40px 20px;
+            }
+
+            .section h2 {
+                font-size: 1.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Hero Section -->
+        <div class="hero">
+            <h1>Welcome to AI Team</h1>
+            <p>Your intelligent workforce of specialized AI agents, ready to transform how you work</p>
+        </div>
+
+        <!-- Main Content -->
+        <div class="content">
+            <!-- About Section -->
+            <div class="section">
+                <h2>About AI Team</h2>
+                <p>
+                    AI Team is a cutting-edge AI-as-a-Service platform that brings together a diverse team of specialized 
+                    AI agents, each designed to excel in specific tasks and workflows. Whether you need creative assistance, 
+                    analytical insights, or technical expertise, our AI agents are here to augment your capabilities and 
+                    accelerate your productivity.
+                </p>
+                <p>
+                    Built on advanced language models and seamlessly integrated with your favorite tools like Google Drive, 
+                    Google Calendar, and Slack, AI Team becomes an extension of your workflow—understanding context, 
+                    maintaining continuity, and delivering intelligent solutions exactly when you need them.
+                </p>
+            </div>
+
+            <!-- Features Section -->
+            <div class="section">
+                <h2>What Makes Us Different</h2>
+                <div class="features">
+                    <div class="feature-card">
+                        <h3>🎯 Specialized Agents</h3>
+                        <p>Seven unique AI personalities, each optimized for specific tasks—from creative brainstorming to technical analysis.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>🔗 Seamless Integration</h3>
+                        <p>Direct integration with Google Drive, Calendar, and Slack keeps your AI team connected to your workflow.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>💡 Context-Aware</h3>
+                        <p>Our agents remember your preferences, understand your projects, and deliver personalized assistance.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>🚀 Always Available</h3>
+                        <p>24/7 access to your AI team—no meetings to schedule, no time zones to coordinate.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>🔒 Secure & Private</h3>
+                        <p>Enterprise-grade security with encrypted connections and strict data privacy protocols.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>📈 Scalable Solutions</h3>
+                        <p>From solo entrepreneurs to large teams, AI Team grows with your needs.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Meet the Team Section -->
+            <div class="section">
+                <h2>Meet Your AI Team</h2>
+                <div class="agents">
+                    <div class="agent-card">
+                        <div class="agent-icon">🌙</div>
+                        <h3>Luna</h3>
+                        <p>Creative strategist specializing in innovation, design thinking, and imaginative solutions</p>
+                    </div>
+                    <div class="agent-card">
+                        <div class="agent-icon">💫</div>
+                        <h3>Mila</h3>
+                        <p>Empathetic communicator focused on relationship building and emotional intelligence</p>
+                    </div>
+                    <div class="agent-card">
+                        <div class="agent-icon">🧠</div>
+                        <h3>Sage</h3>
+                        <p>Analytical thinker providing deep insights, research, and strategic analysis</p>
+                    </div>
+                    <div class="agent-card">
+                        <div class="agent-icon">🔥</div>
+                        <h3>Ember</h3>
+                        <p>Dynamic catalyst driving action, motivation, and rapid execution</p>
+                    </div>
+                    <div class="agent-card">
+                        <div class="agent-icon">☀️</div>
+                        <h3>Sol</h3>
+                        <p>Positive optimist bringing clarity, simplification, and accessible solutions</p>
+                    </div>
+                    <div class="agent-card">
+                        <div class="agent-icon">⚡</div>
+                        <h3>Nova</h3>
+                        <p>Tech specialist mastering coding, systems architecture, and technical challenges</p>
+                    </div>
+                    <div class="agent-card">
+                        <div class="agent-icon">🎯</div>
+                        <h3>Theo</h3>
+                        <p>Strategic planner orchestrating long-term vision and systematic approaches</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mission Section -->
+            <div class="section">
+                <h2>Our Mission</h2>
+                <p>
+                    We believe that artificial intelligence should be accessible, practical, and genuinely helpful. 
+                    Our mission is to democratize access to specialized AI expertise, enabling individuals and teams 
+                    to achieve more while maintaining their unique human creativity and judgment.
+                </p>
+                <p>
+                    AI Team isn't about replacing human intelligence—it's about amplifying it. Each agent is designed 
+                    to be a collaborative partner, helping you think through problems, explore possibilities, and 
+                    execute with confidence.
+                </p>
+            </div>
+        </div>
+
+        <!-- Call to Action -->
+        <div class="cta">
+            <h2>Ready to Meet Your AI Team?</h2>
+            <p style="font-size: 1.2em; margin-bottom: 10px;">Start your journey with intelligent collaboration today</p>
+            <a href="/" class="cta-button">Get Started</a>
+        </div>
+    </div>
+</body>
+</html>
