@@ -106,20 +106,21 @@
         .agent-card {
             background: white;
             border-radius: 20px;
-            padding: 25px;
+            padding: 30px 25px;
             text-align: center;
             transition: all 0.3s;
             box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            height: 100%;
         }
         
         .agent-card:hover {
-            transform: scale(1.05);
+            transform: translateY(-10px);
             box-shadow: 0 15px 35px rgba(0,0,0,0.15);
         }
         
         .agent-image {
-            width: 120px;
-            height: 120px;
+            width: 100px;
+            height: 100px;
             border-radius: 50%;
             margin: 0 auto 20px;
             object-fit: cover;
@@ -130,6 +131,27 @@
         .agent-card:hover .agent-image {
             border-color: var(--accent-color);
             transform: scale(1.1);
+        }
+        
+        .agent-card h4 {
+            color: var(--primary-color);
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .agent-card .role {
+            color: #666;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 15px;
+        }
+        
+        .agent-card .description {
+            color: #555;
+            font-size: 0.95rem;
+            line-height: 1.6;
         }
         
         .cta-section {
@@ -231,68 +253,83 @@
     <section class="agent-preview">
         <div class="container">
             <h2 class="text-center mb-5">Meet Your Team Members</h2>
-            <div class="row g-4">
-                <div class="col-md-3">
+            
+            <div class="row g-4 mb-4">
+                <div class="col-md-6 col-lg-3">
                     <div class="agent-card">
                         <img src="{{ url_for('static', filename='images/luna.jpg') }}" alt="Luna" class="agent-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                        <div style="display:none; font-size: 80px;">🌙</div>
+                        <div style="display:none; font-size: 70px;">🌙</div>
                         <h4>Luna</h4>
-                        <p>Research & Analysis</p>
+                        <div class="role">Research & Analysis</div>
+                        <p class="description">Deep-dive researcher who uncovers insights, analyzes data, and finds the information you need with thoughtful precision.</p>
                     </div>
                 </div>
-                <div class="col-md-3">
+                
+                <div class="col-md-6 col-lg-3">
                     <div class="agent-card">
                         <img src="{{ url_for('static', filename='images/mila.jpg') }}" alt="Mila" class="agent-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                        <div style="display:none; font-size: 80px;">🐉</div>
+                        <div style="display:none; font-size: 70px;">🐉</div>
                         <h4>Mila</h4>
-                        <p>Organization & Planning</p>
+                        <div class="role">Organization & Planning</div>
+                        <p class="description">Master organizer who creates systems, builds workflows, and helps you turn chaos into structured plans.</p>
                     </div>
                 </div>
-                <div class="col-md-3">
+                
+                <div class="col-md-6 col-lg-3">
                     <div class="agent-card">
                         <img src="{{ url_for('static', filename='images/sage.jpg') }}" alt="Sage" class="agent-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                        <div style="display:none; font-size: 80px;">🦉</div>
+                        <div style="display:none; font-size: 70px;">🦉</div>
                         <h4>Sage</h4>
-                        <p>Writing & Content</p>
+                        <div class="role">Writing & Content</div>
+                        <p class="description">Skilled wordsmith who crafts compelling copy, refines your message, and brings your ideas to life through words.</p>
                     </div>
                 </div>
-                <div class="col-md-3">
+                
+                <div class="col-md-6 col-lg-3">
                     <div class="agent-card">
                         <img src="{{ url_for('static', filename='images/ember.jpg') }}" alt="Ember" class="agent-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                        <div style="display:none; font-size: 80px;">🦁</div>
+                        <div style="display:none; font-size: 70px;">🦁</div>
                         <h4>Ember</h4>
-                        <p>Creative Direction</p>
+                        <div class="role">Creative Direction</div>
+                        <p class="description">Bold visionary who sparks innovative ideas, pushes creative boundaries, and helps you stand out from the crowd.</p>
                     </div>
                 </div>
             </div>
-            <div class="row g-4 mt-3">
-                <div class="col-md-4">
+            
+            <div class="row g-4 justify-content-center">
+                <div class="col-md-6 col-lg-4">
                     <div class="agent-card">
                         <img src="{{ url_for('static', filename='images/sol.jpg') }}" alt="Sol" class="agent-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                        <div style="display:none; font-size: 80px;">🐤</div>
+                        <div style="display:none; font-size: 70px;">🐤</div>
                         <h4>Sol</h4>
-                        <p>Strategic Thinking</p>
+                        <div class="role">Strategic Thinking</div>
+                        <p class="description">Strategic advisor who sees the big picture, identifies opportunities, and guides you toward long-term success.</p>
                     </div>
                 </div>
-                <div class="col-md-4">
+                
+                <div class="col-md-6 col-lg-4">
                     <div class="agent-card">
                         <img src="{{ url_for('static', filename='images/nova.jpg') }}" alt="Nova" class="agent-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                        <div style="display:none; font-size: 80px;">🌌</div>
+                        <div style="display:none; font-size: 70px;">🌌</div>
                         <h4>Nova</h4>
-                        <p>Technical Solutions</p>
+                        <div class="role">Technical Solutions</div>
+                        <p class="description">Tech expert who solves complex problems, explains technical concepts clearly, and makes technology work for you.</p>
                     </div>
                 </div>
-                <div class="col-md-4">
+                
+                <div class="col-md-6 col-lg-4">
                     <div class="agent-card">
                         <img src="{{ url_for('static', filename='images/theo.jpg') }}" alt="Theo" class="agent-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                        <div style="display:none; font-size: 80px;">🐰</div>
+                        <div style="display:none; font-size: 70px;">🐰</div>
                         <h4>Theo</h4>
-                        <p>Implementation</p>
+                        <div class="role">Implementation</div>
+                        <p class="description">Reliable builder who takes ideas and turns them into reality with practical action plans and steady execution.</p>
                     </div>
                 </div>
             </div>
+            
             <div class="text-center mt-5">
-                <a href="/about" class="btn btn-primary">Learn More About Each Agent</a>
+                <a href="/about" class="btn btn-primary btn-lg">Learn More About Each Agent</a>
             </div>
         </div>
     </section>
