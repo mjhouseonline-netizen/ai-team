@@ -223,10 +223,22 @@
             font-weight: 600;
             color: #333;
             font-size: 0.95em;
+            margin-bottom: 5px;
+        }
+
+        .character-role {
+            font-size: 0.75em;
+            color: #666;
+            font-weight: 400;
+            opacity: 0.8;
         }
 
         .character-card.active .character-name {
             color: white;
+        }
+
+        .character-card.active .character-role {
+            color: rgba(255, 255, 255, 0.9);
         }
 
         .zzz {
@@ -307,6 +319,8 @@
         .message-text {
             color: #333;
             line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
 
         /* Input Area */
@@ -470,6 +484,7 @@
                         <img src="/static/Images/luna.png" alt="Luna" class="character-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                         <div style="display:none; font-size: 50px;">🌙</div>
                         <div class="character-name">Luna</div>
+                        <div class="character-role">Research & Analysis</div>
                     </div>
 
                     <div class="character-card sleeping" data-agent="Mila" onclick="selectAgent('Mila')">
@@ -477,6 +492,7 @@
                         <img src="/static/Images/mila.png" alt="Mila" class="character-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                         <div style="display:none; font-size: 50px;">🐉</div>
                         <div class="character-name">Mila</div>
+                        <div class="character-role">Organization & Planning</div>
                     </div>
 
                     <div class="character-card sleeping" data-agent="Sage" onclick="selectAgent('Sage')">
@@ -484,12 +500,14 @@
                         <img src="/static/Images/sage.png" alt="Sage" class="character-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                         <div style="display:none; font-size: 50px;">🦉</div>
                         <div class="character-name">Sage</div>
+                        <div class="character-role">Writing & Content</div>
                     </div>
 
                     <div class="character-card active" data-agent="Ember" onclick="selectAgent('Ember')">
                         <img src="/static/Images/ember.png" alt="Ember" class="character-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                         <div style="display:none; font-size: 50px;">🦁</div>
                         <div class="character-name">Ember</div>
+                        <div class="character-role">Creative Direction</div>
                     </div>
 
                     <div class="character-card sleeping" data-agent="Sol" onclick="selectAgent('Sol')">
@@ -497,6 +515,7 @@
                         <img src="/static/Images/sol.png" alt="Sol" class="character-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                         <div style="display:none; font-size: 50px;">🐤</div>
                         <div class="character-name">Sol</div>
+                        <div class="character-role">Strategic Thinking</div>
                     </div>
 
                     <div class="character-card sleeping" data-agent="Nova" onclick="selectAgent('Nova')">
@@ -504,6 +523,7 @@
                         <img src="/static/Images/nova.png" alt="Nova" class="character-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                         <div style="display:none; font-size: 50px;">🌌</div>
                         <div class="character-name">Nova</div>
+                        <div class="character-role">Technical Solutions</div>
                     </div>
 
                     <div class="character-card sleeping" data-agent="Theo" onclick="selectAgent('Theo')">
@@ -511,6 +531,7 @@
                         <img src="/static/Images/theo.png" alt="Theo" class="character-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                         <div style="display:none; font-size: 50px;">🐰</div>
                         <div class="character-name">Theo</div>
+                        <div class="character-role">Implementation</div>
                     </div>
                 </div>
             </div>
