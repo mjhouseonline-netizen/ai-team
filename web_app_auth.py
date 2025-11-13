@@ -239,6 +239,7 @@ def api_login():
 # ============================================
 # DASHBOARD
 # ============================================
+
 @app.route('/dashboard')
 @login_required
 def dashboard():
@@ -248,6 +249,7 @@ def dashboard():
 # ============================================
 # SETTINGS PAGE (FOR NOTION INTEGRATION)
 # ============================================
+
 @app.route('/settings')
 @login_required
 def settings():
