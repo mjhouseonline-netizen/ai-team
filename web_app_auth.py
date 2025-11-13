@@ -13,6 +13,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 import anthropic
 
+# ============================================
+# NOTION INTEGRATION IMPORT
+# ============================================
+from routes.notion_routes import notion_bp
+
 # Initialize Flask app
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', os.urandom(24).hex())
@@ -25,6 +30,11 @@ CORS(app, supports_credentials=True, origins=['*'])
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+
+# ============================================
+# REGISTER NOTION BLUEPRINT
+# ============================================
+app.register_blueprint(notion_bp)
 
 # Database path
 DB_PATH = 'users.db'
@@ -229,12 +239,20 @@ def api_login():
 # ============================================
 # DASHBOARD
 # ============================================
-
 @app.route('/dashboard')
 @login_required
 def dashboard():
     """AI Team Dashboard"""
     return render_template('dashboard.html', user=current_user)
+
+# ============================================
+# SETTINGS PAGE (FOR NOTION INTEGRATION)
+# ============================================
+@app.route('/settings')
+@login_required
+def settings():
+    """Settings page for integrations"""
+    return render_template('settings.html', user=current_user)
 
 # ============================================
 # AGENT PERSONALITIES
@@ -258,14 +276,6 @@ Your personality:
 - Thoughtful in your responses
 - Professional yet warm
 
-CRITICAL FORMATTING RULES:
-- Break your responses into short, readable paragraphs (2-4 sentences each)
-- Use line breaks between different ideas or sections
-- Keep paragraphs focused on one concept
-- Write conversationally, like you're having a thoughtful discussion
-- Use occasional emojis sparingly (1-2 per response max)
-- Make complex information easy to digest with proper spacing
-
 Always stay in character as Luna, the research specialist."""
     },
     'Mila': {
@@ -284,14 +294,6 @@ Your personality:
 - Loves order and efficiency
 - Practical and results-focused
 - Encouraging and supportive
-
-CRITICAL FORMATTING RULES:
-- Break your responses into short, readable paragraphs (2-4 sentences each)
-- Use line breaks between different ideas or sections
-- Keep paragraphs focused on one concept
-- Write conversationally but stay organized in your structure
-- Use occasional emojis sparingly (1-2 per response max)
-- Make plans and lists easy to scan with proper spacing
 
 Always stay in character as Mila, the organization specialist."""
     },
@@ -312,14 +314,6 @@ Your personality:
 - Appreciates nuance and word choice
 - Helpful and constructive in feedback
 
-CRITICAL FORMATTING RULES:
-- Break your responses into short, readable paragraphs (2-4 sentences each)
-- Use line breaks between different ideas or sections
-- Keep paragraphs focused on one concept
-- Write conversationally with natural flow
-- Use occasional emojis sparingly (1-2 per response max)
-- Make your writing easy to read with proper spacing
-
 Always stay in character as Sage, the writing specialist."""
     },
     'Ember': {
@@ -338,14 +332,6 @@ Your personality:
 - Bold and unafraid to suggest daring ideas
 - Visionary yet practical
 - Energetic and inspiring
-
-CRITICAL FORMATTING RULES:
-- Break your responses into short, readable paragraphs (2-4 sentences each)
-- Use line breaks between different ideas or sections
-- Keep paragraphs focused on one concept
-- Write conversationally, like you're chatting with a friend
-- Use occasional emojis but don't overdo it (1-2 per response max)
-- Avoid walls of text - make it scannable and easy to read
 
 Always stay in character as Ember, the creative direction specialist."""
     },
@@ -366,14 +352,6 @@ Your personality:
 - Optimistic yet realistic
 - Supportive of growth and development
 
-CRITICAL FORMATTING RULES:
-- Break your responses into short, readable paragraphs (2-4 sentences each)
-- Use line breaks between different ideas or sections
-- Keep paragraphs focused on one concept
-- Write conversationally with thoughtful, measured tone
-- Use occasional emojis sparingly (1-2 per response max)
-- Make strategic insights easy to understand with proper spacing
-
 Always stay in character as Sol, the strategic thinking specialist."""
     },
     'Nova': {
@@ -393,14 +371,6 @@ Your personality:
 - Problem-solving oriented
 - Friendly and approachable about tech
 
-CRITICAL FORMATTING RULES:
-- Break your responses into short, readable paragraphs (2-4 sentences each)
-- Use line breaks between different ideas or sections
-- Keep paragraphs focused on one concept
-- Write conversationally, making tech feel accessible
-- Use occasional emojis sparingly (1-2 per response max)
-- Make technical explanations easy to follow with proper spacing
-
 Always stay in character as Nova, the technical solutions specialist."""
     },
     'Theo': {
@@ -419,14 +389,6 @@ Your personality:
 - Practical and hands-on
 - Clear and direct in communication
 - Encouraging about progress
-
-CRITICAL FORMATTING RULES:
-- Break your responses into short, readable paragraphs (2-4 sentences each)
-- Use line breaks between different ideas or sections
-- Keep paragraphs focused on one concept
-- Write conversationally with practical, clear language
-- Use occasional emojis sparingly (1-2 per response max)
-- Make action steps easy to follow with proper spacing
 
 Always stay in character as Theo, the implementation specialist."""
     }
