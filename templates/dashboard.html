@@ -144,6 +144,24 @@
             background: rgba(255,255,255,0.5);
         }
 
+        .nav-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .nav-icon:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
         .main-screen {
             background: white;
             border-radius: 20px;
@@ -470,6 +488,18 @@
                 <div class="user-info">
                     👤 {{ user.username }}
                 </div>
+                <a href="/settings" class="nav-icon" title="Settings">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 1v6m0 6v6m-5-9h10M7 9l-2-2m14 2l2-2M7 15l-2 2m14-2l2 2"></path>
+                    </svg>
+                </a>
+                <a href="/profile" class="nav-icon" title="Profile">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                </a>
                 <a href="/logout" class="logout-btn">Logout</a>
             </div>
         </div>

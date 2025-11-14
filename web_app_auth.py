@@ -256,6 +256,12 @@ def settings():
     """Settings page for integrations"""
     return render_template('settings.html', user=current_user)
 
+@app.route('/profile')
+@login_required
+def profile():
+    """User profile page"""
+    return render_template('profile.html', user=current_user)
+
 # ============================================
 # AGENT PERSONALITIES
 # ============================================
@@ -484,6 +490,84 @@ def get_history():
         ]
         
         return jsonify({'history': history}), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ============================================
+# PROFILE API
+# ============================================
+
+@app.route('/api/update-profile', methods=['POST'])
+@login_required
+def update_profile():
+    """Update user profile"""
+    try:
+        data = request.json
+        new_username = data.get('username')
+        new_email = data.get('email')
+        
+        if not new_username or not new_email:
+            return jsonify({'error': 'Username and email required'}), 400
+        
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute(
+                "UPDATE users SET username = ?, email = ? WHERE id = ?",
+                (new_username, new_email, current_user.id)
+            )
+            conn.commit()
+            conn.close()
+            
+            return jsonify({'success': True}), 200
+            
+        except sqlite3.IntegrityError:
+            conn.close()
+            return jsonify({'error': 'Username or email already exists'}), 400
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/change-password', methods=['POST'])
+@login_required
+def change_password():
+    """Change user password"""
+    try:
+        data = request.json
+        current_password = data.get('currentPassword')
+        new_password = data.get('newPassword')
+        
+        if not current_password or not new_password:
+            return jsonify({'error': 'Current and new password required'}), 400
+        
+        # Get current password hash
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT password_hash FROM users WHERE id = ?", (current_user.id,))
+        result = cursor.fetchone()
+        
+        if not result:
+            conn.close()
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Verify current password
+        if not check_password_hash(result[0], current_password):
+            conn.close()
+            return jsonify({'error': 'Current password is incorrect'}), 401
+        
+        # Update password
+        new_hash = generate_password_hash(new_password)
+        cursor.execute(
+            "UPDATE users SET password_hash = ? WHERE id = ?",
+            (new_hash, current_user.id)
+        )
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'success': True}), 200
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
