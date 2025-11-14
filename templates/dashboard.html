@@ -175,27 +175,30 @@
         }
 
         .characters-title {
-            font-size: 1.5em;
-            margin-bottom: 20px;
+            font-size: 1.2em;
+            margin-bottom: 15px;
             color: #38ada9;
             text-align: center;
         }
 
         .characters-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            padding: 5px 0;
         }
 
         .character-card {
             text-align: center;
             cursor: pointer;
-            padding: 15px;
-            border-radius: 15px;
+            padding: 10px;
+            border-radius: 12px;
             transition: all 0.3s;
             background: #f8f9fa;
             position: relative;
+            min-width: 90px;
+            flex-shrink: 0;
         }
 
         .character-card:hover {
@@ -205,7 +208,7 @@
 
         .character-card.active {
             background: linear-gradient(135deg, #b8e994 0%, #78e08f 100%);
-            transform: scale(1.1);
+            transform: scale(1.05);
             box-shadow: 0 10px 30px rgba(56, 173, 169, 0.4);
         }
 
@@ -214,18 +217,18 @@
         }
 
         .character-avatar {
-            width: 80px;
-            height: 80px;
+            width: 50px;
+            height: 50px;
             border-radius: 50%;
-            margin: 0 auto 10px;
+            margin: 0 auto 5px;
             object-fit: cover;
-            border: 3px solid transparent;
+            border: 2px solid transparent;
             transition: all 0.3s;
         }
 
         .character-card.active .character-avatar {
             border-color: white;
-            transform: scale(1.2);
+            transform: scale(1.15);
         }
 
         .character-card.sleeping {
@@ -240,15 +243,16 @@
         .character-name {
             font-weight: 600;
             color: #333;
-            font-size: 0.95em;
-            margin-bottom: 5px;
+            font-size: 0.85em;
+            margin-bottom: 3px;
         }
 
         .character-role {
-            font-size: 0.75em;
+            font-size: 0.65em;
             color: #666;
             font-weight: 400;
             opacity: 0.8;
+            line-height: 1.1;
         }
 
         .character-card.active .character-name {
@@ -282,8 +286,8 @@
             background: #f8f9fa;
             border-radius: 15px;
             padding: 20px;
-            min-height: 400px;
-            max-height: 500px;
+            min-height: 500px;
+            max-height: 650px;
             overflow-y: auto;
             margin-bottom: 20px;
         }
