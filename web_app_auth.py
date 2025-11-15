@@ -6,12 +6,15 @@ Includes: Homepage, Authentication, Dashboard, AI Chat
 import os
 import sys
 from datetime import datetime
-from flask import Flask, request, jsonify, session, redirect, url_for, render_template
+from flask import Flask, request, jsonify, session, redirect, url_for, render_template, send_from_directory
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 import sqlite3
 import anthropic
+import base64
+import mimetypes
 
 # ============================================
 # NOTION INTEGRATION IMPORT
@@ -22,6 +25,24 @@ from routes.notion_routes import notion_bp
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', os.urandom(24).hex())
 app.config['ANTHROPIC_API_KEY'] = os.environ.get('ANTHROPIC_API_KEY')
+
+# File upload configuration
+UPLOAD_FOLDER = 'uploads'
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+ALLOWED_EXTENSIONS = {
+    # Images
+    'png', 'jpg', 'jpeg', 'gif', 'webp',
+    # Documents
+    'pdf', 'txt', 'md', 'csv',
+    # Office
+    'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'
+}
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
+
+# Create upload folder if it doesn't exist
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # Enable CORS
 CORS(app, supports_credentials=True, origins=['*'])
@@ -493,14 +514,96 @@ Remember: Build step-by-step, verify progress, keep momentum."""
 # AI CHAT API
 # ============================================
 
+# ============================================
+# FILE HANDLING HELPERS
+# ============================================
+
+def allowed_file(filename):
+    """Check if file extension is allowed"""
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def encode_file_to_base64(filepath):
+    """Encode file to base64 for Claude API"""
+    with open(filepath, 'rb') as f:
+        return base64.b64encode(f.read()).decode('utf-8')
+
+def get_file_media_type(filepath):
+    """Get media type for file"""
+    mime_type, _ = mimetypes.guess_type(filepath)
+    return mime_type or 'application/octet-stream'
+
+def is_image_file(filename):
+    """Check if file is an image"""
+    ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+    return ext in {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+
+def is_pdf_file(filename):
+    """Check if file is a PDF"""
+    ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+    return ext == 'pdf'
+
+def is_text_file(filename):
+    """Check if file is a text file"""
+    ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+    return ext in {'txt', 'md', 'csv'}
+
+# ============================================
+# FILE UPLOAD API
+# ============================================
+
+@app.route('/api/upload', methods=['POST'])
+@login_required
+def upload_file():
+    """Upload a file"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+        
+        file = request.files['file']
+        
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        if not allowed_file(file.filename):
+            return jsonify({'error': 'File type not allowed'}), 400
+        
+        # Create user-specific upload folder
+        user_folder = os.path.join(UPLOAD_FOLDER, str(current_user.id))
+        os.makedirs(user_folder, exist_ok=True)
+        
+        # Save file with secure filename
+        filename = secure_filename(file.filename)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        unique_filename = f"{timestamp}_{filename}"
+        filepath = os.path.join(user_folder, unique_filename)
+        
+        file.save(filepath)
+        
+        # Get file info
+        file_size = os.path.getsize(filepath)
+        file_type = get_file_media_type(filepath)
+        
+        return jsonify({
+            'success': True,
+            'filename': unique_filename,
+            'original_filename': filename,
+            'filepath': filepath,
+            'file_size': file_size,
+            'file_type': file_type
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/chat', methods=['POST'])
 @login_required
 def chat():
-    """Send message to AI agent"""
+    """Send message to AI agent with optional file attachment"""
     try:
         data = request.json
         message = data.get('message')
         agent = data.get('agent', 'Ember')
+        attached_file = data.get('file')  # File info from upload
         
         if not message:
             return jsonify({'error': 'Message required'}), 400
@@ -529,6 +632,59 @@ CRITICAL RESPONSE RULES:
 RESPONSE LENGTH:
 Your response should be concise enough to read in 30 seconds or less."""
         
+        # Build message content with file if provided
+        message_content = []
+        
+        # Add file if provided
+        if attached_file and 'filepath' in attached_file:
+            filepath = attached_file['filepath']
+            
+            if os.path.exists(filepath):
+                filename = attached_file.get('original_filename', 'file')
+                
+                # Handle images
+                if is_image_file(filename):
+                    base64_data = encode_file_to_base64(filepath)
+                    media_type = get_file_media_type(filepath)
+                    
+                    message_content.append({
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": media_type,
+                            "data": base64_data
+                        }
+                    })
+                
+                # Handle PDFs
+                elif is_pdf_file(filename):
+                    base64_data = encode_file_to_base64(filepath)
+                    
+                    message_content.append({
+                        "type": "document",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "application/pdf",
+                            "data": base64_data
+                        }
+                    })
+                
+                # Handle text files
+                elif is_text_file(filename):
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        file_content = f.read()
+                    message = f"{message}\n\nFile: {filename}\nContent:\n{file_content}"
+        
+        # Add text message
+        message_content.append({
+            "type": "text",
+            "text": message
+        })
+        
+        # If only text, simplify to string
+        if len(message_content) == 1 and message_content[0]["type"] == "text":
+            message_content = message
+        
         # Call Anthropic API with proper system prompt
         client = anthropic.Anthropic(api_key=api_key)
         
@@ -537,7 +693,7 @@ Your response should be concise enough to read in 30 seconds or less."""
             max_tokens=500,  # Reduced from 1024 for shorter responses
             system=system_prompt,
             messages=[
-                {"role": "user", "content": message}
+                {"role": "user", "content": message_content}
             ]
         )
         
@@ -551,9 +707,15 @@ Your response should be concise enough to read in 30 seconds or less."""
         # Save to chat history
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
+        
+        # Include filename in message if file was attached
+        saved_message = message
+        if attached_file and 'original_filename' in attached_file:
+            saved_message = f"📎 {attached_file['original_filename']}\n{message}"
+        
         cursor.execute(
             "INSERT INTO chat_history (user_id, agent_name, message, response) VALUES (?, ?, ?, ?)",
-            (current_user.id, agent, message, ai_response)
+            (current_user.id, agent, saved_message, ai_response)
         )
         conn.commit()
         conn.close()
@@ -776,6 +938,443 @@ def health():
 # ============================================
 # RUN APP
 # ============================================
+
+
+# ============================================
+# PROMO CODE SYSTEM
+# ============================================
+
+# ============================================
+# SUBSCRIPTION TIERS (WITHOUT STRIPE)
+# ============================================
+
+SUBSCRIPTION_TIERS = {
+    'free': {
+        'name': 'Free',
+        'messages_per_day': 25,
+        'agents_available': 7,
+        'features': [
+            '25 messages per day',
+            'Access to all 7 agents',
+            'Basic chat history'
+        ]
+    },
+    'freeforlife': {
+        'name': 'Free For Life',
+        'messages_per_day': -1,  # Unlimited
+        'agents_available': 7,
+        'features': [
+            'Unlimited messages',
+            'All 7 AI agents',
+            'Full chat history',
+            'Priority support',
+            'Automation API access'
+        ]
+    },
+    'starter': {
+        'name': 'Starter',
+        'price': 19,
+        'messages_per_day': 100,
+        'agents_available': 7,
+        'features': [
+            '100 messages per day',
+            'All 7 AI agents',
+            'Full chat history'
+        ]
+    },
+    'pro': {
+        'name': 'Pro',
+        'price': 49,
+        'messages_per_day': 500,
+        'agents_available': 7,
+        'features': [
+            '500 messages per day',
+            'All 7 AI agents',
+            'Unlimited chat history',
+            'Automation API access'
+        ]
+    }
+}
+
+# ============================================
+# DATABASE INITIALIZATION - ADD PROMO CODES TABLE
+# ============================================
+
+def init_promo_codes_table():
+    """Initialize promo codes table"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS promo_codes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code TEXT UNIQUE NOT NULL,
+            tier TEXT NOT NULL,
+            max_uses INTEGER DEFAULT 1,
+            times_used INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            expires_at TIMESTAMP,
+            is_active BOOLEAN DEFAULT 1
+        )
+    """)
+    
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS promo_code_usage (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            promo_code_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (promo_code_id) REFERENCES promo_codes (id),
+            FOREIGN KEY (user_id) REFERENCES users (id),
+            UNIQUE(promo_code_id, user_id)
+        )
+    """)
+    
+    conn.commit()
+    conn.close()
+
+# Call this after your existing init_database()
+init_promo_codes_table()
+
+# ============================================
+# CREATE MASTER CODE FOR AMANDA
+# ============================================
+
+def create_master_code():
+    """Create master code for Amanda (if it doesn't exist)"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("""
+            INSERT OR IGNORE INTO promo_codes (code, tier, max_uses, is_active)
+            VALUES ('MASTER-UNLIMITED-AMANDA', 'freeforlife', 1, 1)
+        """)
+        conn.commit()
+    except:
+        pass
+    finally:
+        conn.close()
+
+# Create master code on startup
+create_master_code()
+
+# ============================================
+# GENERATE PROMO CODES
+# ============================================
+
+def generate_promo_code(length=12):
+    """Generate a random promo code"""
+    chars = string.ascii_uppercase + string.digits
+    return ''.join(secrets.choice(chars) for _ in range(length))
+
+
+def create_promo_codes(tier, count, prefix=""):
+    """Create multiple promo codes for a tier"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    codes = []
+    for i in range(count):
+        code = f"{prefix}{generate_promo_code(8)}" if prefix else generate_promo_code(12)
+        
+        try:
+            cursor.execute("""
+                INSERT INTO promo_codes (code, tier, max_uses)
+                VALUES (?, ?, 1)
+            """, (code, tier))
+            codes.append(code)
+        except sqlite3.IntegrityError:
+            # Code already exists, try again
+            i -= 1
+            continue
+    
+    conn.commit()
+    conn.close()
+    
+    return codes
+
+# ============================================
+# PROMO CODE VALIDATION & REDEMPTION
+# ============================================
+
+def validate_promo_code(code):
+    """Check if promo code is valid and available"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT id, tier, max_uses, times_used, expires_at, is_active
+        FROM promo_codes
+        WHERE code = ?
+    """, (code.upper(),))
+    
+    result = cursor.fetchone()
+    conn.close()
+    
+    if not result:
+        return False, "Invalid promo code"
+    
+    promo_id, tier, max_uses, times_used, expires_at, is_active = result
+    
+    if not is_active:
+        return False, "This promo code is no longer active"
+    
+    if times_used >= max_uses:
+        return False, "This promo code has already been used"
+    
+    if expires_at:
+        expiry = datetime.fromisoformat(expires_at)
+        if datetime.utcnow() > expiry:
+            return False, "This promo code has expired"
+    
+    return True, {'id': promo_id, 'tier': tier}
+
+
+def redeem_promo_code(code, user_id):
+    """Redeem a promo code for a user"""
+    # Validate code first
+    is_valid, result = validate_promo_code(code)
+    
+    if not is_valid:
+        return False, result
+    
+    promo_id = result['id']
+    tier = result['tier']
+    
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    try:
+        # Check if user already used this code
+        cursor.execute("""
+            SELECT id FROM promo_code_usage
+            WHERE promo_code_id = ? AND user_id = ?
+        """, (promo_id, user_id))
+        
+        if cursor.fetchone():
+            conn.close()
+            return False, "You have already used this promo code"
+        
+        # Record usage
+        cursor.execute("""
+            INSERT INTO promo_code_usage (promo_code_id, user_id)
+            VALUES (?, ?)
+        """, (promo_id, user_id))
+        
+        # Increment times_used
+        cursor.execute("""
+            UPDATE promo_codes
+            SET times_used = times_used + 1
+            WHERE id = ?
+        """, (promo_id,))
+        
+        # Update user's tier
+        cursor.execute("""
+            UPDATE users
+            SET subscription_tier = ?
+            WHERE id = ?
+        """, (tier, user_id))
+        
+        conn.commit()
+        conn.close()
+        
+        return True, tier
+        
+    except Exception as e:
+        conn.close()
+        return False, str(e)
+
+# ============================================
+# API ENDPOINTS
+# ============================================
+
+@app.route('/api/redeem-promo-code', methods=['POST'])
+@login_required
+def api_redeem_promo_code():
+    """Redeem a promo code"""
+    try:
+        data = request.json
+        code = data.get('code', '').strip().upper()
+        
+        if not code:
+            return jsonify({'error': 'Promo code required'}), 400
+        
+        success, result = redeem_promo_code(code, current_user.id)
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'tier': result,
+                'message': f'Promo code redeemed! You now have {SUBSCRIPTION_TIERS[result]["name"]} access.'
+            }), 200
+        else:
+            return jsonify({'error': result}), 400
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/check-promo-code', methods=['POST'])
+def api_check_promo_code():
+    """Check if promo code is valid (public endpoint for signup)"""
+    try:
+        data = request.json
+        code = data.get('code', '').strip().upper()
+        
+        if not code:
+            return jsonify({'error': 'Promo code required'}), 400
+        
+        is_valid, result = validate_promo_code(code)
+        
+        if is_valid:
+            tier_info = SUBSCRIPTION_TIERS[result['tier']]
+            return jsonify({
+                'valid': True,
+                'tier': result['tier'],
+                'tier_name': tier_info['name'],
+                'features': tier_info['features']
+            }), 200
+        else:
+            return jsonify({'valid': False, 'error': result}), 200
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ============================================
+# ADMIN ENDPOINT TO GENERATE CODES
+# ============================================
+
+@app.route('/api/admin/generate-promo-codes', methods=['POST'])
+@login_required
+def admin_generate_promo_codes():
+    """Generate promo codes (admin only)"""
+    # Add admin check here
+    # For now, just check if user is id 1 (first user)
+    if current_user.id != 1:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    try:
+        data = request.json
+        tier = data.get('tier', 'freeforlife')
+        count = data.get('count', 10)
+        prefix = data.get('prefix', '')
+        
+        if tier not in SUBSCRIPTION_TIERS:
+            return jsonify({'error': 'Invalid tier'}), 400
+        
+        codes = create_promo_codes(tier, count, prefix)
+        
+        return jsonify({
+            'success': True,
+            'codes': codes,
+            'count': len(codes)
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/admin/list-promo-codes')
+@login_required
+def admin_list_promo_codes():
+    """List all promo codes (admin only)"""
+    if current_user.id != 1:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT code, tier, max_uses, times_used, is_active, created_at
+            FROM promo_codes
+            ORDER BY created_at DESC
+        """)
+        
+        results = cursor.fetchall()
+        conn.close()
+        
+        codes = [
+            {
+                'code': row[0],
+                'tier': row[1],
+                'max_uses': row[2],
+                'times_used': row[3],
+                'is_active': row[4],
+                'created_at': row[5]
+            }
+            for row in results
+        ]
+        
+        return jsonify({'codes': codes}), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ============================================
+# USAGE LIMITS (UPDATE YOUR EXISTING FUNCTION)
+# ============================================
+
+def check_message_limit(user_id):
+    """Check if user has reached their daily message limit"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT subscription_tier, messages_today, last_message_reset
+        FROM users
+        WHERE id = ?
+    """, (user_id,))
+    
+    result = cursor.fetchone()
+    if not result:
+        conn.close()
+        return False, "User not found"
+    
+    tier, messages_today, last_reset = result
+    tier_info = SUBSCRIPTION_TIERS.get(tier, SUBSCRIPTION_TIERS['free'])
+    max_messages = tier_info['messages_per_day']
+    
+    # Reset counter if it's a new day
+    if last_reset:
+        last_reset_date = datetime.fromisoformat(last_reset).date()
+        today = datetime.utcnow().date()
+        
+        if last_reset_date < today:
+            cursor.execute("""
+                UPDATE users
+                SET messages_today = 0,
+                    last_message_reset = CURRENT_TIMESTAMP
+                WHERE id = ?
+            """, (user_id,))
+            conn.commit()
+            messages_today = 0
+    
+    conn.close()
+    
+    # Check limit (-1 means unlimited)
+    if max_messages == -1:
+        return True, None
+    
+    if messages_today >= max_messages:
+        return False, f"Daily limit reached ({max_messages} messages)"
+    
+    return True, None
+
+
+def increment_message_count(user_id):
+    """Increment user's daily message count"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        UPDATE users
+        SET messages_today = messages_today + 1
+        WHERE id = ?
+    """, (user_id,))
+    
+    conn.commit()
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

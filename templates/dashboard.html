@@ -387,6 +387,57 @@
             cursor: not-allowed;
         }
 
+        .attach-btn {
+            padding: 15px 20px;
+            background: #f0f0f0;
+            color: #333;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .attach-btn:hover {
+            background: #e0e0e0;
+            transform: translateY(-2px);
+        }
+
+        .file-preview {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+            background: #f0f9ff;
+            border: 2px solid #78e08f;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+
+        .file-preview span {
+            flex: 1;
+            font-size: 0.9em;
+            color: #333;
+        }
+
+        .remove-file-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .remove-file-btn:hover {
+            background: #dc2626;
+        }
+
         /* Tabs */
         .tabs {
             display: flex;
@@ -588,12 +639,26 @@
 
                 <div class="input-area">
                     <input 
+                        type="file" 
+                        id="fileInput" 
+                        style="display: none;"
+                        accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.txt,.md,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                        onchange="handleFileSelect(event)"
+                    >
+                    <button id="attachBtn" onclick="document.getElementById('fileInput').click()" class="attach-btn" title="Attach file">
+                        📎
+                    </button>
+                    <input 
                         type="text" 
                         id="messageInput" 
                         placeholder="Type your message to Ember..."
                         onkeypress="if(event.key === 'Enter') sendMessage()"
                     >
                     <button id="sendBtn" onclick="sendMessage()">Send 🚀</button>
+                </div>
+                <div id="filePreview" class="file-preview" style="display: none;">
+                    <span id="fileName"></span>
+                    <button onclick="removeFile()" class="remove-file-btn">✕</button>
                 </div>
             </div>
 
@@ -642,18 +707,70 @@
             `;
         }
 
+        let uploadedFile = null;
+
+        async function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Check file size (10MB limit)
+            if (file.size > 10 * 1024 * 1024) {
+                alert('File size must be less than 10MB');
+                event.target.value = '';
+                return;
+            }
+
+            // Upload file
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    credentials: 'include',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    uploadedFile = data;
+                    document.getElementById('fileName').textContent = `📎 ${data.original_filename}`;
+                    document.getElementById('filePreview').style.display = 'flex';
+                } else {
+                    alert('Error uploading file: ' + (data.error || 'Unknown error'));
+                    event.target.value = '';
+                }
+            } catch (error) {
+                alert('Error uploading file: ' + error);
+                event.target.value = '';
+            }
+        }
+
+        function removeFile() {
+            uploadedFile = null;
+            document.getElementById('fileInput').value = '';
+            document.getElementById('filePreview').style.display = 'none';
+        }
+
         async function sendMessage() {
             const input = document.getElementById('messageInput');
             const message = input.value.trim();
             
-            if (!message) return;
+            if (!message && !uploadedFile) return;
             
             const sendBtn = document.getElementById('sendBtn');
             sendBtn.disabled = true;
             sendBtn.textContent = 'Sending...';
             
+            // Build display message
+            let displayMessage = message;
+            if (uploadedFile) {
+                displayMessage = `📎 ${uploadedFile.original_filename}\n${message}`;
+            }
+            
             // Add user message
-            addMessage(message, 'user');
+            addMessage(displayMessage || '📎 File uploaded', 'user');
             input.value = '';
             
             try {
@@ -664,8 +781,9 @@
                     },
                     credentials: 'include',
                     body: JSON.stringify({
-                        message: message,
-                        agent: currentAgent
+                        message: message || 'Please analyze this file',
+                        agent: currentAgent,
+                        file: uploadedFile
                     })
                 });
                 
@@ -678,6 +796,11 @@
                 }
             } catch (error) {
                 addMessage('Error: Failed to connect to server', 'agent', currentAgent);
+            }
+            
+            // Clear file after sending
+            if (uploadedFile) {
+                removeFile();
             }
             
             sendBtn.disabled = false;
