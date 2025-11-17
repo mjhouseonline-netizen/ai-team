@@ -285,6 +285,12 @@ def profile():
     """User profile page"""
     return render_template('profile.html', user=current_user)
 
+@app.route('/automations')
+@login_required
+def automations():
+    """Automations page"""
+    return render_template('automations.html', user=current_user)
+
 # ============================================
 # AGENT PERSONALITIES
 # ============================================
@@ -771,27 +777,35 @@ def get_history():
 def automate_chat():
     """
     Automation endpoint for programmatic agent access
-    Requires API key in header: X-API-Key
+    Requires user's API key in header: X-API-Key
     
     Usage:
     POST /api/automate/chat
-    Headers: X-API-Key: your-anthropic-api-key
+    Headers: X-API-Key: sk-xxxxxxx
     Body: {
         "message": "Your question",
-        "agent": "Luna",
-        "user_id": "automation_user" (optional)
+        "agent": "Luna"
     }
     """
     try:
-        # Check for API key in header
-        api_key = request.headers.get('X-API-Key')
-        if not api_key:
+        # Check for user's API key in header
+        user_api_key = request.headers.get('X-API-Key')
+        if not user_api_key:
             return jsonify({'error': 'API key required in X-API-Key header'}), 401
+        
+        # Verify the user's API key
+        user_id = verify_api_key(user_api_key)
+        if not user_id:
+            return jsonify({'error': 'Invalid or inactive API key'}), 401
+        
+        # Check message limits
+        can_send, error_msg = check_message_limit(user_id)
+        if not can_send:
+            return jsonify({'error': error_msg}), 429
         
         data = request.json
         message = data.get('message')
         agent = data.get('agent', 'Ember')
-        user_id = data.get('user_id', 'automation_user')
         
         if not message:
             return jsonify({'error': 'Message required'}), 400
@@ -801,6 +815,11 @@ def automate_chat():
             return jsonify({'error': f'Invalid agent. Choose from: {", ".join(AGENT_PERSONALITIES.keys())}'}), 400
         
         agent_info = AGENT_PERSONALITIES[agent]
+        
+        # Get server's Anthropic API key
+        anthropic_api_key = app.config['ANTHROPIC_API_KEY']
+        if not anthropic_api_key:
+            return jsonify({'error': 'Server API key not configured'}), 500
         
         # Enhanced system prompt for concise responses
         system_prompt = agent_info['system_prompt'] + """
@@ -815,8 +834,8 @@ CRITICAL RESPONSE RULES:
 RESPONSE LENGTH:
 Your response should be concise enough to read in 30 seconds or less."""
         
-        # Call Anthropic API
-        client = anthropic.Anthropic(api_key=api_key)
+        # Call Anthropic API using server's key
+        client = anthropic.Anthropic(api_key=anthropic_api_key)
         
         response = client.messages.create(
             model="claude-sonnet-4-20250514",
@@ -828,6 +847,9 @@ Your response should be concise enough to read in 30 seconds or less."""
         )
         
         ai_response = response.content[0].text
+        
+        # Increment message count
+        increment_message_count(user_id)
         
         # Check if response is approaching token limit
         word_count = len(ai_response.split())
@@ -971,6 +993,52 @@ def get_user_stats():
         return jsonify({'error': str(e)}), 500
 
 # ============================================
+# API KEY MANAGEMENT
+# ============================================
+
+@app.route('/api/api-keys', methods=['GET'])
+@login_required
+def get_api_keys():
+    """Get user's API keys"""
+    try:
+        keys = get_user_api_keys(current_user.id)
+        return jsonify({'keys': keys}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/api-keys', methods=['POST'])
+@login_required
+def create_new_api_key():
+    """Create a new API key"""
+    try:
+        data = request.json
+        name = data.get('name', 'Default')
+        
+        api_key = create_api_key(current_user.id, name)
+        
+        if api_key:
+            return jsonify({
+                'success': True,
+                'api_key': api_key,
+                'message': 'API key created successfully'
+            }), 200
+        else:
+            return jsonify({'error': 'Failed to create API key'}), 500
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/api-keys/<int:key_id>', methods=['DELETE'])
+@login_required
+def remove_api_key(key_id):
+    """Delete an API key"""
+    try:
+        delete_api_key(current_user.id, key_id)
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ============================================
 # HEALTH CHECK
 # ============================================
 
@@ -1084,6 +1152,34 @@ def init_promo_codes_table():
 init_promo_codes_table()
 
 # ============================================
+# API KEYS FOR AUTOMATION
+# ============================================
+
+def init_api_keys_table():
+    """Initialize API keys table for automation"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS api_keys (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            api_key TEXT UNIQUE NOT NULL,
+            name TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_used TIMESTAMP,
+            is_active BOOLEAN DEFAULT 1,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+    """)
+    
+    conn.commit()
+    conn.close()
+
+# Initialize API keys table
+init_api_keys_table()
+
+# ============================================
 # CREATE MASTER CODE FOR AMANDA
 # ============================================
 
@@ -1105,6 +1201,100 @@ def create_master_code():
 
 # Create master code on startup
 create_master_code()
+
+# ============================================
+# GENERATE PROMO CODES
+# ============================================
+
+def generate_api_key():
+    """Generate a secure API key"""
+    return f"sk-{secrets.token_urlsafe(32)}"
+
+def create_api_key(user_id, name="Default"):
+    """Create an API key for a user"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    api_key = generate_api_key()
+    
+    try:
+        cursor.execute("""
+            INSERT INTO api_keys (user_id, api_key, name)
+            VALUES (?, ?, ?)
+        """, (user_id, api_key, name))
+        conn.commit()
+        conn.close()
+        return api_key
+    except:
+        conn.close()
+        return None
+
+def get_user_api_keys(user_id):
+    """Get all API keys for a user"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT id, api_key, name, created_at, last_used, is_active
+        FROM api_keys
+        WHERE user_id = ?
+        ORDER BY created_at DESC
+    """, (user_id,))
+    
+    results = cursor.fetchall()
+    conn.close()
+    
+    keys = []
+    for row in results:
+        keys.append({
+            'id': row[0],
+            'api_key': row[1],
+            'name': row[2],
+            'created_at': row[3],
+            'last_used': row[4],
+            'is_active': row[5]
+        })
+    
+    return keys
+
+def verify_api_key(api_key):
+    """Verify an API key and return user_id"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT user_id, is_active FROM api_keys
+        WHERE api_key = ?
+    """, (api_key,))
+    
+    result = cursor.fetchone()
+    
+    if result and result[1]:  # Key exists and is active
+        # Update last_used timestamp
+        cursor.execute("""
+            UPDATE api_keys
+            SET last_used = CURRENT_TIMESTAMP
+            WHERE api_key = ?
+        """, (api_key,))
+        conn.commit()
+        conn.close()
+        return result[0]  # Return user_id
+    
+    conn.close()
+    return None
+
+def delete_api_key(user_id, key_id):
+    """Delete an API key"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        DELETE FROM api_keys
+        WHERE id = ? AND user_id = ?
+    """, (key_id, user_id))
+    
+    conn.commit()
+    conn.close()
 
 # ============================================
 # GENERATE PROMO CODES
