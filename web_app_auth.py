@@ -5,6 +5,8 @@ Includes: Homepage, Authentication, Dashboard, AI Chat
 
 import os
 import sys
+import secrets
+import string
 from datetime import datetime
 from flask import Flask, request, jsonify, session, redirect, url_for, render_template, send_from_directory
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -919,6 +921,51 @@ def change_password():
         conn.close()
         
         return jsonify({'success': True}), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ============================================
+# USER STATS API
+# ============================================
+
+@app.route('/api/user-stats')
+@login_required
+def get_user_stats():
+    """Get current user's usage statistics"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT subscription_tier, messages_today, last_message_reset
+            FROM users
+            WHERE id = ?
+        """, (current_user.id,))
+        
+        result = cursor.fetchone()
+        conn.close()
+        
+        if not result:
+            return jsonify({'error': 'User not found'}), 404
+        
+        tier, messages_today, last_reset = result
+        tier_info = SUBSCRIPTION_TIERS.get(tier, SUBSCRIPTION_TIERS['free'])
+        
+        # Reset counter if it's a new day
+        if last_reset:
+            last_reset_date = datetime.fromisoformat(last_reset).date()
+            today = datetime.utcnow().date()
+            
+            if last_reset_date < today:
+                messages_today = 0
+        
+        return jsonify({
+            'messages_today': messages_today,
+            'messages_limit': tier_info['messages_per_day'],
+            'tier': tier,
+            'tier_name': tier_info['name']
+        }), 200
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500

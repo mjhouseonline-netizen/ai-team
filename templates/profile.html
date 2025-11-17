@@ -360,9 +360,9 @@
                 <div class="info-item">
                     <div class="info-label">Messages Today</div>
                     <div class="usage-bar">
-                        <div class="usage-fill" style="width: 30%"></div>
+                        <div class="usage-fill" id="usageFill" style="width: 0%"></div>
                     </div>
-                    <div class="usage-text">3 of 10 messages used</div>
+                    <div class="usage-text" id="usageText">Loading...</div>
                 </div>
             </div>
 
@@ -415,6 +415,40 @@
     </div>
 
     <script>
+        // Load usage stats on page load
+        async function loadUsageStats() {
+            try {
+                const response = await fetch('/api/user-stats');
+                if (response.ok) {
+                    const data = await response.json();
+                    const messagesUsed = data.messages_today || 0;
+                    const messagesLimit = data.messages_limit || 25;
+                    
+                    // Update display
+                    const usageText = messagesLimit === -1 
+                        ? `${messagesUsed} messages used (Unlimited ♾️)`
+                        : `${messagesUsed} of ${messagesLimit} messages used`;
+                    
+                    document.getElementById('usageText').textContent = usageText;
+                    
+                    // Update progress bar
+                    if (messagesLimit > 0) {
+                        const percentage = (messagesUsed / messagesLimit) * 100;
+                        document.getElementById('usageFill').style.width = `${Math.min(percentage, 100)}%`;
+                    } else {
+                        // Unlimited - show full bar in different color
+                        document.getElementById('usageFill').style.width = '100%';
+                        document.getElementById('usageFill').style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+                    }
+                }
+            } catch (error) {
+                document.getElementById('usageText').textContent = 'Unable to load stats';
+            }
+        }
+
+        // Load stats when page loads
+        loadUsageStats();
+
         function showMessage(message, type) {
             const messagesDiv = document.getElementById('messages');
             const alertClass = type === 'success' ? 'alert-success' : 'alert-error';
