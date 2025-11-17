@@ -250,6 +250,31 @@
             </div>
         </div>
 
+        <!-- Promo Code Section -->
+        <div class="settings-card">
+            <h2 class="section-title">🎟️ Promo Code</h2>
+            <div class="integration-item">
+                <div class="integration-info">
+                    <div class="integration-details">
+                        <h3>Redeem Promo Code</h3>
+                        <p>Enter a promo code to upgrade your subscription</p>
+                        <div style="margin-top: 15px;">
+                            <input 
+                                type="text" 
+                                id="promoCode" 
+                                placeholder="Enter promo code" 
+                                style="padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; width: 300px; text-transform: uppercase;"
+                            >
+                            <button onclick="redeemPromoCode()" class="btn btn-primary" style="margin-left: 10px;">
+                                Redeem
+                            </button>
+                        </div>
+                        <div id="promo-result" style="margin-top: 10px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Other Settings Sections -->
         <div class="settings-card">
             <h2 class="section-title">👤 Account</h2>
@@ -334,6 +359,54 @@
                 messagesDiv.innerHTML = '';
             }, 5000);
         }
+
+        async function redeemPromoCode() {
+            const code = document.getElementById('promoCode').value.trim().toUpperCase();
+            
+            if (!code) {
+                showMessage('❌ Please enter a promo code', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/redeem-promo-code', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ code: code })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showMessage(`🎉 ${data.message}`, 'success');
+                    document.getElementById('promoCode').value = '';
+                    
+                    // Reload page after 2 seconds to show updated tier
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    showMessage('❌ ' + data.error, 'error');
+                }
+            } catch (error) {
+                showMessage('❌ Error redeeming code: ' + error, 'error');
+            }
+        }
+
+        // Allow Enter key to redeem
+        document.addEventListener('DOMContentLoaded', function() {
+            const promoInput = document.getElementById('promoCode');
+            if (promoInput) {
+                promoInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        redeemPromoCode();
+                    }
+                });
+            }
+        });
 
         // Check for OAuth callback messages in URL
         const urlParams = new URLSearchParams(window.location.search);
