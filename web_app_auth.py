@@ -247,31 +247,32 @@ def api_signup():
 
 @app.route('/api/login', methods=['POST'])
 def api_login():
-    """Login user"""
+    """Login user - accepts either username OR email"""
     try:
         data = request.json
-        email = data.get('email')
+        # Accept either 'email' or 'username' field for backwards compatibility
+        username_or_email = data.get('email') or data.get('username')
         password = data.get('password')
         
-        if not email or not password:
-            return jsonify({'error': 'Email and password required'}), 400
+        if not username_or_email or not password:
+            return jsonify({'error': 'Username/email and password required'}), 400
         
-        # Get user
+        # Get user by EITHER username OR email
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT id, username, email, password_hash, subscription_tier FROM users WHERE email = ? AND is_active = 1",
-            (email,)
+            "SELECT id, username, email, password_hash, subscription_tier FROM users WHERE (email = ? OR username = ?) AND is_active = 1",
+            (username_or_email, username_or_email)
         )
         result = cursor.fetchone()
         conn.close()
         
         if not result:
-            return jsonify({'error': 'Invalid email or password'}), 401
+            return jsonify({'error': 'Invalid username/email or password'}), 401
         
         # Verify password
         if not check_password_hash(result[3], password):
-            return jsonify({'error': 'Invalid email or password'}), 401
+            return jsonify({'error': 'Invalid username/email or password'}), 401
         
         # Login user
         user = User(id=result[0], username=result[1], email=result[2], subscription_tier=result[4])
