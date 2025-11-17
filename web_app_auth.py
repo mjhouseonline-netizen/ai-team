@@ -17,6 +17,7 @@ import sqlite3
 import anthropic
 import base64
 import mimetypes
+import stripe
 
 # ============================================
 # NOTION INTEGRATION IMPORT
@@ -27,6 +28,15 @@ from routes.notion_routes import notion_bp
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', os.urandom(24).hex())
 app.config['ANTHROPIC_API_KEY'] = os.environ.get('ANTHROPIC_API_KEY')
+
+# ============================================
+# STRIPE CONFIGURATION
+# ============================================
+stripe.api_key = os.environ.get('STRIPE_SECRET_KEY')
+STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY')
+STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET')
+STRIPE_STARTER_PRICE_ID = os.environ.get('STRIPE_STARTER_PRICE_ID')
+STRIPE_PRO_PRICE_ID = os.environ.get('STRIPE_PRO_PRICE_ID')
 
 # File upload configuration
 UPLOAD_FOLDER = 'uploads'
@@ -116,9 +126,22 @@ def init_database():
             messages_today INTEGER DEFAULT 0,
             last_message_reset TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            is_active BOOLEAN DEFAULT 1
+            is_active BOOLEAN DEFAULT 1,
+            stripe_customer_id TEXT UNIQUE,
+            stripe_subscription_id TEXT UNIQUE
         )
     """)
+    
+    # Migration: Add Stripe columns if they don't exist
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN stripe_customer_id TEXT UNIQUE")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+    
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN stripe_subscription_id TEXT UNIQUE")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
     
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS chat_history (
@@ -284,6 +307,269 @@ def settings():
 def profile():
     """User profile page"""
     return render_template('profile.html', user=current_user)
+
+# ============================================
+# STRIPE PAYMENT ROUTES
+# ============================================
+
+@app.route('/pricing')
+@login_required
+def pricing():
+    """Display pricing page with Stripe checkout"""
+    return render_template('pricing.html',
+                         current_plan=current_user.subscription_tier,
+                         starter_price_id=STRIPE_STARTER_PRICE_ID,
+                         pro_price_id=STRIPE_PRO_PRICE_ID)
+
+
+@app.route('/create-checkout-session', methods=['POST'])
+@login_required
+def create_checkout_session():
+    """Create Stripe checkout session for subscription"""
+    try:
+        price_id = request.form.get('price_id')
+        
+        # Determine plan details based on price_id
+        if price_id == STRIPE_STARTER_PRICE_ID:
+            plan_name = 'starter'
+        elif price_id == STRIPE_PRO_PRICE_ID:
+            plan_name = 'pro'
+        else:
+            return jsonify({'error': 'Invalid price ID'}), 400
+        
+        # Get or create Stripe customer
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT stripe_customer_id FROM users WHERE id = ?", (current_user.id,))
+        result = cursor.fetchone()
+        
+        if result and result[0]:
+            customer_id = result[0]
+        else:
+            # Create new Stripe customer
+            customer = stripe.Customer.create(
+                email=current_user.email,
+                metadata={'user_id': current_user.id}
+            )
+            customer_id = customer.id
+            
+            # Save customer ID
+            cursor.execute(
+                "UPDATE users SET stripe_customer_id = ? WHERE id = ?",
+                (customer_id, current_user.id)
+            )
+            conn.commit()
+        
+        conn.close()
+        
+        # Create checkout session
+        checkout_session = stripe.checkout.Session.create(
+            customer=customer_id,
+            payment_method_types=['card'],
+            line_items=[{
+                'price': price_id,
+                'quantity': 1,
+            }],
+            mode='subscription',
+            success_url=request.host_url + 'success?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url=request.host_url + 'cancel',
+            metadata={
+                'user_id': current_user.id,
+                'plan': plan_name
+            }
+        )
+        
+        return redirect(checkout_session.url)
+        
+    except Exception as e:
+        print(f"Error creating checkout session: {str(e)}")
+        return jsonify({'error': 'Error creating checkout session'}), 500
+
+
+@app.route('/success')
+@login_required
+def success():
+    """Payment success page"""
+    session_id = request.args.get('session_id')
+    
+    try:
+        # Retrieve session details
+        session = stripe.checkout.Session.retrieve(session_id)
+        
+        # Get plan details
+        plan_name = session.metadata.get('plan', 'unknown')
+        
+        # Get daily limit based on plan
+        limits = {
+            'starter': 100,
+            'pro': 500
+        }
+        daily_limit = limits.get(plan_name, 100)
+        
+        return render_template('success.html',
+                             plan_name=plan_name.capitalize(),
+                             daily_limit=daily_limit)
+    except Exception as e:
+        print(f"Error retrieving session: {str(e)}")
+        return render_template('success.html',
+                             plan_name='Unknown',
+                             daily_limit=100)
+
+
+@app.route('/cancel')
+@login_required
+def cancel():
+    """Payment cancelled page"""
+    return render_template('cancel.html')
+
+
+@app.route('/webhook', methods=['POST'])
+def stripe_webhook():
+    """Handle Stripe webhook events"""
+    payload = request.data
+    sig_header = request.headers.get('Stripe-Signature')
+    
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, STRIPE_WEBHOOK_SECRET
+        )
+    except ValueError:
+        # Invalid payload
+        return jsonify({'error': 'Invalid payload'}), 400
+    except stripe.error.SignatureVerificationError:
+        # Invalid signature
+        return jsonify({'error': 'Invalid signature'}), 400
+    
+    # Handle the event
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+        handle_checkout_session_completed(session)
+    
+    elif event['type'] == 'customer.subscription.updated':
+        subscription = event['data']['object']
+        handle_subscription_updated(subscription)
+    
+    elif event['type'] == 'customer.subscription.deleted':
+        subscription = event['data']['object']
+        handle_subscription_deleted(subscription)
+    
+    elif event['type'] == 'invoice.payment_succeeded':
+        invoice = event['data']['object']
+        handle_invoice_payment_succeeded(invoice)
+    
+    elif event['type'] == 'invoice.payment_failed':
+        invoice = event['data']['object']
+        handle_invoice_payment_failed(invoice)
+    
+    return jsonify({'status': 'success'})
+
+
+# ============================================
+# STRIPE WEBHOOK HANDLERS
+# ============================================
+
+def handle_checkout_session_completed(session):
+    """Handle completed checkout session"""
+    try:
+        user_id = session['metadata']['user_id']
+        plan = session['metadata']['plan']
+        customer_id = session['customer']
+        subscription_id = session['subscription']
+        
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            UPDATE users
+            SET stripe_customer_id = ?,
+                stripe_subscription_id = ?,
+                subscription_tier = ?
+            WHERE id = ?
+        """, (customer_id, subscription_id, plan, user_id))
+        
+        conn.commit()
+        conn.close()
+        
+        print(f"✅ User {user_id} upgraded to {plan}")
+        
+    except Exception as e:
+        print(f"Error handling checkout session: {str(e)}")
+
+
+def handle_subscription_updated(subscription):
+    """Handle subscription updates"""
+    try:
+        customer_id = subscription['customer']
+        status = subscription['status']
+        
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        if status == 'active':
+            print(f"✅ Subscription active for customer {customer_id}")
+        elif status == 'canceled':
+            cursor.execute("""
+                UPDATE users
+                SET subscription_tier = 'free',
+                    stripe_subscription_id = NULL
+                WHERE stripe_customer_id = ?
+            """, (customer_id,))
+            conn.commit()
+            print(f"❌ Subscription cancelled for customer {customer_id}")
+        
+        conn.close()
+    
+    except Exception as e:
+        print(f"Error handling subscription update: {str(e)}")
+
+
+def handle_subscription_deleted(subscription):
+    """Handle subscription deletion"""
+    try:
+        customer_id = subscription['customer']
+        
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            UPDATE users
+            SET subscription_tier = 'free',
+                stripe_subscription_id = NULL
+            WHERE stripe_customer_id = ?
+        """, (customer_id,))
+        
+        conn.commit()
+        conn.close()
+        
+        print(f"🗑️ Subscription deleted for customer {customer_id}")
+    
+    except Exception as e:
+        print(f"Error handling subscription deletion: {str(e)}")
+
+
+def handle_invoice_payment_succeeded(invoice):
+    """Handle successful payment"""
+    try:
+        customer_id = invoice['customer']
+        amount_paid = invoice['amount_paid'] / 100  # Convert from cents
+        
+        print(f"💰 Payment of ${amount_paid} succeeded for customer {customer_id}")
+    
+    except Exception as e:
+        print(f"Error handling payment success: {str(e)}")
+
+
+def handle_invoice_payment_failed(invoice):
+    """Handle failed payment"""
+    try:
+        customer_id = invoice['customer']
+        
+        print(f"⚠️ Payment failed for customer {customer_id}")
+        # You might want to send an email notification here
+    
+    except Exception as e:
+        print(f"Error handling payment failure: {str(e)}")
+
 
 @app.route('/automations')
 @login_required

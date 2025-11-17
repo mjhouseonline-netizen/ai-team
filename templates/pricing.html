@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Choose Your Plan - AI Team</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a4d2e 0%, #2d5016 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            padding-top: 40px;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+            background: linear-gradient(45deg, #90EE90, #FFD700);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+
+        .pricing-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            position: relative;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border-color: #90EE90;
+        }
+
+        .pricing-card.featured {
+            border-color: #FFD700;
+            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.3);
+        }
+
+        .badge {
+            position: absolute;
+            top: -15px;
+            right: 20px;
+            background: #FFD700;
+            color: #1a4d2e;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .plan-name {
+            font-size: 2em;
+            margin-bottom: 15px;
+            color: #90EE90;
+        }
+
+        .plan-price {
+            font-size: 3em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .plan-price small {
+            font-size: 0.4em;
+            opacity: 0.7;
+        }
+
+        .plan-description {
+            opacity: 0.8;
+            margin-bottom: 30px;
+            min-height: 50px;
+        }
+
+        .features-list {
+            list-style: none;
+            margin-bottom: 30px;
+            text-align: left;
+        }
+
+        .features-list li {
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+        }
+
+        .features-list li:before {
+            content: "✓";
+            color: #90EE90;
+            font-weight: bold;
+            margin-right: 12px;
+            font-size: 1.2em;
+        }
+
+        .select-button {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #90EE90, #76c776);
+            color: #1a4d2e;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .select-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(144, 238, 144, 0.4);
+        }
+
+        .select-button.featured {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+        }
+
+        .select-button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .current-plan {
+            background: #2d5016;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 0.9em;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 30px;
+            color: #90EE90;
+            text-decoration: none;
+            font-size: 1.1em;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .faq-section {
+            margin-top: 80px;
+            text-align: center;
+        }
+
+        .faq-section h2 {
+            font-size: 2.5em;
+            margin-bottom: 40px;
+            color: #90EE90;
+        }
+
+        .faq-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            text-align: left;
+        }
+
+        .faq-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 25px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .faq-item h3 {
+            color: #FFD700;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .faq-item p {
+            opacity: 0.9;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .pricing-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .faq-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/dashboard" class="back-link">← Back to Dashboard</a>
+        
+        <div class="header">
+            <h1>🦜 Choose Your Plan</h1>
+            <p>Unlock the full power of your AI Team with unlimited access to all 7 specialized agents</p>
+        </div>
+
+        <div class="pricing-grid">
+            <!-- Free Plan -->
+            <div class="pricing-card">
+                <div class="plan-name">Free</div>
+                <div class="plan-price">
+                    $0
+                    <small>/month</small>
+                </div>
+                <div class="plan-description">Perfect for trying out AI Team</div>
+                
+                <ul class="features-list">
+                    <li>25 messages per day</li>
+                    <li>Access to all 7 AI agents</li>
+                    <li>File upload & analysis</li>
+                    <li>Chat history</li>
+                    <li>Notion integration</li>
+                </ul>
+
+                {% if current_plan == 'free' %}
+                    <div class="current-plan">✓ Your Current Plan</div>
+                {% else %}
+                    <button class="select-button" disabled>Current Plan Available</button>
+                {% endif %}
+            </div>
+
+            <!-- Starter Plan -->
+            <div class="pricing-card">
+                <div class="plan-name">Starter</div>
+                <div class="plan-price">
+                    $10
+                    <small>/month</small>
+                </div>
+                <div class="plan-description">For regular users who need more</div>
+                
+                <ul class="features-list">
+                    <li>100 messages per day</li>
+                    <li>Access to all 7 AI agents</li>
+                    <li>File upload & analysis</li>
+                    <li>Chat history</li>
+                    <li>Notion integration</li>
+                    <li>Priority support</li>
+                </ul>
+
+                {% if current_plan == 'starter' %}
+                    <div class="current-plan">✓ Your Current Plan</div>
+                {% else %}
+                    <form action="/create-checkout-session" method="POST">
+                        <input type="hidden" name="price_id" value="{{ starter_price_id }}">
+                        <button type="submit" class="select-button">Select Starter</button>
+                    </form>
+                {% endif %}
+            </div>
+
+            <!-- Pro Plan -->
+            <div class="pricing-card featured">
+                <div class="badge">MOST POPULAR</div>
+                <div class="plan-name">Pro</div>
+                <div class="plan-price">
+                    $30
+                    <small>/month</small>
+                </div>
+                <div class="plan-description">For power users & professionals</div>
+                
+                <ul class="features-list">
+                    <li>500 messages per day</li>
+                    <li>Access to all 7 AI agents</li>
+                    <li>File upload & analysis</li>
+                    <li>Chat history</li>
+                    <li>Notion integration</li>
+                    <li>API access & automation</li>
+                    <li>Priority support</li>
+                    <li>Early access to new features</li>
+                </ul>
+
+                {% if current_plan == 'pro' %}
+                    <div class="current-plan">✓ Your Current Plan</div>
+                {% else %}
+                    <form action="/create-checkout-session" method="POST">
+                        <input type="hidden" name="price_id" value="{{ pro_price_id }}">
+                        <button type="submit" class="select-button featured">Select Pro</button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- FAQ Section -->
+        <div class="faq-section">
+            <h2>Frequently Asked Questions</h2>
+            <div class="faq-grid">
+                <div class="faq-item">
+                    <h3>🔄 Can I change plans?</h3>
+                    <p>Yes! You can upgrade or downgrade anytime. Changes take effect immediately, and we'll prorate the difference.</p>
+                </div>
+
+                <div class="faq-item">
+                    <h3>💳 What payment methods do you accept?</h3>
+                    <p>We accept all major credit cards, debit cards, and digital wallets through our secure Stripe payment processor.</p>
+                </div>
+
+                <div class="faq-item">
+                    <h3>🎟️ Do promo codes work with paid plans?</h3>
+                    <p>If you have a "Free For Life" promo code with unlimited access, you don't need a paid plan! Otherwise, you can use promo codes for discounts.</p>
+                </div>
+
+                <div class="faq-item">
+                    <h3>🔒 Is my data secure?</h3>
+                    <p>Absolutely! We use bank-level encryption, and your data is stored securely. We never share your information with third parties.</p>
+                </div>
+
+                <div class="faq-item">
+                    <h3>🚫 What's your refund policy?</h3>
+                    <p>We offer a 7-day money-back guarantee. If you're not satisfied, contact us for a full refund - no questions asked.</p>
+                </div>
+
+                <div class="faq-item">
+                    <h3>📧 Need help choosing?</h3>
+                    <p>Contact our team at support@aiteam.com and we'll help you find the perfect plan for your needs.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

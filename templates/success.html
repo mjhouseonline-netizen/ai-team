@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Successful! - AI Team</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a4d2e 0%, #2d5016 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .success-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 30px;
+            padding: 60px;
+            text-align: center;
+            max-width: 600px;
+            border: 2px solid rgba(144, 238, 144, 0.5);
+            animation: slideUp 0.5s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .success-icon {
+            font-size: 5em;
+            margin-bottom: 20px;
+            animation: bounce 1s ease;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-20px);
+            }
+            60% {
+                transform: translateY(-10px);
+            }
+        }
+
+        h1 {
+            color: #90EE90;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+
+        p {
+            color: #fff;
+            font-size: 1.2em;
+            opacity: 0.9;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        .plan-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: #1a4d2e;
+            padding: 10px 30px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 1.2em;
+            margin: 30px 0;
+        }
+
+        .dashboard-button {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 18px 50px;
+            background: linear-gradient(135deg, #90EE90, #76c776);
+            color: #1a4d2e;
+            text-decoration: none;
+            border-radius: 12px;
+            font-size: 1.2em;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .dashboard-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(144, 238, 144, 0.4);
+        }
+
+        .benefits-list {
+            text-align: left;
+            margin: 30px 0;
+            display: inline-block;
+        }
+
+        .benefits-list li {
+            color: #fff;
+            padding: 12px 0;
+            font-size: 1.1em;
+        }
+
+        .benefits-list li:before {
+            content: "✓ ";
+            color: #90EE90;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="success-container">
+        <div class="success-icon">🎉</div>
+        <h1>Payment Successful!</h1>
+        
+        <p>Welcome to the {{ plan_name }} plan!</p>
+        
+        <div class="plan-badge">{{ plan_name }} Member</div>
+        
+        <p>Your subscription is now active and you have immediate access to:</p>
+        
+        <ul class="benefits-list">
+            <li>{{ daily_limit }} messages per day</li>
+            <li>All 7 specialized AI agents</li>
+            <li>File upload & analysis</li>
+            <li>Notion integration</li>
+            {% if plan_name == 'Pro' %}
+            <li>API access & automation</li>
+            <li>Priority support</li>
+            {% endif %}
+        </ul>
+        
+        <p>Check your email for your receipt and subscription details.</p>
+        
+        <a href="/dashboard" class="dashboard-button">Go to Dashboard →</a>
+    </div>
+</body>
+</html>

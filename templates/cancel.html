@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Cancelled - AI Team</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a4d2e 0%, #2d5016 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .cancel-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 30px;
+            padding: 60px;
+            text-align: center;
+            max-width: 600px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            animation: slideUp 0.5s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .cancel-icon {
+            font-size: 5em;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #FFD700;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+
+        p {
+            color: #fff;
+            font-size: 1.2em;
+            opacity: 0.9;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 40px;
+            flex-wrap: wrap;
+        }
+
+        .button {
+            padding: 18px 40px;
+            border-radius: 12px;
+            font-size: 1.1em;
+            font-weight: bold;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .primary-button {
+            background: linear-gradient(135deg, #90EE90, #76c776);
+            color: #1a4d2e;
+        }
+
+        .secondary-button {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .reassurance {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .reassurance h3 {
+            color: #90EE90;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+    </style>
+</head>
+<body>
+    <div class="cancel-container">
+        <div class="cancel-icon">🤔</div>
+        <h1>Payment Cancelled</h1>
+        
+        <p>No worries! Your payment was cancelled and you haven't been charged.</p>
+        
+        <p>You can still enjoy AI Team with our generous free plan featuring all 7 specialized agents and 25 messages per day!</p>
+        
+        <div class="reassurance">
+            <h3>Still interested in upgrading?</h3>
+            <p>Our paid plans offer more messages and additional features. You can upgrade anytime from your dashboard.</p>
+        </div>
+        
+        <div class="buttons">
+            <a href="/dashboard" class="button primary-button">Back to Dashboard</a>
+            <a href="/pricing" class="button secondary-button">View Plans Again</a>
+        </div>
+    </div>
+</body>
+</html>
