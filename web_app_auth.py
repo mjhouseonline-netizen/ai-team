@@ -108,6 +108,58 @@ def load_user(user_id):
     return None
 
 # ============================================
+# SUBSCRIPTION TIERS
+# ============================================
+
+SUBSCRIPTION_TIERS = {
+    'free': {
+        'name': 'Free',
+        'messages_per_day': 25,
+        'agents_available': 7,
+        'features': [
+            '25 messages per day',
+            'Access to all 7 agents',
+            'Basic chat history'
+        ]
+    },
+    'freeforlife': {
+        'name': 'Free For Life',
+        'messages_per_day': -1,  # Unlimited
+        'agents_available': 7,
+        'features': [
+            'Unlimited messages',
+            'All 7 AI agents',
+            'Full chat history',
+            'Priority support',
+            'Automation API access'
+        ]
+    },
+    'starter': {
+        'name': 'Starter',
+        'price': 19,
+        'messages_per_day': 100,
+        'agents_available': 7,
+        'features': [
+            '100 messages per day',
+            'All 7 AI agents',
+            'Full chat history'
+        ]
+    },
+    'pro': {
+        'name': 'Pro',
+        'price': 49,
+        'messages_per_day': 500,
+        'agents_available': 7,
+        'features': [
+            '500 messages per day',
+            'All 7 AI agents',
+            'Unlimited chat history',
+            'Automation API access'
+        ]
+    }
+}
+
+# ============================================
 # DATABASE INITIALIZATION
 # ============================================
 
@@ -1260,6 +1312,7 @@ def get_user_stats():
         
         tier, messages_today, last_reset = result
         tier_info = SUBSCRIPTION_TIERS.get(tier, SUBSCRIPTION_TIERS['free'])
+        daily_limit = tier_info['messages_per_day']
         
         # Reset counter if it's a new day
         if last_reset:
@@ -1269,14 +1322,22 @@ def get_user_stats():
             if last_reset_date < today:
                 messages_today = 0
         
+        # Calculate remaining messages
+        if daily_limit == -1 or daily_limit == 999999:
+            messages_remaining = -1  # Unlimited
+        else:
+            messages_remaining = max(0, daily_limit - messages_today)
+        
         return jsonify({
+            'subscription_tier': tier,
             'messages_today': messages_today,
-            'messages_limit': tier_info['messages_per_day'],
-            'tier': tier,
+            'daily_limit': daily_limit,
+            'messages_remaining': messages_remaining,
             'tier_name': tier_info['name']
         }), 200
         
     except Exception as e:
+        print(f"Error getting user stats: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 # ============================================
@@ -1345,58 +1406,6 @@ def health():
 # ============================================
 # PROMO CODE SYSTEM
 # ============================================
-
-# ============================================
-# SUBSCRIPTION TIERS (WITHOUT STRIPE)
-# ============================================
-
-SUBSCRIPTION_TIERS = {
-    'free': {
-        'name': 'Free',
-        'messages_per_day': 25,
-        'agents_available': 7,
-        'features': [
-            '25 messages per day',
-            'Access to all 7 agents',
-            'Basic chat history'
-        ]
-    },
-    'freeforlife': {
-        'name': 'Free For Life',
-        'messages_per_day': -1,  # Unlimited
-        'agents_available': 7,
-        'features': [
-            'Unlimited messages',
-            'All 7 AI agents',
-            'Full chat history',
-            'Priority support',
-            'Automation API access'
-        ]
-    },
-    'starter': {
-        'name': 'Starter',
-        'price': 19,
-        'messages_per_day': 100,
-        'agents_available': 7,
-        'features': [
-            '100 messages per day',
-            'All 7 AI agents',
-            'Full chat history'
-        ]
-    },
-    'pro': {
-        'name': 'Pro',
-        'price': 49,
-        'messages_per_day': 500,
-        'agents_available': 7,
-        'features': [
-            '500 messages per day',
-            'All 7 AI agents',
-            'Unlimited chat history',
-            'Automation API access'
-        ]
-    }
-}
 
 # ============================================
 # DATABASE INITIALIZATION - ADD PROMO CODES TABLE

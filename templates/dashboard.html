@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🌴 AI Team - Rainforest Dashboard</title>
+    <title>🌴 AI Team Dashboard</title>
     <style>
         * {
             margin: 0;
@@ -12,55 +12,37 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #b8e994 0%, #78e08f 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a4d2e 0%, #2d5016 100%);
             min-height: 100vh;
             padding: 20px;
             position: relative;
             overflow-x: hidden;
         }
 
-        /* Palm Leaves Decorations */
-        .palm-leaf {
+        /* Animated Jungle Background */
+        .jungle-bg {
             position: fixed;
-            width: 200px;
-            height: 200px;
-            opacity: 0.15;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             pointer-events: none;
-            z-index: 1;
+            z-index: 0;
         }
 
-        .palm-leaf.top-left {
-            top: -50px;
-            left: -50px;
-            transform: rotate(-45deg);
-            animation: sway 4s ease-in-out infinite;
+        .leaf {
+            position: absolute;
+            width: 60px;
+            height: 80px;
+            background: rgba(76, 175, 80, 0.1);
+            border-radius: 0 50% 50% 0;
+            animation: float 6s ease-in-out infinite;
         }
 
-        .palm-leaf.top-right {
-            top: -50px;
-            right: -50px;
-            transform: rotate(45deg);
-            animation: sway 4.5s ease-in-out infinite;
-        }
-
-        .palm-leaf.bottom-left {
-            bottom: -50px;
-            left: -50px;
-            transform: rotate(45deg);
-            animation: sway 5s ease-in-out infinite;
-        }
-
-        .palm-leaf.bottom-right {
-            bottom: -50px;
-            right: -50px;
-            transform: rotate(-45deg);
-            animation: sway 4.2s ease-in-out infinite;
-        }
-
-        @keyframes sway {
-            0%, 100% { transform: rotate(0deg); }
-            50% { transform: rotate(5deg); }
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(5deg); }
         }
 
         /* Falling Leaves */
@@ -70,6 +52,7 @@
             animation: fall linear infinite;
             pointer-events: none;
             z-index: 1;
+            opacity: 0.3;
         }
 
         @keyframes fall {
@@ -90,27 +73,32 @@
             z-index: 2;
         }
 
+        /* Header */
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            color: white;
             margin-bottom: 30px;
-            background: rgba(56, 173, 169, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
             padding: 20px 30px;
             border-radius: 15px;
-            backdrop-filter: blur(10px);
+            border: 2px solid rgba(144, 238, 144, 0.3);
         }
 
         .header-left h1 {
             font-size: 2.5em;
             margin-bottom: 5px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            background: linear-gradient(45deg, #90EE90, #FFD700);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         .header-left p {
+            color: #fff;
             font-size: 1.1em;
-            opacity: 0.95;
+            opacity: 0.9;
         }
 
         .header-right {
@@ -119,54 +107,87 @@
             align-items: center;
         }
 
-        .user-info {
-            background: rgba(255,255,255,0.3);
+        .nav-btn {
+            background: rgba(144, 238, 144, 0.2);
+            color: #90EE90;
             padding: 10px 20px;
-            border-radius: 8px;
-            backdrop-filter: blur(10px);
-            font-weight: 600;
-        }
-
-        .logout-btn {
-            background: rgba(255,255,255,0.4);
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: background 0.3s;
+            border: 2px solid rgba(144, 238, 144, 0.4);
+            border-radius: 10px;
             text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
             display: inline-block;
         }
 
+        .nav-btn:hover {
+            background: rgba(144, 238, 144, 0.3);
+            border-color: #90EE90;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(144, 238, 144, 0.3);
+        }
+
+        .logout-btn {
+            background: rgba(255, 100, 100, 0.2);
+            color: #ff6464;
+            border-color: rgba(255, 100, 100, 0.4);
+        }
+
         .logout-btn:hover {
-            background: rgba(255,255,255,0.5);
+            background: rgba(255, 100, 100, 0.3);
+            border-color: #ff6464;
         }
 
-        .nav-icon {
-            display: inline-flex;
+        /* Usage Stats Bar */
+        .stats-bar {
+            background: rgba(255, 215, 0, 0.15);
+            border: 2px solid rgba(255, 215, 0, 0.4);
+            border-radius: 12px;
+            padding: 15px 25px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
             align-items: center;
-            justify-content: center;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-label {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            color: #FFD700;
+            font-size: 1.4em;
+            font-weight: bold;
+        }
+
+        .upgrade-link {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: #1a4d2e;
+            padding: 10px 20px;
+            border-radius: 8px;
             text-decoration: none;
-            transition: all 0.2s;
+            font-weight: bold;
+            transition: all 0.3s ease;
         }
 
-        .nav-icon:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: scale(1.1);
+        .upgrade-link:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(255, 215, 0, 0.4);
         }
 
+        /* Main Dashboard */
         .main-screen {
-            background: white;
+            background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
             padding: 40px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(144, 238, 144, 0.2);
         }
 
         /* Character Selection */
@@ -175,267 +196,105 @@
         }
 
         .characters-title {
-            font-size: 1.2em;
-            margin-bottom: 15px;
-            color: #38ada9;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            color: #2d5016;
             text-align: center;
+            font-weight: bold;
         }
 
         .characters-grid {
             display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
+            gap: 12px;
+            margin-bottom: 25px;
             overflow-x: auto;
-            padding: 5px 0;
+            padding: 10px 5px;
+            justify-content: center;
         }
 
         .character-card {
             text-align: center;
             cursor: pointer;
-            padding: 10px;
-            border-radius: 12px;
-            transition: all 0.3s;
+            padding: 15px;
+            border-radius: 15px;
+            transition: all 0.3s ease;
             background: #f8f9fa;
             position: relative;
-            min-width: 90px;
+            min-width: 100px;
             flex-shrink: 0;
+            border: 2px solid transparent;
         }
 
         .character-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(56, 173, 169, 0.3);
+            box-shadow: 0 10px 25px rgba(45, 80, 22, 0.2);
+            border-color: #90EE90;
         }
 
         .character-card.active {
-            background: linear-gradient(135deg, #b8e994 0%, #78e08f 100%);
-            transform: scale(1.05);
-            box-shadow: 0 10px 30px rgba(56, 173, 169, 0.4);
-        }
-
-        .character-card.active .character-avatar {
-            animation: bounce 1s ease-in-out infinite;
+            background: linear-gradient(135deg, #90EE90, #76c776);
+            transform: scale(1.08);
+            box-shadow: 0 15px 35px rgba(45, 80, 22, 0.3);
+            border-color: #2d5016;
         }
 
         .character-avatar {
-            width: 50px;
-            height: 50px;
+            width: 60px;
+            height: 60px;
             border-radius: 50%;
-            margin: 0 auto 5px;
+            margin: 0 auto 10px;
             object-fit: cover;
-            border: 2px solid transparent;
-            transition: all 0.3s;
+            border: 3px solid transparent;
+            transition: all 0.3s ease;
         }
 
         .character-card.active .character-avatar {
             border-color: white;
-            transform: scale(1.15);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
         }
 
         .character-card.sleeping {
-            opacity: 0.6;
-            filter: grayscale(70%);
-        }
-
-        .character-card.sleeping .character-avatar {
-            opacity: 0.7;
-        }
-
-        .character-name {
-            font-weight: 600;
-            color: #333;
-            font-size: 0.85em;
-            margin-bottom: 3px;
-        }
-
-        .character-role {
-            font-size: 0.65em;
-            color: #666;
-            font-weight: 400;
-            opacity: 0.8;
-            line-height: 1.1;
-        }
-
-        .character-card.active .character-name {
-            color: white;
-        }
-
-        .character-card.active .character-role {
-            color: rgba(255, 255, 255, 0.9);
+            opacity: 0.5;
+            filter: grayscale(80%);
         }
 
         .zzz {
             position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 1.2em;
-            animation: float 2s ease-in-out infinite;
+            top: 5px;
+            right: 5px;
+            font-size: 0.8em;
+            color: #999;
+            animation: fadeInOut 2s ease-in-out infinite;
         }
 
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
         }
 
-        @keyframes float {
-            0%, 100% { transform: translateY(0); opacity: 0.7; }
-            50% { transform: translateY(-5px); opacity: 1; }
-        }
-
-        /* Chat Interface */
-        .chat-container {
-            background: #f8f9fa;
-            border-radius: 15px;
-            padding: 20px;
-            min-height: 500px;
-            max-height: 650px;
-            overflow-y: auto;
-            margin-bottom: 20px;
-        }
-
-        .welcome-message {
-            text-align: center;
-            color: #38ada9;
-            padding: 40px;
-            font-size: 1.2em;
-        }
-
-        .welcome-message h3 {
-            font-size: 1.8em;
-            margin-bottom: 15px;
-        }
-
-        .chat-message {
-            margin-bottom: 20px;
-            animation: fadeIn 0.3s;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .message-user {
-            background: #e8f5e9;
-            padding: 15px;
-            border-radius: 15px;
-            margin-left: 50px;
-            border-left: 4px solid #78e08f;
-        }
-
-        .message-agent {
-            background: white;
-            padding: 15px;
-            border-radius: 15px;
-            margin-right: 50px;
-            border-left: 4px solid #38ada9;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-
-        .message-agent-name {
+        .character-name {
+            font-size: 0.95em;
             font-weight: 600;
-            color: #38ada9;
-            margin-bottom: 5px;
-            font-size: 0.9em;
-        }
-
-        .message-text {
             color: #333;
-            line-height: 1.6;
-            white-space: pre-wrap;
-            word-wrap: break-word;
+            margin-bottom: 3px;
         }
 
-        /* Input Area */
-        .input-area {
-            display: flex;
-            gap: 10px;
+        .character-card.active .character-name {
+            color: #1a4d2e;
         }
 
-        #messageInput {
-            flex: 1;
-            padding: 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 1em;
-            transition: border-color 0.3s;
+        .character-role {
+            font-size: 0.75em;
+            color: #666;
         }
 
-        #messageInput:focus {
-            outline: none;
-            border-color: #78e08f;
-        }
-
-        #sendBtn {
-            padding: 15px 30px;
-            background: linear-gradient(135deg, #b8e994 0%, #78e08f 100%);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-size: 1em;
-        }
-
-        #sendBtn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(120, 224, 143, 0.4);
-        }
-
-        #sendBtn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .attach-btn {
-            padding: 15px 20px;
-            background: #f0f0f0;
-            color: #333;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 1.2em;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .attach-btn:hover {
-            background: #e0e0e0;
-            transform: translateY(-2px);
-        }
-
-        .file-preview {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 15px;
-            background: #f0f9ff;
-            border: 2px solid #78e08f;
-            border-radius: 10px;
-            margin-bottom: 10px;
-        }
-
-        .file-preview span {
-            flex: 1;
-            font-size: 0.9em;
-            color: #333;
-        }
-
-        .remove-file-btn {
-            background: #ef4444;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            cursor: pointer;
-            font-size: 0.9em;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .remove-file-btn:hover {
-            background: #dc2626;
+        .character-card.active .character-role {
+            color: #2d5016;
         }
 
         /* Tabs */
@@ -444,25 +303,32 @@
             gap: 10px;
             margin-bottom: 20px;
             border-bottom: 2px solid #e0e0e0;
-            padding-bottom: 10px;
         }
 
         .tab {
-            padding: 10px 20px;
-            background: transparent;
-            border: none;
+            padding: 12px 25px;
             cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s;
+            border: none;
+            background: transparent;
             color: #666;
-            border-radius: 8px 8px 0 0;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab:hover {
+            color: #2d5016;
+            background: rgba(144, 238, 144, 0.1);
         }
 
         .tab.active {
-            background: linear-gradient(135deg, #b8e994 0%, #78e08f 100%);
-            color: white;
+            color: #2d5016;
+            border-bottom-color: #90EE90;
+            background: rgba(144, 238, 144, 0.15);
         }
 
+        /* Tab Content */
         .tab-content {
             display: none;
         }
@@ -471,158 +337,374 @@
             display: block;
         }
 
-        /* History */
-        .history-item {
+        /* Chat Container */
+        #chatContainer {
+            height: 450px;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .welcome-message {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .welcome-message h3 {
+            font-size: 2em;
+            margin-bottom: 15px;
+            color: #2d5016;
+        }
+
+        .welcome-message p {
+            font-size: 1.2em;
+        }
+
+        .chat-message {
+            margin-bottom: 20px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message-user {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .message-user .message-text {
+            background: linear-gradient(135deg, #90EE90, #76c776);
+            color: #1a4d2e;
+            padding: 12px 18px;
+            border-radius: 18px 18px 4px 18px;
+            max-width: 70%;
+            word-wrap: break-word;
+            font-weight: 500;
+            box-shadow: 0 2px 10px rgba(45, 80, 22, 0.2);
+        }
+
+        .message-agent {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .message-agent-name {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .message-agent .message-text {
+            background: white;
+            color: #333;
+            padding: 12px 18px;
+            border-radius: 18px 18px 18px 4px;
+            max-width: 70%;
+            word-wrap: break-word;
+            border: 2px solid #e0e0e0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Input Area */
+        .input-area {
+            display: flex;
+            gap: 10px;
+            align-items: center;
             background: white;
             padding: 15px;
-            border-radius: 10px;
+            border-radius: 12px;
+            border: 2px solid #e0e0e0;
+            transition: border-color 0.3s ease;
+        }
+
+        .input-area:focus-within {
+            border-color: #90EE90;
+            box-shadow: 0 0 0 3px rgba(144, 238, 144, 0.1);
+        }
+
+        .attach-btn {
+            background: rgba(144, 238, 144, 0.2);
+            border: 2px solid #90EE90;
+            color: #2d5016;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2em;
+            transition: all 0.3s ease;
+        }
+
+        .attach-btn:hover {
+            background: rgba(144, 238, 144, 0.3);
+            transform: scale(1.1);
+        }
+
+        #messageInput {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            outline: none;
+            font-size: 1em;
+            font-family: inherit;
+        }
+
+        #sendBtn {
+            background: linear-gradient(135deg, #90EE90, #76c776);
+            color: #1a4d2e;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+
+        #sendBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(144, 238, 144, 0.4);
+        }
+
+        #sendBtn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .file-preview {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+            background: rgba(144, 238, 144, 0.1);
+            border: 2px solid #90EE90;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        #fileName {
+            flex: 1;
+            color: #2d5016;
+            font-weight: 600;
+        }
+
+        .remove-file-btn {
+            background: rgba(255, 100, 100, 0.2);
+            border: 2px solid #ff6464;
+            color: #ff6464;
+            padding: 5px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .remove-file-btn:hover {
+            background: rgba(255, 100, 100, 0.3);
+            transform: scale(1.05);
+        }
+
+        /* History Tab */
+        #historyContainer {
+            max-height: 500px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .history-item {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
             margin-bottom: 15px;
-            border-left: 4px solid #78e08f;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            border: 2px solid #e0e0e0;
+            transition: all 0.3s ease;
+        }
+
+        .history-item:hover {
+            border-color: #90EE90;
+            box-shadow: 0 5px 15px rgba(45, 80, 22, 0.1);
         }
 
         .history-agent {
-            font-weight: 600;
-            color: #38ada9;
-            margin-bottom: 5px;
+            color: #2d5016;
+            font-weight: bold;
+            margin-bottom: 8px;
+            font-size: 1.1em;
         }
 
         .history-time {
-            font-size: 0.85em;
             color: #999;
+            font-size: 0.85em;
+            margin-bottom: 12px;
+        }
+
+        .history-message, .history-response {
             margin-bottom: 10px;
+            line-height: 1.6;
         }
 
         .history-message {
             color: #666;
-            margin-bottom: 8px;
         }
 
         .history-response {
             color: #333;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 8px;
         }
 
         /* Responsive */
         @media (max-width: 768px) {
-            .characters-grid {
-                grid-template-columns: repeat(3, 1fr);
-            }
-            
             .header {
                 flex-direction: column;
                 gap: 15px;
                 text-align: center;
             }
+
+            .header-left h1 {
+                font-size: 2em;
+            }
+
+            .header-right {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .stats-bar {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .characters-grid {
+                justify-content: flex-start;
+            }
+
+            #chatContainer {
+                height: 350px;
+            }
+
+            .input-area {
+                flex-wrap: wrap;
+            }
+
+            #messageInput {
+                order: 1;
+                width: 100%;
+            }
+
+            .attach-btn {
+                order: 2;
+            }
+
+            #sendBtn {
+                order: 3;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Palm Leaves Decorations -->
-    <div class="palm-leaf top-left">🌿</div>
-    <div class="palm-leaf top-right">🌿</div>
-    <div class="palm-leaf bottom-left">🌿</div>
-    <div class="palm-leaf bottom-right">🌿</div>
+    <!-- Animated Background -->
+    <div class="jungle-bg">
+        <div class="leaf" style="top: 10%; left: 10%; animation-delay: 0s;"></div>
+        <div class="leaf" style="top: 60%; left: 80%; animation-delay: 2s;"></div>
+        <div class="leaf" style="top: 80%; left: 20%; animation-delay: 4s;"></div>
+    </div>
 
     <!-- Falling Leaves -->
-    <div class="falling-leaf" style="left: 10%; animation-duration: 8s; animation-delay: 0s;">🍃</div>
-    <div class="falling-leaf" style="left: 30%; animation-duration: 10s; animation-delay: 2s;">🍃</div>
-    <div class="falling-leaf" style="left: 50%; animation-duration: 9s; animation-delay: 4s;">🍃</div>
-    <div class="falling-leaf" style="left: 70%; animation-duration: 11s; animation-delay: 1s;">🍃</div>
-    <div class="falling-leaf" style="left: 90%; animation-duration: 12s; animation-delay: 3s;">🍃</div>
+    <div class="falling-leaf" style="left: 20%; animation-duration: 8s; animation-delay: 0s;">🍃</div>
+    <div class="falling-leaf" style="left: 50%; animation-duration: 10s; animation-delay: 2s;">🌿</div>
+    <div class="falling-leaf" style="left: 80%; animation-duration: 9s; animation-delay: 4s;">🍃</div>
 
     <div class="container">
+        <!-- Header -->
         <div class="header">
             <div class="header-left">
-                <h1>🌴 AI Team Rainforest</h1>
-                <p>Your Jungle of Intelligent Assistants</p>
+                <h1>🌴 AI Team Dashboard</h1>
+                <p>Your 7 specialized AI agents, ready to help!</p>
             </div>
             <div class="header-right">
-                <div class="user-info">
-                    👤 {{ user.username }}
-                </div>
-                <a href="/automations" class="nav-icon" title="Automations">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="16 18 22 12 16 6"></polyline>
-                        <polyline points="8 6 2 12 8 18"></polyline>
-                    </svg>
-                </a>
-                <a href="/settings" class="nav-icon" title="Settings">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="3"></circle>
-                        <path d="M12 1v6m0 6v6m-5-9h10M7 9l-2-2m14 2l2-2M7 15l-2 2m14-2l2 2"></path>
-                    </svg>
-                </a>
-                <a href="/profile" class="nav-icon" title="Profile">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                        <circle cx="12" cy="7" r="4"></circle>
-                    </svg>
-                </a>
-                <a href="/logout" class="logout-btn">Logout</a>
+                <a href="/profile" class="nav-btn">👤 Profile</a>
+                <a href="/settings" class="nav-btn">⚙️ Settings</a>
+                <a href="/pricing" class="nav-btn">💎 Pricing</a>
+                <a href="/logout" class="nav-btn logout-btn">🚪 Logout</a>
             </div>
         </div>
 
+        <!-- Usage Stats Bar -->
+        <div class="stats-bar">
+            <div class="stat-item">
+                <div class="stat-label">Messages Today</div>
+                <div class="stat-value" id="messages-today">Loading...</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Daily Limit</div>
+                <div class="stat-value" id="daily-limit">Loading...</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Remaining</div>
+                <div class="stat-value" id="messages-remaining">Loading...</div>
+            </div>
+            <a href="/pricing" class="upgrade-link" id="upgrade-btn" style="display: none;">⭐ Upgrade Plan</a>
+        </div>
+
+        <!-- Main Dashboard -->
         <div class="main-screen">
-            <!-- Characters Section -->
+            <!-- Character Selection -->
             <div class="characters-section">
-                <h2 class="characters-title">🦁 Select Your AI Companion 🦁</h2>
+                <div class="characters-title">🦜 Choose Your AI Agent</div>
                 <div class="characters-grid">
-                    <div class="character-card sleeping" data-agent="Luna" onclick="selectAgent('Luna')">
-                        <div class="zzz">Zzz</div>
-                        <img src="/static/Images/luna.png" alt="Luna" class="character-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                        <div style="display:none; font-size: 50px;">🌙</div>
+                    <div class="character-card active" data-agent="Luna" onclick="selectAgent('Luna')">
+                        <img src="/static/images/luna.png" alt="Luna" class="character-avatar" onerror="this.src='https://api.dicebear.com/7.x/bottts/svg?seed=Luna&backgroundColor=b6e3f4'">
                         <div class="character-name">Luna</div>
-                        <div class="character-role">Research & Analysis</div>
+                        <div class="character-role">Creative Writer</div>
                     </div>
 
                     <div class="character-card sleeping" data-agent="Mila" onclick="selectAgent('Mila')">
                         <div class="zzz">Zzz</div>
-                        <img src="/static/Images/mila.png" alt="Mila" class="character-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                        <div style="display:none; font-size: 50px;">🐉</div>
+                        <img src="/static/images/mila.png" alt="Mila" class="character-avatar" onerror="this.src='https://api.dicebear.com/7.x/bottts/svg?seed=Mila&backgroundColor=c7ecee'">
                         <div class="character-name">Mila</div>
-                        <div class="character-role">Organization & Planning</div>
+                        <div class="character-role">Life Coach</div>
                     </div>
 
                     <div class="character-card sleeping" data-agent="Sage" onclick="selectAgent('Sage')">
                         <div class="zzz">Zzz</div>
-                        <img src="/static/Images/sage.png" alt="Sage" class="character-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                        <div style="display:none; font-size: 50px;">🦉</div>
+                        <img src="/static/images/sage.png" alt="Sage" class="character-avatar" onerror="this.src='https://api.dicebear.com/7.x/bottts/svg?seed=Sage&backgroundColor=d3f8e2'">
                         <div class="character-name">Sage</div>
-                        <div class="character-role">Writing & Content</div>
+                        <div class="character-role">Business Advisor</div>
                     </div>
 
-                    <div class="character-card active" data-agent="Ember" onclick="selectAgent('Ember')">
-                        <img src="/static/Images/ember.png" alt="Ember" class="character-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                        <div style="display:none; font-size: 50px;">🦁</div>
+                    <div class="character-card sleeping" data-agent="Ember" onclick="selectAgent('Ember')">
+                        <div class="zzz">Zzz</div>
+                        <img src="/static/images/ember.png" alt="Ember" class="character-avatar" onerror="this.src='https://api.dicebear.com/7.x/bottts/svg?seed=Ember&backgroundColor=ffeaa7'">
                         <div class="character-name">Ember</div>
-                        <div class="character-role">Creative Direction</div>
+                        <div class="character-role">Tech Expert</div>
                     </div>
 
                     <div class="character-card sleeping" data-agent="Sol" onclick="selectAgent('Sol')">
                         <div class="zzz">Zzz</div>
-                        <img src="/static/Images/sol.png" alt="Sol" class="character-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                        <div style="display:none; font-size: 50px;">🐤</div>
+                        <img src="/static/images/sol.png" alt="Sol" class="character-avatar" onerror="this.src='https://api.dicebear.com/7.x/bottts/svg?seed=Sol&backgroundColor=fab1a0'">
                         <div class="character-name">Sol</div>
-                        <div class="character-role">Strategic Thinking</div>
+                        <div class="character-role">Researcher</div>
                     </div>
 
                     <div class="character-card sleeping" data-agent="Nova" onclick="selectAgent('Nova')">
                         <div class="zzz">Zzz</div>
-                        <img src="/static/Images/nova.png" alt="Nova" class="character-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                        <div style="display:none; font-size: 50px;">🌌</div>
+                        <img src="/static/images/nova.png" alt="Nova" class="character-avatar" onerror="this.src='https://api.dicebear.com/7.x/bottts/svg?seed=Nova&backgroundColor=dfe6e9'">
                         <div class="character-name">Nova</div>
-                        <div class="character-role">Technical Solutions</div>
+                        <div class="character-role">Data Analyst</div>
                     </div>
 
                     <div class="character-card sleeping" data-agent="Theo" onclick="selectAgent('Theo')">
                         <div class="zzz">Zzz</div>
-                        <img src="/static/Images/theo.png" alt="Theo" class="character-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                        <div style="display:none; font-size: 50px;">🐰</div>
+                        <img src="/static/images/theo.png" alt="Theo" class="character-avatar" onerror="this.src='https://api.dicebear.com/7.x/bottts/svg?seed=Theo&backgroundColor=a29bfe'">
                         <div class="character-name">Theo</div>
-                        <div class="character-role">Implementation</div>
+                        <div class="character-role">Learning Guide</div>
                     </div>
                 </div>
             </div>
@@ -630,19 +712,17 @@
             <!-- Tabs -->
             <div class="tabs">
                 <button class="tab active" onclick="switchTab('chat')">💬 Chat</button>
-                <button class="tab" onclick="switchTab('history')">📜 History</button>
+                <button class="tab" onclick="switchTab('history')">📚 History</button>
             </div>
 
             <!-- Chat Tab -->
             <div id="chatTab" class="tab-content active">
-                <div class="chat-container" id="chatContainer">
+                <div id="chatContainer">
                     <div class="welcome-message">
-                        <h3>🌴 Welcome to the AI Rainforest! 🌴</h3>
-                        <p>Click any character to wake them up and start chatting!</p>
-                        <p><strong>Ember</strong> the lion is ready to help you! 🦁</p>
+                        <h3>Hello! I'm Luna! 🌴</h3>
+                        <p>How can I help you today?</p>
                     </div>
                 </div>
-
                 <div class="input-area">
                     <input 
                         type="file" 
@@ -657,12 +737,12 @@
                     <input 
                         type="text" 
                         id="messageInput" 
-                        placeholder="Type your message to Ember..."
-                        onkeypress="if(event.key === 'Enter') sendMessage()"
+                        placeholder="Type your message to Luna..."
+                        onkeypress="if(event.key === 'Enter' && !event.shiftKey) sendMessage()"
                     >
                     <button id="sendBtn" onclick="sendMessage()">Send 🚀</button>
                 </div>
-                <div id="filePreview" class="file-preview" style="display: none;">
+                <div id="filePreview" class="file-preview">
                     <span id="fileName"></span>
                     <button onclick="removeFile()" class="remove-file-btn">✕</button>
                 </div>
@@ -678,8 +758,46 @@
     </div>
 
     <script>
-        let currentAgent = 'Ember';
+        let currentAgent = 'Luna';
 
+        // Load user stats on page load
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/user-stats', {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('messages-today').textContent = data.messages_today || 0;
+                    
+                    if (data.daily_limit === 999999 || data.daily_limit === -1) {
+                        document.getElementById('daily-limit').textContent = 'Unlimited';
+                        document.getElementById('messages-remaining').textContent = 'Unlimited';
+                    } else {
+                        document.getElementById('daily-limit').textContent = data.daily_limit;
+                        const remaining = Math.max(0, data.daily_limit - data.messages_today);
+                        document.getElementById('messages-remaining').textContent = remaining;
+                        
+                        // Show upgrade button if on free tier
+                        if (data.subscription_tier === 'free' && remaining < 10) {
+                            document.getElementById('upgrade-btn').style.display = 'block';
+                        }
+                    }
+                } else {
+                    document.getElementById('messages-today').textContent = '-';
+                    document.getElementById('daily-limit').textContent = '-';
+                    document.getElementById('messages-remaining').textContent = '-';
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+                document.getElementById('messages-today').textContent = '-';
+                document.getElementById('daily-limit').textContent = '-';
+                document.getElementById('messages-remaining').textContent = '-';
+            }
+        }
+
+        // Select agent
         function selectAgent(agentName) {
             currentAgent = agentName;
             
@@ -713,6 +831,7 @@
             `;
         }
 
+        // File handling
         let uploadedFile = null;
 
         async function handleFileSelect(event) {
@@ -759,6 +878,7 @@
             document.getElementById('filePreview').style.display = 'none';
         }
 
+        // Send message
         async function sendMessage() {
             const input = document.getElementById('messageInput');
             const message = input.value.trim();
@@ -797,6 +917,8 @@
                 
                 if (response.ok) {
                     addMessage(data.response, 'agent', currentAgent);
+                    // Reload stats after successful message
+                    loadStats();
                 } else {
                     addMessage('Error: ' + (data.error || 'Failed to get response'), 'agent', currentAgent);
                 }
@@ -843,9 +965,10 @@
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
-            return div.innerHTML;
+            return div.innerHTML.replace(/\n/g, '<br>');
         }
 
+        // Tab switching
         function switchTab(tabName) {
             // Update tab buttons
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
@@ -861,6 +984,7 @@
             }
         }
 
+        // Load history
         async function loadHistory() {
             const container = document.getElementById('historyContainer');
             container.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">Loading...</p>';
@@ -872,7 +996,7 @@
                 
                 const data = await response.json();
                 
-                if (response.ok && data.history.length > 0) {
+                if (response.ok && data.history && data.history.length > 0) {
                     container.innerHTML = data.history.map(item => `
                         <div class="history-item">
                             <div class="history-agent">${item.agent}</div>
@@ -888,6 +1012,9 @@
                 container.innerHTML = '<p style="text-align: center; color: #c33; padding: 40px;">Failed to load history</p>';
             }
         }
+
+        // Initialize on page load
+        loadStats();
     </script>
 </body>
 </html>
