@@ -195,6 +195,12 @@ def init_database():
     except sqlite3.OperationalError:
         pass  # Column already exists
     
+    # Migration: Add last_message_reset column if it doesn't exist
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN last_message_reset TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+    
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS chat_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
