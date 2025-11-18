@@ -65,6 +65,16 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 
 # ============================================
+# STATIC FILES - Serve images, CSS, JS, etc.
+# ============================================
+
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    """Serve static files (images, CSS, JS)"""
+    static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
+    return send_from_directory(static_dir, filename)
+
+# ============================================
 # REGISTER NOTION BLUEPRINT
 # ============================================
 app.register_blueprint(notion_bp)
