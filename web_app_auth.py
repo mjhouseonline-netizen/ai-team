@@ -31,8 +31,20 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', os.urandom(24).hex())
 app.config['ANTHROPIC_API_KEY'] = os.environ.get('ANTHROPIC_API_KEY')
 app.config['OPENAI_API_KEY'] = os.environ.get('OPENAI_API_KEY')
 
-# Initialize OpenAI client
-openai_client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY')) if os.environ.get('OPENAI_API_KEY') else None
+# Initialize OpenAI client with proper error handling
+try:
+    if os.environ.get('OPENAI_API_KEY'):
+        # Initialize with explicit settings to avoid proxy conflicts
+        import httpx
+        openai_client = OpenAI(
+            api_key=os.environ.get('OPENAI_API_KEY'),
+            http_client=httpx.Client()
+        )
+    else:
+        openai_client = None
+except Exception as e:
+    print(f"Warning: Could not initialize OpenAI client: {e}")
+    openai_client = None
 
 # ============================================
 # STRIPE CONFIGURATION
