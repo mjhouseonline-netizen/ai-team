@@ -18,6 +18,7 @@ import anthropic
 import base64
 import mimetypes
 import stripe
+from openai import OpenAI
 
 # ============================================
 # NOTION INTEGRATION IMPORT
@@ -28,6 +29,10 @@ from routes.notion_routes import notion_bp
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', os.urandom(24).hex())
 app.config['ANTHROPIC_API_KEY'] = os.environ.get('ANTHROPIC_API_KEY')
+app.config['OPENAI_API_KEY'] = os.environ.get('OPENAI_API_KEY')
+
+# Initialize OpenAI client
+openai_client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY')) if os.environ.get('OPENAI_API_KEY') else None
 
 # ============================================
 # STRIPE CONFIGURATION
@@ -1089,6 +1094,97 @@ Your response should be concise enough to read in 30 seconds or less."""
         }), 200
         
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/generate-image', methods=['POST'])
+@login_required
+def generate_image():
+    """Generate an image using DALL-E"""
+    try:
+        data = request.json
+        prompt = data.get('message') or data.get('prompt')
+        agent = data.get('agent', 'AI')
+        
+        if not prompt:
+            return jsonify({'error': 'No prompt provided'}), 400
+        
+        # Check if OpenAI is configured
+        if not openai_client:
+            return jsonify({'error': 'Image generation not configured. Please add OPENAI_API_KEY to environment variables.'}), 500
+        
+        # Check user's message limit
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT subscription_tier, messages_today, last_message_reset
+            FROM users
+            WHERE id = ?
+        """, (current_user.id,))
+        
+        result = cursor.fetchone()
+        if not result:
+            conn.close()
+            return jsonify({'error': 'User not found'}), 404
+        
+        tier, messages_today, last_reset = result
+        tier_info = SUBSCRIPTION_TIERS.get(tier, SUBSCRIPTION_TIERS['free'])
+        daily_limit = tier_info['messages_per_day']
+        
+        # Check if user has exceeded limit
+        if daily_limit != -1 and daily_limit != 999999:
+            if messages_today >= daily_limit:
+                conn.close()
+                return jsonify({'error': 'Daily message limit reached. Upgrade your plan to generate more images!'}), 429
+        
+        # Generate image with DALL-E
+        try:
+            response = openai_client.images.generate(
+                model="dall-e-3",
+                prompt=prompt,
+                size="1024x1024",
+                quality="standard",
+                n=1,
+            )
+            
+            image_url = response.data[0].url
+            
+        except Exception as e:
+            print(f"DALL-E Error: {str(e)}")
+            conn.close()
+            return jsonify({'error': f'Failed to generate image: {str(e)}'}), 500
+        
+        # Increment message counter
+        cursor.execute("""
+            UPDATE users
+            SET messages_today = messages_today + 1,
+                last_message_reset = ?
+            WHERE id = ?
+        """, (datetime.utcnow().isoformat(), current_user.id))
+        
+        # Save to history
+        cursor.execute("""
+            INSERT INTO chat_history (user_id, agent_name, message, response, timestamp)
+            VALUES (?, ?, ?, ?, ?)
+        """, (
+            current_user.id,
+            agent,
+            f"🎨 Generate image: {prompt}",
+            f"Generated image: {image_url}",
+            datetime.utcnow().isoformat()
+        ))
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'response': f'I generated an image based on your description!',
+            'image_url': image_url
+        }), 200
+        
+    except Exception as e:
+        print(f"Error in generate_image: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/history')
