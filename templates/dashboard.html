@@ -785,7 +785,7 @@
                     <button id="voiceInputBtn" onclick="toggleVoiceInput()" class="voice-input-btn" title="Voice input">
                         🎤
                     </button>
-                    <button id="imageBtn" onclick="toggleImageMode()" class="image-btn" title="Generate image">
+                    <button id="imageBtn" onclick="toggleImageMode()" class="image-btn" title="Generate AI Images (FREE!)">
                         🎨
                     </button>
                     <input 
@@ -1053,13 +1053,16 @@
                     file: uploadedFile
                 };
 
-                // If in image mode, use image generation endpoint
+                // If in image mode, use FREE image generation by default
                 if (imageMode) {
-                    endpoint = '/api/generate-image';
+                    endpoint = '/api/generate-image-free';  // FREE option
                     requestBody = {
                         prompt: message,
                         agent: currentAgent
                     };
+                    
+                    // Show generating message
+                    addMessage('🎨 Generating your image...', 'agent', currentAgent);
                 }
 
                 const response = await fetch(endpoint, {
@@ -1075,11 +1078,42 @@
                 
                 if (response.ok) {
                     if (imageMode && data.image_url) {
-                        addMessage(`Here's your generated image!`, 'agent', currentAgent, data.image_url);
+                        // Remove the "generating" message
+                        const lastMsg = document.querySelector('.chat-message:last-child');
+                        if (lastMsg && lastMsg.textContent.includes('Generating')) {
+                            lastMsg.remove();
+                        }
+                        
+                        // Add provider badge to message
+                        let providerBadge = '';
+                        if (data.provider === 'pollinations') {
+                            providerBadge = '<span style="background: #10b981; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-left: 8px;">✨ FREE</span>';
+                        } else if (data.provider === 'dalle') {
+                            providerBadge = '<span style="background: #8b5cf6; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-left: 8px;">⭐ DALL-E 3</span>';
+                        }
+                        
+                        addMessage(`Here's your generated image! ${providerBadge}`, 'agent', currentAgent, data.image_url);
                     } else {
                         addMessage(data.response, 'agent', currentAgent);
                     }
                     loadStats();
+                } else if (response.status === 202 && data.fallback) {
+                    // DALL-E not configured, retry with free option
+                    const freeResponse = await fetch('/api/generate-image-free', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify(requestBody)
+                    });
+                    const freeData = await freeResponse.json();
+                    if (freeResponse.ok && freeData.image_url) {
+                        const lastMsg = document.querySelector('.chat-message:last-child');
+                        if (lastMsg && lastMsg.textContent.includes('Generating')) {
+                            lastMsg.remove();
+                        }
+                        addMessage(`Here's your generated image! <span style="background: #10b981; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-left: 8px;">✨ FREE</span>`, 'agent', currentAgent, freeData.image_url);
+                        loadStats();
+                    }
                 } else {
                     addMessage('Error: ' + (data.error || 'Failed to get response'), 'agent', currentAgent);
                 }
