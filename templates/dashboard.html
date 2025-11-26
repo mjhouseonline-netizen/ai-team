@@ -436,6 +436,7 @@
 
         /* Generated Image Display */
         .generated-image {
+            position: relative;
             margin-top: 10px;
             border-radius: 12px;
             overflow: hidden;
@@ -446,6 +447,35 @@
             width: 100%;
             height: auto;
             display: block;
+        }
+
+        .image-download-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: linear-gradient(135deg, #90EE90 0%, #7CCD7C 100%);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 10px 16px;
+            border-radius: 12px;
+            color: #1a4d2e;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+        }
+
+        .image-download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(144, 238, 144, 0.5);
+            background: linear-gradient(135deg, #7CCD7C 0%, #90EE90 100%);
+        }
+
+        .image-download-btn:active {
+            transform: translateY(0);
         }
 
         /* Input Area */
@@ -1603,7 +1633,15 @@
                 const voiceBtnId = 'voice-' + Date.now();
                 let imageHtml = '';
                 if (imageUrl) {
-                    imageHtml = `<div class="generated-image"><img src="${imageUrl}" alt="Generated image"></div>`;
+                    const downloadId = 'download-' + Date.now();
+                    imageHtml = `
+                        <div class="generated-image">
+                            <button id="${downloadId}" class="image-download-btn" onclick="downloadImage('${imageUrl}', this)">
+                                📥 Download
+                            </button>
+                            <img src="${imageUrl}" alt="Generated image">
+                        </div>
+                    `;
                 }
                 messageDiv.innerHTML = `
                     <div class="message-agent">
@@ -1625,6 +1663,50 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML.replace(/\n/g, '<br>');
+        }
+
+        // Download generated image
+        async function downloadImage(imageUrl, button) {
+            try {
+                // Update button to show loading
+                const originalText = button.innerHTML;
+                button.innerHTML = '⏳ Downloading...';
+                button.disabled = true;
+
+                // Fetch the image
+                const response = await fetch(imageUrl);
+                const blob = await response.blob();
+                
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                
+                // Generate filename with timestamp
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+                a.download = `ai-team-image-${timestamp}.png`;
+                
+                // Trigger download
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                // Update button to show success
+                button.innerHTML = '✅ Downloaded!';
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                }, 2000);
+                
+            } catch (error) {
+                console.error('Download error:', error);
+                button.innerHTML = '❌ Error';
+                setTimeout(() => {
+                    button.innerHTML = '📥 Download';
+                    button.disabled = false;
+                }, 2000);
+            }
         }
 
         // Tab switching

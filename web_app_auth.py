@@ -211,22 +211,42 @@ def init_database():
         )
     """)
     
-    # Migration: Add Stripe columns if they don't exist
-    try:
-        cursor.execute("ALTER TABLE users ADD COLUMN stripe_customer_id TEXT UNIQUE")
-    except sqlite3.OperationalError:
-        pass  # Column already exists
+    # Check existing columns
+    cursor.execute("PRAGMA table_info(users)")
+    existing_columns = [col[1] for col in cursor.fetchall()]
+    print(f"Database columns check: {existing_columns}")
     
-    try:
-        cursor.execute("ALTER TABLE users ADD COLUMN stripe_subscription_id TEXT UNIQUE")
-    except sqlite3.OperationalError:
-        pass  # Column already exists
+    # Migration: Add Stripe columns if they don't exist
+    if 'stripe_customer_id' not in existing_columns:
+        try:
+            print("Adding stripe_customer_id column...")
+            cursor.execute("ALTER TABLE users ADD COLUMN stripe_customer_id TEXT UNIQUE")
+            print("✅ Added stripe_customer_id")
+        except sqlite3.OperationalError as e:
+            print(f"Warning: {e}")
+    
+    if 'stripe_subscription_id' not in existing_columns:
+        try:
+            print("Adding stripe_subscription_id column...")
+            cursor.execute("ALTER TABLE users ADD COLUMN stripe_subscription_id TEXT UNIQUE")
+            print("✅ Added stripe_subscription_id")
+        except sqlite3.OperationalError as e:
+            print(f"Warning: {e}")
     
     # Migration: Add last_message_reset column if it doesn't exist
-    try:
-        cursor.execute("ALTER TABLE users ADD COLUMN last_message_reset TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
-    except sqlite3.OperationalError:
-        pass  # Column already exists
+    if 'last_message_reset' not in existing_columns:
+        try:
+            print("Adding last_message_reset column...")
+            cursor.execute("ALTER TABLE users ADD COLUMN last_message_reset TIMESTAMP")
+            # Initialize existing users with current timestamp
+            from datetime import datetime
+            cursor.execute("UPDATE users SET last_message_reset = ? WHERE last_message_reset IS NULL", 
+                         (datetime.utcnow().isoformat(),))
+            print("✅ Added and initialized last_message_reset column")
+        except sqlite3.OperationalError as e:
+            print(f"Warning: {e}")
+    else:
+        print("✅ last_message_reset column already exists")
     
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS chat_history (
@@ -242,6 +262,7 @@ def init_database():
     
     conn.commit()
     conn.close()
+    print("✅ Database initialization complete")
 
 # Initialize database on startup
 init_database()
