@@ -1638,10 +1638,11 @@ def health():
 # ============================================
 
 def init_promo_codes_table():
-    """Initialize promo codes table"""
+    """Initialize promo codes table with migration support"""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
+    # Create promo_codes table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS promo_codes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1655,6 +1656,27 @@ def init_promo_codes_table():
         )
     """)
     
+    # Check if times_used column exists (migration)
+    cursor.execute("PRAGMA table_info(promo_codes)")
+    existing_columns = [col[1] for col in cursor.fetchall()]
+    
+    if 'times_used' not in existing_columns:
+        try:
+            print("Adding times_used column to promo_codes table...")
+            cursor.execute("ALTER TABLE promo_codes ADD COLUMN times_used INTEGER DEFAULT 0")
+            print("✅ Added times_used column")
+        except sqlite3.OperationalError as e:
+            print(f"Warning: Could not add times_used column: {e}")
+    
+    if 'is_active' not in existing_columns:
+        try:
+            print("Adding is_active column to promo_codes table...")
+            cursor.execute("ALTER TABLE promo_codes ADD COLUMN is_active BOOLEAN DEFAULT 1")
+            print("✅ Added is_active column")
+        except sqlite3.OperationalError as e:
+            print(f"Warning: Could not add is_active column: {e}")
+    
+    # Create promo_code_usage table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS promo_code_usage (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1669,6 +1691,7 @@ def init_promo_codes_table():
     
     conn.commit()
     conn.close()
+    print("✅ Promo codes tables initialized")
 
 # Call this after your existing init_database()
 init_promo_codes_table()
@@ -2011,6 +2034,7 @@ def admin_generate_promo_codes():
     # Add admin check here
     # For now, just check if user is id 1 (first user)
     if current_user.id != 1:
+        print(f"Unauthorized promo code generation attempt by user {current_user.id}")
         return jsonify({'error': 'Unauthorized'}), 403
     
     try:
@@ -2019,10 +2043,15 @@ def admin_generate_promo_codes():
         count = data.get('count', 10)
         prefix = data.get('prefix', '')
         
+        print(f"Generating {count} promo codes for tier: {tier}, prefix: {prefix}")
+        
         if tier not in SUBSCRIPTION_TIERS:
+            print(f"Invalid tier requested: {tier}")
             return jsonify({'error': 'Invalid tier'}), 400
         
         codes = create_promo_codes(tier, count, prefix)
+        
+        print(f"✅ Successfully generated {len(codes)} promo codes")
         
         return jsonify({
             'success': True,
@@ -2031,6 +2060,9 @@ def admin_generate_promo_codes():
         }), 200
         
     except Exception as e:
+        print(f"❌ Error generating promo codes: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 
@@ -2039,11 +2071,14 @@ def admin_generate_promo_codes():
 def admin_list_promo_codes():
     """List all promo codes (admin only)"""
     if current_user.id != 1:
+        print(f"Unauthorized promo code list attempt by user {current_user.id}")
         return jsonify({'error': 'Unauthorized'}), 403
     
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
+        
+        print("Loading promo codes...")
         
         cursor.execute("""
             SELECT code, tier, max_uses, times_used, is_active, created_at
@@ -2066,9 +2101,14 @@ def admin_list_promo_codes():
             for row in results
         ]
         
+        print(f"✅ Loaded {len(codes)} promo codes")
+        
         return jsonify({'codes': codes}), 200
         
     except Exception as e:
+        print(f"❌ Error loading promo codes: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 # ============================================
