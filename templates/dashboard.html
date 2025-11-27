@@ -986,6 +986,99 @@
             opacity: 0.95;
         }
 
+        /* Website File Creation */
+        .code-block-container {
+            position: relative;
+            margin: 15px 0;
+        }
+
+        .create-file-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s;
+            z-index: 10;
+        }
+
+        .create-file-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4);
+        }
+
+        .download-card {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 15px 0;
+            box-shadow: 0 5px 20px rgba(16, 185, 129, 0.3);
+        }
+
+        .download-card h4 {
+            margin-bottom: 15px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .download-btn-large {
+            background: white;
+            color: #059669;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+            margin-bottom: 15px;
+        }
+
+        .download-btn-large:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .instructions-box {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .instructions-box h5 {
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .instructions-box ol {
+            margin-left: 20px;
+            line-height: 1.8;
+        }
+
+        .instructions-box li {
+            margin-bottom: 8px;
+        }
+
+        .instructions-box strong {
+            color: #fff;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .header {
@@ -1365,9 +1458,12 @@
                 </div>
 
                 <!-- Website Builder Tip -->
-                <div class="website-builder-tip">
-                    <h3>💻 Need a Website? Your AI Team Can Build It!</h3>
-                    <p>Ask <strong>Nova</strong> (Technical Solutions) or <strong>Theo</strong> (Implementation) to create HTML/CSS/JavaScript code. Copy & paste their code into a file - your website is ready! Perfect for landing pages, portfolios, forms, and more.</p>
+<div class="website-builder-tip">
+                    <h3>💻 Build Websites in Minutes!</h3>
+                    <p>Ask <strong>Nova</strong> or <strong>Theo</strong> to create a website. They'll generate the code AND create a downloadable file for you! Just click the green download button, save the file, and open it in your browser. No coding knowledge needed!</p>
+                    <p style="margin-top: 10px; font-size: 13px; opacity: 0.9;">
+                        <strong>Try it:</strong> "Create a landing page for my coffee shop with a contact form"
+                    </p>
                 </div>
 
                 <!-- Custom Agent Creator -->
@@ -2042,12 +2138,39 @@
                         </div>
                     `;
                 }
+                
+                // Detect HTML code in the message
+                const hasHtmlCode = detectHtmlCode(text);
+                let downloadCardHtml = '';
+                
+                if (hasHtmlCode) {
+                    const downloadCardId = 'download-card-' + Date.now();
+                    downloadCardHtml = `
+                        <div id="${downloadCardId}" class="download-card">
+                            <h4>📁 Website File Ready!</h4>
+                            <button class="download-btn-large" onclick="createWebsiteFile(\`${escapeForJs(text)}\`, '${downloadCardId}')">
+                                💾 Download Website File
+                            </button>
+                            <div class="instructions-box" style="display: none;" id="instructions-${downloadCardId}">
+                                <h5>📋 How to Use Your Website:</h5>
+                                <ol>
+                                    <li><strong>Find the file</strong> in your Downloads folder</li>
+                                    <li><strong>Double-click</strong> the file to open it in your browser</li>
+                                    <li><strong>View your website!</strong> It works instantly</li>
+                                    <li><strong>Optional:</strong> Upload to hosting (Netlify, Vercel, GitHub Pages) to share online</li>
+                                </ol>
+                            </div>
+                        </div>
+                    `;
+                }
+                
                 messageDiv.innerHTML = `
                     <div class="message-agent">
                         <div class="message-agent-name">${agentName}</div>
                         <div class="message-text">
                             ${escapeHtml(text)}
                             ${imageHtml}
+                            ${downloadCardHtml}
                             ${!imageUrl ? `<button id="${voiceBtnId}" class="voice-btn" onclick="speakText(\`${text.replace(/`/g, '\\`').replace(/"/g, '&quot;')}\`, this)">🔊</button>` : ''}
                         </div>
                     </div>
@@ -2062,6 +2185,97 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML.replace(/\n/g, '<br>');
+        }
+
+        function escapeForJs(text) {
+            return text.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
+        }
+
+        // Detect if message contains HTML code
+        function detectHtmlCode(text) {
+            const htmlPatterns = [
+                /<!DOCTYPE html>/i,
+                /<html[\s>]/i,
+                /<head[\s>]/i,
+                /<body[\s>]/i,
+                /(<html>[\s\S]*<\/html>)/i
+            ];
+            
+            return htmlPatterns.some(pattern => pattern.test(text));
+        }
+
+        // Extract HTML code from message
+        function extractHtmlCode(text) {
+            // Try to find code in triple backticks first
+            const codeBlockMatch = text.match(/```html\n?([\s\S]*?)\n?```/i);
+            if (codeBlockMatch) {
+                return codeBlockMatch[1].trim();
+            }
+            
+            // Try to find DOCTYPE tag and extract from there
+            const doctypeMatch = text.match(/(<!DOCTYPE[\s\S]*)/i);
+            if (doctypeMatch) {
+                return doctypeMatch[1].trim();
+            }
+            
+            // Try to find <html> tag
+            const htmlMatch = text.match(/(<html[\s\S]*<\/html>)/i);
+            if (htmlMatch) {
+                return htmlMatch[1].trim();
+            }
+            
+            return text; // Return as-is if no pattern matched
+        }
+
+        // Create website file for download
+        async function createWebsiteFile(messageText, cardId) {
+            try {
+                const code = extractHtmlCode(messageText);
+                
+                // Determine filename from context
+                let filename = 'website.html';
+                if (messageText.toLowerCase().includes('landing page')) {
+                    filename = 'landing-page.html';
+                } else if (messageText.toLowerCase().includes('portfolio')) {
+                    filename = 'portfolio.html';
+                } else if (messageText.toLowerCase().includes('contact')) {
+                    filename = 'contact-form.html';
+                }
+                
+                // Create a downloadable file directly (client-side)
+                const blob = new Blob([code], { type: 'text/html' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                
+                // Trigger download
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                // Show instructions
+                const instructionsBox = document.getElementById(`instructions-${cardId}`);
+                if (instructionsBox) {
+                    instructionsBox.style.display = 'block';
+                }
+                
+                // Update button
+                const button = event.target;
+                const originalText = button.innerHTML;
+                button.innerHTML = '✅ Downloaded!';
+                button.disabled = true;
+                
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                }, 3000);
+                
+            } catch (error) {
+                console.error('Error creating website file:', error);
+                alert('Error creating file. Please try copying the code manually.');
+            }
         }
 
         // Download generated image

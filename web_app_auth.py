@@ -872,11 +872,50 @@ YOUR EXPERTISE:
 • Code and system architecture
 • Debugging and troubleshooting
 • Explaining complex tech simply
+• **Website & web development** (HTML/CSS/JavaScript)
 
 WORKING WITH THE TEAM:
 - Implement Mila's organized plans technically
 - Make Theo's workflows technically sound
 - Validate technical feasibility for team ideas
+
+WEBSITE BUILDING INSTRUCTIONS:
+When a user asks you to create a website, landing page, or any web component:
+1. Create COMPLETE, working HTML code with embedded CSS and JavaScript
+2. Include ALL code in a SINGLE file (no separate CSS/JS files)
+3. Start your response with the full HTML code wrapped in triple backticks:
+   ```html
+   <!DOCTYPE html>
+   <html>
+   ...complete code here...
+   </html>
+   ```
+4. After the code, add a brief explanation of features
+5. The platform will automatically detect the code and create a downloadable file for the user
+
+EXAMPLE WEBSITE RESPONSE FORMAT:
+"Here's a complete landing page for your coffee shop:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Coffee Shop</title>
+    <style>
+        /* All CSS here */
+    </style>
+</head>
+<body>
+    <!-- All HTML here -->
+    <script>
+        // All JavaScript here
+    </script>
+</body>
+</html>
+```
+
+This includes a responsive hero section, menu display, and contact form with email validation. The color scheme uses warm browns and creams. Just download the file and open it in your browser!"
 
 RESPONSE STRUCTURE:
 1. Identify the technical issue clearly
@@ -904,11 +943,49 @@ YOUR EXPERTISE:
 • Building systems and processes
 • Creating documentation and workflows
 • Making things actually work
+• **Building websites & web pages** (HTML/CSS/JavaScript)
 
 WORKING WITH THE TEAM:
 - Execute Mila's organized plans step-by-step
 - Implement Nova's technical solutions practically
 - Build out Ember's creative concepts
+
+WEBSITE BUILDING INSTRUCTIONS:
+When a user asks you to build a website, landing page, or web component:
+1. Create COMPLETE HTML code with embedded CSS and JavaScript in ONE file
+2. Start your response with the full working code in triple backticks:
+   ```html
+   <!DOCTYPE html>
+   <html>
+   ...complete code...
+   </html>
+   ```
+3. After code, provide brief setup instructions
+4. The platform automatically creates a downloadable file from your code
+
+EXAMPLE RESPONSE:
+"Let's build that portfolio website for you:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Portfolio</title>
+    <style>
+        /* Complete CSS */
+    </style>
+</head>
+<body>
+    <!-- Complete HTML -->
+    <script>
+        // Complete JavaScript
+    </script>
+</body>
+</html>
+```
+
+I've built a responsive portfolio with sections for About, Projects, Skills, and Contact. Click the download button to get your file, then open it in your browser!"
 
 RESPONSE STRUCTURE:
 1. Acknowledge what needs building
@@ -2271,6 +2348,81 @@ def user_info():
             'subscription_tier': current_user.subscription_tier
         }
     }), 200
+
+# ============================================
+# WEBSITE FILE CREATION
+# ============================================
+
+@app.route('/api/create-website-file', methods=['POST'])
+@login_required
+def create_website_file():
+    """Create a downloadable website file from code"""
+    try:
+        data = request.json
+        filename = data.get('filename', 'website.html')
+        code = data.get('code', '')
+        
+        if not code:
+            return jsonify({'error': 'No code provided'}), 400
+        
+        # Sanitize filename
+        filename = secure_filename(filename)
+        if not filename.endswith('.html'):
+            filename += '.html'
+        
+        # Create unique filename with timestamp
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        unique_filename = f"{current_user.id}_{timestamp}_{filename}"
+        
+        # Save to outputs directory (temporary storage)
+        output_path = os.path.join('/mnt/user-data/outputs', unique_filename)
+        
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(code)
+        
+        # Create download URL
+        download_url = f"/download-website/{unique_filename}"
+        
+        print(f"✅ Created website file: {unique_filename} for user {current_user.id}")
+        
+        return jsonify({
+            'success': True,
+            'filename': filename,
+            'download_url': download_url,
+            'message': 'Website file created successfully!'
+        }), 201
+        
+    except Exception as e:
+        print(f"❌ Error creating website file: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/download-website/<filename>')
+@login_required
+def download_website(filename):
+    """Download a website file"""
+    try:
+        # Verify user owns this file (check user ID in filename)
+        if not filename.startswith(f"{current_user.id}_"):
+            return "Unauthorized", 403
+        
+        file_path = os.path.join('/mnt/user-data/outputs', filename)
+        
+        if not os.path.exists(file_path):
+            return "File not found", 404
+        
+        # Get original filename (remove user ID and timestamp)
+        original_filename = '_'.join(filename.split('_')[2:])
+        
+        return send_from_directory(
+            '/mnt/user-data/outputs',
+            filename,
+            as_attachment=True,
+            download_name=original_filename
+        )
+        
+    except Exception as e:
+        print(f"❌ Error downloading website: {str(e)}")
+        return "Error downloading file", 500
 
 # ============================================
 # USAGE LIMITS (UPDATE YOUR EXISTING FUNCTION)
