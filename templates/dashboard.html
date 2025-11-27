@@ -98,6 +98,7 @@
             display: flex;
             gap: 15px;
             align-items: center;
+            position: relative;
         }
 
         .nav-btn {
@@ -128,6 +129,86 @@
         .logout-btn:hover {
             background: rgba(255, 100, 100, 0.3);
             border-color: #ff6464;
+        }
+
+        /* Dropdown Menu */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-btn {
+            background: rgba(144, 238, 144, 0.2);
+            color: #90EE90;
+            padding: 10px 20px;
+            border: 2px solid rgba(144, 238, 144, 0.4);
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dropdown-btn:hover {
+            background: rgba(144, 238, 144, 0.3);
+            border-color: #90EE90;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(144, 238, 144, 0.3);
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            margin-top: 10px;
+            background: rgba(26, 77, 46, 0.98);
+            min-width: 200px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+            border-radius: 10px;
+            z-index: 1000;
+            border: 2px solid rgba(144, 238, 144, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .dropdown-content a {
+            color: #90EE90;
+            padding: 12px 20px;
+            text-decoration: none;
+            display: block;
+            transition: all 0.3s;
+            border-radius: 8px;
+            margin: 5px;
+        }
+
+        .dropdown-content a:hover {
+            background: rgba(144, 238, 144, 0.2);
+        }
+
+        .dropdown.show .dropdown-content {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .dropdown-icon {
+            transition: transform 0.3s;
+        }
+
+        .dropdown.show .dropdown-icon {
+            transform: rotate(180deg);
         }
 
         /* Stats Bar */
@@ -629,6 +710,282 @@
             color: #333;
         }
 
+        /* Custom Agent Creator */
+        .create-agent-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 20px auto;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .create-agent-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .custom-agent-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s;
+        }
+
+        .custom-agent-modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            animation: slideUp 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        .modal-header h2 {
+            color: #667eea;
+            font-size: 24px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+            transition: color 0.3s;
+        }
+
+        .modal-close:hover {
+            color: #333;
+        }
+
+        .form-group-custom {
+            margin-bottom: 20px;
+        }
+
+        .form-group-custom label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .form-group-custom input,
+        .form-group-custom textarea,
+        .form-group-custom select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+
+        .form-group-custom input:focus,
+        .form-group-custom textarea:focus,
+        .form-group-custom select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group-custom textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .radio-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .radio-item input[type="radio"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 15px;
+            justify-content: flex-end;
+            margin-top: 30px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #666;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-secondary:hover {
+            background: #d0d0d0;
+        }
+
+        .custom-agents-list {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .custom-agent-item {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .custom-agent-info h4 {
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .custom-agent-info p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .custom-agent-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+
+        .btn-use {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-delete {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-small:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .website-builder-tip {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .website-builder-tip h3 {
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .website-builder-tip p {
+            font-size: 14px;
+            line-height: 1.6;
+            opacity: 0.95;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .header {
@@ -917,10 +1274,21 @@
                 <button onclick="openVoiceSettings()" class="voice-settings-btn">
                     🎙️ Voice Settings
                 </button>
-                <a href="/profile" class="nav-btn">👤 Profile</a>
-                <a href="/settings" class="nav-btn">⚙️ Settings</a>
-                <a href="/pricing" class="nav-btn">💎 Pricing</a>
-                <a href="/logout" class="nav-btn logout-btn">🚪 Logout</a>
+                <div class="dropdown" id="navDropdown">
+                    <button onclick="toggleDropdown()" class="dropdown-btn">
+                        ☰ Menu
+                        <span class="dropdown-icon">▼</span>
+                    </button>
+                    <div class="dropdown-content">
+                        <a href="/profile">👤 Profile</a>
+                        <a href="/settings">⚙️ Settings</a>
+                        <a href="/pricing">💎 Pricing</a>
+                        <a href="/automations">🔗 Automations</a>
+                        <a href="/promo-codes" id="adminLink" style="display: none;">🎫 Promo Codes</a>
+                        <hr style="margin: 10px 5px; border: 1px solid rgba(144, 238, 144, 0.2);">
+                        <a href="/logout" style="color: #ff6464;">🚪 Logout</a>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -994,6 +1362,23 @@
                         <div class="character-name">Theo</div>
                         <div class="character-role">Implementation</div>
                     </div>
+                </div>
+
+                <!-- Website Builder Tip -->
+                <div class="website-builder-tip">
+                    <h3>💻 Need a Website? Your AI Team Can Build It!</h3>
+                    <p>Ask <strong>Nova</strong> (Technical Solutions) or <strong>Theo</strong> (Implementation) to create HTML/CSS/JavaScript code. Copy & paste their code into a file - your website is ready! Perfect for landing pages, portfolios, forms, and more.</p>
+                </div>
+
+                <!-- Custom Agent Creator -->
+                <button class="create-agent-btn" onclick="openCustomAgentModal()">
+                    ✨ Create Your Custom Agent
+                </button>
+
+                <!-- Custom Agents List -->
+                <div id="customAgentsList" class="custom-agents-list" style="display: none;">
+                    <h3 style="margin-bottom: 15px; color: #667eea;">Your Custom Agents</h3>
+                    <div id="customAgentsContainer"></div>
                 </div>
             </div>
 
@@ -1401,6 +1786,17 @@
                 const response = await fetch('/api/user-stats', {
                     credentials: 'include'
                 });
+                
+                // Check if response is JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    // Not logged in or route doesn't exist
+                    document.getElementById('messages-today').textContent = '-';
+                    document.getElementById('daily-limit').textContent = '-';
+                    document.getElementById('messages-remaining').textContent = '-';
+                    return;
+                }
+                
                 const data = await response.json();
                 
                 if (response.ok) {
@@ -1415,7 +1811,10 @@
                         document.getElementById('messages-remaining').textContent = remaining;
                         
                         if (data.subscription_tier === 'free' && remaining < 10) {
-                            document.getElementById('upgrade-btn').style.display = 'block';
+                            const upgradeBtn = document.getElementById('upgrade-btn');
+                            if (upgradeBtn) {
+                                upgradeBtn.style.display = 'block';
+                            }
                         }
                     }
                 } else {
@@ -1424,7 +1823,7 @@
                     document.getElementById('messages-remaining').textContent = '-';
                 }
             } catch (error) {
-                console.error('Error loading stats:', error);
+                console.log('Stats not available');
                 document.getElementById('messages-today').textContent = '-';
                 document.getElementById('daily-limit').textContent = '-';
                 document.getElementById('messages-remaining').textContent = '-';
@@ -1751,8 +2150,268 @@
             }
         }
 
+        // Dropdown Menu
+        function toggleDropdown() {
+            const dropdown = document.getElementById('navDropdown');
+            dropdown.classList.toggle('show');
+        }
+
+        // Close dropdown when clicking outside
+        window.onclick = function(event) {
+            if (!event.target.matches('.dropdown-btn') && !event.target.matches('.dropdown-icon')) {
+                const dropdown = document.getElementById('navDropdown');
+                if (dropdown && dropdown.classList.contains('show')) {
+                    dropdown.classList.remove('show');
+                }
+            }
+        }
+
+        // Custom Agent Modal Functions
+        function openCustomAgentModal() {
+            document.getElementById('customAgentModal').classList.add('show');
+        }
+
+        function closeCustomAgentModal() {
+            document.getElementById('customAgentModal').classList.remove('show');
+            document.getElementById('customAgentForm').reset();
+        }
+
+        // Save Custom Agent
+        async function saveCustomAgent(event) {
+            event.preventDefault();
+
+            const name = document.getElementById('agentName').value;
+            const role = document.getElementById('agentRole').value;
+            const traits = Array.from(document.querySelectorAll('input[name="traits"]:checked')).map(cb => cb.value);
+            const style = document.querySelector('input[name="style"]:checked').value;
+            const systemPrompt = document.getElementById('systemPrompt').value;
+
+            const agentData = {
+                name: name,
+                role: role,
+                personality: {
+                    traits: traits,
+                    style: style
+                },
+                system_prompt: systemPrompt || `You are ${name}, specializing in ${role}. ${traits.length ? 'You are ' + traits.join(', ') + '.' : ''} Your communication style is ${style}.`
+            };
+
+            try {
+                const response = await fetch('/api/custom-agents', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(agentData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert('✅ Custom agent created successfully!');
+                    closeCustomAgentModal();
+                    loadCustomAgents();
+                } else {
+                    alert('❌ Error: ' + (data.error || 'Failed to create agent'));
+                }
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+
+        // Load Custom Agents
+        async function loadCustomAgents() {
+            try {
+                const response = await fetch('/api/custom-agents');
+                
+                // Check if response is JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    // Not logged in or route doesn't exist, silently fail
+                    document.getElementById('customAgentsList').style.display = 'none';
+                    return;
+                }
+                
+                const data = await response.json();
+
+                if (response.ok && data.agents && data.agents.length > 0) {
+                    const container = document.getElementById('customAgentsContainer');
+                    const list = document.getElementById('customAgentsList');
+                    
+                    container.innerHTML = data.agents.map(agent => `
+                        <div class="custom-agent-item">
+                            <div class="custom-agent-info">
+                                <h4>${agent.name}</h4>
+                                <p>${agent.role}</p>
+                            </div>
+                            <div class="custom-agent-actions">
+                                <button class="btn-small btn-use" onclick="useCustomAgent(${agent.id}, '${agent.name}', \`${agent.system_prompt.replace(/`/g, '\\`')}\`)">Use</button>
+                                <button class="btn-small btn-delete" onclick="deleteCustomAgent(${agent.id})">Delete</button>
+                            </div>
+                        </div>
+                    `).join('');
+
+                    list.style.display = 'block';
+                } else {
+                    document.getElementById('customAgentsList').style.display = 'none';
+                }
+            } catch (error) {
+                // Silently fail - user might not be logged in or feature not available
+                console.log('Custom agents not available');
+                document.getElementById('customAgentsList').style.display = 'none';
+            }
+        }
+
+        // Use Custom Agent
+        function useCustomAgent(id, name, systemPrompt) {
+            // Deselect all default agents
+            document.querySelectorAll('.character-card').forEach(card => {
+                card.classList.remove('active');
+                card.classList.add('sleeping');
+            });
+
+            // Set current agent to custom
+            currentAgent = {
+                name: name,
+                isCustom: true,
+                systemPrompt: systemPrompt
+            };
+
+            // Update welcome message
+            const chatContainer = document.getElementById('chatContainer');
+            chatContainer.innerHTML = `
+                <div class="welcome-message">
+                    <h3>Hello! I'm ${name}! 🌴</h3>
+                    <p>How can I help you today?</p>
+                </div>
+            `;
+
+            alert(`✅ Now using ${name}!`);
+        }
+
+        // Delete Custom Agent
+        async function deleteCustomAgent(id) {
+            if (!confirm('Are you sure you want to delete this custom agent?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/custom-agents/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    alert('✅ Custom agent deleted!');
+                    loadCustomAgents();
+                } else {
+                    alert('❌ Failed to delete agent');
+                }
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+
+        // Check if user is admin and show promo codes link
+        async function checkAdminStatus() {
+            try {
+                const response = await fetch('/api/user-info');
+                
+                // Check if response is JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    // Not logged in or route doesn't exist, silently fail
+                    return;
+                }
+                
+                const data = await response.json();
+                
+                if (data.user && data.user.id === 1) {
+                    const adminLink = document.getElementById('adminLink');
+                    if (adminLink) {
+                        adminLink.style.display = 'block';
+                    }
+                }
+            } catch (error) {
+                // Silently fail - admin link stays hidden by default
+                console.log('Admin check not available');
+            }
+        }
+
         // Initialize
         loadStats();
+        loadCustomAgents();
+        checkAdminStatus();
     </script>
+
+    <!-- Custom Agent Creation Modal -->
+    <div id="customAgentModal" class="custom-agent-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>✨ Create Your Custom Agent</h2>
+                <button class="modal-close" onclick="closeCustomAgentModal()">&times;</button>
+            </div>
+
+            <form id="customAgentForm" onsubmit="saveCustomAgent(event)">
+                <div class="form-group-custom">
+                    <label for="agentName">Agent Name *</label>
+                    <input type="text" id="agentName" placeholder="e.g., Marketing Expert, Code Reviewer" required maxlength="50">
+                </div>
+
+                <div class="form-group-custom">
+                    <label for="agentRole">Role/Expertise *</label>
+                    <input type="text" id="agentRole" placeholder="e.g., Social Media Marketing, Python Development" required maxlength="100">
+                </div>
+
+                <div class="form-group-custom">
+                    <label>Personality Traits</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-item">
+                            <input type="checkbox" name="traits" value="professional"> Professional
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" name="traits" value="friendly"> Friendly
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" name="traits" value="humorous"> Humorous
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" name="traits" value="concise"> Concise
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" name="traits" value="detailed"> Detailed
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" name="traits" value="creative"> Creative
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group-custom">
+                    <label>Communication Style</label>
+                    <div class="radio-group">
+                        <label class="radio-item">
+                            <input type="radio" name="style" value="direct" checked> Direct & Brief
+                        </label>
+                        <label class="radio-item">
+                            <input type="radio" name="style" value="conversational"> Conversational
+                        </label>
+                        <label class="radio-item">
+                            <input type="radio" name="style" value="educational"> Educational
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group-custom">
+                    <label for="systemPrompt">Custom Instructions (Optional)</label>
+                    <textarea id="systemPrompt" placeholder="Add specific instructions, expertise areas, or guidelines for this agent..."></textarea>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="closeCustomAgentModal()">Cancel</button>
+                    <button type="submit" class="btn-primary">💾 Save Agent</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </body>
 </html>

@@ -7,6 +7,7 @@ import os
 import sys
 import secrets
 import string
+import json
 from datetime import datetime
 from flask import Flask, request, jsonify, session, redirect, url_for, render_template, send_from_directory
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -1733,6 +1734,35 @@ def init_api_keys_table():
 init_api_keys_table()
 
 # ============================================
+# CUSTOM AGENTS SYSTEM
+# ============================================
+
+def init_custom_agents_table():
+    """Initialize custom agents table"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS custom_agents (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            role TEXT NOT NULL,
+            personality TEXT,
+            system_prompt TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+    """)
+    
+    conn.commit()
+    conn.close()
+    print("✅ Custom agents table initialized")
+
+# Initialize custom agents table
+init_custom_agents_table()
+
+# ============================================
 # CREATE MASTER CODE FOR AMANDA
 # ============================================
 
@@ -2118,6 +2148,129 @@ def admin_list_promo_codes():
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
+
+# ============================================
+# CUSTOM AGENTS SYSTEM
+# ============================================
+
+@app.route('/api/custom-agents', methods=['GET'])
+@login_required
+def get_custom_agents():
+    """Get all custom agents for current user"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT id, name, role, personality, system_prompt, created_at
+            FROM custom_agents
+            WHERE user_id = ?
+            ORDER BY created_at DESC
+        """, (current_user.id,))
+        
+        results = cursor.fetchall()
+        conn.close()
+        
+        agents = [
+            {
+                'id': row[0],
+                'name': row[1],
+                'role': row[2],
+                'personality': row[3],
+                'system_prompt': row[4],
+                'created_at': row[5]
+            }
+            for row in results
+        ]
+        
+        return jsonify({'agents': agents}), 200
+        
+    except Exception as e:
+        print(f"❌ Error loading custom agents: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/custom-agents', methods=['POST'])
+@login_required
+def create_custom_agent():
+    """Create a new custom agent"""
+    try:
+        data = request.json
+        name = data.get('name')
+        role = data.get('role')
+        personality = json.dumps(data.get('personality', {}))
+        system_prompt = data.get('system_prompt', '')
+        
+        if not name or not role:
+            return jsonify({'error': 'Name and role are required'}), 400
+        
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            INSERT INTO custom_agents (user_id, name, role, personality, system_prompt)
+            VALUES (?, ?, ?, ?, ?)
+        """, (current_user.id, name, role, personality, system_prompt))
+        
+        agent_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        
+        print(f"✅ Created custom agent '{name}' for user {current_user.id}")
+        
+        return jsonify({
+            'success': True,
+            'agent_id': agent_id
+        }), 201
+        
+    except Exception as e:
+        print(f"❌ Error creating custom agent: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/custom-agents/<int:agent_id>', methods=['DELETE'])
+@login_required
+def delete_custom_agent(agent_id):
+    """Delete a custom agent"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        # Verify ownership
+        cursor.execute("""
+            SELECT user_id FROM custom_agents WHERE id = ?
+        """, (agent_id,))
+        
+        result = cursor.fetchone()
+        if not result:
+            conn.close()
+            return jsonify({'error': 'Agent not found'}), 404
+        
+        if result[0] != current_user.id:
+            conn.close()
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        cursor.execute("DELETE FROM custom_agents WHERE id = ?", (agent_id,))
+        conn.commit()
+        conn.close()
+        
+        print(f"✅ Deleted custom agent {agent_id} for user {current_user.id}")
+        
+        return jsonify({'success': True}), 200
+        
+    except Exception as e:
+        print(f"❌ Error deleting custom agent: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/user-info')
+@login_required
+def user_info():
+    """Get current user info"""
+    return jsonify({
+        'user': {
+            'id': current_user.id,
+            'email': current_user.email,
+            'subscription_tier': current_user.subscription_tier
+        }
+    }), 200
 
 # ============================================
 # USAGE LIMITS (UPDATE YOUR EXISTING FUNCTION)
