@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Promo Code Management - AI Team</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 20px 30px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #667eea;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .back-btn {
+            padding: 10px 20px;
+            background: #90EE90;
+            color: #1a4d2e;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .back-btn:hover {
+            background: #76d876;
+            transform: translateY(-2px);
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: #10b981;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .message.success {
+            background: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid #10b981;
+        }
+
+        .message.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid #ef4444;
+        }
+
+        .codes-display {
+            background: #f9fafb;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .code-item {
+            background: white;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 3px solid #667eea;
+        }
+
+        .code-text {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .copy-btn {
+            padding: 5px 15px;
+            background: #90EE90;
+            color: #1a4d2e;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .copy-btn:hover {
+            background: #76d876;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        th {
+            background: #f9fafb;
+            color: #374151;
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background: #f9fafb;
+        }
+
+        .badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-active {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-inactive {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+        }
+
+        .spinner {
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🎫 Promo Code Management</h1>
+            <a href="/dashboard" class="back-btn">← Back to Dashboard</a>
+        </div>
+
+        <!-- Messages -->
+        <div id="message" class="message"></div>
+
+        <!-- Generate New Promo Codes -->
+        <div class="card">
+            <h2>Generate New Promo Codes</h2>
+            <form id="generateForm">
+                <div class="form-group">
+                    <label for="tier">Tier:</label>
+                    <select id="tier" name="tier" required>
+                        <option value="freeforlife">Free For Life (Unlimited)</option>
+                        <option value="pro">Pro ($30/month features)</option>
+                        <option value="starter">Starter ($10/month features)</option>
+                        <option value="free">Free (25 messages/day)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="count">Number of Codes:</label>
+                    <input type="number" id="count" name="count" min="1" max="100" value="10" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="prefix">Prefix (optional):</label>
+                    <input type="text" id="prefix" name="prefix" placeholder="e.g., BETA" maxlength="10">
+                </div>
+
+                <button type="submit" class="btn">Generate Codes</button>
+            </form>
+
+            <!-- Display Generated Codes -->
+            <div id="generatedCodes" class="codes-display" style="display: none;">
+                <h3 style="margin-bottom: 15px;">✅ Generated Codes:</h3>
+                <div id="codesList"></div>
+            </div>
+        </div>
+
+        <!-- Existing Promo Codes -->
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>Existing Promo Codes</h2>
+                <button onclick="loadPromoCodes()" class="btn btn-success">🔄 Refresh List</button>
+            </div>
+
+            <div id="promoCodesTable">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Loading promo codes...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load promo codes on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPromoCodes();
+        });
+
+        // Generate promo codes
+        document.getElementById('generateForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const tier = document.getElementById('tier').value;
+            const count = parseInt(document.getElementById('count').value);
+            const prefix = document.getElementById('prefix').value;
+
+            try {
+                const response = await fetch('/api/admin/generate-promo-codes', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ tier, count, prefix })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showMessage(`Successfully generated ${data.count} promo codes!`, 'success');
+                    displayGeneratedCodes(data.codes);
+                    loadPromoCodes(); // Refresh the list
+                } else {
+                    showMessage(`Error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`Error: ${error.message}`, 'error');
+            }
+        });
+
+        // Display generated codes
+        function displayGeneratedCodes(codes) {
+            const codesDiv = document.getElementById('generatedCodes');
+            const codesList = document.getElementById('codesList');
+            
+            codesList.innerHTML = codes.map(code => `
+                <div class="code-item">
+                    <span class="code-text">${code}</span>
+                    <button class="copy-btn" onclick="copyToClipboard('${code}')">📋 Copy</button>
+                </div>
+            `).join('');
+
+            codesDiv.style.display = 'block';
+        }
+
+        // Copy to clipboard
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showMessage('Code copied to clipboard!', 'success');
+            });
+        }
+
+        // Load promo codes
+        async function loadPromoCodes() {
+            const tableDiv = document.getElementById('promoCodesTable');
+            
+            tableDiv.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Loading promo codes...
+                </div>
+            `;
+
+            try {
+                const response = await fetch('/api/admin/list-promo-codes');
+                const data = await response.json();
+
+                if (response.ok) {
+                    if (data.codes.length === 0) {
+                        tableDiv.innerHTML = '<p style="text-align: center; padding: 40px; color: #6b7280;">No promo codes generated yet.</p>';
+                    } else {
+                        displayPromoCodesTable(data.codes);
+                    }
+                } else {
+                    tableDiv.innerHTML = `<p style="color: red; text-align: center; padding: 40px;">Error: ${data.error}</p>`;
+                }
+            } catch (error) {
+                tableDiv.innerHTML = `<p style="color: red; text-align: center; padding: 40px;">Error: ${error.message}</p>`;
+            }
+        }
+
+        // Display promo codes table
+        function displayPromoCodesTable(codes) {
+            const tableDiv = document.getElementById('promoCodesTable');
+            
+            const tableHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Tier</th>
+                            <th>Max Uses</th>
+                            <th>Times Used</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${codes.map(code => `
+                            <tr>
+                                <td><code style="background: #f3f4f6; padding: 4px 8px; border-radius: 4px;">${code.code}</code></td>
+                                <td>${formatTier(code.tier)}</td>
+                                <td>${code.max_uses}</td>
+                                <td>${code.times_used}</td>
+                                <td><span class="badge ${code.is_active ? 'badge-active' : 'badge-inactive'}">${code.is_active ? 'Active' : 'Inactive'}</span></td>
+                                <td>${formatDate(code.created_at)}</td>
+                                <td><button class="copy-btn" onclick="copyToClipboard('${code.code}')">📋 Copy</button></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+
+            tableDiv.innerHTML = tableHTML;
+        }
+
+        // Format tier name
+        function formatTier(tier) {
+            const tiers = {
+                'free': 'Free',
+                'freeforlife': 'Free For Life',
+                'starter': 'Starter',
+                'pro': 'Pro'
+            };
+            return tiers[tier] || tier;
+        }
+
+        // Format date
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+
+        // Show message
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${type}`;
+            messageDiv.style.display = 'block';
+
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

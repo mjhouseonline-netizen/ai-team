@@ -684,6 +684,14 @@ def automations():
     """Automations page"""
     return render_template('automations.html', user=current_user)
 
+@app.route('/promo-codes')
+@login_required
+def promo_codes_page():
+    """Promo codes management page (admin only)"""
+    if current_user.id != 1:
+        return redirect(url_for('dashboard'))
+    return render_template('promo-codes.html', user=current_user)
+
 # ============================================
 # AGENT PERSONALITIES
 # ============================================
