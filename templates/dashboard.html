@@ -669,6 +669,12 @@
             background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 165, 0, 0.2));
             border-color: #ffa500;
             color: #ff8c00;
+            font-size: 0.85em;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: 600;
         }
 
         .prompt-builder-btn:hover {
@@ -1703,8 +1709,14 @@
                 order: 4;
             }
 
-            #sendBtn {
+            .prompt-builder-btn {
                 order: 5;
+                font-size: 0.75em;
+                padding: 6px 10px;
+            }
+
+            #sendBtn {
+                order: 6;
             }
         }
 
@@ -2063,7 +2075,7 @@
                         🎨
                     </button>
                     <button id="promptBuilderBtn" onclick="openPromptBuilder()" class="prompt-builder-btn" title="AI Prompt Builder - Get help creating better prompts!">
-                        ✨
+                        <span>✨</span><span>AI Help</span>
                     </button>
                     <input 
                         type="text" 
