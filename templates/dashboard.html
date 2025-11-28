@@ -215,9 +215,9 @@
         .stats-bar {
             background: rgba(255, 215, 0, 0.15);
             border: 2px solid rgba(255, 215, 0, 0.4);
-            border-radius: 12px;
-            padding: 15px 25px;
-            margin-bottom: 20px;
+            border-radius: 8px;
+            padding: 8px 20px;
+            margin-bottom: 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -230,23 +230,24 @@
 
         .stat-label {
             color: rgba(255, 255, 255, 0.7);
-            font-size: 0.9em;
-            margin-bottom: 5px;
+            font-size: 0.75em;
+            margin-bottom: 2px;
         }
 
         .stat-value {
             color: #FFD700;
-            font-size: 1.4em;
+            font-size: 1.1em;
             font-weight: bold;
         }
 
         .upgrade-link {
             background: linear-gradient(135deg, #FFD700, #FFA500);
             color: #1a4d2e;
-            padding: 10px 20px;
-            border-radius: 8px;
+            padding: 6px 15px;
+            border-radius: 6px;
             text-decoration: none;
             font-weight: bold;
+            font-size: 0.85em;
             transition: all 0.3s ease;
         }
 
@@ -1929,6 +1930,7 @@
                         <a href="/pricing">💎 Pricing</a>
                         <a href="/automations">🔗 Automations</a>
                         <a href="/promo-codes" id="adminLink" style="display: none;">🎫 Promo Codes</a>
+                        <a href="/admin/analytics" id="adminAnalyticsLink" style="display: none;">📊 Admin Analytics</a>
                         <hr style="margin: 10px 5px; border: 1px solid rgba(144, 238, 144, 0.2);">
                         <a href="/logout" style="color: #ff6464;">🚪 Logout</a>
                     </div>
@@ -3345,6 +3347,10 @@
                     const adminLink = document.getElementById('adminLink');
                     if (adminLink) {
                         adminLink.style.display = 'block';
+                    }
+                    const adminAnalyticsLink = document.getElementById('adminAnalyticsLink');
+                    if (adminAnalyticsLink) {
+                        adminAnalyticsLink.style.display = 'block';
                     }
                 }
             } catch (error) {

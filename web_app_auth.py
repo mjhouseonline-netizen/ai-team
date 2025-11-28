@@ -693,6 +693,138 @@ def promo_codes_page():
         return redirect(url_for('dashboard'))
     return render_template('promo-codes.html', user=current_user)
 
+@app.route('/admin/analytics')
+@login_required
+def admin_analytics():
+    """Admin analytics dashboard (admin only)"""
+    if current_user.id != 1:
+        return redirect(url_for('dashboard'))
+    return render_template('admin_dashboard.html', user=current_user)
+
+@app.route('/api/admin/analytics')
+@login_required
+def api_admin_analytics():
+    """Get analytics data (admin only)"""
+    if current_user.id != 1:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Total users
+        cursor.execute("SELECT COUNT(*) FROM users")
+        total_users = cursor.fetchone()[0]
+        
+        # Messages today
+        cursor.execute("""
+            SELECT COUNT(*) FROM chat_history 
+            WHERE DATE(timestamp) = CURRENT_DATE
+        """)
+        messages_today = cursor.fetchone()[0]
+        
+        # Total messages
+        cursor.execute("SELECT COUNT(*) FROM chat_history")
+        total_messages = cursor.fetchone()[0]
+        
+        # Paid users (Pro, Team, Enterprise)
+        cursor.execute("""
+            SELECT COUNT(*) FROM users 
+            WHERE subscription_tier IN ('pro', 'team', 'enterprise')
+        """)
+        paid_users = cursor.fetchone()[0]
+        
+        # Subscription breakdown
+        cursor.execute("""
+            SELECT subscription_tier, COUNT(*) 
+            FROM users 
+            GROUP BY subscription_tier
+        """)
+        subscription_data = cursor.fetchall()
+        subscription_breakdown = {tier: count for tier, count in subscription_data}
+        
+        # Agent usage
+        cursor.execute("""
+            SELECT agent, COUNT(*) 
+            FROM chat_history 
+            GROUP BY agent
+        """)
+        agent_data = cursor.fetchall()
+        agent_usage = {agent: count for agent, count in agent_data}
+        
+        # Total custom agents
+        cursor.execute("SELECT COUNT(*) FROM custom_agents")
+        total_custom_agents = cursor.fetchone()[0]
+        
+        # Recent activity (last 20 users)
+        cursor.execute("""
+            SELECT 
+                u.email,
+                u.subscription_tier,
+                u.created_at,
+                COUNT(CASE WHEN DATE(ch.timestamp) = CURRENT_DATE THEN 1 END) as messages_today,
+                COUNT(ch.id) as total_messages,
+                MAX(ch.timestamp) as last_active
+            FROM users u
+            LEFT JOIN chat_history ch ON u.id = ch.user_id
+            GROUP BY u.id, u.email, u.subscription_tier, u.created_at
+            ORDER BY last_active DESC NULLS LAST
+            LIMIT 20
+        """)
+        recent_activity = []
+        for row in cursor.fetchall():
+            recent_activity.append({
+                'email': row[0],
+                'subscription_tier': row[1],
+                'created_at': row[2].isoformat() if row[2] else None,
+                'messages_today': row[3],
+                'total_messages': row[4],
+                'last_active': row[5].isoformat() if row[5] else 'Never'
+            })
+        
+        # Top users by message count
+        cursor.execute("""
+            SELECT 
+                u.email,
+                u.subscription_tier,
+                u.created_at,
+                COUNT(ch.id) as total_messages
+            FROM users u
+            LEFT JOIN chat_history ch ON u.id = ch.user_id
+            GROUP BY u.id, u.email, u.subscription_tier, u.created_at
+            ORDER BY total_messages DESC
+            LIMIT 10
+        """)
+        top_users = []
+        for row in cursor.fetchall():
+            top_users.append({
+                'email': row[0],
+                'subscription_tier': row[1],
+                'created_at': row[2].isoformat() if row[2] else None,
+                'total_messages': row[3]
+            })
+        
+        conn.close()
+        
+        return jsonify({
+            'total_users': total_users,
+            'messages_today': messages_today,
+            'total_messages': total_messages,
+            'paid_users': paid_users,
+            'subscription_breakdown': subscription_breakdown,
+            'agent_usage': agent_usage,
+            'total_custom_agents': total_custom_agents,
+            'recent_activity': recent_activity,
+            'top_users': top_users,
+            'avg_response_time': 250,  # Placeholder
+            'error_rate': 0.1,  # Placeholder
+            'uptime': 99.9  # Placeholder
+        }), 200
+        
+    except Exception as e:
+        print(f"❌ Error getting analytics: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 # ============================================
 # AGENT PERSONALITIES
 # ============================================
