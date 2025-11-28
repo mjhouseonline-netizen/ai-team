@@ -685,6 +685,14 @@ def automations():
     """Automations page"""
     return render_template('automations.html', user=current_user)
 
+@app.route('/admin')
+@login_required
+def admin_portal():
+    """Admin portal - central hub for all admin functions (admin only)"""
+    if current_user.id != 1:
+        return redirect(url_for('dashboard'))
+    return render_template('admin_portal.html', user=current_user)
+
 @app.route('/promo-codes')
 @login_required
 def promo_codes_page():
