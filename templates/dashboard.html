@@ -165,29 +165,49 @@
             right: 0;
             top: 100%;
             margin-top: 10px;
-            background: #1a4d2e !important;
-            min-width: 200px;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+            background: #0d3318 !important;
+            background-color: #0d3318 !important;
+            min-width: 220px;
+            max-height: 400px;
+            overflow-y: auto;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.8);
             border-radius: 10px;
             z-index: 1000;
-            border: 2px solid #90EE90;
+            border: 3px solid #90EE90;
+            padding: 5px;
+        }
+        
+        .dropdown-content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #0d3318;
+            z-index: -1;
+            border-radius: 10px;
         }
 
         .dropdown-content a {
-            color: #e8f5e9 !important;
+            color: #ffffff !important;
             padding: 12px 20px;
             text-decoration: none;
             display: block;
             transition: all 0.3s;
             border-radius: 8px;
             margin: 5px;
-            font-weight: 600;
-            font-size: 14px;
+            font-weight: 700;
+            font-size: 15px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+            background-color: transparent;
+            position: relative;
         }
 
         .dropdown-content a:hover {
-            background: rgba(144, 238, 144, 0.4) !important;
-            color: #ffffff !important;
+            background: #90EE90 !important;
+            color: #0d3318 !important;
+            transform: translateX(-2px);
         }
 
         .dropdown.show .dropdown-content {
@@ -1967,8 +1987,8 @@
                         <a href="/admin" id="adminPortalLink" style="display: none;">🎛️ Admin Portal</a>
                         <a href="/promo-codes" id="adminLink" style="display: none;">🎫 Promo Codes</a>
                         <a href="/admin/analytics" id="adminAnalyticsLink" style="display: none;">📊 Admin Analytics</a>
-                        <hr style="margin: 10px 5px; border: 1px solid rgba(144, 238, 144, 0.6);">
-                        <a href="/logout" style="color: #ff9999; font-weight: 600;">🚪 Logout</a>
+                        <hr style="margin: 10px 5px; border: none; border-top: 2px solid #90EE90; background: #0d3318;">
+                        <a href="/logout" style="color: #ffffff !important; background: rgba(255, 100, 100, 0.3); font-weight: 700;">🚪 Logout</a>
                     </div>
                 </div>
             </div>
@@ -3114,8 +3134,15 @@
             const dropdown = document.getElementById('navDropdown');
             const button = event.target.closest('.dropdown-btn');
             
-            // If clicked outside dropdown and not on button
+            // If clicked outside dropdown and not on button, or clicked on a character card
             if (!button && !event.target.closest('.dropdown-content')) {
+                if (dropdown && dropdown.classList.contains('show')) {
+                    dropdown.classList.remove('show');
+                }
+            }
+            
+            // Close dropdown when clicking on character cards
+            if (event.target.closest('.character-card')) {
                 if (dropdown && dropdown.classList.contains('show')) {
                     dropdown.classList.remove('show');
                 }
