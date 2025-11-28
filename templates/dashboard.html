@@ -3133,6 +3133,13 @@
         document.addEventListener('click', function(event) {
             const dropdown = document.getElementById('navDropdown');
             const button = event.target.closest('.dropdown-btn');
+            const dropdownLink = event.target.closest('.dropdown-content a');
+            
+            // If clicking a dropdown link, let it navigate first
+            if (dropdownLink) {
+                // Allow default link behavior
+                return;
+            }
             
             // If clicked outside dropdown and not on button, or clicked on a character card
             if (!button && !event.target.closest('.dropdown-content')) {
