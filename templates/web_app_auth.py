@@ -730,15 +730,21 @@ def api_admin_analytics():
         total_users = cursor.fetchone()[0]
         
         # Messages today
-        cursor.execute("""
-            SELECT COUNT(*) FROM chat_history 
-            WHERE date(timestamp) = date('now')
-        """)
-        messages_today = cursor.fetchone()[0]
+        try:
+            cursor.execute("""
+                SELECT COUNT(*) FROM chat_history 
+                WHERE date(timestamp) = date('now')
+            """)
+            messages_today = cursor.fetchone()[0]
+        except:
+            messages_today = 0
         
         # Total messages
-        cursor.execute("SELECT COUNT(*) FROM chat_history")
-        total_messages = cursor.fetchone()[0]
+        try:
+            cursor.execute("SELECT COUNT(*) FROM chat_history")
+            total_messages = cursor.fetchone()[0]
+        except:
+            total_messages = 0
         
         # Paid users (Starter, Pro)
         cursor.execute("""
@@ -756,14 +762,28 @@ def api_admin_analytics():
         subscription_data = cursor.fetchall()
         subscription_breakdown = {tier: count for tier, count in subscription_data}
         
-        # Agent usage
-        cursor.execute("""
-            SELECT agent, COUNT(*) 
-            FROM chat_history 
-            GROUP BY agent
-        """)
-        agent_data = cursor.fetchall()
-        agent_usage = {agent: count for agent, count in agent_data}
+        # Agent usage - skip if column doesn't exist
+        agent_usage = {}
+        try:
+            cursor.execute("""
+                SELECT agent, COUNT(*) 
+                FROM chat_history 
+                GROUP BY agent
+            """)
+            agent_data = cursor.fetchall()
+            agent_usage = {agent: count for agent, count in agent_data}
+        except Exception as e:
+            # Agent column doesn't exist yet, return empty dict
+            print(f"Agent usage not available: {e}")
+            agent_usage = {
+                'Luna': 0,
+                'Mila': 0,
+                'Sage': 0,
+                'Ember': 0,
+                'Sol': 0,
+                'Nova': 0,
+                'Theo': 0
+            }
         
         # Total custom agents
         cursor.execute("SELECT COUNT(*) FROM custom_agents")
