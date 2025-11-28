@@ -16,6 +16,7 @@
             background: linear-gradient(135deg, #1a4d2e 0%, #2d5016 100%);
             min-height: 100vh;
             padding: 20px;
+            padding-bottom: 80px;
             position: relative;
             overflow-x: hidden;
         }
@@ -213,15 +214,20 @@
 
         /* Stats Bar */
         .stats-bar {
-            background: rgba(255, 215, 0, 0.15);
-            border: 2px solid rgba(255, 215, 0, 0.4);
-            border-radius: 8px;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(26, 77, 46, 0.95);
+            border-top: 2px solid rgba(255, 215, 0, 0.4);
             padding: 8px 20px;
-            margin-bottom: 15px;
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
+            gap: 40px;
             backdrop-filter: blur(10px);
+            z-index: 999;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
         }
 
         .stat-item {
@@ -1649,8 +1655,23 @@
             }
 
             .stats-bar {
-                flex-direction: column;
-                gap: 15px;
+                flex-direction: row;
+                gap: 20px;
+                padding: 6px 10px;
+                font-size: 0.85em;
+            }
+            
+            .stat-item {
+                flex: 1;
+                min-width: auto;
+            }
+            
+            .stat-label {
+                font-size: 0.7em;
+            }
+            
+            .stat-value {
+                font-size: 0.95em;
             }
 
             .characters-grid {
@@ -1936,23 +1957,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Stats Bar -->
-        <div class="stats-bar">
-            <div class="stat-item">
-                <div class="stat-label">Messages Today</div>
-                <div class="stat-value" id="messages-today">Loading...</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-label">Daily Limit</div>
-                <div class="stat-value" id="daily-limit">Loading...</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-label">Remaining</div>
-                <div class="stat-value" id="messages-remaining">Loading...</div>
-            </div>
-            <a href="/pricing" class="upgrade-link" id="upgrade-btn" style="display: none;">⭐ Upgrade Plan</a>
         </div>
 
         <!-- Main Dashboard -->
@@ -3639,6 +3643,23 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Stats Bar (Fixed at Bottom) -->
+    <div class="stats-bar">
+        <div class="stat-item">
+            <div class="stat-label">Messages Today</div>
+            <div class="stat-value" id="messages-today">Loading...</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-label">Daily Limit</div>
+            <div class="stat-value" id="daily-limit">Loading...</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-label">Remaining</div>
+            <div class="stat-value" id="messages-remaining">Loading...</div>
+        </div>
+        <a href="/pricing" class="upgrade-link" id="upgrade-btn" style="display: none;">⭐ Upgrade Plan</a>
     </div>
 </body>
 </html>
