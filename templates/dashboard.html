@@ -642,7 +642,7 @@
             box-shadow: 0 0 0 3px rgba(144, 238, 144, 0.1);
         }
 
-        .attach-btn, .voice-input-btn, .image-btn {
+        .attach-btn, .voice-input-btn, .image-btn, .prompt-builder-btn {
             background: rgba(144, 238, 144, 0.2);
             border: 2px solid #90EE90;
             color: #2d5016;
@@ -653,8 +653,19 @@
             transition: all 0.3s ease;
         }
 
-        .attach-btn:hover, .voice-input-btn:hover, .image-btn:hover {
+        .attach-btn:hover, .voice-input-btn:hover, .image-btn:hover, .prompt-builder-btn:hover {
             background: rgba(144, 238, 144, 0.3);
+            transform: scale(1.1);
+        }
+
+        .prompt-builder-btn {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 165, 0, 0.2));
+            border-color: #ffa500;
+            color: #ff8c00;
+        }
+
+        .prompt-builder-btn:hover {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.3), rgba(255, 165, 0, 0.3));
             transform: scale(1.1);
         }
 
@@ -1055,6 +1066,199 @@
         .preview-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Prompt Builder Modal */
+        .prompt-builder-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .prompt-builder-modal.show {
+            display: flex;
+        }
+
+        .prompt-builder-content {
+            background: white;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 85vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .prompt-builder-header {
+            padding: 25px;
+            background: linear-gradient(135deg, #ffa500, #ff8c00);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .prompt-builder-header h2 {
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .prompt-builder-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 32px;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .prompt-builder-close:hover {
+            transform: rotate(90deg);
+        }
+
+        .prompt-builder-body {
+            padding: 30px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .prompt-builder-step {
+            margin-bottom: 25px;
+        }
+
+        .prompt-builder-step label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+
+        .prompt-builder-step textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .prompt-builder-step textarea:focus {
+            outline: none;
+            border-color: #ffa500;
+        }
+
+        .prompt-builder-examples {
+            background: #fff8e1;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            border-left: 4px solid #ffa500;
+        }
+
+        .prompt-builder-examples h4 {
+            margin: 0 0 10px 0;
+            color: #ff8c00;
+            font-size: 14px;
+        }
+
+        .prompt-builder-examples ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .prompt-builder-examples li {
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 5px;
+            cursor: pointer;
+        }
+
+        .prompt-builder-examples li:hover {
+            color: #ff8c00;
+        }
+
+        .prompt-builder-output {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            min-height: 100px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: inherit;
+            line-height: 1.6;
+            display: none;
+        }
+
+        .prompt-builder-output.show {
+            display: block;
+        }
+
+        .prompt-builder-loading {
+            text-align: center;
+            padding: 30px;
+            color: #999;
+            display: none;
+        }
+
+        .prompt-builder-loading.show {
+            display: block;
+        }
+
+        .prompt-builder-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .prompt-builder-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .prompt-builder-btn-generate {
+            background: linear-gradient(135deg, #ffa500, #ff8c00);
+            color: white;
+        }
+
+        .prompt-builder-btn-use {
+            background: #10b981;
+            color: white;
+            display: none;
+        }
+
+        .prompt-builder-btn-use.show {
+            display: block;
+        }
+
+        .prompt-builder-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .prompt-builder-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
         }
 
         /* Custom Agent Creator */
@@ -1850,6 +2054,9 @@
                     </button>
                     <button id="imageBtn" onclick="toggleImageMode()" class="image-btn" title="Generate AI Images (FREE!)">
                         🎨
+                    </button>
+                    <button id="promptBuilderBtn" onclick="openPromptBuilder()" class="prompt-builder-btn" title="AI Prompt Builder - Get help creating better prompts!">
+                        ✨
                     </button>
                     <input 
                         type="text" 
@@ -3169,6 +3376,111 @@
             }
         }
 
+        // Prompt Builder Functions
+        let generatedPrompt = '';
+
+        function openPromptBuilder() {
+            document.getElementById('promptBuilderModal').classList.add('show');
+            document.getElementById('promptGoal').focus();
+        }
+
+        function closePromptBuilder() {
+            document.getElementById('promptBuilderModal').classList.remove('show');
+            document.getElementById('promptGoal').value = '';
+            document.getElementById('promptBuilderOutput').classList.remove('show');
+            document.getElementById('usePromptBtn').classList.remove('show');
+            generatedPrompt = '';
+        }
+
+        function usePromptExample(example) {
+            document.getElementById('promptGoal').value = example;
+        }
+
+        async function generatePrompt() {
+            const goal = document.getElementById('promptGoal').value.trim();
+            
+            if (!goal) {
+                alert('Please describe what you want help with!');
+                return;
+            }
+
+            // Show loading
+            const loading = document.getElementById('promptBuilderLoading');
+            const output = document.getElementById('promptBuilderOutput');
+            const generateBtn = document.getElementById('generateBtn');
+            const useBtn = document.getElementById('usePromptBtn');
+            
+            loading.classList.add('show');
+            output.classList.remove('show');
+            useBtn.classList.remove('show');
+            generateBtn.disabled = true;
+
+            try {
+                const response = await fetch('/api/generate-prompt', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ goal: goal })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.prompt) {
+                    generatedPrompt = data.prompt;
+                    
+                    // Show output
+                    loading.classList.remove('show');
+                    output.textContent = generatedPrompt;
+                    output.classList.add('show');
+                    useBtn.classList.add('show');
+                } else {
+                    alert('Failed to generate prompt: ' + (data.error || 'Unknown error'));
+                    loading.classList.remove('show');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+                loading.classList.remove('show');
+            } finally {
+                generateBtn.disabled = false;
+            }
+        }
+
+        function useGeneratedPrompt() {
+            if (generatedPrompt) {
+                // Insert into message input
+                document.getElementById('messageInput').value = generatedPrompt;
+                
+                // Close modal
+                closePromptBuilder();
+                
+                // Focus on input
+                document.getElementById('messageInput').focus();
+                
+                // Show success message
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: linear-gradient(135deg, #10b981, #059669);
+                    color: white;
+                    padding: 15px 25px;
+                    border-radius: 10px;
+                    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+                    z-index: 10001;
+                    animation: slideIn 0.3s ease;
+                `;
+                notification.textContent = '✅ Prompt added to message box!';
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.remove();
+                }, 3000);
+            }
+        }
+
         // Initialize
         loadStats();
         loadCustomAgents().then(() => {
@@ -3273,6 +3585,53 @@
         </div>
         <div class="preview-body" id="previewBody">
             <!-- Content will be dynamically inserted -->
+        </div>
+    </div>
+
+    <!-- Prompt Builder Modal -->
+    <div id="promptBuilderModal" class="prompt-builder-modal">
+        <div class="prompt-builder-content">
+            <div class="prompt-builder-header">
+                <h2>✨ AI Prompt Builder</h2>
+                <button class="prompt-builder-close" onclick="closePromptBuilder()">&times;</button>
+            </div>
+            <div class="prompt-builder-body">
+                <div class="prompt-builder-step">
+                    <label>What do you want help with?</label>
+                    <textarea 
+                        id="promptGoal" 
+                        placeholder="Example: I want to write a professional email to a client about a project delay"
+                        rows="3"
+                    ></textarea>
+                    
+                    <div class="prompt-builder-examples">
+                        <h4>💡 Quick Examples (click to use):</h4>
+                        <ul>
+                            <li onclick="usePromptExample('Write a marketing email for my new product launch')">Write a marketing email</li>
+                            <li onclick="usePromptExample('Create a landing page for a coffee shop')">Create a landing page</li>
+                            <li onclick="usePromptExample('Analyze data from my sales report')">Analyze data</li>
+                            <li onclick="usePromptExample('Help me brainstorm blog post ideas about AI')">Brainstorm ideas</li>
+                            <li onclick="usePromptExample('Write a professional resume summary')">Write resume content</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="prompt-builder-loading" id="promptBuilderLoading">
+                    <div style="font-size: 48px; margin-bottom: 15px;">✨</div>
+                    <div>Crafting your perfect prompt...</div>
+                </div>
+
+                <div class="prompt-builder-output" id="promptBuilderOutput"></div>
+
+                <div class="prompt-builder-actions">
+                    <button class="prompt-builder-btn prompt-builder-btn-generate" onclick="generatePrompt()" id="generateBtn">
+                        ✨ Generate Better Prompt
+                    </button>
+                    <button class="prompt-builder-btn prompt-builder-btn-use" onclick="useGeneratedPrompt()" id="usePromptBtn">
+                        ✅ Use This Prompt
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </body>

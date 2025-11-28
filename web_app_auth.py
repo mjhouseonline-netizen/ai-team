@@ -2337,6 +2337,125 @@ def delete_custom_agent(agent_id):
         print(f"❌ Error deleting custom agent: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/agent/<int:agent_id>')
+def view_custom_agent(agent_id):
+    """View a custom agent page (shareable link)"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT id, name, role, system_prompt
+            FROM custom_agents
+            WHERE id = ?
+        """, (agent_id,))
+        
+        result = cursor.fetchone()
+        conn.close()
+        
+        if not result:
+            return "Custom agent not found", 404
+        
+        agent = {
+            'id': result[0],
+            'name': result[1],
+            'role': result[2],
+            'system_prompt': result[3]
+        }
+        
+        # Redirect to dashboard with agent preselected
+        # For now, just redirect to dashboard and use JavaScript to select
+        return redirect(f'/dashboard?custom_agent={agent_id}')
+        
+    except Exception as e:
+        print(f"❌ Error viewing custom agent: {str(e)}")
+        return "Error loading custom agent", 500
+
+@app.route('/api/custom-agents/<int:agent_id>')
+@login_required
+def get_custom_agent(agent_id):
+    """Get details for a specific custom agent"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT id, name, role, personality, system_prompt, created_at
+            FROM custom_agents
+            WHERE id = ?
+        """, (agent_id,))
+        
+        result = cursor.fetchone()
+        conn.close()
+        
+        if not result:
+            return jsonify({'error': 'Agent not found'}), 404
+        
+        agent = {
+            'id': result[0],
+            'name': result[1],
+            'role': result[2],
+            'personality': result[3],
+            'system_prompt': result[4],
+            'created_at': result[5]
+        }
+        
+        return jsonify({'agent': agent}), 200
+        
+    except Exception as e:
+        print(f"❌ Error getting custom agent: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/generate-prompt', methods=['POST'])
+@login_required
+def generate_prompt():
+    """Generate an improved prompt using AI"""
+    try:
+        data = request.get_json()
+        user_goal = data.get('goal', '').strip()
+        
+        if not user_goal:
+            return jsonify({'error': 'Goal is required'}), 400
+        
+        print(f"🔮 Generating prompt for goal: {user_goal}")
+        
+        # System prompt for the prompt builder
+        system_prompt = """You are an expert prompt engineer. Your job is to take a user's simple request and transform it into a clear, effective, detailed prompt that will get the best results from an AI assistant.
+
+When creating prompts, you should:
+1. Be specific and detailed
+2. Include context that helps the AI understand the task
+3. Specify the desired format, tone, or style when relevant
+4. Break complex requests into clear steps
+5. Add relevant constraints or requirements
+6. Keep it concise but comprehensive
+
+Transform the user's simple goal into a well-structured prompt. Return ONLY the improved prompt, no explanations or meta-commentary."""
+
+        # Create the prompt generation request
+        response = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=500,
+            system=system_prompt,
+            messages=[{
+                "role": "user",
+                "content": f"Transform this simple request into an effective, detailed prompt:\n\n{user_goal}"
+            }]
+        )
+        
+        improved_prompt = response.content[0].text.strip()
+        
+        print(f"✅ Generated prompt: {improved_prompt[:100]}...")
+        
+        return jsonify({
+            'prompt': improved_prompt,
+            'original': user_goal
+        }), 200
+        
+    except Exception as e:
+        print(f"❌ Error generating prompt: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/user-info')
 @login_required
 def user_info():
