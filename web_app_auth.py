@@ -100,6 +100,11 @@ app.register_blueprint(notion_bp)
 # Database path
 DB_PATH = 'users.db'
 
+# Helper function for database connection
+def get_db_connection():
+    """Get SQLite database connection"""
+    return sqlite3.connect(DB_PATH)
+
 # ============================================
 # USER MODEL
 # ============================================
@@ -727,7 +732,7 @@ def api_admin_analytics():
         # Messages today
         cursor.execute("""
             SELECT COUNT(*) FROM chat_history 
-            WHERE DATE(timestamp) = CURRENT_DATE
+            WHERE date(timestamp) = date('now')
         """)
         messages_today = cursor.fetchone()[0]
         
@@ -770,24 +775,24 @@ def api_admin_analytics():
                 u.email,
                 u.subscription_tier,
                 u.created_at,
-                COUNT(CASE WHEN DATE(ch.timestamp) = CURRENT_DATE THEN 1 END) as messages_today,
+                COUNT(CASE WHEN date(ch.timestamp) = date('now') THEN 1 END) as messages_today,
                 COUNT(ch.id) as total_messages,
                 MAX(ch.timestamp) as last_active
             FROM users u
             LEFT JOIN chat_history ch ON u.id = ch.user_id
             GROUP BY u.id, u.email, u.subscription_tier, u.created_at
-            ORDER BY last_active DESC NULLS LAST
+            ORDER BY last_active DESC
             LIMIT 20
         """)
         recent_activity = []
         for row in cursor.fetchall():
             recent_activity.append({
                 'email': row[0],
-                'subscription_tier': row[1],
-                'created_at': row[2].isoformat() if row[2] else None,
+                'subscription_tier': row[1] or 'free',
+                'created_at': row[2] if row[2] else None,
                 'messages_today': row[3],
                 'total_messages': row[4],
-                'last_active': row[5].isoformat() if row[5] else 'Never'
+                'last_active': str(row[5]) if row[5] else 'Never'
             })
         
         # Top users by message count
@@ -807,8 +812,8 @@ def api_admin_analytics():
         for row in cursor.fetchall():
             top_users.append({
                 'email': row[0],
-                'subscription_tier': row[1],
-                'created_at': row[2].isoformat() if row[2] else None,
+                'subscription_tier': row[1] or 'free',
+                'created_at': str(row[2]) if row[2] else None,
                 'total_messages': row[3]
             })
         
