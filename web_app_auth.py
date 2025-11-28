@@ -735,10 +735,10 @@ def api_admin_analytics():
         cursor.execute("SELECT COUNT(*) FROM chat_history")
         total_messages = cursor.fetchone()[0]
         
-        # Paid users (Pro, Team, Enterprise)
+        # Paid users (Starter, Pro)
         cursor.execute("""
             SELECT COUNT(*) FROM users 
-            WHERE subscription_tier IN ('pro', 'team', 'enterprise')
+            WHERE subscription_tier IN ('starter', 'pro')
         """)
         paid_users = cursor.fetchone()[0]
         
