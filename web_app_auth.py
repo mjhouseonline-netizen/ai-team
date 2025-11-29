@@ -2900,6 +2900,72 @@ def increment_message_count(user_id):
     conn.commit()
 
 # ============================================
+# WEBHOOK SYSTEM FOR MAKE.COM
+# ============================================
+
+def init_webhooks_table():
+    """Initialize webhooks table for Make.com integration"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS webhooks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            webhook_url TEXT NOT NULL,
+            event_type TEXT NOT NULL,
+            is_active BOOLEAN DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_triggered TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+    """)
+    
+    conn.commit()
+    conn.close()
+
+init_webhooks_table()
+
+def trigger_webhook(user_id, event_type, data):
+    """Trigger all active webhooks for a user and event type"""
+    try:
+        import requests as webhook_requests
+        
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT id, webhook_url FROM webhooks 
+            WHERE user_id = ? AND event_type = ? AND is_active = 1
+        """, (user_id, event_type))
+        
+        webhooks = cursor.fetchall()
+        
+        for webhook_id, webhook_url in webhooks:
+            try:
+                # Send webhook
+                webhook_requests.post(
+                    webhook_url,
+                    json=data,
+                    timeout=5
+                )
+                
+                # Update last_triggered
+                cursor.execute("""
+                    UPDATE webhooks 
+                    SET last_triggered = CURRENT_TIMESTAMP 
+                    WHERE id = ?
+                """, (webhook_id,))
+                conn.commit()
+                
+            except Exception as e:
+                print(f"Webhook trigger error for {webhook_url}: {e}")
+        
+        conn.close()
+    except Exception as e:
+        print(f"Webhook system error: {e}")
+
+# ============================================
 # API ENDPOINTS
 # ============================================
 
@@ -3049,6 +3115,17 @@ def api_chat():
         """, (user_id, agent, message, ai_response))
         conn.commit()
         conn.close()
+        
+        # Trigger webhooks for Make.com integration
+        webhook_data = {
+            'event': 'message.completed',
+            'agent': agent,
+            'message': message,
+            'response': ai_response,
+            'timestamp': datetime.now().isoformat(),
+            'user_id': user_id
+        }
+        trigger_webhook(user_id, 'message.completed', webhook_data)
         
         return jsonify({
             'success': True,
@@ -3204,6 +3281,129 @@ def api_usage():
         'remaining_today': max(0, daily_limit - total_today),
         'total_api_requests': stats['total_requests'],
         'api_requests_today': stats['today_requests']
+    })
+
+# ============================================
+# WEBHOOK MANAGEMENT ENDPOINTS (for Make.com)
+# ============================================
+
+@app.route('/api/webhooks', methods=['GET'])
+@login_required
+def get_webhooks():
+    """Get all webhooks for current user"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT id, webhook_url, event_type, is_active, created_at, last_triggered
+        FROM webhooks 
+        WHERE user_id = ?
+        ORDER BY created_at DESC
+    """, (current_user.id,))
+    
+    webhooks = []
+    for row in cursor.fetchall():
+        webhooks.append({
+            'id': row[0],
+            'webhook_url': row[1],
+            'event_type': row[2],
+            'is_active': bool(row[3]),
+            'created_at': row[4],
+            'last_triggered': row[5]
+        })
+    
+    conn.close()
+    
+    return jsonify({
+        'success': True,
+        'webhooks': webhooks,
+        'total': len(webhooks)
+    })
+
+@app.route('/api/webhooks', methods=['POST'])
+@login_required
+def create_webhook():
+    """Create a new webhook"""
+    data = request.get_json()
+    
+    webhook_url = data.get('webhook_url')
+    event_type = data.get('event_type', 'message.completed')
+    
+    if not webhook_url:
+        return jsonify({'error': 'webhook_url is required'}), 400
+    
+    # Validate event type
+    valid_events = ['message.completed', 'image.generated', 'agent.response']
+    if event_type not in valid_events:
+        return jsonify({'error': f'event_type must be one of: {", ".join(valid_events)}'}), 400
+    
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        INSERT INTO webhooks (user_id, webhook_url, event_type)
+        VALUES (?, ?, ?)
+    """, (current_user.id, webhook_url, event_type))
+    
+    webhook_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    
+    return jsonify({
+        'success': True,
+        'webhook_id': webhook_id,
+        'message': 'Webhook created successfully'
+    })
+
+@app.route('/api/webhooks/<int:webhook_id>', methods=['DELETE'])
+@login_required
+def delete_webhook(webhook_id):
+    """Delete a webhook"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    # Check ownership
+    cursor.execute("SELECT user_id FROM webhooks WHERE id = ?", (webhook_id,))
+    result = cursor.fetchone()
+    
+    if not result or result[0] != current_user.id:
+        conn.close()
+        return jsonify({'error': 'Webhook not found'}), 404
+    
+    cursor.execute("DELETE FROM webhooks WHERE id = ?", (webhook_id,))
+    conn.commit()
+    conn.close()
+    
+    return jsonify({
+        'success': True,
+        'message': 'Webhook deleted successfully'
+    })
+
+@app.route('/api/webhooks/<int:webhook_id>/toggle', methods=['POST'])
+@login_required
+def toggle_webhook(webhook_id):
+    """Toggle webhook active status"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    # Check ownership
+    cursor.execute("SELECT user_id, is_active FROM webhooks WHERE id = ?", (webhook_id,))
+    result = cursor.fetchone()
+    
+    if not result or result[0] != current_user.id:
+        conn.close()
+        return jsonify({'error': 'Webhook not found'}), 404
+    
+    new_status = 0 if result[1] else 1
+    
+    cursor.execute("UPDATE webhooks SET is_active = ? WHERE id = ?", (new_status, webhook_id))
+    conn.commit()
+    conn.close()
+    
+    return jsonify({
+        'success': True,
+        'is_active': bool(new_status),
+        'message': f'Webhook {"activated" if new_status else "deactivated"}'
     })
 
 # ============================================
