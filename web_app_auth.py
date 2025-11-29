@@ -24,7 +24,13 @@ from openai import OpenAI
 # ============================================
 # NOTION INTEGRATION IMPORT
 # ============================================
-from routes.notion_routes import notion_bp
+try:
+    from routes.notion_routes import notion_bp
+    NOTION_AVAILABLE = True
+except ImportError:
+    print("⚠️  Notion integration not available - routes/notion_routes.py not found")
+    notion_bp = None
+    NOTION_AVAILABLE = False
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -95,7 +101,11 @@ def serve_static(filename):
 # ============================================
 # REGISTER NOTION BLUEPRINT
 # ============================================
-app.register_blueprint(notion_bp)
+if NOTION_AVAILABLE:
+    app.register_blueprint(notion_bp)
+    print("✅ Notion integration enabled")
+else:
+    print("⚠️  Notion integration disabled")
 
 # Database path
 DB_PATH = 'users.db'
@@ -1976,6 +1986,123 @@ def init_api_keys_table():
 init_api_keys_table()
 
 # ============================================
+# API KEY MANAGEMENT FUNCTIONS
+# ============================================
+
+def generate_api_key():
+    """Generate a secure API key"""
+    return 'sk-ai-team-' + secrets.token_urlsafe(32)
+
+def get_user_api_key(user_id):
+    """Get user's API key"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT api_key FROM api_keys WHERE user_id = ? AND is_active = 1", (user_id,))
+    result = cursor.fetchone()
+    conn.close()
+    return result[0] if result else None
+
+def create_user_api_key(user_id, name="Default API Key"):
+    """Create a new API key for user"""
+    api_key = generate_api_key()
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    # Deactivate old keys
+    cursor.execute("UPDATE api_keys SET is_active = 0 WHERE user_id = ?", (user_id,))
+    
+    # Create new key
+    cursor.execute("""
+        INSERT INTO api_keys (user_id, api_key, name)
+        VALUES (?, ?, ?)
+    """, (user_id, api_key, name))
+    
+    conn.commit()
+    conn.close()
+    return api_key
+
+def validate_api_key(api_key):
+    """Validate API key and return user_id"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT user_id FROM api_keys 
+        WHERE api_key = ? AND is_active = 1
+    """, (api_key,))
+    result = cursor.fetchone()
+    
+    if result:
+        # Update last_used timestamp
+        cursor.execute("""
+            UPDATE api_keys 
+            SET last_used = CURRENT_TIMESTAMP 
+            WHERE api_key = ?
+        """, (api_key,))
+        conn.commit()
+    
+    conn.close()
+    return result[0] if result else None
+
+# ============================================
+# API USAGE TRACKING
+# ============================================
+
+def init_api_usage_table():
+    """Initialize API usage tracking table"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS api_usage (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            endpoint TEXT NOT NULL,
+            method TEXT NOT NULL,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            status_code INTEGER,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+    """)
+    
+    conn.commit()
+    conn.close()
+
+init_api_usage_table()
+
+def log_api_request(user_id, endpoint, method, status_code=200):
+    """Log API request"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO api_usage (user_id, endpoint, method, status_code)
+        VALUES (?, ?, ?, ?)
+    """, (user_id, endpoint, method, status_code))
+    conn.commit()
+    conn.close()
+
+def get_api_usage_stats(user_id):
+    """Get API usage statistics for user"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    # Total requests
+    cursor.execute("SELECT COUNT(*) FROM api_usage WHERE user_id = ?", (user_id,))
+    total_requests = cursor.fetchone()[0]
+    
+    # Today's requests
+    cursor.execute("""
+        SELECT COUNT(*) FROM api_usage 
+        WHERE user_id = ? AND date(timestamp) = date('now')
+    """, (user_id,))
+    today_requests = cursor.fetchone()[0]
+    
+    conn.close()
+    return {
+        'total_requests': total_requests,
+        'today_requests': today_requests
+    }
+
+# ============================================
 # CUSTOM AGENTS SYSTEM
 # ============================================
 
@@ -2771,6 +2898,317 @@ def increment_message_count(user_id):
     """, (user_id,))
     
     conn.commit()
+
+# ============================================
+# API ENDPOINTS
+# ============================================
+
+# API Key Management Endpoints
+@app.route('/api/get-api-key')
+@login_required
+def get_api_key():
+    """Get user's API key"""
+    api_key = get_user_api_key(current_user.id)
+    
+    if not api_key:
+        # Generate new key if doesn't exist
+        api_key = create_user_api_key(current_user.id)
+    
+    return jsonify({'api_key': api_key})
+
+@app.route('/api/regenerate-api-key', methods=['POST'])
+@login_required
+def regenerate_api_key():
+    """Regenerate user's API key"""
+    api_key = create_user_api_key(current_user.id)
+    return jsonify({'api_key': api_key})
+
+@app.route('/api/usage-stats')
+@login_required
+def api_usage_stats():
+    """Get API usage statistics"""
+    stats = get_api_usage_stats(current_user.id)
+    return jsonify(stats)
+
+# API Authentication Decorator
+def require_api_key(f):
+    """Decorator to require API key authentication"""
+    def decorated_function(*args, **kwargs):
+        auth_header = request.headers.get('Authorization')
+        
+        if not auth_header:
+            return jsonify({'error': 'Missing Authorization header'}), 401
+        
+        if not auth_header.startswith('Bearer '):
+            return jsonify({'error': 'Invalid Authorization header format. Use: Bearer YOUR_API_KEY'}), 401
+        
+        api_key = auth_header.replace('Bearer ', '')
+        user_id = validate_api_key(api_key)
+        
+        if not user_id:
+            return jsonify({'error': 'Invalid or inactive API key'}), 401
+        
+        # Store user_id in request context
+        request.api_user_id = user_id
+        
+        # Log the API request
+        log_api_request(user_id, request.path, request.method)
+        
+        return f(*args, **kwargs)
+    
+    decorated_function.__name__ = f.__name__
+    return decorated_function
+
+# Chat API Endpoint
+@app.route('/api/chat', methods=['POST'])
+@require_api_key
+def api_chat():
+    """Send a message to an AI agent via API"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'error': 'Request body must be JSON'}), 400
+        
+        agent = data.get('agent', 'Luna')
+        message = data.get('message', '')
+        context = data.get('context', {})
+        
+        if not message:
+            return jsonify({'error': 'Message is required'}), 400
+        
+        # Check daily message limit
+        user_id = request.api_user_id
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT subscription_tier FROM users WHERE id = ?", (user_id,))
+        result = cursor.fetchone()
+        tier = result[0] if result else 'free'
+        
+        # Count today's messages (chat + API)
+        cursor.execute("""
+            SELECT COUNT(*) FROM chat_history 
+            WHERE user_id = ? AND date(timestamp) = date('now')
+        """, (user_id,))
+        chat_messages = cursor.fetchone()[0]
+        
+        cursor.execute("""
+            SELECT COUNT(*) FROM api_usage 
+            WHERE user_id = ? AND date(timestamp) = date('now') AND endpoint = '/api/chat'
+        """, (user_id,))
+        api_messages = cursor.fetchone()[0]
+        
+        total_messages = chat_messages + api_messages
+        daily_limit = SUBSCRIPTION_TIERS[tier]['messages_per_day']
+        
+        if total_messages >= daily_limit:
+            conn.close()
+            return jsonify({
+                'error': 'Daily message limit reached',
+                'limit': daily_limit,
+                'used': total_messages
+            }), 429
+        
+        conn.close()
+        
+        # Get agent personality
+        agents_config = {
+            'Luna': "You are Luna, an AI data analyst. You excel at analyzing data, finding patterns, and providing insights.",
+            'Mila': "You are Mila, an AI organization expert. You help with planning, task management, and project organization.",
+            'Sage': "You are Sage, an AI content writer. You create engaging written content, from articles to marketing copy.",
+            'Ember': "You are Ember, an AI creative director. You provide creative ideas, artistic direction, and design suggestions.",
+            'Sol': "You are Sol, an AI strategic thinker. You help with business strategy, decision-making, and long-term planning.",
+            'Nova': "You are Nova, an AI technical expert. You assist with coding, debugging, and technical problem-solving.",
+            'Theo': "You are Theo, an AI implementation specialist. You help turn ideas into actionable plans and execute them."
+        }
+        
+        system_message = agents_config.get(agent, agents_config['Luna'])
+        
+        # Call Claude API
+        client = anthropic.Anthropic(api_key=app.config['ANTHROPIC_API_KEY'])
+        
+        response = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=2000,
+            system=system_message,
+            messages=[{
+                "role": "user",
+                "content": message
+            }]
+        )
+        
+        ai_response = response.content[0].text
+        
+        # Save to chat history
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO chat_history (user_id, agent, message, response)
+            VALUES (?, ?, ?, ?)
+        """, (user_id, agent, message, ai_response))
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'agent': agent,
+            'message': message,
+            'response': ai_response,
+            'timestamp': datetime.now().isoformat(),
+            'remaining_quota': daily_limit - total_messages - 1
+        })
+        
+    except Exception as e:
+        print(f"API chat error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# Generate Image API Endpoint
+@app.route('/api/generate-image', methods=['POST'])
+@require_api_key
+def api_generate_image():
+    """Generate an image via API"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'error': 'Request body must be JSON'}), 400
+        
+        prompt = data.get('prompt', '')
+        
+        if not prompt:
+            return jsonify({'error': 'Prompt is required'}), 400
+        
+        # Generate image using OpenAI DALL-E
+        if not openai_client:
+            return jsonify({'error': 'Image generation not available - OpenAI API key not configured'}), 503
+        
+        response = openai_client.images.generate(
+            model="dall-e-3",
+            prompt=prompt,
+            n=1,
+            size="1024x1024",
+            quality="standard"
+        )
+        
+        image_url = response.data[0].url
+        
+        return jsonify({
+            'success': True,
+            'prompt': prompt,
+            'image_url': image_url,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"API image generation error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# List Agents API Endpoint
+@app.route('/api/agents', methods=['GET'])
+@require_api_key
+def api_list_agents():
+    """List all available AI agents"""
+    agents = [
+        {
+            'name': 'Luna',
+            'role': 'Data Analyst',
+            'description': 'Expert at analyzing data, finding patterns, and providing insights',
+            'specialties': ['Data Analysis', 'Pattern Recognition', 'Insights', 'Statistics']
+        },
+        {
+            'name': 'Mila',
+            'role': 'Organization & Planning',
+            'description': 'Helps with planning, task management, and project organization',
+            'specialties': ['Project Planning', 'Task Management', 'Organization', 'Scheduling']
+        },
+        {
+            'name': 'Sage',
+            'role': 'Writing & Content',
+            'description': 'Creates engaging written content, from articles to marketing copy',
+            'specialties': ['Content Writing', 'Copywriting', 'Articles', 'Marketing']
+        },
+        {
+            'name': 'Ember',
+            'role': 'Creative Direction',
+            'description': 'Provides creative ideas, artistic direction, and design suggestions',
+            'specialties': ['Creative Ideas', 'Design', 'Branding', 'Visual Concepts']
+        },
+        {
+            'name': 'Sol',
+            'role': 'Strategic Thinking',
+            'description': 'Helps with business strategy, decision-making, and long-term planning',
+            'specialties': ['Strategy', 'Business Planning', 'Decision Making', 'Analysis']
+        },
+        {
+            'name': 'Nova',
+            'role': 'Technical Solutions',
+            'description': 'Assists with coding, debugging, and technical problem-solving',
+            'specialties': ['Coding', 'Debugging', 'Technical Support', 'Development']
+        },
+        {
+            'name': 'Theo',
+            'role': 'Implementation',
+            'description': 'Helps turn ideas into actionable plans and execute them',
+            'specialties': ['Execution', 'Implementation', 'Action Plans', 'Delivery']
+        }
+    ]
+    
+    return jsonify({
+        'success': True,
+        'agents': agents,
+        'total': len(agents)
+    })
+
+# API Usage Quota Endpoint
+@app.route('/api/usage', methods=['GET'])
+@require_api_key
+def api_usage():
+    """Get current API usage and quota"""
+    user_id = request.api_user_id
+    
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    # Get user subscription tier
+    cursor.execute("SELECT subscription_tier FROM users WHERE id = ?", (user_id,))
+    result = cursor.fetchone()
+    tier = result[0] if result else 'free'
+    
+    # Count today's messages (chat + API)
+    cursor.execute("""
+        SELECT COUNT(*) FROM chat_history 
+        WHERE user_id = ? AND date(timestamp) = date('now')
+    """, (user_id,))
+    chat_messages = cursor.fetchone()[0]
+    
+    cursor.execute("""
+        SELECT COUNT(*) FROM api_usage 
+        WHERE user_id = ? AND date(timestamp) = date('now') AND endpoint = '/api/chat'
+    """, (user_id,))
+    api_messages = cursor.fetchone()[0]
+    
+    # Get total API requests
+    stats = get_api_usage_stats(user_id)
+    
+    conn.close()
+    
+    daily_limit = SUBSCRIPTION_TIERS[tier]['messages_per_day']
+    total_today = chat_messages + api_messages
+    
+    return jsonify({
+        'success': True,
+        'subscription_tier': tier,
+        'daily_limit': daily_limit,
+        'used_today': total_today,
+        'remaining_today': max(0, daily_limit - total_today),
+        'total_api_requests': stats['total_requests'],
+        'api_requests_today': stats['today_requests']
+    })
+
+# ============================================
+# RUN APPLICATION
+# ============================================
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
