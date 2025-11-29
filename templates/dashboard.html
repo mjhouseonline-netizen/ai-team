@@ -3140,23 +3140,29 @@
         document.addEventListener('click', function(event) {
             const dropdown = document.getElementById('navDropdown');
             const button = event.target.closest('.dropdown-btn');
+            const dropdownContent = event.target.closest('.dropdown-content');
             const dropdownLink = event.target.closest('.dropdown-content a');
             
-            // If clicking a dropdown link, let it navigate first
-            if (dropdownLink) {
-                // Allow default link behavior
+            // If clicking anywhere in dropdown content, stop propagation to prevent character card clicks
+            if (dropdownContent) {
+                event.stopPropagation();
+                // If it's a link, let it navigate
+                if (dropdownLink) {
+                    return;
+                }
+                // Otherwise, do nothing (clicking on dropdown background/padding)
                 return;
             }
             
             // If clicked outside dropdown and not on button, or clicked on a character card
-            if (!button && !event.target.closest('.dropdown-content')) {
+            if (!button && !dropdownContent) {
                 if (dropdown && dropdown.classList.contains('show')) {
                     dropdown.classList.remove('show');
                 }
             }
             
-            // Close dropdown when clicking on character cards
-            if (event.target.closest('.character-card')) {
+            // Close dropdown when clicking on character cards (only if not in dropdown)
+            if (event.target.closest('.character-card') && !dropdownContent) {
                 if (dropdown && dropdown.classList.contains('show')) {
                     dropdown.classList.remove('show');
                 }
