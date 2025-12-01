@@ -2988,7 +2988,8 @@ def user_info():
             'id': current_user.id,
             'email': current_user.email,
             'subscription_tier': current_user.subscription_tier
-        }
+        },
+        'is_admin': current_user.id == 1
     }), 200
 
 # ============================================
