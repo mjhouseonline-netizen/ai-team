@@ -20,6 +20,7 @@ import base64
 import mimetypes
 import stripe
 from openai import OpenAI
+import google.generativeai as genai
 
 # ============================================
 # NOTION INTEGRATION IMPORT
@@ -869,6 +870,95 @@ def api_admin_analytics():
         return jsonify({'error': str(e)}), 500
 
 # ============================================
+# GOOGLE AI / GEMINI CONFIGURATION
+# ============================================
+try:
+    google_api_key = os.environ.get('GOOGLE_AI_API_KEY')
+    if google_api_key:
+        genai.configure(api_key=google_api_key)
+        print("✅ Google AI (Gemini) initialized")
+    else:
+        print("⚠️  Google AI not configured - set GOOGLE_AI_API_KEY to enable Gemini models")
+except Exception as e:
+    print(f"⚠️  Google AI initialization failed: {e}")
+
+# ============================================
+# MULTI-MODEL AI CONFIGURATION
+# ============================================
+
+MODELS = {
+    # Claude Models (Anthropic)
+    'claude-sonnet-4.5': {
+        'provider': 'anthropic',
+        'model_id': 'claude-sonnet-4-20250514',
+        'name': 'Claude Sonnet 4.5',
+        'description': 'Fast & intelligent - Best all-around',
+        'max_tokens': 2000,
+        'cost': '$3/1M tokens'
+    },
+    'claude-opus-4': {
+        'provider': 'anthropic',
+        'model_id': 'claude-opus-4-20250514',
+        'name': 'Claude Opus 4',
+        'description': 'Most capable - Deep reasoning',
+        'max_tokens': 2000,
+        'cost': '$15/1M tokens'
+    },
+    'claude-haiku-4.5': {
+        'provider': 'anthropic',
+        'model_id': 'claude-haiku-4-5-20251001',
+        'name': 'Claude Haiku 4.5',
+        'description': 'Ultra-fast - Budget friendly',
+        'max_tokens': 2000,
+        'cost': '$0.80/1M tokens'
+    },
+    
+    # OpenAI Models (GPT)
+    'gpt-4o': {
+        'provider': 'openai',
+        'model_id': 'gpt-4o',
+        'name': 'GPT-4o',
+        'description': 'Latest - Multimodal powerhouse',
+        'max_tokens': 2000,
+        'cost': '$2.50/1M tokens'
+    },
+    'gpt-4-turbo': {
+        'provider': 'openai',
+        'model_id': 'gpt-4-turbo-preview',
+        'name': 'GPT-4 Turbo',
+        'description': 'Powerful - Great for complex tasks',
+        'max_tokens': 2000,
+        'cost': '$10/1M tokens'
+    },
+    'gpt-4o-mini': {
+        'provider': 'openai',
+        'model_id': 'gpt-4o-mini',
+        'name': 'GPT-4o Mini',
+        'description': 'Super fast - Most affordable',
+        'max_tokens': 2000,
+        'cost': '$0.15/1M tokens'
+    },
+    
+    # Google Gemini Models
+    'gemini-2.0-flash': {
+        'provider': 'google',
+        'model_id': 'gemini-2.0-flash-exp',
+        'name': 'Gemini 2.0 Flash',
+        'description': 'Newest - FREE tier available!',
+        'max_tokens': 2000,
+        'cost': 'FREE (15 req/min)'
+    },
+    'gemini-1.5-pro': {
+        'provider': 'google',
+        'model_id': 'gemini-1.5-pro',
+        'name': 'Gemini 1.5 Pro',
+        'description': 'Advanced - 2M token context',
+        'max_tokens': 2000,
+        'cost': '$1.25/1M tokens'
+    }
+}
+
+# ============================================
 # AGENT PERSONALITIES
 # ============================================
 
@@ -1257,137 +1347,237 @@ def upload_file():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# ============================================
+# CONVERSATION HISTORY & MULTI-MODEL ROUTING
+# ============================================
+
+def get_conversation_history(user_id, agent_name, limit=20):
+    """Get recent conversation history for context"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT message, response
+        FROM chat_history
+        WHERE user_id = ? AND agent_name = ?
+        ORDER BY timestamp DESC
+        LIMIT ?
+    """, (user_id, agent_name, limit))
+    
+    results = cursor.fetchall()
+    conn.close()
+    
+    # Reverse to get chronological order
+    results.reverse()
+    
+    # Format for AI models
+    history = []
+    for message, response in results:
+        history.append({"role": "user", "content": message})
+        history.append({"role": "assistant", "content": response})
+    
+    return history
+
+def call_claude_with_history(model_id, system_prompt, history, new_message, max_tokens=2000):
+    """Call Claude with conversation history"""
+    api_key = app.config['ANTHROPIC_API_KEY']
+    if not api_key:
+        raise Exception("Anthropic API key not configured")
+    
+    client = anthropic.Anthropic(api_key=api_key)
+    
+    # Add new message
+    messages = history + [{"role": "user", "content": new_message}]
+    
+    response = client.messages.create(
+        model=model_id,
+        max_tokens=max_tokens,
+        system=system_prompt,
+        messages=messages
+    )
+    
+    return response.content[0].text
+
+def call_gpt_with_history(model_id, system_prompt, history, new_message, max_tokens=2000):
+    """Call GPT with conversation history"""
+    if not openai_client:
+        raise Exception("OpenAI not configured")
+    
+    # Format for OpenAI
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.extend(history)
+    messages.append({"role": "user", "content": new_message})
+    
+    response = openai_client.chat.completions.create(
+        model=model_id,
+        messages=messages,
+        max_tokens=max_tokens
+    )
+    
+    return response.choices[0].message.content
+
+def call_gemini_with_history(model_id, system_prompt, history, new_message, max_tokens=2000):
+    """Call Gemini with conversation history"""
+    model = genai.GenerativeModel(model_id)
+    
+    # Build conversation context
+    context = f"{system_prompt}\n\n"
+    for msg in history:
+        role = "User" if msg['role'] == 'user' else "Assistant"
+        context += f"{role}: {msg['content']}\n"
+    
+    context += f"User: {new_message}\nAssistant:"
+    
+    response = model.generate_content(
+        context,
+        generation_config=genai.types.GenerationConfig(
+            max_output_tokens=max_tokens
+        )
+    )
+    
+    return response.text
+
+def route_to_model(model_key, system_prompt, history, new_message):
+    """Route to appropriate AI model with conversation history"""
+    if model_key not in MODELS:
+        model_key = 'claude-sonnet-4.5'  # Default fallback
+    
+    config = MODELS[model_key]
+    provider = config['provider']
+    model_id = config['model_id']
+    max_tokens = config.get('max_tokens', 2000)
+    
+    try:
+        if provider == 'anthropic':
+            return call_claude_with_history(model_id, system_prompt, history, new_message, max_tokens)
+        elif provider == 'openai':
+            return call_gpt_with_history(model_id, system_prompt, history, new_message, max_tokens)
+        elif provider == 'google':
+            return call_gemini_with_history(model_id, system_prompt, history, new_message, max_tokens)
+        else:
+            raise Exception(f"Unknown provider: {provider}")
+    except Exception as e:
+        print(f"Error with {provider} ({model_key}): {e}")
+        # Fallback to Claude if other model fails
+        if provider != 'anthropic':
+            print(f"Falling back to Claude Sonnet...")
+            return call_claude_with_history('claude-sonnet-4-20250514', system_prompt, history, new_message, 2000)
+        raise
+
 @app.route('/api/chat', methods=['POST'])
 @login_required
 def chat():
-    """Send message to AI agent with optional file attachment"""
+    """Send message to AI agent with conversation history and multi-model support"""
     try:
         data = request.json
         message = data.get('message')
         agent = data.get('agent', 'Ember')
-        attached_file = data.get('file')  # File info from upload
+        model_key = data.get('model', 'claude-sonnet-4.5')  # NEW: Model selection
+        attached_file = data.get('file')
         
         if not message:
             return jsonify({'error': 'Message required'}), 400
         
-        # Get agent personality
-        if agent not in AGENT_PERSONALITIES:
-            return jsonify({'error': 'Invalid agent'}), 400
-        
-        agent_info = AGENT_PERSONALITIES[agent]
-        
-        # Get API key
-        api_key = app.config['ANTHROPIC_API_KEY']
-        if not api_key:
-            return jsonify({'error': 'API key not configured'}), 500
-        
-        # Enhanced system prompt for concise responses
-        system_prompt = agent_info['system_prompt'] + """
-
-CRITICAL RESPONSE RULES:
-- Keep responses SHORT and focused (2-4 sentences or 1 brief paragraph)
-- If using bullet points, keep list to 3-5 items maximum
-- Ask ONLY ONE question at the end, if needed
-- Be direct - no fluff or overexplaining
-- Get straight to the point
-
-RESPONSE LENGTH:
-Your response should be concise enough to read in 30 seconds or less."""
-        
-        # Build message content with file if provided
-        message_content = []
-        
-        # Add file if provided
-        if attached_file and 'filepath' in attached_file:
-            filepath = attached_file['filepath']
-            
-            if os.path.exists(filepath):
-                filename = attached_file.get('original_filename', 'file')
-                
-                # Handle images
-                if is_image_file(filename):
-                    base64_data = encode_file_to_base64(filepath)
-                    media_type = get_file_media_type(filepath)
-                    
-                    message_content.append({
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": media_type,
-                            "data": base64_data
-                        }
-                    })
-                
-                # Handle PDFs
-                elif is_pdf_file(filename):
-                    base64_data = encode_file_to_base64(filepath)
-                    
-                    message_content.append({
-                        "type": "document",
-                        "source": {
-                            "type": "base64",
-                            "media_type": "application/pdf",
-                            "data": base64_data
-                        }
-                    })
-                
-                # Handle text files
-                elif is_text_file(filename):
-                    with open(filepath, 'r', encoding='utf-8') as f:
-                        file_content = f.read()
-                    message = f"{message}\n\nFile: {filename}\nContent:\n{file_content}"
-        
-        # Add text message
-        message_content.append({
-            "type": "text",
-            "text": message
-        })
-        
-        # If only text, simplify to string
-        if len(message_content) == 1 and message_content[0]["type"] == "text":
-            message_content = message
-        
-        # Call Anthropic API with proper system prompt
-        client = anthropic.Anthropic(api_key=api_key)
-        
-        response = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=500,  # Reduced from 1024 for shorter responses
-            system=system_prompt,
-            messages=[
-                {"role": "user", "content": message_content}
-            ]
-        )
-        
-        ai_response = response.content[0].text
-        
-        # Check if response is approaching token limit and add warning
-        word_count = len(ai_response.split())
-        if word_count > 300:  # Roughly 400 tokens, leaving 100 token buffer
-            ai_response += "\n\n⚠️ *Response limit reached. Ask me to continue if you need more detail.*"
-        
-        # Save to chat history
+        # Check message limit and reset if needed
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
-        # Include filename in message if file was attached
+        cursor.execute("""
+            SELECT subscription_tier, messages_today, last_message_reset
+            FROM users
+            WHERE id = ?
+        """, (current_user.id,))
+        
+        result = cursor.fetchone()
+        if not result:
+            conn.close()
+            return jsonify({'error': 'User not found'}), 404
+        
+        tier, messages_today, last_reset = result
+        tier_info = SUBSCRIPTION_TIERS.get(tier, SUBSCRIPTION_TIERS['free'])
+        daily_limit = tier_info['messages_per_day']
+        
+        # Reset counter if it's a new day
+        if last_reset:
+            try:
+                last_reset_date = datetime.fromisoformat(last_reset).date()
+                today = datetime.utcnow().date()
+                if last_reset_date < today:
+                    messages_today = 0
+                    cursor.execute("""
+                        UPDATE users
+                        SET messages_today = 0, last_message_reset = ?
+                        WHERE id = ?
+                    """, (datetime.utcnow().isoformat(), current_user.id))
+                    conn.commit()
+            except:
+                pass  # Handle any date parsing issues gracefully
+        
+        # Check if user has exceeded daily limit
+        if daily_limit != -1 and daily_limit != 999999:
+            if messages_today >= daily_limit:
+                conn.close()
+                return jsonify({'error': 'Daily message limit reached. Upgrade your plan to continue!'}), 429
+        
+        # Get agent personality
+        if agent not in AGENT_PERSONALITIES:
+            conn.close()
+            return jsonify({'error': 'Invalid agent'}), 400
+        
+        agent_info = AGENT_PERSONALITIES[agent]
+        system_prompt = agent_info['system_prompt']
+        
+        # Get conversation history (last 20 messages for context)
+        history = get_conversation_history(current_user.id, agent, limit=20)
+        
+        # Handle file attachments (simplified for text files)
+        if attached_file and 'filepath' in attached_file:
+            filepath = attached_file['filepath']
+            if os.path.exists(filepath):
+                filename = attached_file.get('original_filename', 'file')
+                # For text files, include content in message
+                if filename.endswith(('.txt', '.md', '.csv', '.json', '.py', '.js', '.html', '.css')):
+                    try:
+                        with open(filepath, 'r', encoding='utf-8') as f:
+                            file_content = f.read()[:10000]  # Limit to 10k chars
+                        message = f"{message}\n\nFile: {filename}\nContent:\n{file_content}"
+                    except:
+                        pass  # If file reading fails, just use original message
+        
+        # Route to selected model with conversation history
+        ai_response = route_to_model(model_key, system_prompt, history, message)
+        
+        # Save to chat history
         saved_message = message
         if attached_file and 'original_filename' in attached_file:
             saved_message = f"📎 {attached_file['original_filename']}\n{message}"
         
-        cursor.execute(
-            "INSERT INTO chat_history (user_id, agent_name, message, response) VALUES (?, ?, ?, ?)",
-            (current_user.id, agent, saved_message, ai_response)
-        )
+        cursor.execute("""
+            INSERT INTO chat_history (user_id, agent_name, message, response)
+            VALUES (?, ?, ?, ?)
+        """, (current_user.id, agent, saved_message, ai_response))
+        
+        # ✅ INCREMENT MESSAGE COUNTER (THE FIX!)
+        cursor.execute("""
+            UPDATE users
+            SET messages_today = messages_today + 1,
+                last_message_reset = ?
+            WHERE id = ?
+        """, (datetime.utcnow().isoformat(), current_user.id))
+        
         conn.commit()
         conn.close()
         
         return jsonify({
             'response': ai_response,
-            'agent': agent
+            'agent': agent,
+            'model_used': model_key
         }), 200
         
     except Exception as e:
+        print(f"Chat error: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 
@@ -1465,6 +1655,47 @@ def generate_image_free():
         
     except Exception as e:
         print(f"Error in generate_image_free: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/models', methods=['GET'])
+@login_required
+def get_available_models():
+    """Get list of available AI models"""
+    models_list = []
+    for key, config in MODELS.items():
+        models_list.append({
+            'key': key,
+            'name': config['name'],
+            'description': config['description'],
+            'provider': config['provider'],
+            'cost': config.get('cost', 'N/A')
+        })
+    
+    return jsonify({'models': models_list})
+
+@app.route('/api/clear-chat', methods=['POST'])
+@login_required
+def clear_chat_history():
+    """Clear chat history for current agent or all agents"""
+    try:
+        data = request.json or {}
+        agent = data.get('agent', 'all')
+        
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        if agent == 'all':
+            cursor.execute("DELETE FROM chat_history WHERE user_id = ?", (current_user.id,))
+        else:
+            cursor.execute("DELETE FROM chat_history WHERE user_id = ? AND agent_name = ?", 
+                          (current_user.id, agent))
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'success': True, 'message': 'Chat history cleared'})
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
