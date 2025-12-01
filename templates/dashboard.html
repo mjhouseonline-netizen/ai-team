@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Team - Modern Dashboard</title>
+    <title>AI Team - Ultimate Dashboard</title>
     <style>
         /* ================================================
-           MODERN CHATGPT/CLAUDE STYLE - COMPLETE DASHBOARD
-           Mobile-First, Professional, Feature-Complete
+           ULTIMATE AI TEAM DASHBOARD
+           Sidebar + ChatGPT Style + Floating Preview
            ================================================ */
 
         * {
@@ -19,6 +19,8 @@
         :root {
             --primary: #10a37f;
             --primary-hover: #0d8c6f;
+            --sidebar-bg: #1a1a1a;
+            --sidebar-hover: #2a2a2a;
             --bg-main: #ffffff;
             --bg-secondary: #f9fafb;
             --bg-hover: #f3f4f6;
@@ -26,8 +28,6 @@
             --text-secondary: #6b7280;
             --border: #e5e7eb;
             --shadow: rgba(0, 0, 0, 0.1);
-            --success: #10b981;
-            --danger: #ef4444;
         }
 
         body {
@@ -37,30 +37,226 @@
             line-height: 1.6;
             margin: 0;
             padding: 0;
-            overflow-x: hidden;
+            overflow: hidden;
+            display: flex;
+            height: 100vh;
+        }
+
+        /* ================================================
+           LEFT SIDEBAR - AGENTS
+           ================================================ */
+
+        .sidebar {
+            width: 280px;
+            background: var(--sidebar-bg);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #333;
+            position: relative;
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #333;
+        }
+
+        .sidebar-logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar-subtitle {
+            font-size: 12px;
+            color: #888;
+            margin-top: 4px;
+        }
+
+        .agents-section {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 8px;
+        }
+
+        .section-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 8px 12px;
+            margin-top: 8px;
+        }
+
+        .agent-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            margin: 4px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .agent-item:hover {
+            background: var(--sidebar-hover);
+        }
+
+        .agent-item.active {
+            background: var(--primary);
+        }
+
+        .agent-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .agent-item.active .agent-avatar {
+            box-shadow: 0 0 0 3px rgba(255,255,255,0.3);
+        }
+
+        /* Agent-specific gradients */
+        .agent-luna .agent-avatar { background: linear-gradient(135deg, #667eea, #764ba2); }
+        .agent-mila .agent-avatar { background: linear-gradient(135deg, #f093fb, #f5576c); }
+        .agent-sage .agent-avatar { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+        .agent-ember .agent-avatar { background: linear-gradient(135deg, #fa709a, #fee140); }
+        .agent-sol .agent-avatar { background: linear-gradient(135deg, #ffecd2, #fcb69f); }
+        .agent-nova .agent-avatar { background: linear-gradient(135deg, #a8edea, #fed6e3); }
+        .agent-theo .agent-avatar { background: linear-gradient(135deg, #ff9a9e, #fecfef); }
+
+        .agent-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .agent-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: white;
+            margin-bottom: 2px;
+        }
+
+        .agent-role {
+            font-size: 11px;
+            color: #888;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .sidebar-footer {
+            padding: 12px;
+            border-top: 1px solid #333;
+        }
+
+        .new-agent-btn {
+            width: 100%;
+            padding: 10px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .new-agent-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102,126,234,0.4);
+        }
+
+        /* ================================================
+           MAIN CONTENT AREA
+           ================================================ */
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
         }
 
         /* Header */
         .header {
-            position: sticky;
-            top: 0;
             background: var(--bg-main);
             border-bottom: 1px solid var(--border);
-            padding: 12px 20px;
+            padding: 12px 24px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            z-index: 1000;
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
 
-        .logo {
-            font-size: 20px;
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .current-agent-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .current-agent-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .current-agent-name {
+            font-size: 16px;
             font-weight: 600;
-            color: var(--primary);
+            color: var(--text-primary);
+        }
+
+        .model-selector-header {
             display: flex;
             align-items: center;
             gap: 8px;
+        }
+
+        .model-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .model-select {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+
+        .model-select:focus {
+            outline: none;
+            border-color: var(--primary);
         }
 
         .header-right {
@@ -71,11 +267,30 @@
 
         .usage-badge {
             background: var(--bg-secondary);
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 13px;
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 12px;
             font-weight: 500;
             color: var(--text-secondary);
+        }
+
+        .header-btn {
+            background: none;
+            border: 1px solid var(--border);
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text-primary);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .header-btn:hover {
+            background: var(--bg-hover);
+            border-color: var(--primary);
         }
 
         .menu-btn {
@@ -86,7 +301,6 @@
             padding: 8px;
             color: var(--text-secondary);
             border-radius: 8px;
-            transition: all 0.2s;
         }
 
         .menu-btn:hover {
@@ -97,7 +311,7 @@
         .dropdown-menu {
             position: absolute;
             top: 60px;
-            right: 20px;
+            right: 24px;
             background: white;
             border: 1px solid var(--border);
             border-radius: 12px;
@@ -114,7 +328,7 @@
 
         .dropdown-menu a {
             display: block;
-            padding: 12px 16px;
+            padding: 10px 14px;
             color: var(--text-primary);
             text-decoration: none;
             border-radius: 8px;
@@ -127,154 +341,14 @@
             color: var(--primary);
         }
 
-        /* Container */
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding-bottom: 100px;
-        }
-
-        /* Agent Selector */
-        .agent-selector {
-            background: var(--bg-secondary);
-            padding: 20px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .agent-section-title {
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 12px;
-            text-align: center;
-        }
-
-        .agent-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-            gap: 10px;
-            max-width: 900px;
-            margin: 0 auto;
-        }
-
-        .agent-card {
-            background: white;
-            border: 2px solid var(--border);
-            border-radius: 12px;
-            padding: 14px 10px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-size: 13px;
-            font-weight: 500;
-        }
-
-        .agent-card:hover {
-            border-color: var(--primary);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        }
-
-        .agent-card.active {
-            background: var(--primary);
-            color: white;
-            border-color: var(--primary);
-        }
-
-        .custom-agent-btn {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            border: none;
-            padding: 14px 10px;
-            border-radius: 12px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-
-        .custom-agent-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102,126,234,0.4);
-        }
-
-        /* Model Selector */
-        .model-selector-wrap {
-            background: white;
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-        }
-
-        .model-label {
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--text-secondary);
-        }
-
-        .model-select {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            padding: 10px 16px;
-            border-radius: 8px;
-            font-size: 14px;
-            color: var(--text-primary);
-            cursor: pointer;
-            min-width: 280px;
-            transition: all 0.2s;
-        }
-
-        .model-select:hover {
-            border-color: var(--primary);
-        }
-
-        .model-select:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(16,163,127,0.1);
-        }
-
-        /* Tabs */
-        .tabs-container {
-            background: white;
-            border-bottom: 1px solid var(--border);
-            padding: 0 20px;
-            display: flex;
-            gap: 8px;
-            max-width: 900px;
-            margin: 0 auto;
-        }
-
-        .tab {
-            background: none;
-            border: none;
-            padding: 12px 16px;
-            cursor: pointer;
-            color: var(--text-secondary);
-            font-size: 14px;
-            font-weight: 500;
-            border-bottom: 2px solid transparent;
-            transition: all 0.2s;
-        }
-
-        .tab.active {
-            color: var(--primary);
-            border-bottom-color: var(--primary);
-        }
-
-        .tab:hover {
-            color: var(--text-primary);
-        }
-
         /* Chat Container */
         .chat-container {
-            padding: 20px;
-            min-height: calc(100vh - 500px);
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            max-width: 900px;
+            width: 100%;
+            margin: 0 auto;
         }
 
         .welcome {
@@ -303,21 +377,20 @@
 
         .message.user {
             background: var(--bg-secondary);
-            margin: 20px -20px;
-            padding: 20px;
+            margin: 20px -24px;
+            padding: 20px 24px;
         }
 
         .avatar {
             width: 32px;
             height: 32px;
             border-radius: 50%;
-            background: var(--primary);
-            color: white;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 16px;
             flex-shrink: 0;
+            background: linear-gradient(135deg, #667eea, #764ba2);
         }
 
         .message.user .avatar {
@@ -359,16 +432,34 @@
             color: var(--primary);
         }
 
-        /* Input Area */
+        /* Typing Indicator */
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 8px 0;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--text-secondary);
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing {
+            0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+            30% { opacity: 1; transform: translateY(-6px); }
+        }
+
+        /* Input Container */
         .input-container {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: var(--bg-main);
             border-top: 1px solid var(--border);
-            padding: 16px 20px 20px;
-            z-index: 100;
+            padding: 16px 24px;
+            background: var(--bg-main);
         }
 
         .input-wrapper {
@@ -454,7 +545,6 @@
             cursor: not-allowed;
         }
 
-        /* File Preview */
         .file-preview {
             background: var(--bg-hover);
             border-radius: 8px;
@@ -470,40 +560,83 @@
             display: flex;
         }
 
-        .remove-file-btn {
+        /* ================================================
+           FLOATING PREVIEW WINDOW
+           ================================================ */
+
+        .floating-preview {
+            position: fixed;
+            bottom: 100px;
+            right: 24px;
+            width: 450px;
+            max-height: 600px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            display: none;
+            flex-direction: column;
+            z-index: 5000;
+            overflow: hidden;
+        }
+
+        .floating-preview.active {
+            display: flex;
+        }
+
+        .preview-header {
+            background: var(--bg-secondary);
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .preview-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .preview-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .preview-control-btn {
             background: none;
             border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
             padding: 4px 8px;
+            cursor: pointer;
+            font-size: 18px;
+            color: var(--text-secondary);
             border-radius: 4px;
+            transition: all 0.2s;
         }
 
-        .remove-file-btn:hover {
-            background: rgba(0,0,0,0.05);
+        .preview-control-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
         }
 
-        /* Typing Indicator */
-        .typing-indicator {
+        .preview-body {
+            flex: 1;
+            overflow: auto;
+            padding: 16px;
+        }
+
+        .preview-iframe {
+            width: 100%;
+            height: 400px;
+            border: none;
+            border-radius: 8px;
+        }
+
+        .preview-actions {
+            padding: 12px 16px;
+            border-top: 1px solid var(--border);
             display: flex;
-            gap: 4px;
-            padding: 8px 0;
-        }
-
-        .typing-dot {
-            width: 8px;
-            height: 8px;
-            background: var(--text-secondary);
-            border-radius: 50%;
-            animation: typing 1.4s infinite;
-        }
-
-        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-
-        @keyframes typing {
-            0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
-            30% { opacity: 1; transform: translateY(-6px); }
+            gap: 8px;
         }
 
         /* Modals */
@@ -548,12 +681,6 @@
             cursor: pointer;
             font-size: 18px;
             color: var(--text-secondary);
-            transition: all 0.2s;
-        }
-
-        .modal-close:hover {
-            background: var(--bg-hover);
-            color: var(--text-primary);
         }
 
         .modal-title {
@@ -584,7 +711,6 @@
             font-size: 14px;
             font-family: inherit;
             color: var(--text-primary);
-            transition: all 0.2s;
         }
 
         .form-input:focus, .form-textarea:focus {
@@ -598,14 +724,7 @@
             min-height: 120px;
         }
 
-        .form-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 20px;
-        }
-
         .btn {
-            flex: 1;
             padding: 10px 16px;
             border: none;
             border-radius: 8px;
@@ -633,91 +752,53 @@
             background: var(--bg-hover);
         }
 
-        .btn-danger {
-            background: var(--danger);
-            color: white;
+        .form-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 20px;
         }
 
-        .btn-danger:hover {
-            background: #dc2626;
-        }
-
-        /* Preview Modal */
-        .preview-modal .modal-content {
-            max-width: 90%;
-            max-height: 90vh;
-        }
-
-        /* Agent Library Grid */
-        .library-grid {
-            display: grid;
-            gap: 16px;
-            margin-top: 16px;
-        }
-
-        .library-item {
-            background: var(--bg-secondary);
-            padding: 16px;
-            border-radius: 12px;
-            border: 1px solid var(--border);
-        }
-
-        .library-item h3 {
-            margin-bottom: 8px;
-            color: var(--text-primary);
-            font-size: 16px;
-        }
-
-        .library-item p {
-            color: var(--text-secondary);
-            font-size: 14px;
-            margin-bottom: 12px;
+        .form-actions .btn {
+            flex: 1;
         }
 
         /* Mobile Responsive */
         @media (max-width: 768px) {
-            .header {
-                padding: 10px 16px;
+            .sidebar {
+                position: fixed;
+                left: -280px;
+                top: 0;
+                bottom: 0;
+                z-index: 1000;
+                transition: left 0.3s;
             }
 
-            .logo {
-                font-size: 18px;
+            .sidebar.active {
+                left: 0;
             }
 
-            .usage-badge {
-                font-size: 12px;
-                padding: 4px 10px;
+            .sidebar-toggle {
+                position: fixed;
+                top: 12px;
+                left: 12px;
+                z-index: 999;
+                background: white;
+                border: 1px solid var(--border);
+                padding: 8px 12px;
+                border-radius: 8px;
+                cursor: pointer;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             }
 
-            .dropdown-menu {
+            .floating-preview {
+                width: calc(100% - 32px);
                 right: 16px;
                 left: 16px;
-                min-width: auto;
+                bottom: 80px;
             }
 
-            .agent-selector {
-                padding: 16px;
-            }
-
-            .agent-grid {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 8px;
-            }
-
-            .agent-card, .custom-agent-btn {
-                padding: 12px 8px;
-                font-size: 12px;
-            }
-
-            .model-selector-wrap {
+            .header {
                 padding: 12px 16px;
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .model-select {
-                min-width: 100%;
-                font-size: 13px;
             }
 
             .chat-container {
@@ -729,143 +810,197 @@
                 padding: 16px;
             }
 
-            .welcome h2 {
-                font-size: 24px;
-            }
-
-            .input-container {
-                padding: 12px 16px 16px;
-            }
-
-            #messageInput {
-                font-size: 14px;
-            }
-
-            .send-btn {
-                padding: 8px 16px;
-                font-size: 13px;
-            }
-
-            .modal-content {
-                padding: 20px;
-                margin: 16px;
-            }
-
-            .tabs-container {
-                padding: 0 16px;
+            .model-selector-header {
+                display: none;
             }
         }
     </style>
 </head>
 <body>
-    <!-- Header -->
-    <div class="header">
-        <div class="logo">🌿 AI Team</div>
-        <div class="header-right">
-            <div class="usage-badge">
-                <span id="messages-used">0</span>/<span id="daily-limit">25</span> today
+    <!-- Mobile Sidebar Toggle -->
+    <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" style="display: none;">☰</button>
+
+    <!-- Left Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                🌿 AI Team
             </div>
-            <button class="menu-btn" onclick="toggleMenu()">⋮</button>
+            <div class="sidebar-subtitle">Your AI Assistant Team</div>
+        </div>
+
+        <div class="agents-section">
+            <div class="section-title">Core Agents</div>
+            
+            <div class="agent-item active agent-luna" onclick="selectAgent('Luna', '🌙', 'Research Analyst')">
+                <div class="agent-avatar">🌙</div>
+                <div class="agent-info">
+                    <div class="agent-name">Luna</div>
+                    <div class="agent-role">Research Analyst</div>
+                </div>
+            </div>
+
+            <div class="agent-item agent-mila" onclick="selectAgent('Mila', '📋', 'Task Manager')">
+                <div class="agent-avatar">📋</div>
+                <div class="agent-info">
+                    <div class="agent-name">Mila</div>
+                    <div class="agent-role">Task Manager</div>
+                </div>
+            </div>
+
+            <div class="agent-item agent-sage" onclick="selectAgent('Sage', '📝', 'Content Writer')">
+                <div class="agent-avatar">📝</div>
+                <div class="agent-info">
+                    <div class="agent-name">Sage</div>
+                    <div class="agent-role">Content Writer</div>
+                </div>
+            </div>
+
+            <div class="agent-item agent-ember" onclick="selectAgent('Ember', '🎨', 'Creative Director')">
+                <div class="agent-avatar">🎨</div>
+                <div class="agent-info">
+                    <div class="agent-name">Ember</div>
+                    <div class="agent-role">Creative Director</div>
+                </div>
+            </div>
+
+            <div class="agent-item agent-sol" onclick="selectAgent('Sol', '☀️', 'Wellness Coach')">
+                <div class="agent-avatar">☀️</div>
+                <div class="agent-info">
+                    <div class="agent-name">Sol</div>
+                    <div class="agent-role">Wellness Coach</div>
+                </div>
+            </div>
+
+            <div class="agent-item agent-nova" onclick="selectAgent('Nova', '💻', 'Tech Specialist')">
+                <div class="agent-avatar">💻</div>
+                <div class="agent-info">
+                    <div class="agent-name">Nova</div>
+                    <div class="agent-role">Tech Specialist</div>
+                </div>
+            </div>
+
+            <div class="agent-item agent-theo" onclick="selectAgent('Theo', '⚡', 'Strategy Advisor')">
+                <div class="agent-avatar">⚡</div>
+                <div class="agent-info">
+                    <div class="agent-name">Theo</div>
+                    <div class="agent-role">Strategy Advisor</div>
+                </div>
+            </div>
+
+            <div class="section-title" id="customAgentsTitle" style="display: none;">Custom Agents</div>
+            <div id="customAgentsList"></div>
+        </div>
+
+        <div class="sidebar-footer">
+            <button class="new-agent-btn" onclick="openCustomAgentModal()">
+                ✨ Create Custom Agent
+            </button>
         </div>
     </div>
 
-    <!-- Dropdown Menu -->
-    <div class="dropdown-menu" id="dropdownMenu">
-        <a href="/pricing">⭐ Upgrade Plan</a>
-        <a href="#" onclick="openCustomAgentModal(); return false;">✨ Create Custom Agent</a>
-        <a href="#" onclick="openAgentLibrary(); return false;">📚 Agent Library</a>
-        <a href="#" onclick="openPromptBuilder(); return false;">🎯 Prompt Builder</a>
-        <a href="#" onclick="clearAllChat(); return false;">🗑️ Clear All Chats</a>
-        <a href="/automations">🔌 Automations</a>
-        <a href="/admin" id="adminLink" style="display:none;">⚙️ Admin</a>
-        <a href="/logout">🚪 Logout</a>
-    </div>
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-left">
+                <div class="current-agent-info">
+                    <div class="current-agent-avatar" id="currentAgentAvatar" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+                        🌙
+                    </div>
+                    <div class="current-agent-name" id="currentAgentName">Luna</div>
+                </div>
 
-    <!-- Agent Selector -->
-    <div class="agent-selector">
-        <div class="agent-section-title">Select Your AI Agent</div>
-        <div class="agent-grid" id="agentGrid">
-            <div class="agent-card active" onclick="selectAgent('Luna')">🌙 Luna</div>
-            <div class="agent-card" onclick="selectAgent('Mila')">📋 Mila</div>
-            <div class="agent-card" onclick="selectAgent('Sage')">📝 Sage</div>
-            <div class="agent-card" onclick="selectAgent('Ember')">🎨 Ember</div>
-            <div class="agent-card" onclick="selectAgent('Sol')">☀️ Sol</div>
-            <div class="agent-card" onclick="selectAgent('Nova')">💻 Nova</div>
-            <div class="agent-card" onclick="selectAgent('Theo')">⚡ Theo</div>
-            <button class="custom-agent-btn" onclick="openCustomAgentModal()">✨ Custom</button>
-        </div>
-    </div>
+                <div class="model-selector-header">
+                    <span class="model-label">Model:</span>
+                    <select id="modelSelect" class="model-select">
+                        <optgroup label="Claude (Anthropic)">
+                            <option value="claude-sonnet-4.5" selected>Sonnet 4.5</option>
+                            <option value="claude-opus-4">Opus 4</option>
+                            <option value="claude-haiku-4.5">Haiku 4.5</option>
+                        </optgroup>
+                        <optgroup label="GPT (OpenAI)">
+                            <option value="gpt-4o">GPT-4o</option>
+                            <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                            <option value="gpt-4o-mini">GPT-4o Mini</option>
+                        </optgroup>
+                        <optgroup label="Gemini (Google)">
+                            <option value="gemini-2.0-flash">Gemini 2.0 FREE</option>
+                            <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                        </optgroup>
+                    </select>
+                </div>
+            </div>
 
-    <!-- Model Selector -->
-    <div class="model-selector-wrap">
-        <span class="model-label">AI Model:</span>
-        <select id="modelSelect" class="model-select">
-            <optgroup label="Claude (Anthropic)">
-                <option value="claude-sonnet-4.5" selected>Sonnet 4.5 - Smart & Fast</option>
-                <option value="claude-opus-4">Opus 4 - Most Capable</option>
-                <option value="claude-haiku-4.5">Haiku 4.5 - Ultra Fast</option>
-            </optgroup>
-            <optgroup label="GPT (OpenAI)">
-                <option value="gpt-4o">GPT-4o - Latest Multimodal</option>
-                <option value="gpt-4-turbo">GPT-4 Turbo - Powerful</option>
-                <option value="gpt-4o-mini">GPT-4o Mini - Cheapest</option>
-            </optgroup>
-            <optgroup label="Gemini (Google)">
-                <option value="gemini-2.0-flash">Gemini 2.0 - FREE!</option>
-                <option value="gemini-1.5-pro">Gemini 1.5 Pro - 2M Context</option>
-            </optgroup>
-        </select>
-    </div>
-
-    <!-- Main Container -->
-    <div class="container">
-        <!-- Tabs -->
-        <div class="tabs-container">
-            <button class="tab active" onclick="switchTab('chat')">💬 Chat</button>
-            <button class="tab" onclick="switchTab('history')">📚 History</button>
+            <div class="header-right">
+                <button class="header-btn" onclick="openPromptBuilder()">
+                    🎯 Prompt Builder
+                </button>
+                <div class="usage-badge">
+                    <span id="messages-used">0</span>/<span id="daily-limit">25</span> today
+                </div>
+                <button class="menu-btn" onclick="toggleMenu()">⋮</button>
+            </div>
         </div>
 
-        <!-- Chat Tab -->
-        <div id="chatTab" class="tab-content active">
-            <div class="chat-container" id="chatContainer">
-                <div class="welcome">
-                    <h2>Hi! I'm Luna 🌙</h2>
-                    <p>I'm your research analyst. How can I help you today?</p>
+        <!-- Dropdown Menu -->
+        <div class="dropdown-menu" id="dropdownMenu">
+            <a href="/pricing">⭐ Upgrade Plan</a>
+            <a href="#" onclick="openAgentLibrary(); return false;">📚 Agent Library</a>
+            <a href="#" onclick="viewHistory(); return false;">📜 Chat History</a>
+            <a href="#" onclick="clearAllChat(); return false;">🗑️ Clear Chats</a>
+            <a href="/automations">🔌 Automations</a>
+            <a href="/admin" id="adminLink" style="display:none;">⚙️ Admin</a>
+            <a href="/logout">🚪 Logout</a>
+        </div>
+
+        <!-- Chat Container -->
+        <div class="chat-container" id="chatContainer">
+            <div class="welcome">
+                <h2>Hi! I'm Luna 🌙</h2>
+                <p>I'm your research analyst. How can I help you today?</p>
+            </div>
+        </div>
+
+        <!-- Input Container -->
+        <div class="input-container">
+            <div class="input-wrapper">
+                <div class="input-area">
+                    <input type="file" id="fileInput" style="display:none;" accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.txt,.md,.csv,.doc,.docx,.xls,.xlsx">
+                    <button class="input-btn" onclick="document.getElementById('fileInput').click()" title="Attach file">📎</button>
+                    <button class="input-btn" id="voiceBtn" onclick="toggleVoice()" title="Voice input">🎤</button>
+                    <button class="input-btn" id="imageBtn" onclick="toggleImageMode()" title="Generate image">🎨</button>
+                    <textarea 
+                        id="messageInput" 
+                        placeholder="Message Luna..." 
+                        rows="1"
+                        onkeydown="handleKeyPress(event)"
+                        oninput="autoResize(this)"
+                    ></textarea>
+                    <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send</button>
+                </div>
+                <div class="file-preview" id="filePreview">
+                    <span id="fileName"></span>
+                    <button class="remove-file-btn" onclick="removeFile()">✕</button>
                 </div>
             </div>
         </div>
-
-        <!-- History Tab -->
-        <div id="historyTab" class="tab-content" style="display:none;">
-            <div class="chat-container" id="historyContainer">
-                <div class="welcome">
-                    <p>Loading chat history...</p>
-                </div>
-            </div>
-        </div>
     </div>
 
-    <!-- Input Container -->
-    <div class="input-container">
-        <div class="input-wrapper">
-            <div class="input-area">
-                <input type="file" id="fileInput" style="display:none;" accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.txt,.md,.csv,.doc,.docx,.xls,.xlsx">
-                <button class="input-btn" onclick="document.getElementById('fileInput').click()" title="Attach file">📎</button>
-                <button class="input-btn" id="voiceBtn" onclick="toggleVoice()" title="Voice input">🎤</button>
-                <button class="input-btn" id="imageBtn" onclick="toggleImageMode()" title="Generate image">🎨</button>
-                <textarea 
-                    id="messageInput" 
-                    placeholder="Message Luna..." 
-                    rows="1"
-                    onkeydown="handleKeyPress(event)"
-                    oninput="autoResize(this)"
-                ></textarea>
-                <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send</button>
+    <!-- Floating Preview Window -->
+    <div class="floating-preview" id="floatingPreview">
+        <div class="preview-header">
+            <div class="preview-title" id="previewTitle">Preview</div>
+            <div class="preview-controls">
+                <button class="preview-control-btn" onclick="minimizePreview()" title="Minimize">─</button>
+                <button class="preview-control-btn" onclick="closeFloatingPreview()" title="Close">✕</button>
             </div>
-            <div class="file-preview" id="filePreview">
-                <span id="fileName"></span>
-                <button class="remove-file-btn" onclick="removeFile()">✕</button>
-            </div>
+        </div>
+        <div class="preview-body" id="floatingPreviewBody">
+            <!-- Content loaded dynamically -->
+        </div>
+        <div class="preview-actions" id="floatingPreviewActions">
+            <!-- Actions loaded dynamically -->
         </div>
     </div>
 
@@ -884,8 +1019,12 @@
                     <input type="text" id="agentRole" class="form-input" required placeholder="e.g., Corporate Law Expert">
                 </div>
                 <div class="form-group">
+                    <label class="form-label">Emoji/Icon</label>
+                    <input type="text" id="agentEmoji" class="form-input" maxlength="2" placeholder="⚖️">
+                </div>
+                <div class="form-group">
                     <label class="form-label">Instructions/Personality</label>
-                    <textarea id="agentPrompt" class="form-textarea" required placeholder="Describe how this agent should behave and what they specialize in..."></textarea>
+                    <textarea id="agentPrompt" class="form-textarea" required placeholder="Describe how this agent should behave..."></textarea>
                 </div>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Create Agent</button>
@@ -895,29 +1034,28 @@
         </div>
     </div>
 
-    <!-- Agent Library Modal -->
-    <div class="modal" id="agentLibraryModal">
-        <div class="modal-content">
-            <button class="modal-close" onclick="closeAgentLibrary()">✕</button>
-            <h2 class="modal-title">Your Custom Agents</h2>
-            <div id="agentLibraryContent">
-                <div class="welcome"><p>Loading agents...</p></div>
-            </div>
-        </div>
-    </div>
-
     <!-- Prompt Builder Modal -->
     <div class="modal" id="promptBuilderModal">
         <div class="modal-content">
             <button class="modal-close" onclick="closePromptBuilder()">✕</button>
-            <h2 class="modal-title">AI Prompt Builder</h2>
+            <h2 class="modal-title">🎯 AI Prompt Builder</h2>
             <div class="form-group">
                 <label class="form-label">What do you want help with?</label>
-                <textarea id="promptInput" class="form-textarea" placeholder="e.g., I need help writing a blog post about AI..."></textarea>
+                <textarea id="promptInput" class="form-textarea" placeholder="e.g., I need to write a professional email to my team about the new project timeline..."></textarea>
             </div>
             <div class="form-group">
-                <label class="form-label">Suggested Prompt:</label>
-                <textarea id="promptOutput" class="form-textarea" readonly style="background: var(--bg-secondary);"></textarea>
+                <label class="form-label">Select Prompt Style:</label>
+                <select class="form-input" id="promptStyle">
+                    <option value="detailed">Detailed & Comprehensive</option>
+                    <option value="concise">Concise & Direct</option>
+                    <option value="creative">Creative & Engaging</option>
+                    <option value="professional">Professional & Formal</option>
+                    <option value="casual">Casual & Friendly</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Enhanced Prompt:</label>
+                <textarea id="promptOutput" class="form-textarea" readonly style="background: var(--bg-secondary); min-height: 160px;"></textarea>
             </div>
             <div class="form-actions">
                 <button class="btn btn-primary" onclick="buildPrompt()">Generate Prompt</button>
@@ -926,14 +1064,6 @@
         </div>
     </div>
 
-    <!-- Preview Modal -->
-    <div class="modal preview-modal" id="previewModal">
-        <div class="modal-content">
-            <button class="modal-close" onclick="closePreview()">✕</button>
-            <div id="previewBody"></div>
-        </div>
-    </div>
-
-    <script src="/dashboard.js"></script>
+    <script src="/static/dashboard_ultimate.js"></script>
 </body>
 </html>
