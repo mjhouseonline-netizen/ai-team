@@ -2144,7 +2144,8 @@ def init_promo_codes_table():
             times_used INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             expires_at TIMESTAMP,
-            is_active BOOLEAN DEFAULT 1
+            is_active BOOLEAN DEFAULT 1,
+            single_use BOOLEAN DEFAULT 0
         )
     """)
     
@@ -2167,6 +2168,14 @@ def init_promo_codes_table():
             print("✅ Added is_active column")
         except sqlite3.OperationalError as e:
             print(f"Warning: Could not add is_active column: {e}")
+    
+    if 'single_use' not in existing_columns:
+        try:
+            print("Adding single_use column to promo_codes table...")
+            cursor.execute("ALTER TABLE promo_codes ADD COLUMN single_use BOOLEAN DEFAULT 0")
+            print("✅ Added single_use column")
+        except sqlite3.OperationalError as e:
+            print(f"Warning: Could not add single_use column: {e}")
     
     # Create promo_code_usage table
     cursor.execute("""
@@ -2524,7 +2533,7 @@ def validate_promo_code(code):
     cursor = conn.cursor()
     
     cursor.execute("""
-        SELECT id, tier, max_uses, times_used, expires_at, is_active
+        SELECT id, tier, max_uses, times_used, expires_at, is_active, single_use
         FROM promo_codes
         WHERE code = ?
     """, (code.upper(),))
@@ -2535,20 +2544,25 @@ def validate_promo_code(code):
     if not result:
         return False, "Invalid promo code"
     
-    promo_id, tier, max_uses, times_used, expires_at, is_active = result
+    promo_id, tier, max_uses, times_used, expires_at, is_active, single_use = result
     
     if not is_active:
         return False, "This promo code is no longer active"
     
-    if times_used >= max_uses:
+    # For single-use codes, check if already used (times_used should be 0)
+    if single_use and times_used >= 1:
         return False, "This promo code has already been used"
+    
+    # For multi-use codes, check against max_uses
+    if not single_use and times_used >= max_uses:
+        return False, "This promo code has reached its maximum uses"
     
     if expires_at:
         expiry = datetime.fromisoformat(expires_at)
         if datetime.utcnow() > expiry:
             return False, "This promo code has expired"
     
-    return True, {'id': promo_id, 'tier': tier}
+    return True, {'id': promo_id, 'tier': tier, 'single_use': single_use}
 
 
 def redeem_promo_code(code, user_id):
@@ -2648,17 +2662,89 @@ def api_check_promo_code():
         is_valid, result = validate_promo_code(code)
         
         if is_valid:
-            tier_info = SUBSCRIPTION_TIERS[result['tier']]
             return jsonify({
                 'valid': True,
-                'tier': result['tier'],
-                'tier_name': tier_info['name'],
-                'features': tier_info['features']
+                'plan': result['tier'],
+                'message': f'Valid code for {result["tier"]} plan!'
             }), 200
         else:
-            return jsonify({'valid': False, 'error': result}), 200
+            return jsonify({'valid': False, 'message': result}), 200
             
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/apply-promo-upgrade', methods=['POST'])
+@login_required
+def apply_promo_upgrade():
+    """Apply promo code to upgrade user's subscription"""
+    try:
+        data = request.json
+        code = data.get('code', '').strip().upper()
+        plan = data.get('plan', '')
+        
+        if not code or not plan:
+            return jsonify({'error': 'Code and plan required'}), 400
+        
+        # Validate promo code
+        is_valid, result = validate_promo_code(code)
+        
+        if not is_valid:
+            return jsonify({'error': result}), 400
+        
+        # Check if code is for the requested plan
+        if result['tier'] != plan:
+            return jsonify({'error': f'This code is for {result["tier"]} plan, not {plan}'}), 400
+        
+        # Update user subscription
+        current_user.subscription_tier = plan
+        current_user.promo_code_used = code
+        db.session.commit()
+        
+        # Increment promo code usage in SQLite
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        # Get current usage
+        cursor.execute("""
+            SELECT times_used, single_use, max_uses
+            FROM promo_codes
+            WHERE code = ?
+        """, (code,))
+        row = cursor.fetchone()
+        
+        if row:
+            times_used, single_use, max_uses = row
+            new_times_used = times_used + 1
+            
+            # For single-use codes, deactivate after use
+            if single_use:
+                cursor.execute("""
+                    UPDATE promo_codes
+                    SET times_used = ?,
+                        is_active = 0
+                    WHERE code = ?
+                """, (new_times_used, code))
+            # For multi-use codes, increment and check max_uses
+            else:
+                is_active = 1 if new_times_used < max_uses else 0
+                cursor.execute("""
+                    UPDATE promo_codes
+                    SET times_used = ?,
+                        is_active = ?
+                    WHERE code = ?
+                """, (new_times_used, is_active, code))
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Successfully upgraded to {plan} plan!',
+            'new_tier': plan
+        }), 200
+            
+    except Exception as e:
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
 # ============================================

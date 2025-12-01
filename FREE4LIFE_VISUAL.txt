@@ -1,0 +1,285 @@
+╔══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║  🎟️ YOUR PROMO CODE SYSTEM - 10 SINGLE-USE + MULTI-USE                  ║
+║                                                                           ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  YOUR SYSTEM NOW SUPPORTS TWO TYPES OF CODES:                             │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                           │
+│  TYPE 1: SINGLE-USE CODES (10 Free4Life Codes)                           │
+│  ═════════════════════════════════════════════════════════               │
+│  Code: FREE4LIFE-X7Y9                                                     │
+│  Plan: Pro ($30/month)                                                    │
+│  Uses: 1 maximum                                                          │
+│  Status: Deactivates after one use                                        │
+│  Purpose: VIP gifts, special promotions                                   │
+│                                                                           │
+│  TYPE 2: MULTI-USE CODES (All Other Codes)                               │
+│  ═══════════════════════════════════════════════════════                 │
+│  Code: WELCOME2024                                                        │
+│  Plan: Starter or Pro                                                     │
+│  Uses: Up to 100 (or any max_uses)                                       │
+│  Status: Active until max uses reached                                    │
+│  Purpose: Launch campaigns, public promotions                             │
+│                                                                           │
+└──────────────────────────────────────────────────────────────────────────┘
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║  HOW SINGLE-USE CODES WORK:                                               ║
+║                                                                           ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+ADMIN GENERATES 10 CODES:
+┌────────────────────────────────┐
+│ $ python generate_free4life.py │
+│                                 │
+│ Generating codes...             │
+│ ✅ FREE4LIFE-A1B2               │
+│ ✅ FREE4LIFE-C3D4               │
+│ ✅ FREE4LIFE-E5F6               │
+│ ...10 codes total               │
+└────────────────────────────────┘
+
+ADMIN SHARES CODE WITH USER 1:
+┌────────────────────────────────┐
+│ Your exclusive code:            │
+│ FREE4LIFE-A1B2                  │
+│                                 │
+│ • Use at /pricing               │
+│ • Get Pro plan FREE             │
+│ • One-time use only             │
+└────────────────────────────────┘
+
+USER 1 REDEEMS CODE:
+┌────────────────────────────────┐
+│ /pricing                        │
+│ Enter code: FREE4LIFE-A1B2      │
+│ [Apply Code]                    │
+│                                 │
+│ ✅ Success! Pro plan FREE!      │
+│ [Subscribe]                     │
+└────────────────────────────────┘
+         ↓
+┌────────────────────────────────┐
+│ DATABASE UPDATE:                │
+│ Code: FREE4LIFE-A1B2            │
+│ times_used: 0 → 1               │
+│ is_active: 1 → 0  ❌            │
+└────────────────────────────────┘
+
+USER 2 TRIES SAME CODE:
+┌────────────────────────────────┐
+│ /pricing                        │
+│ Enter code: FREE4LIFE-A1B2      │
+│ [Apply Code]                    │
+│                                 │
+│ ❌ Code already used!           │
+└────────────────────────────────┘
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║  HOW MULTI-USE CODES WORK:                                                ║
+║                                                                           ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+ADMIN CREATES MULTI-USE CODE:
+┌────────────────────────────────┐
+│ /promo-codes                    │
+│ [+ Create Code]                 │
+│                                 │
+│ Code: WELCOME2024               │
+│ Plan: Pro                       │
+│ Max Uses: 100                   │
+│ [Create]                        │
+└────────────────────────────────┘
+
+ADMIN SHARES PUBLICLY:
+┌────────────────────────────────┐
+│ 🎉 Launch Special!              │
+│                                 │
+│ First 100 users get Pro FREE!   │
+│ Use code: WELCOME2024           │
+│                                 │
+│ Visit: ai-team.com/pricing      │
+└────────────────────────────────┘
+
+USER 1 REDEEMS:
+┌────────────────────────────────┐
+│ Enter code: WELCOME2024         │
+│ ✅ Success! (Uses: 1/100)       │
+└────────────────────────────────┘
+
+USER 2 REDEEMS:
+┌────────────────────────────────┐
+│ Enter code: WELCOME2024         │
+│ ✅ Success! (Uses: 2/100)       │
+└────────────────────────────────┘
+
+...98 more users...
+
+USER 100 REDEEMS:
+┌────────────────────────────────┐
+│ Enter code: WELCOME2024         │
+│ ✅ Success! (Uses: 100/100)     │
+│ Code now INACTIVE               │
+└────────────────────────────────┘
+
+USER 101 TRIES:
+┌────────────────────────────────┐
+│ Enter code: WELCOME2024         │
+│ ❌ Max uses reached!            │
+└────────────────────────────────┘
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║  DATABASE STRUCTURE:                                                      ║
+║                                                                           ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+SINGLE-USE CODE:
+┌─────────────────────────────────────────────┐
+│ id:          1                               │
+│ code:        FREE4LIFE-A1B2                  │
+│ tier:        Pro                             │
+│ max_uses:    1                               │
+│ times_used:  0 → 1 (after use)               │
+│ single_use:  1  ⚡ SINGLE-USE FLAG           │
+│ is_active:   1 → 0 (deactivates after use)   │
+└─────────────────────────────────────────────┘
+
+MULTI-USE CODE:
+┌─────────────────────────────────────────────┐
+│ id:          2                               │
+│ code:        WELCOME2024                     │
+│ tier:        Pro                             │
+│ max_uses:    100                             │
+│ times_used:  23                              │
+│ single_use:  0  🔁 MULTI-USE FLAG           │
+│ is_active:   1 (stays active until 100)      │
+└─────────────────────────────────────────────┘
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║  DEPLOYMENT STEPS:                                                        ║
+║                                                                           ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+STEP 1: Deploy Backend
+┌────────────────────────────────────────────┐
+│ web_app_auth_UPDATED.py → /web_app_auth.py │
+│ git add, commit, push                       │
+│ Wait for Render deployment                  │
+└────────────────────────────────────────────┘
+
+STEP 2: Generate Codes
+┌────────────────────────────────────────────┐
+│ python generate_free4life_codes.py          │
+│                                             │
+│ Output:                                     │
+│ ✅ 10 codes generated                       │
+│ 💾 Saved to codes_free4life.txt            │
+└────────────────────────────────────────────┘
+
+STEP 3: Distribute Codes
+┌────────────────────────────────────────────┐
+│ Give one code to each VIP:                  │
+│ • VIP 1: FREE4LIFE-A1B2                     │
+│ • VIP 2: FREE4LIFE-C3D4                     │
+│ • VIP 3: FREE4LIFE-E5F6                     │
+│ ...etc                                      │
+└────────────────────────────────────────────┘
+
+STEP 4: Create Multi-Use Codes (As Needed)
+┌────────────────────────────────────────────┐
+│ Go to /promo-codes admin panel              │
+│ Create regular codes as before              │
+│ These are automatically multi-use           │
+└────────────────────────────────────────────┘
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║  ADMIN PANEL VIEW:                                                        ║
+║                                                                           ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+PROMO CODES DASHBOARD (/promo-codes)
+┌──────────────────────────────────────────────────────────────────┐
+│ [+ Create Code]                                                   │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│ FREE4LIFE-A1B2                                                    │
+│ Plan: Pro  Uses: 0/1  Status: ✅ Active                          │
+│ Type: Single-Use ⚡                                               │
+│ [Copy] [Delete]                                                   │
+│                                                                   │
+│ FREE4LIFE-X7Y9                                                    │
+│ Plan: Pro  Uses: 1/1  Status: ❌ Inactive                        │
+│ Type: Single-Use ⚡                                               │
+│ [Copy] [Delete]                                                   │
+│                                                                   │
+│ WELCOME2024                                                       │
+│ Plan: Pro  Uses: 23/100  Status: ✅ Active                       │
+│ Type: Multi-Use 🔁                                               │
+│ [Copy] [Delete]                                                   │
+│                                                                   │
+│ LAUNCH2024                                                        │
+│ Plan: Pro  Uses: 100/100  Status: ❌ Inactive                    │
+│ Type: Multi-Use 🔁                                               │
+│ [Copy] [Delete]                                                   │
+│                                                                   │
+└──────────────────────────────────────────────────────────────────┘
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║  VALIDATION LOGIC:                                                        ║
+║                                                                           ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+WHEN USER ENTERS CODE:
+┌────────────────────────────────┐
+│ 1. Check if code exists         │
+│ 2. Check if code is active      │
+│ 3. Check code type:             │
+│    ├─ Single-use?               │
+│    │  └─ Check times_used == 0  │
+│    └─ Multi-use?                │
+│       └─ Check times_used < max │
+│ 4. Validate plan matches        │
+│ 5. If valid, allow redemption   │
+└────────────────────────────────┘
+
+WHEN USER REDEEMS CODE:
+┌────────────────────────────────┐
+│ 1. Update user subscription     │
+│ 2. Save code to user account    │
+│ 3. Increment times_used         │
+│ 4. Check if should deactivate:  │
+│    ├─ Single-use?               │
+│    │  └─ Set is_active = 0      │
+│    └─ Multi-use?                │
+│       └─ If times_used >= max   │
+│          └─ Set is_active = 0   │
+└────────────────────────────────┘
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║  SUMMARY:                                                                 ║
+║                                                                           ║
+║  What You Get:                                                            ║
+║  • 10 single-use FREE4LIFE codes (one-time redemption)                   ║
+║  • Unlimited multi-use codes (as before)                                  ║
+║  • Both systems work together seamlessly                                  ║
+║  • Full tracking and automatic deactivation                               ║
+║                                                                           ║
+║  Files to Deploy:                                                         ║
+║  • web_app_auth_UPDATED.py (backend with single-use support)             ║
+║  • generate_free4life_codes.py (code generator script)                   ║
+║                                                                           ║
+║  Deploy Time: 5 minutes                                                   ║
+║                                                                           ║
+║  READY TO GO! 🚀                                                          ║
+║                                                                           ║
+╚══════════════════════════════════════════════════════════════════════════╝

@@ -46,6 +46,100 @@
             margin: 0 auto;
         }
 
+        /* PROMO CODE SECTION - NEW */
+        .promo-section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 40px;
+            border: 2px solid rgba(144, 238, 144, 0.3);
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            margin-bottom: 40px;
+        }
+
+        .promo-section h3 {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            color: #FFD700;
+            text-align: center;
+        }
+
+        .promo-input-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .promo-input {
+            flex: 1;
+            padding: 14px 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            font-size: 16px;
+            text-transform: uppercase;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-weight: 500;
+        }
+
+        .promo-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .promo-input:focus {
+            outline: none;
+            border-color: #90EE90;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .apply-btn {
+            background: linear-gradient(135deg, #90EE90, #76c776);
+            color: #1a4d2e;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .apply-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(144, 238, 144, 0.4);
+        }
+
+        .apply-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .promo-message {
+            padding: 12px 18px;
+            border-radius: 12px;
+            font-size: 14px;
+            display: none;
+            margin-top: 12px;
+        }
+
+        .promo-message.success {
+            background: rgba(144, 238, 144, 0.2);
+            border: 2px solid #90EE90;
+            color: #90EE90;
+            display: block;
+        }
+
+        .promo-message.error {
+            background: rgba(239, 68, 68, 0.2);
+            border: 2px solid #ef4444;
+            color: #fca5a5;
+            display: block;
+        }
+
         .pricing-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -95,6 +189,19 @@
         .plan-price {
             font-size: 3em;
             font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .plan-price.discounted {
+            text-decoration: line-through;
+            opacity: 0.5;
+            font-size: 1.5em;
+        }
+
+        .plan-price-new {
+            font-size: 3em;
+            font-weight: bold;
+            color: #FFD700;
             margin-bottom: 10px;
         }
 
@@ -226,6 +333,10 @@
             .faq-grid {
                 grid-template-columns: 1fr;
             }
+
+            .promo-input-group {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
@@ -238,11 +349,27 @@
             <p>Unlock the full power of your AI Team with unlimited access to all 7 specialized agents</p>
         </div>
 
+        <!-- PROMO CODE SECTION - NEW -->
+        <div class="promo-section">
+            <h3>🎟️ Have a Promo Code?</h3>
+            <div class="promo-input-group">
+                <input 
+                    type="text" 
+                    id="promoCodeInput" 
+                    class="promo-input" 
+                    placeholder="Enter code (e.g., WELCOME2024)"
+                    maxlength="50"
+                >
+                <button class="apply-btn" onclick="applyPromoCode()">Apply Code</button>
+            </div>
+            <div id="promoMessage" class="promo-message"></div>
+        </div>
+
         <div class="pricing-grid">
             <!-- Free Plan -->
             <div class="pricing-card">
                 <div class="plan-name">Free</div>
-                <div class="plan-price">
+                <div class="plan-price" id="freePrice">
                     $0
                     <small>/month</small>
                 </div>
@@ -264,11 +391,13 @@
             </div>
 
             <!-- Starter Plan -->
-            <div class="pricing-card">
+            <div class="pricing-card" id="starterCard">
                 <div class="plan-name">Starter</div>
-                <div class="plan-price">
-                    $10
-                    <small>/month</small>
+                <div id="starterPrice">
+                    <div class="plan-price">
+                        $10
+                        <small>/month</small>
+                    </div>
                 </div>
                 <div class="plan-description">For regular users who need more</div>
                 
@@ -284,20 +413,19 @@
                 {% if current_plan == 'starter' %}
                     <div class="current-plan">✓ Your Current Plan</div>
                 {% else %}
-                    <form action="/create-checkout-session" method="POST">
-                        <input type="hidden" name="price_id" value="{{ starter_price_id }}">
-                        <button type="submit" class="select-button">Select Starter</button>
-                    </form>
+                    <button type="button" class="select-button" id="starterBtn" onclick="subscribe('Starter')">Select Starter</button>
                 {% endif %}
             </div>
 
             <!-- Pro Plan -->
-            <div class="pricing-card featured">
+            <div class="pricing-card featured" id="proCard">
                 <div class="badge">MOST POPULAR</div>
                 <div class="plan-name">Pro</div>
-                <div class="plan-price">
-                    $30
-                    <small>/month</small>
+                <div id="proPrice">
+                    <div class="plan-price">
+                        $30
+                        <small>/month</small>
+                    </div>
                 </div>
                 <div class="plan-description">For power users & professionals</div>
                 
@@ -315,10 +443,7 @@
                 {% if current_plan == 'pro' %}
                     <div class="current-plan">✓ Your Current Plan</div>
                 {% else %}
-                    <form action="/create-checkout-session" method="POST">
-                        <input type="hidden" name="price_id" value="{{ pro_price_id }}">
-                        <button type="submit" class="select-button featured">Select Pro</button>
-                    </form>
+                    <button type="button" class="select-button featured" id="proBtn" onclick="subscribe('Pro')">Select Pro</button>
                 {% endif %}
             </div>
         </div>
@@ -339,7 +464,7 @@
 
                 <div class="faq-item">
                     <h3>🎟️ Do promo codes work with paid plans?</h3>
-                    <p>If you have a "Free For Life" promo code with unlimited access, you don't need a paid plan! Otherwise, you can use promo codes for discounts.</p>
+                    <p>Yes! Promo codes can give you free access to Starter or Pro plans. Just enter your code above and click Subscribe!</p>
                 </div>
 
                 <div class="faq-item">
@@ -359,5 +484,152 @@
             </div>
         </div>
     </div>
+
+    <script>
+        let appliedPromoCode = null;
+
+        async function applyPromoCode() {
+            const input = document.getElementById('promoCodeInput');
+            const code = input.value.trim().toUpperCase();
+            const message = document.getElementById('promoMessage');
+            const applyBtn = document.querySelector('.apply-btn');
+
+            if (!code) {
+                showMessage('Please enter a promo code', 'error');
+                return;
+            }
+
+            applyBtn.disabled = true;
+            applyBtn.textContent = 'Checking...';
+
+            try {
+                const response = await fetch('/api/check-promo-code', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ code: code })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.valid) {
+                    appliedPromoCode = {
+                        code: code,
+                        plan: data.plan
+                    };
+                    
+                    showMessage(`✅ Success! Code "${code}" applied! You'll get ${data.plan} plan for FREE!`, 'success');
+                    updatePricing(data.plan);
+                } else {
+                    showMessage(data.message || 'Invalid or expired promo code', 'error');
+                    appliedPromoCode = null;
+                }
+            } catch (error) {
+                showMessage('Error checking promo code', 'error');
+                appliedPromoCode = null;
+            }
+
+            applyBtn.disabled = false;
+            applyBtn.textContent = 'Apply Code';
+        }
+
+        function showMessage(text, type) {
+            const message = document.getElementById('promoMessage');
+            message.textContent = text;
+            message.className = `promo-message ${type}`;
+        }
+
+        function updatePricing(discountedPlan) {
+            // Reset all prices first
+            document.getElementById('starterPrice').innerHTML = `
+                <div class="plan-price">
+                    $10
+                    <small>/month</small>
+                </div>
+            `;
+            document.getElementById('proPrice').innerHTML = `
+                <div class="plan-price">
+                    $30
+                    <small>/month</small>
+                </div>
+            `;
+
+            // Apply discount to specific plan
+            if (discountedPlan === 'Starter') {
+                document.getElementById('starterPrice').innerHTML = `
+                    <div class="plan-price-new">
+                        FREE
+                        <small>/month</small>
+                    </div>
+                    <div class="plan-price discounted">
+                        was $10
+                    </div>
+                `;
+            } else if (discountedPlan === 'Pro') {
+                document.getElementById('proPrice').innerHTML = `
+                    <div class="plan-price-new">
+                        FREE
+                        <small>/month</small>
+                    </div>
+                    <div class="plan-price discounted">
+                        was $30
+                    </div>
+                `;
+            }
+        }
+
+        async function subscribe(plan) {
+            // If promo code is applied for this plan
+            if (appliedPromoCode && appliedPromoCode.plan === plan) {
+                // Apply promo code
+                try {
+                    const response = await fetch('/api/apply-promo-upgrade', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            code: appliedPromoCode.code,
+                            plan: plan
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        alert(`✅ Success! You now have ${plan} plan for FREE!`);
+                        window.location.href = '/dashboard';
+                    } else {
+                        alert('Error: ' + (data.error || 'Failed to apply promo code'));
+                    }
+                } catch (error) {
+                    alert('Error applying promo code');
+                }
+            } else {
+                // Regular Stripe checkout - use form submission
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/create-checkout-session';
+                
+                const priceIdInput = document.createElement('input');
+                priceIdInput.type = 'hidden';
+                priceIdInput.name = 'price_id';
+                priceIdInput.value = plan === 'Starter' ? '{{ starter_price_id }}' : '{{ pro_price_id }}';
+                
+                form.appendChild(priceIdInput);
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        // Auto-focus promo code input if code in URL
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            if (code) {
+                document.getElementById('promoCodeInput').value = code;
+                applyPromoCode();
+            }
+        });
+    </script>
 </body>
 </html>
