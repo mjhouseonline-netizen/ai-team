@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Analytics - AI Team</title>
+    <title>Admin Dashboard - AI Team</title>
     <style>
         * {
             margin: 0;
@@ -11,625 +11,430 @@
             box-sizing: border-box;
         }
 
+        :root {
+            --primary: #10a37f;
+            --sidebar-bg: #1a1a1a;
+            --bg-main: #ffffff;
+            --bg-secondary: #f9fafb;
+            --text-primary: #374151;
+            --text-secondary: #6b7280;
+            --border: #e5e7eb;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1a4d2e 0%, #2d5016 100%);
-            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 260px;
+            background: var(--sidebar-bg);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #333;
+        }
+
+        .sidebar-header {
             padding: 20px;
+            border-bottom: 1px solid #333;
         }
 
-        .admin-container {
-            max-width: 1400px;
-            margin: 0 auto;
+        .sidebar-logo {
+            font-size: 18px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 4px;
         }
 
-        .admin-header {
-            background: white;
-            padding: 25px;
-            border-radius: 15px;
-            margin-bottom: 20px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        .sidebar-subtitle {
+            font-size: 11px;
+            color: #888;
         }
 
-        .admin-header h1 {
-            color: #1a4d2e;
+        .nav-section {
+            padding: 20px 12px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .nav-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 8px 12px;
+            margin-top: 12px;
+        }
+
+        .nav-item {
             display: flex;
             align-items: center;
-            gap: 15px;
-            font-size: 32px;
+            gap: 12px;
+            padding: 10px 12px;
+            margin: 4px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: white;
+            text-decoration: none;
         }
 
-        .admin-header p {
-            color: #666;
-            margin-top: 8px;
+        .nav-item:hover {
+            background: #2a2a2a;
+        }
+
+        .nav-item.active {
+            background: var(--primary);
+        }
+
+        .nav-icon {
+            font-size: 18px;
+            width: 24px;
+            text-align: center;
+        }
+
+        .nav-label {
             font-size: 14px;
         }
 
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .back-btn {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: none;
+            color: var(--text-primary);
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            background: #e5e7eb;
+        }
+
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        /* Stats Grid */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 20px;
-            margin-bottom: 20px;
+            margin-bottom: 24px;
         }
 
         .stat-card {
             background: white;
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .stat-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
-        .stat-icon {
-            font-size: 36px;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
 
         .stat-label {
-            color: #666;
-            font-size: 14px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            margin-bottom: 8px;
         }
 
         .stat-value {
-            font-size: 36px;
-            font-weight: bold;
-            color: #1a4d2e;
-            margin: 10px 0;
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
         }
 
         .stat-change {
             font-size: 13px;
-            padding: 4px 8px;
-            border-radius: 4px;
-            display: inline-block;
+            color: var(--primary);
         }
 
-        .stat-change.positive {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .stat-change.negative {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .charts-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-
+        /* Charts Section */
         .chart-card {
             background: white;
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            padding: 24px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            margin-bottom: 24px;
         }
 
-        .chart-card h3 {
-            color: #1a4d2e;
-            margin-bottom: 20px;
+        .chart-title {
             font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: var(--text-primary);
         }
 
-        .activity-section {
+        /* Table */
+        .table-card {
             background: white;
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
         }
 
-        .activity-section h3 {
-            color: #1a4d2e;
-            margin-bottom: 20px;
-            font-size: 18px;
+        .table-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
         }
 
-        .activity-table {
+        .table-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        table {
             width: 100%;
             border-collapse: collapse;
         }
 
-        .activity-table th {
+        th, td {
             text-align: left;
-            padding: 12px;
-            background: #f8f9fa;
-            color: #666;
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background: var(--bg-secondary);
             font-size: 13px;
             font-weight: 600;
+            color: var(--text-secondary);
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
-        .activity-table td {
-            padding: 15px 12px;
-            border-bottom: 1px solid #f0f0f0;
-        }
-
-        .activity-table tr:hover {
-            background: #f8f9fa;
-        }
-
-        .user-email {
-            color: #1a4d2e;
-            font-weight: 600;
-        }
-
-        .subscription-badge {
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            display: inline-block;
-        }
-
-        .subscription-free {
-            background: #e9ecef;
-            color: #495057;
-        }
-
-        .subscription-pro {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .subscription-team {
-            background: #d1ecf1;
-            color: #0c5460;
-        }
-
-        .subscription-enterprise {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .refresh-btn {
-            background: linear-gradient(135deg, #90EE90, #76c776);
-            color: #1a4d2e;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            margin-left: 15px;
-        }
-
-        .refresh-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(144, 238, 144, 0.4);
-        }
-
-        .back-btn {
-            background: #6c757d;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            text-decoration: none;
-            display: inline-block;
-            transition: all 0.3s ease;
-        }
-
-        .back-btn:hover {
-            background: #5a6268;
-            transform: translateY(-2px);
-        }
-
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #666;
-        }
-
-        .error-message {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-
-        .progress-bar {
-            width: 100%;
-            height: 8px;
-            background: #e9ecef;
-            border-radius: 4px;
-            overflow: hidden;
-            margin-top: 8px;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(135deg, #90EE90, #76c776);
-            border-radius: 4px;
-            transition: width 0.3s ease;
-        }
-
-        .metric-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid #f0f0f0;
-        }
-
-        .metric-row:last-child {
-            border-bottom: none;
-        }
-
-        .metric-label {
-            color: #666;
+        td {
             font-size: 14px;
+            color: var(--text-primary);
         }
 
-        .metric-value {
-            color: #1a4d2e;
-            font-weight: 600;
-            font-size: 16px;
+        tr:hover {
+            background: var(--bg-secondary);
         }
 
+        /* Mobile */
         @media (max-width: 768px) {
-            .charts-grid {
-                grid-template-columns: 1fr;
+            .sidebar {
+                position: fixed;
+                left: -260px;
+                top: 0;
+                bottom: 0;
+                z-index: 1000;
+                transition: left 0.3s;
+            }
+
+            .sidebar.active {
+                left: 0;
             }
 
             .stats-grid {
                 grid-template-columns: 1fr;
             }
-
-            .activity-table {
-                font-size: 12px;
-            }
-
-            .activity-table th,
-            .activity-table td {
-                padding: 8px;
-            }
         }
     </style>
 </head>
 <body>
-    <div class="admin-container">
-        <!-- Header -->
-        <div class="admin-header">
-            <h1>
-                📊 Admin Analytics Dashboard
-                <button class="refresh-btn" onclick="loadAllData()">🔄 Refresh</button>
-                <a href="/dashboard" class="back-btn">← Back to Dashboard</a>
-            </h1>
-            <p id="last-updated">Last updated: Loading...</p>
+    <!-- Sidebar Navigation -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">🌿 AI Team Admin</div>
+            <div class="sidebar-subtitle">Administration Panel</div>
         </div>
 
-        <!-- Key Stats -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-card-header">
-                    <div class="stat-icon">👥</div>
-                    <span class="stat-label">Total Users</span>
-                </div>
-                <div class="stat-value" id="total-users">0</div>
-                <span class="stat-change positive" id="users-change">+0 this week</span>
-            </div>
+        <div class="nav-section">
+            <div class="nav-title">Main</div>
+            <a href="/" class="nav-item">
+                <span class="nav-icon">💬</span>
+                <span class="nav-label">Dashboard</span>
+            </a>
 
-            <div class="stat-card">
-                <div class="stat-card-header">
-                    <div class="stat-icon">💬</div>
-                    <span class="stat-label">Messages Today</span>
-                </div>
-                <div class="stat-value" id="messages-today">0</div>
-                <span class="stat-change positive" id="messages-change">+0% vs yesterday</span>
-            </div>
+            <div class="nav-title">Admin Tools</div>
+            <a href="/admin" class="nav-item active">
+                <span class="nav-icon">📊</span>
+                <span class="nav-label">Analytics</span>
+            </a>
+            <a href="/promo-codes" class="nav-item">
+                <span class="nav-icon">🎟️</span>
+                <span class="nav-label">Promo Codes</span>
+            </a>
+            <a href="/automations" class="nav-item">
+                <span class="nav-icon">🔌</span>
+                <span class="nav-label">Automations</span>
+            </a>
 
-            <div class="stat-card">
-                <div class="stat-card-header">
-                    <div class="stat-icon">📈</div>
-                    <span class="stat-label">Total Messages</span>
-                </div>
-                <div class="stat-value" id="total-messages">0</div>
-                <span class="stat-change positive" id="total-change">All time</span>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-card-header">
-                    <div class="stat-icon">⭐</div>
-                    <span class="stat-label">Paid Users</span>
-                </div>
-                <div class="stat-value" id="paid-users">0</div>
-                <span class="stat-change positive" id="paid-percentage">0% of total</span>
-            </div>
-        </div>
-
-        <!-- Charts Section -->
-        <div class="charts-grid">
-            <!-- Subscription Breakdown -->
-            <div class="chart-card">
-                <h3>📊 Subscription Breakdown</h3>
-                <div id="subscription-breakdown">
-                    <div class="metric-row">
-                        <span class="metric-label">Free Tier</span>
-                        <span class="metric-value" id="free-count">0</span>
-                    </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="free-progress" style="width: 0%"></div>
-                    </div>
-
-                    <div class="metric-row">
-                        <span class="metric-label">Pro Tier ($20/mo)</span>
-                        <span class="metric-value" id="pro-count">0</span>
-                    </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="pro-progress" style="width: 0%"></div>
-                    </div>
-
-                    <div class="metric-row">
-                        <span class="metric-label">Team Tier ($50/mo)</span>
-                        <span class="metric-value" id="team-count">0</span>
-                    </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="team-progress" style="width: 0%"></div>
-                    </div>
-
-                    <div class="metric-row">
-                        <span class="metric-label">Enterprise</span>
-                        <span class="metric-value" id="enterprise-count">0</span>
-                    </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="enterprise-progress" style="width: 0%"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Agent Usage -->
-            <div class="chart-card">
-                <h3>🤖 Most Popular Agents</h3>
-                <div id="agent-usage">
-                    <div class="metric-row">
-                        <span class="metric-label">🌙 Luna</span>
-                        <span class="metric-value" id="agent-luna">0</span>
-                    </div>
-                    <div class="metric-row">
-                        <span class="metric-label">📋 Mila</span>
-                        <span class="metric-value" id="agent-mila">0</span>
-                    </div>
-                    <div class="metric-row">
-                        <span class="metric-label">✍️ Sage</span>
-                        <span class="metric-value" id="agent-sage">0</span>
-                    </div>
-                    <div class="metric-row">
-                        <span class="metric-label">🎨 Ember</span>
-                        <span class="metric-value" id="agent-ember">0</span>
-                    </div>
-                    <div class="metric-row">
-                        <span class="metric-label">💡 Sol</span>
-                        <span class="metric-value" id="agent-sol">0</span>
-                    </div>
-                    <div class="metric-row">
-                        <span class="metric-label">💻 Nova</span>
-                        <span class="metric-value" id="agent-nova">0</span>
-                    </div>
-                    <div class="metric-row">
-                        <span class="metric-label">⚙️ Theo</span>
-                        <span class="metric-value" id="agent-theo">0</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- System Health -->
-        <div class="chart-card" style="margin-bottom: 20px;">
-            <h3>🏥 System Health</h3>
-            <div class="metric-row">
-                <span class="metric-label">API Response Time (avg)</span>
-                <span class="metric-value" id="response-time">0ms</span>
-            </div>
-            <div class="metric-row">
-                <span class="metric-label">Error Rate</span>
-                <span class="metric-value" id="error-rate">0%</span>
-            </div>
-            <div class="metric-row">
-                <span class="metric-label">Uptime (30 days)</span>
-                <span class="metric-value" id="uptime">100%</span>
-            </div>
-            <div class="metric-row">
-                <span class="metric-label">Custom Agents Created</span>
-                <span class="metric-value" id="custom-agents">0</span>
-            </div>
-        </div>
-
-        <!-- Recent Activity -->
-        <div class="activity-section">
-            <h3>🔔 Recent User Activity</h3>
-            <table class="activity-table">
-                <thead>
-                    <tr>
-                        <th>User</th>
-                        <th>Subscription</th>
-                        <th>Messages Today</th>
-                        <th>Total Messages</th>
-                        <th>Last Active</th>
-                    </tr>
-                </thead>
-                <tbody id="recent-activity">
-                    <tr>
-                        <td colspan="5" class="loading">Loading activity...</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Top Users -->
-        <div class="activity-section">
-            <h3>🏆 Top Users (by message count)</h3>
-            <table class="activity-table">
-                <thead>
-                    <tr>
-                        <th>Rank</th>
-                        <th>User</th>
-                        <th>Subscription</th>
-                        <th>Total Messages</th>
-                        <th>Joined</th>
-                    </tr>
-                </thead>
-                <tbody id="top-users">
-                    <tr>
-                        <td colspan="5" class="loading">Loading top users...</td>
-                    </tr>
-                </tbody>
-            </table>
+            <div class="nav-title">Settings</div>
+            <a href="/pricing" class="nav-item">
+                <span class="nav-icon">⭐</span>
+                <span class="nav-label">Pricing</span>
+            </a>
+            <a href="/logout" class="nav-item">
+                <span class="nav-icon">🚪</span>
+                <span class="nav-label">Logout</span>
+            </a>
         </div>
     </div>
 
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="header">
+            <h1>📊 Analytics Dashboard</h1>
+            <a href="/" class="back-btn">← Back to Chat</a>
+        </div>
+
+        <div class="content-area">
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Users</div>
+                    <div class="stat-value" id="totalUsers">0</div>
+                    <div class="stat-change">+12% this month</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-label">Messages Today</div>
+                    <div class="stat-value" id="messagesToday">0</div>
+                    <div class="stat-change">+8% from yesterday</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-label">Active Subscriptions</div>
+                    <div class="stat-value" id="activeSubscriptions">0</div>
+                    <div class="stat-change">+5 this week</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-label">Custom Agents</div>
+                    <div class="stat-value" id="customAgents">0</div>
+                    <div class="stat-change">+15 this month</div>
+                </div>
+            </div>
+
+            <!-- Usage Chart -->
+            <div class="chart-card">
+                <div class="chart-title">Message Usage (Last 7 Days)</div>
+                <canvas id="usageChart" height="80"></canvas>
+            </div>
+
+            <!-- Recent Activity Table -->
+            <div class="table-card">
+                <div class="table-header">
+                    <div class="table-title">Recent User Activity</div>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Messages</th>
+                            <th>Plan</th>
+                            <th>Last Active</th>
+                        </tr>
+                    </thead>
+                    <tbody id="activityTable">
+                        <tr>
+                            <td colspan="4" style="text-align: center; padding: 40px;">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        async function loadAllData() {
-            document.getElementById('last-updated').textContent = 'Last updated: Refreshing...';
-            
+        // Load stats
+        async function loadStats() {
             try {
-                const response = await fetch('/api/admin/analytics', {
-                    credentials: 'include'
-                });
-
-                if (!response.ok) {
-                    if (response.status === 403) {
-                        alert('Access denied. Admin privileges required.');
-                        window.location.href = '/dashboard';
-                        return;
-                    }
-                    throw new Error('Failed to load analytics');
-                }
-
+                const response = await fetch('/api/admin-stats', { credentials: 'include' });
                 const data = await response.json();
                 
-                // Update key stats
-                document.getElementById('total-users').textContent = data.total_users || 0;
-                document.getElementById('messages-today').textContent = data.messages_today || 0;
-                document.getElementById('total-messages').textContent = data.total_messages || 0;
-                document.getElementById('paid-users').textContent = data.paid_users || 0;
-
-                // Update percentages
-                const paidPercentage = data.total_users > 0 
-                    ? Math.round((data.paid_users / data.total_users) * 100) 
-                    : 0;
-                document.getElementById('paid-percentage').textContent = `${paidPercentage}% of total`;
-
-                // Update subscription breakdown
-                const subscriptions = data.subscription_breakdown || {};
-                const total = data.total_users || 1;
+                document.getElementById('totalUsers').textContent = data.total_users || 0;
+                document.getElementById('messagesToday').textContent = data.messages_today || 0;
+                document.getElementById('activeSubscriptions').textContent = data.active_subscriptions || 0;
+                document.getElementById('customAgents').textContent = data.custom_agents || 0;
                 
-                document.getElementById('free-count').textContent = subscriptions.free || 0;
-                document.getElementById('free-progress').style.width = 
-                    `${((subscriptions.free || 0) / total) * 100}%`;
+                // Load chart
+                if (data.usage_data) {
+                    const ctx = document.getElementById('usageChart').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: data.usage_data.labels,
+                            datasets: [{
+                                label: 'Messages',
+                                data: data.usage_data.values,
+                                borderColor: '#10a37f',
+                                backgroundColor: 'rgba(16, 163, 127, 0.1)',
+                                tension: 0.4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                }
+                            }
+                        }
+                    });
+                }
                 
-                document.getElementById('pro-count').textContent = subscriptions.pro || 0;
-                document.getElementById('pro-progress').style.width = 
-                    `${((subscriptions.pro || 0) / total) * 100}%`;
-                
-                document.getElementById('team-count').textContent = subscriptions.team || 0;
-                document.getElementById('team-progress').style.width = 
-                    `${((subscriptions.team || 0) / total) * 100}%`;
-                
-                document.getElementById('enterprise-count').textContent = subscriptions.enterprise || 0;
-                document.getElementById('enterprise-progress').style.width = 
-                    `${((subscriptions.enterprise || 0) / total) * 100}%`;
-
-                // Update agent usage
-                const agentUsage = data.agent_usage || {};
-                document.getElementById('agent-luna').textContent = agentUsage.Luna || 0;
-                document.getElementById('agent-mila').textContent = agentUsage.Mila || 0;
-                document.getElementById('agent-sage').textContent = agentUsage.Sage || 0;
-                document.getElementById('agent-ember').textContent = agentUsage.Ember || 0;
-                document.getElementById('agent-sol').textContent = agentUsage.Sol || 0;
-                document.getElementById('agent-nova').textContent = agentUsage.Nova || 0;
-                document.getElementById('agent-theo').textContent = agentUsage.Theo || 0;
-
-                // Update system health
-                document.getElementById('response-time').textContent = 
-                    `${data.avg_response_time || 0}ms`;
-                document.getElementById('error-rate').textContent = 
-                    `${data.error_rate || 0}%`;
-                document.getElementById('uptime').textContent = 
-                    `${data.uptime || 100}%`;
-                document.getElementById('custom-agents').textContent = 
-                    data.total_custom_agents || 0;
-
-                // Update recent activity
-                updateRecentActivity(data.recent_activity || []);
-                
-                // Update top users
-                updateTopUsers(data.top_users || []);
-
-                // Update timestamp
-                const now = new Date();
-                document.getElementById('last-updated').textContent = 
-                    `Last updated: ${now.toLocaleString()}`;
-
+                // Load activity table
+                if (data.recent_activity) {
+                    const tbody = document.getElementById('activityTable');
+                    tbody.innerHTML = data.recent_activity.map(user => `
+                        <tr>
+                            <td>${user.email}</td>
+                            <td>${user.messages}</td>
+                            <td>${user.plan}</td>
+                            <td>${new Date(user.last_active).toLocaleDateString()}</td>
+                        </tr>
+                    `).join('');
+                }
             } catch (error) {
-                console.error('Error loading analytics:', error);
-                alert('Error loading analytics: ' + error.message);
+                console.error('Error loading stats:', error);
             }
         }
 
-        function updateRecentActivity(activities) {
-            const tbody = document.getElementById('recent-activity');
-            
-            if (activities.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999;">No recent activity</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = activities.map(activity => `
-                <tr>
-                    <td class="user-email">${activity.email}</td>
-                    <td><span class="subscription-badge subscription-${activity.subscription_tier}">${activity.subscription_tier}</span></td>
-                    <td>${activity.messages_today || 0}</td>
-                    <td>${activity.total_messages || 0}</td>
-                    <td>${new Date(activity.last_active).toLocaleString()}</td>
-                </tr>
-            `).join('');
-        }
-
-        function updateTopUsers(users) {
-            const tbody = document.getElementById('top-users');
-            
-            if (users.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999;">No users yet</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = users.map((user, index) => `
-                <tr>
-                    <td><strong>${index + 1}</strong></td>
-                    <td class="user-email">${user.email}</td>
-                    <td><span class="subscription-badge subscription-${user.subscription_tier}">${user.subscription_tier}</span></td>
-                    <td><strong>${user.total_messages || 0}</strong></td>
-                    <td>${new Date(user.created_at).toLocaleDateString()}</td>
-                </tr>
-            `).join('');
-        }
-
-        // Load data on page load
-        loadAllData();
-
-        // Auto-refresh every 60 seconds
-        setInterval(loadAllData, 60000);
+        document.addEventListener('DOMContentLoaded', loadStats);
     </script>
 </body>
 </html>

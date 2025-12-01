@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Promo Codes - AI Team</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #10a37f;
+            --sidebar-bg: #1a1a1a;
+            --bg-main: #ffffff;
+            --bg-secondary: #f9fafb;
+            --text-primary: #374151;
+            --text-secondary: #6b7280;
+            --border: #e5e7eb;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar Navigation - Same as others */
+        .sidebar {
+            width: 260px;
+            background: var(--sidebar-bg);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #333;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #333;
+        }
+
+        .sidebar-logo {
+            font-size: 18px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 4px;
+        }
+
+        .sidebar-subtitle {
+            font-size: 11px;
+            color: #888;
+        }
+
+        .nav-section {
+            padding: 20px 12px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .nav-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 8px 12px;
+            margin-top: 12px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            margin: 4px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: white;
+            text-decoration: none;
+        }
+
+        .nav-item:hover {
+            background: #2a2a2a;
+        }
+
+        .nav-item.active {
+            background: var(--primary);
+        }
+
+        .nav-icon {
+            font-size: 18px;
+            width: 24px;
+            text-align: center;
+        }
+
+        .nav-label {
+            font-size: 14px;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .back-btn {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: none;
+            color: var(--text-primary);
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            background: #e5e7eb;
+        }
+
+        .create-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .create-btn:hover {
+            background: #0d8c6f;
+        }
+
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        /* Promo Codes Grid */
+        .promo-grid {
+            display: grid;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .promo-card {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .promo-info {
+            flex: 1;
+        }
+
+        .promo-code {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            font-family: monospace;
+        }
+
+        .promo-details {
+            display: flex;
+            gap: 20px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .promo-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+
+        .btn-copy {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-delete {
+            background: #ef4444;
+            color: white;
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 20px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            flex: 1;
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            flex: 1;
+        }
+
+        /* Mobile */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: -260px;
+                top: 0;
+                bottom: 0;
+                z-index: 1000;
+                transition: left 0.3s;
+            }
+
+            .sidebar.active {
+                left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">🌿 AI Team</div>
+            <div class="sidebar-subtitle">Promo Code Manager</div>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Main</div>
+            <a href="/" class="nav-item">
+                <span class="nav-icon">💬</span>
+                <span class="nav-label">Dashboard</span>
+            </a>
+
+            <div class="nav-title">Admin Tools</div>
+            <a href="/admin" class="nav-item">
+                <span class="nav-icon">📊</span>
+                <span class="nav-label">Analytics</span>
+            </a>
+            <a href="/promo-codes" class="nav-item active">
+                <span class="nav-icon">🎟️</span>
+                <span class="nav-label">Promo Codes</span>
+            </a>
+            <a href="/automations" class="nav-item">
+                <span class="nav-icon">🔌</span>
+                <span class="nav-label">Automations</span>
+            </a>
+
+            <div class="nav-title">Settings</div>
+            <a href="/pricing" class="nav-item">
+                <span class="nav-icon">⭐</span>
+                <span class="nav-label">Pricing</span>
+            </a>
+            <a href="/logout" class="nav-item">
+                <span class="nav-icon">🚪</span>
+                <span class="nav-label">Logout</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="header">
+            <h1>🎟️ Promo Codes</h1>
+            <div class="header-actions">
+                <button class="create-btn" onclick="openCreateModal()">+ Create Code</button>
+                <a href="/" class="back-btn">← Back</a>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <div class="promo-grid" id="promoGrid">
+                <div style="text-align: center; padding: 40px; color: var(--text-secondary);">Loading promo codes...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Promo Code Modal -->
+    <div class="modal" id="createModal">
+        <div class="modal-content">
+            <h2 class="modal-title">Create Promo Code</h2>
+            <form id="createForm" onsubmit="createPromoCode(event)">
+                <div class="form-group">
+                    <label class="form-label">Code</label>
+                    <input type="text" class="form-input" id="codeInput" required placeholder="WELCOME2024">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Plan</label>
+                    <select class="form-select" id="planInput" required>
+                        <option value="Basic">Basic Plan</option>
+                        <option value="Plus">Plus Plan</option>
+                        <option value="Premium">Premium Plan</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Max Uses</label>
+                    <input type="number" class="form-input" id="maxUsesInput" value="100" min="1">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Create Code</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeCreateModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        async function loadPromoCodes() {
+            try {
+                const response = await fetch('/api/promo-codes', { credentials: 'include' });
+                const data = await response.json();
+                
+                const grid = document.getElementById('promoGrid');
+                if (data.codes && data.codes.length > 0) {
+                    grid.innerHTML = data.codes.map(code => `
+                        <div class="promo-card">
+                            <div class="promo-info">
+                                <div class="promo-code">${code.code}</div>
+                                <div class="promo-details">
+                                    <span>Plan: ${code.plan}</span>
+                                    <span>Uses: ${code.uses}/${code.max_uses}</span>
+                                    <span>Status: ${code.active ? '✅ Active' : '❌ Inactive'}</span>
+                                </div>
+                            </div>
+                            <div class="promo-actions">
+                                <button class="btn btn-copy" onclick="copyCode('${code.code}')">Copy</button>
+                                <button class="btn btn-delete" onclick="deleteCode(${code.id})">Delete</button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    grid.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-secondary);">No promo codes yet. Create your first one!</div>';
+                }
+            } catch (error) {
+                console.error('Error loading promo codes:', error);
+            }
+        }
+
+        function openCreateModal() {
+            document.getElementById('createModal').classList.add('active');
+        }
+
+        function closeCreateModal() {
+            document.getElementById('createModal').classList.remove('active');
+            document.getElementById('createForm').reset();
+        }
+
+        async function createPromoCode(event) {
+            event.preventDefault();
+            
+            const code = document.getElementById('codeInput').value;
+            const plan = document.getElementById('planInput').value;
+            const maxUses = document.getElementById('maxUsesInput').value;
+            
+            try {
+                const response = await fetch('/api/promo-code', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        code: code,
+                        plan: plan,
+                        max_uses: maxUses
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('✅ Promo code created!');
+                    closeCreateModal();
+                    loadPromoCodes();
+                } else {
+                    const data = await response.json();
+                    alert('Error: ' + (data.error || 'Failed to create code'));
+                }
+            } catch (error) {
+                alert('Error creating promo code');
+            }
+        }
+
+        function copyCode(code) {
+            navigator.clipboard.writeText(code).then(() => {
+                alert('✅ Code copied: ' + code);
+            });
+        }
+
+        async function deleteCode(id) {
+            if (!confirm('Delete this promo code?')) return;
+            
+            try {
+                const response = await fetch(`/api/promo-code/${id}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    alert('✅ Code deleted');
+                    loadPromoCodes();
+                } else {
+                    alert('Error deleting code');
+                }
+            } catch (error) {
+                alert('Error deleting code');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadPromoCodes);
+    </script>
+</body>
+</html>

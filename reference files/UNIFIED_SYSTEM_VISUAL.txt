@@ -1,0 +1,242 @@
+╔══════════════════════════════════════════════════════════════════════════╗
+║              🎯 UNIFIED NAVIGATION SYSTEM - COMPLETE!                     ║
+║                  ALL PAGES LINKED TOGETHER                                ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  MAIN DASHBOARD - NEW SIDEBAR STRUCTURE:                                  │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                           │
+│  ┌──────────────┐                                                         │
+│  │ 🌿 AI Team   │                                                         │
+│  │ Your AI Team │                                                         │
+│  ├──────────────┤                                                         │
+│  │ CORE AGENTS  │                                                         │
+│  │ 🌙 Luna      │ ← Click to chat with Luna                              │
+│  │ 📋 Mila      │ ← Click to chat with Mila                              │
+│  │ 📝 Sage      │ ← Click to chat with Sage                              │
+│  │ 🎨 Ember     │ ← Click to chat with Ember                             │
+│  │ ☀️ Sol       │ ← Click to chat with Sol                               │
+│  │ 💻 Nova      │ ← Click to chat with Nova                              │
+│  │ ⚡ Theo      │ ← Click to chat with Theo                              │
+│  ├──────────────┤                                                         │
+│  │ CUSTOM       │                                                         │
+│  │ ✨ Your      │ ← Your custom agents appear here                       │
+│  │   Agents     │                                                         │
+│  ├──────────────┤                                                         │
+│  │ SETTINGS ★★★│ ← NEW SECTION!                                          │
+│  │ & TOOLS      │                                                         │
+│  ├──────────────┤                                                         │
+│  │ 🔌 Automations ─────► Goes to Automations page                        │
+│  │   Zapier &   │                                                         │
+│  │   Make.com   │                                                         │
+│  ├──────────────┤                                                         │
+│  │ ⚙️ Admin ────────► Goes to Admin Dashboard (admin only)               │
+│  │   Dashboard  │                                                         │
+│  │   & Stats    │                                                         │
+│  ├──────────────┤                                                         │
+│  │ 🎟️ Promo ────────► Goes to Promo Codes page (admin only)             │
+│  │   Codes      │                                                         │
+│  │   Manage     │                                                         │
+│  ├──────────────┤                                                         │
+│  │ ⭐ Upgrade ───────► Goes to Pricing page                               │
+│  │   Plan       │                                                         │
+│  │   Premium    │                                                         │
+│  ├──────────────┤                                                         │
+│  │ ┌──────────┐ │                                                         │
+│  │ │ ✨ Create│ │ ← Create custom agent                                  │
+│  │ │   Agent  │ │                                                         │
+│  │ └──────────┘ │                                                         │
+│  └──────────────┘                                                         │
+│                                                                           │
+└──────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  ALL ADMIN PAGES NOW HAVE UNIFIED SIDEBAR:                                │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                           │
+│  ADMIN DASHBOARD (/admin)                                                 │
+│  ┌──────────────┬─────────────────────────────────────┐                  │
+│  │ 🌿 AI Team   │  📊 Analytics Dashboard             │                  │
+│  │ Admin Panel  │                                     │                  │
+│  ├──────────────┤  [Stats Cards]                      │                  │
+│  │ MAIN         │  • Total Users: 1,234               │                  │
+│  │ 💬 Dashboard │  • Messages: 5,678                  │                  │
+│  ├──────────────┤  • Subscriptions: 234               │                  │
+│  │ ADMIN TOOLS  │  • Custom Agents: 89                │                  │
+│  │ 📊 Analytics │  [Usage Chart]                      │                  │
+│  │ 🎟️ Promo    │  [Recent Activity Table]            │                  │
+│  │ 🔌 Automations                                     │                  │
+│  ├──────────────┤  ← Back to Chat                     │                  │
+│  │ SETTINGS     │                                     │                  │
+│  │ ⭐ Pricing   │                                     │                  │
+│  │ 🚪 Logout    │                                     │                  │
+│  └──────────────┴─────────────────────────────────────┘                  │
+│                                                                           │
+│  AUTOMATIONS (/automations)                                               │
+│  ┌──────────────┬─────────────────────────────────────┐                  │
+│  │ 🌿 AI Team   │  🔌 Automations & Integrations      │                  │
+│  │ Automation   │                                     │                  │
+│  ├──────────────┤  [Zapier Card]                      │                  │
+│  │ MAIN         │  ⚡ Connect 5,000+ apps             │                  │
+│  │ 💬 Dashboard │  [Open Zapier] [Test]               │                  │
+│  ├──────────────┤                                     │                  │
+│  │ ADMIN TOOLS  │  [Make.com Card]                    │                  │
+│  │ 📊 Analytics │  🔧 Visual workflows                │                  │
+│  │ 🎟️ Promo    │  [Open Make] [Test]                 │                  │
+│  │ 🔌 Automations                                     │                  │
+│  ├──────────────┤  [Notion Card]                      │                  │
+│  │ SETTINGS     │  📝 Save to Notion                  │                  │
+│  │ ⭐ Pricing   │  [Connect Notion]                   │                  │
+│  │ 🚪 Logout    │                                     │                  │
+│  └──────────────┴─────────────────────────────────────┘                  │
+│                                                                           │
+│  PROMO CODES (/promo-codes)                                               │
+│  ┌──────────────┬─────────────────────────────────────┐                  │
+│  │ 🌿 AI Team   │  🎟️ Promo Codes    [+ Create Code] │                  │
+│  │ Promo Codes  │                                     │                  │
+│  ├──────────────┤  WELCOME2024                        │                  │
+│  │ MAIN         │  Plan: Premium  Uses: 5/100         │                  │
+│  │ 💬 Dashboard │  [Copy] [Delete]                    │                  │
+│  ├──────────────┤                                     │                  │
+│  │ ADMIN TOOLS  │  STARTER50                          │                  │
+│  │ 📊 Analytics │  Plan: Basic  Uses: 12/50           │                  │
+│  │ 🎟️ Promo    │  [Copy] [Delete]                    │                  │
+│  │ 🔌 Automations                                     │                  │
+│  ├──────────────┤  ← Back to Chat                     │                  │
+│  │ SETTINGS     │                                     │                  │
+│  │ ⭐ Pricing   │                                     │                  │
+│  │ 🚪 Logout    │                                     │                  │
+│  └──────────────┴─────────────────────────────────────┘                  │
+│                                                                           │
+└──────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  NAVIGATION FLOW:                                                         │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                           │
+│  Main Dashboard (/)                                                       │
+│         │                                                                 │
+│         ├─► Click 🔌 Automations → Automations page                      │
+│         │                          (with sidebar navigation)             │
+│         │                                                                 │
+│         ├─► Click ⚙️ Admin → Admin Dashboard                             │
+│         │                    (with sidebar navigation)                   │
+│         │                                                                 │
+│         ├─► Click 🎟️ Promo → Promo Codes page                           │
+│         │                    (with sidebar navigation)                   │
+│         │                                                                 │
+│         └─► Click ⭐ Upgrade → Pricing page                              │
+│                                                                           │
+│  From ANY admin page:                                                     │
+│         │                                                                 │
+│         ├─► Click 💬 Dashboard → Back to main chat                       │
+│         │                                                                 │
+│         ├─► Click other sections → Navigate between pages                │
+│         │                                                                 │
+│         └─► All have same sidebar → Consistent experience                │
+│                                                                           │
+└──────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  FILES TO DEPLOY:                                                         │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                           │
+│  1. dashboard_ULTIMATE.html          → /templates/dashboard.html         │
+│     ✅ Added Settings & Tools section in sidebar                         │
+│     ✅ Links to Automations, Admin, Promo Codes, Pricing                 │
+│                                                                           │
+│  2. dashboard_ultimate.js            → /static/dashboard_ultimate.js     │
+│     ✅ Shows admin links for admin users                                 │
+│                                                                           │
+│  3. admin_dashboard_UNIFIED.html     → /templates/admin_dashboard.html   │
+│     ✅ New unified sidebar navigation                                    │
+│     ✅ Links back to main dashboard                                      │
+│                                                                           │
+│  4. automations_UNIFIED.html         → /templates/automations.html       │
+│     ✅ New unified sidebar navigation                                    │
+│     ✅ Zapier, Make.com, Notion cards                                    │
+│                                                                           │
+│  5. promo_codes_UNIFIED.html         → /templates/promo-codes.html       │
+│     ✅ New unified sidebar navigation                                    │
+│     ✅ Create/manage codes interface                                     │
+│                                                                           │
+│  6. web_app_auth_UPDATED.py          → /web_app_auth.py                  │
+│     ✅ Backend with all API endpoints                                    │
+│                                                                           │
+└──────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  WHAT CHANGED:                                                            │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                           │
+│  BEFORE:                                                                  │
+│  ❌ No links in main dashboard sidebar                                   │
+│  ❌ Had to type URLs manually                                            │
+│  ❌ Different designs on each page                                       │
+│  ❌ No way to navigate between pages                                     │
+│  ❌ Admin pages felt disconnected                                        │
+│                                                                           │
+│  AFTER:                                                                   │
+│  ✅ Settings section in main dashboard sidebar                           │
+│  ✅ One-click navigation to any page                                     │
+│  ✅ Unified design across all pages                                      │
+│  ✅ Same sidebar on every page                                           │
+│  ✅ Professional, cohesive system                                        │
+│                                                                           │
+└──────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  USER PERMISSIONS:                                                        │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                           │
+│  ALL USERS SEE:                                                           │
+│  ✅ All 7 core agents                                                     │
+│  ✅ Custom agents section                                                 │
+│  ✅ 🔌 Automations link                                                   │
+│  ✅ ⭐ Upgrade Plan link                                                  │
+│  ✅ ✨ Create Custom Agent button                                        │
+│                                                                           │
+│  ADMIN USERS ALSO SEE:                                                    │
+│  ✅ ⚙️ Admin Portal link (in sidebar)                                    │
+│  ✅ 🎟️ Promo Codes link (in sidebar)                                    │
+│  ✅ Admin dropdown menu options                                          │
+│                                                                           │
+│  JavaScript automatically shows/hides admin links!                        │
+│                                                                           │
+└──────────────────────────────────────────────────────────────────────────┘
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║  🎉 YOUR PLATFORM IS NOW FULLY UNIFIED!                                  ║
+║                                                                           ║
+║  ✨ Main dashboard with Settings section                                 ║
+║  ✨ Admin dashboard with unified navigation                              ║
+║  ✨ Automations page with unified navigation                             ║
+║  ✨ Promo codes page with unified navigation                             ║
+║  ✨ All pages linked together                                            ║
+║  ✨ Consistent design throughout                                         ║
+║  ✨ Mobile responsive sidebar                                            ║
+║  ✨ Professional & cohesive                                              ║
+║                                                                           ║
+║  DEPLOYMENT: 10 MINUTES                                                  ║
+║  DIFFICULTY: EASY (just upload 6 files)                                  ║
+║                                                                           ║
+║  RESULT: COMPLETE UNIFIED SYSTEM! 🚀                                     ║
+║                                                                           ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+QUICK DEPLOY CHECKLIST:
+□ Upload dashboard_ULTIMATE.html to /templates/dashboard.html
+□ Upload dashboard_ultimate.js to /static/dashboard_ultimate.js
+□ Upload admin_dashboard_UNIFIED.html to /templates/admin_dashboard.html
+□ Upload automations_UNIFIED.html to /templates/automations.html
+□ Upload promo_codes_UNIFIED.html to /templates/promo-codes.html
+□ Upload web_app_auth_UPDATED.py to /web_app_auth.py
+□ Deploy to Render
+□ Test navigation - click through all links
+□ Verify admin pages show (if admin)
+□ Test on mobile - sidebar should slide in/out
+□ Enjoy your unified system! 🎉
+
+ALL FILES READY IN: /mnt/user-data/outputs/
