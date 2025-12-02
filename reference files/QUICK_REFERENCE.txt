@@ -1,0 +1,250 @@
+╔══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║  📋 QUICK REFERENCE - AI TEAM PLATFORM                                   ║
+║  Last Updated: December 2, 2024                                          ║
+║                                                                           ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  ✅ CORRECT FILES TO DEPLOY:                                             │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                           │
+│  1. dashboard_ULTIMATE_FIXED.html → /templates/dashboard.html            │
+│     • Modern ChatGPT-style layout                                        │
+│     • Dark sidebar + clean main area                                     │
+│     • Mobile input fix (sticky)                                          │
+│     • Combined buttons dropdown                                          │
+│     • 1,180 lines                                                        │
+│                                                                           │
+│  2. pricing_UPDATED.html → /templates/pricing.html                       │
+│     • 3 tiers: Free/$0, Starter/$10, Pro/$30                            │
+│     • Promo code input at top                                            │
+│     • Green jungle theme                                                 │
+│                                                                           │
+│  3. promo_codes_UPDATED.html → /templates/promo_codes.html               │
+│     • Admin promo management                                             │
+│     • Correct plans: Starter/Pro                                         │
+│                                                                           │
+│  4. web_app_auth_UPDATED.py → /web_app_auth.py                           │
+│     • Backend with single-use codes                                      │
+│     • Promo endpoints                                                    │
+│     • 3,700 lines                                                        │
+│                                                                           │
+│  5. generate_free4life_codes.py (Run after deploy)                       │
+│     • Generates 10 VIP codes                                             │
+│                                                                           │
+└──────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  ❌ DEPRECATED FILES (Don't Use):                                        │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                           │
+│  ❌ dashboard.html (3,756 lines - OLD layout)                           │
+│  ❌ dashboard_MOBILE_FIXED.html                                          │
+│  ❌ dashboard_COMBINED_BUTTONS.html                                      │
+│  ❌ dashboard_COMPLETE_MODERN.html                                       │
+│  ❌ dashboard_MODERN_CLEAN.html                                          │
+│  ❌ dashboard_UPDATED.html                                               │
+│                                                                           │
+│  These have the OLD layout with character grid!                          │
+│                                                                           │
+└──────────────────────────────────────────────────────────────────────────┘
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║  🎨 HOW TO IDENTIFY THE CORRECT DASHBOARD:                                ║
+║                                                                           ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+✅ CORRECT (ULTIMATE):              ❌ WRONG (OLD):
+┌────────┬──────────────┐          ┌────────────────────┐
+│ Sidebar│ Main Area    │          │ 🌿 AI Team         │
+│ (dark) │ (white)      │          │ Usage: 45/100      │
+│        │              │          ├────────────────────┤
+│ 🌙 Luna│ Chat...      │          │ Select Agent:      │
+│ 📋 Mila│              │          │ [Luna][Mila][Sage] │
+│ 🧙 Sage│              │          │                    │
+│ 🔥Ember│              │          │ [Chat][History]    │
+└────────┴──────────────┘          │ Messages here...   │
+                                    └────────────────────┘
+Features:                           Features:
+• Dark sidebar (#1a1a1a)           • No sidebar
+• Modern green (#10a37f)           • Character grid
+• Clean & minimal                  • Stats bar
+• 1,180 lines                      • 3,756 lines
+
+Look for in code:
+Line 9-10:                          Doesn't have:
+"ULTIMATE AI TEAM DASHBOARD"        "ULTIMATE" anywhere
+"Sidebar + ChatGPT Style"
+
+Line 49: .sidebar                   No .sidebar class
+  width: 280px                      
+  background: #1a1a1a               
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║  🚀 DEPLOYMENT STEPS:                                                     ║
+║                                                                           ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+1. Upload Files
+   ────────────────────────────────────────
+   dashboard_ULTIMATE_FIXED.html → /templates/dashboard.html
+   pricing_UPDATED.html → /templates/pricing.html
+   promo_codes_UPDATED.html → /templates/promo_codes.html
+   web_app_auth_UPDATED.py → /web_app_auth.py
+
+2. Deploy
+   ────────────────────────────────────────
+   git add templates/ web_app_auth.py
+   git commit -m "Deploy: Modern layout + mobile fix + promo codes"
+   git push origin main
+
+3. Generate Codes
+   ────────────────────────────────────────
+   python generate_free4life_codes.py
+   
+   Output: 10 codes in codes_free4life.txt
+
+4. Test
+   ────────────────────────────────────────
+   Desktop:
+   ✅ Dark sidebar visible
+   ✅ Modern clean design
+   ✅ Combined options button
+   
+   Mobile:
+   ✅ Sidebar hidden (toggle ☰)
+   ✅ Input sticky at bottom
+   ✅ Can type and send
+   
+   Pricing:
+   ✅ Promo input at top
+   ✅ Enter code → validates
+   ✅ Price shows FREE
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║  📊 CURRENT STATE:                                                        ║
+║                                                                           ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+Platform: ai-team.skillsoul.store
+Tech: Flask + SQLite + Render
+
+Features:
+✅ 8 AI models
+✅ 7 core agents
+✅ Voice input/output
+✅ Image generation (FREE)
+✅ File upload
+✅ Website builder
+✅ Custom agents
+✅ Subscriptions (Free/$10/$30)
+✅ Stripe payments
+✅ Promo codes (multi-use + single-use)
+✅ Admin portal
+✅ Notion OAuth
+✅ Modern UI
+
+Pending:
+⏳ Deploy mobile fixes
+⏳ Deploy promo redemption
+⏳ Generate Free4Life codes
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║  🎯 SUBSCRIPTION TIERS:                                                   ║
+║                                                                           ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+Free:     $0/month   25 messages/day
+Starter:  $10/month  100 messages/day
+Pro:      $30/month  500 messages/day
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║  🎟️ PROMO CODE TYPES:                                                    ║
+║                                                                           ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+Multi-Use:
+Code: WELCOME2024
+Max Uses: 100
+Type: Can be used 100 times
+Plan: Starter or Pro
+Status: Stays active until max uses
+
+Single-Use (Free4Life):
+Code: FREE4LIFE-A1B2
+Max Uses: 1
+Type: Can only be used ONCE
+Plan: Pro
+Status: Deactivates after 1 use
+
+Total: 10 Free4Life codes for VIPs
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║  🤖 AI MODELS:                                                            ║
+║                                                                           ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+1. Claude Sonnet 4.5 (Default)
+2. Claude Opus 4
+3. Claude Haiku 4.5
+4. GPT-4o
+5. GPT-4 Turbo
+6. GPT-4o Mini
+7. Gemini 2.0 Flash FREE
+8. Gemini 1.5 Pro
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║  👥 7 CORE AGENTS:                                                        ║
+║                                                                           ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+🌙 Luna - Research Analyst (Default)
+📋 Mila - Task Manager
+🧙 Sage - Wise Advisor
+🔥 Ember - Creative Dynamo
+☀️ Sol - Data Analyst
+⭐ Nova - Code Expert & Website Builder
+💼 Theo - Business Strategist & Website Builder
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║  📝 IMPORTANT NOTES:                                                      ║
+║                                                                           ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+REMEMBER:
+• ULTIMATE = Correct modern layout
+• dashboard.html = OLD layout (don't use)
+• File size: ~1,180 lines = ULTIMATE ✅
+• File size: ~3,750 lines = OLD ❌
+
+WHEN IN DOUBT:
+• Look for dark sidebar
+• Look for "ULTIMATE" in comments
+• Check file size
+
+ADMIN ACCESS:
+• User ID 1 only
+• Routes: /admin, /promo-codes
+• Admin links auto-show in sidebar
+
+TESTING:
+• Always test on desktop AND mobile
+• Clear browser cache (Ctrl+Shift+R)
+• Check input visible on mobile
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║  📚 FULL DOCUMENTATION:                                                   ║
+║                                                                           ║
+║  See: MASTER_INVENTORY.md (complete reference)                           ║
+║                                                                           ║
+╚══════════════════════════════════════════════════════════════════════════╝

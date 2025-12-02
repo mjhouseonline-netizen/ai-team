@@ -1,0 +1,92 @@
+╔══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║  🚀 DEPLOY NOW - SIMPLE CHECKLIST                                        ║
+║                                                                           ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  📦 5 FILES TO DEPLOY:                                                    │
+└──────────────────────────────────────────────────────────────────────────┘
+
+1. ✅ dashboard_ULTIMATE_FIXED.html → /templates/dashboard.html
+   (Modern layout + mobile fix + combined buttons)
+
+2. ✅ pricing_UPDATED.html → /templates/pricing.html
+   (Promo code redemption page)
+
+3. ✅ promo_codes_UPDATED.html → /templates/promo_codes.html
+   (Admin page with correct plan names)
+
+4. ✅ web_app_auth_UPDATED.py → /web_app_auth.py
+   (Backend with single-use code support)
+
+5. ✅ generate_free4life_codes.py (Run AFTER deploying backend)
+   (Generates 10 VIP codes)
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  🔧 DEPLOY COMMANDS:                                                      │
+└──────────────────────────────────────────────────────────────────────────┘
+
+git add templates/dashboard.html templates/pricing.html templates/promo_codes.html web_app_auth.py
+git commit -m "Deploy: Modern layout + mobile fix + promo system"
+git push origin main
+
+# Wait for Render to deploy (~2 minutes)
+
+# Then generate codes:
+python generate_free4life_codes.py
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  ✅ TEST AFTER DEPLOY:                                                    │
+└──────────────────────────────────────────────────────────────────────────┘
+
+Desktop:
+□ Dashboard has dark sidebar on left
+□ Modern clean design
+□ Click "➕ Options" → Dropdown appears
+□ Can send messages
+
+Mobile:
+□ Dashboard loads
+□ Input visible at bottom
+□ Input stays when scrolling
+□ Can type and send
+
+Pricing:
+□ Promo input at top of page
+□ Enter test code → Validates
+□ Price shows FREE
+
+Admin:
+□ /promo-codes shows Starter/Pro in dropdown
+□ Create code → Works
+□ Copy code → Works
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  🎯 MOST CRITICAL FIX:                                                    │
+└──────────────────────────────────────────────────────────────────────────┘
+
+dashboard_ULTIMATE_FIXED.html
+
+Without this, mobile users CAN'T USE YOUR APP!
+Input is off-screen on mobile devices.
+
+DEPLOY THIS FIRST!
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  📝 REMEMBER:                                                             │
+└──────────────────────────────────────────────────────────────────────────┘
+
+✅ CORRECT: dashboard_ULTIMATE_FIXED.html (1,180 lines)
+❌ WRONG: dashboard.html (3,756 lines - OLD layout)
+
+Look for: Dark sidebar + "ULTIMATE" in code
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  📚 DOCUMENTATION:                                                        │
+└──────────────────────────────────────────────────────────────────────────┘
+
+Full reference: MASTER_INVENTORY.md
+Quick lookup: QUICK_REFERENCE.txt
+This file: DEPLOY_NOW.txt
+
