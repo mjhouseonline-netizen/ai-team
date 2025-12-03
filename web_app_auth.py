@@ -1443,13 +1443,26 @@ def chat():
                 conn.close()
                 return jsonify({'error': 'Daily message limit reached. Upgrade your plan to continue!'}), 429
         
-        # Get agent personality
-        if agent not in AGENT_PERSONALITIES:
-            conn.close()
-            return jsonify({'error': 'Invalid agent'}), 400
+        # Get agent personality - check built-in agents first, then custom agents
+        system_prompt = None
         
-        agent_info = AGENT_PERSONALITIES[agent]
-        system_prompt = agent_info['system_prompt']
+        if agent in AGENT_PERSONALITIES:
+            # Built-in agent
+            agent_info = AGENT_PERSONALITIES[agent]
+            system_prompt = agent_info['system_prompt']
+        else:
+            # Check for custom agent
+            cursor.execute("""
+                SELECT system_prompt FROM custom_agents
+                WHERE user_id = ? AND name = ?
+            """, (current_user.id, agent))
+            
+            custom_agent = cursor.fetchone()
+            if custom_agent:
+                system_prompt = custom_agent[0]
+            else:
+                conn.close()
+                return jsonify({'error': f'Agent "{agent}" not found'}), 400
         
         # Get conversation history (last 20 messages for context)
         history = get_conversation_history(current_user.id, agent, limit=20)
