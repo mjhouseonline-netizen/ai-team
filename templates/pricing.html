@@ -513,13 +513,46 @@
                 const data = await response.json();
 
                 if (response.ok && data.valid) {
-                    appliedPromoCode = {
-                        code: code,
-                        plan: data.plan
-                    };
-                    
-                    showMessage(`✅ Success! Code "${code}" applied! You'll get ${data.plan} plan for FREE!`, 'success');
-                    updatePricing(data.plan);
+                    // Check if it's a free-for-life code
+                    if (data.plan === 'freeforlife') {
+                        // Immediately apply it!
+                        applyBtn.textContent = 'Applying...';
+                        
+                        try {
+                            const applyResponse = await fetch('/api/apply-promo-upgrade', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'include',
+                                body: JSON.stringify({
+                                    code: code,
+                                    plan: 'freeforlife'
+                                })
+                            });
+
+                            const applyData = await applyResponse.json();
+
+                            if (applyResponse.ok) {
+                                showMessage(`✅ SUCCESS! You now have UNLIMITED FREE access forever! Redirecting...`, 'success');
+                                setTimeout(() => {
+                                    window.location.href = '/dashboard';
+                                }, 2000);
+                                return;
+                            } else {
+                                showMessage('Error: ' + (applyData.error || 'Failed to apply code'), 'error');
+                            }
+                        } catch (error) {
+                            showMessage('Error applying code', 'error');
+                        }
+                    } else {
+                        // Regular discount code - store for later
+                        appliedPromoCode = {
+                            code: code,
+                            plan: data.plan
+                        };
+                        
+                        showMessage(`✅ Success! Code "${code}" applied! Click the ${data.plan} plan button to activate.`, 'success');
+                        updatePricing(data.plan);
+                    }
                 } else {
                     showMessage(data.message || 'Invalid or expired promo code', 'error');
                     appliedPromoCode = null;

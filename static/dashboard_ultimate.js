@@ -567,81 +567,45 @@ function closePromptBuilder() {
     document.getElementById('promptBuilderModal').classList.remove('active');
 }
 
-async function buildPrompt() {
+function buildPrompt() {
     const input = document.getElementById('promptInput').value.trim();
     const style = document.getElementById('promptStyle').value;
     const outputField = document.getElementById('promptOutput');
-    const generateBtn = document.querySelector('.btn-primary');
     
     if (!input) {
         alert('Please describe what you want help with');
         return;
     }
     
-    // Show loading state
-    const originalBtnText = generateBtn.textContent;
-    generateBtn.disabled = true;
-    generateBtn.textContent = 'Generating...';
-    outputField.value = 'AI is enhancing your prompt...';
+    // Create detailed, context-aware prompts based on style
+    let enhancedPrompt = '';
     
-    try {
-        // Call AI to enhance the prompt
-        const response = await fetch('/api/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({
-                model: 'claude-sonnet-4.5',
-                agent: 'Prompt Builder',
-                message: `You are a prompt engineering expert. Transform this basic request into a detailed, effective prompt that will get the best results from an AI assistant.
-
-User's basic request: "${input}"
-
-Desired style: ${style}
-
-Create an enhanced prompt that:
-${style === 'detailed' ? '- Asks for comprehensive, detailed information\n- Requests examples and step-by-step guidance\n- Mentions best practices and potential challenges' : ''}
-${style === 'concise' ? '- Is clear and direct\n- Focuses on key points only\n- Avoids unnecessary elaboration' : ''}
-${style === 'creative' ? '- Encourages innovative thinking\n- Asks for unique perspectives\n- Requests engaging examples' : ''}
-${style === 'professional' ? '- Uses formal, professional language\n- Requests expert-level insights\n- Emphasizes industry best practices' : ''}
-${style === 'casual' ? '- Is friendly and conversational\n- Maintains approachability\n- Still clear about what is needed' : ''}
-
-Output ONLY the enhanced prompt, nothing else. Make it natural and conversational, not a list of instructions.`
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok && data.response) {
-            // Display the AI-enhanced prompt
-            outputField.value = data.response.trim();
-        } else {
-            // Fallback to template if AI fails
-            const styles = {
-                'detailed': `Please provide a comprehensive and detailed response to the following:\n\n${input}\n\nInclude:\n- Thorough explanation\n- Relevant examples\n- Step-by-step guidance\n- Best practices and tips\n- Potential challenges and solutions`,
-                'concise': `${input}\n\nProvide a concise, direct answer focusing on the key points.`,
-                'creative': `Here's what I need:\n\n${input}\n\nPlease approach this creatively with:\n- Original ideas\n- Unique perspectives\n- Engaging examples\n- Innovative solutions`,
-                'professional': `Request:\n\n${input}\n\nPlease provide a professional response with:\n- Formal language\n- Industry best practices\n- Expert-level insights\n- Professional recommendations`,
-                'casual': `Hey! ${input}\n\nKeep it friendly and casual, but still helpful!`
-            };
-            outputField.value = styles[style] || styles['detailed'];
-        }
-    } catch (error) {
-        console.error('Error generating prompt:', error);
-        // Fallback to template on error
-        const styles = {
-            'detailed': `Please provide a comprehensive and detailed response to the following:\n\n${input}\n\nInclude:\n- Thorough explanation\n- Relevant examples\n- Step-by-step guidance\n- Best practices and tips\n- Potential challenges and solutions`,
-            'concise': `${input}\n\nProvide a concise, direct answer focusing on the key points.`,
-            'creative': `Here's what I need:\n\n${input}\n\nPlease approach this creatively with:\n- Original ideas\n- Unique perspectives\n- Engaging examples\n- Innovative solutions`,
-            'professional': `Request:\n\n${input}\n\nPlease provide a professional response with:\n- Formal language\n- Industry best practices\n- Expert-level insights\n- Professional recommendations`,
-            'casual': `Hey! ${input}\n\nKeep it friendly and casual, but still helpful!`
-        };
-        outputField.value = styles[style] || styles['detailed'];
-    } finally {
-        // Restore button state
-        generateBtn.disabled = false;
-        generateBtn.textContent = originalBtnText;
+    switch(style) {
+        case 'detailed':
+            enhancedPrompt = `I need comprehensive help with the following:\n\n${input}\n\nPlease provide:\n\n1. **Detailed Explanation**: Give me a thorough understanding of this topic, including key concepts, important considerations, and relevant background information.\n\n2. **Step-by-Step Guidance**: Break down the process or approach into clear, actionable steps I can follow.\n\n3. **Practical Examples**: Include real-world examples that illustrate the concepts and make them easier to understand.\n\n4. **Best Practices**: Share industry standards, tips from experts, and proven approaches that work well.\n\n5. **Potential Challenges**: Alert me to common pitfalls, mistakes to avoid, and how to troubleshoot issues if they arise.\n\n6. **Resources**: Suggest any helpful tools, references, or next steps I should explore.`;
+            break;
+            
+        case 'concise':
+            enhancedPrompt = `${input}\n\nPlease provide a clear, direct response that:\n- Focuses on the essential information only\n- Uses simple, straightforward language\n- Gets straight to the point without unnecessary elaboration\n- Gives me exactly what I need to know`;
+            break;
+            
+        case 'creative':
+            enhancedPrompt = `I'm looking for creative help with:\n\n${input}\n\nPlease approach this with fresh thinking:\n\n• Think outside the box - don't limit yourself to conventional approaches\n• Explore unique angles and innovative perspectives I might not have considered\n• Use engaging examples and vivid descriptions to bring ideas to life\n• Suggest creative solutions that are both practical and imaginative\n• Help me see this from different viewpoints to spark new ideas`;
+            break;
+            
+        case 'professional':
+            enhancedPrompt = `Professional Request:\n\n${input}\n\nI require a professional-level response that includes:\n\n• Formal, business-appropriate language and tone\n• Expert insights based on industry best practices and current standards\n• Data-driven recommendations where applicable\n• Professional terminology and precise explanations\n• Strategic considerations and business implications\n• Actionable recommendations I can implement in a professional context`;
+            break;
+            
+        case 'casual':
+            enhancedPrompt = `Hey! I could use some help with this:\n\n${input}\n\nKeep it friendly and conversational! I'm looking for advice that:\n- Feels like talking to a knowledgeable friend\n- Uses everyday language (no jargon unless necessary)\n- Is easy to understand and relate to\n- Still gives me solid, useful information\n- Maybe includes some personal examples or relatable scenarios`;
+            break;
+            
+        default:
+            enhancedPrompt = input;
     }
+    
+    outputField.value = enhancedPrompt;
 }
 
 function usePrompt() {
