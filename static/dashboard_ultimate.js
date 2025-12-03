@@ -735,9 +735,120 @@ async function checkAdminStatus() {
     }
 }
 
-function openAgentLibrary() {
-    alert('Agent library - Full view coming soon!');
+async function openAgentLibrary() {
     toggleMenu();
+    
+    const modal = document.getElementById('agentLibraryModal');
+    const loading = document.getElementById('libraryLoading');
+    const empty = document.getElementById('libraryEmpty');
+    const grid = document.getElementById('libraryGrid');
+    
+    // Show modal
+    modal.style.display = 'block';
+    
+    // Show loading state
+    loading.style.display = 'block';
+    empty.style.display = 'none';
+    grid.style.display = 'none';
+    grid.innerHTML = '';
+    
+    try {
+        // Load custom agents
+        const response = await fetch('/api/custom-agents', {
+            credentials: 'include'
+        });
+        
+        const data = await response.json();
+        
+        loading.style.display = 'none';
+        
+        if (!data.agents || data.agents.length === 0) {
+            // No agents yet
+            empty.style.display = 'block';
+        } else {
+            // Show agents in grid
+            grid.style.display = 'grid';
+            
+            data.agents.forEach(agent => {
+                const card = document.createElement('div');
+                card.className = 'library-agent-card';
+                
+                card.innerHTML = `
+                    <div class="library-agent-emoji">${agent.emoji || '🤖'}</div>
+                    <div class="library-agent-name">${escapeHtml(agent.name)}</div>
+                    <div class="library-agent-role">${escapeHtml(agent.role)}</div>
+                    <div class="library-agent-personality">${escapeHtml(agent.personality || 'A helpful AI assistant')}</div>
+                    <div class="library-agent-actions">
+                        <button class="library-action-btn library-chat-btn" onclick="chatWithLibraryAgent('${escapeHtml(agent.name)}', ${agent.id})">
+                            💬 Chat
+                        </button>
+                        <button class="library-action-btn library-delete-btn" onclick="deleteLibraryAgent(${agent.id}, '${escapeHtml(agent.name)}')">
+                            🗑️
+                        </button>
+                    </div>
+                `;
+                
+                grid.appendChild(card);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading agent library:', error);
+        loading.style.display = 'none';
+        empty.style.display = 'block';
+        document.getElementById('libraryEmpty').innerHTML = `
+            <div style="font-size: 60px; margin-bottom: 20px;">⚠️</div>
+            <h3 style="color: #333; margin-bottom: 10px;">Error Loading Agents</h3>
+            <p style="color: #666; margin-bottom: 20px;">Please try again later</p>
+            <button onclick="closeAgentLibrary()" style="background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; cursor: pointer;">Close</button>
+        `;
+    }
+}
+
+function closeAgentLibrary() {
+    document.getElementById('agentLibraryModal').style.display = 'none';
+}
+
+function chatWithLibraryAgent(agentName, agentId) {
+    closeAgentLibrary();
+    switchAgent(agentName);
+    document.getElementById('messageInput').focus();
+}
+
+async function deleteLibraryAgent(agentId, agentName) {
+    if (!confirm(`Delete "${agentName}"? This cannot be undone.`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/custom-agents/${agentId}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            // Reload the library
+            openAgentLibrary();
+            
+            // Also remove from sidebar if it exists
+            const sidebarAgents = document.querySelectorAll('.agent-item');
+            sidebarAgents.forEach(item => {
+                if (item.querySelector('.agent-name')?.textContent === agentName) {
+                    item.remove();
+                }
+            });
+        } else {
+            alert('Failed to delete agent. Please try again.');
+        }
+    } catch (error) {
+        console.error('Error deleting agent:', error);
+        alert('Error deleting agent. Please try again.');
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 // ================================================
