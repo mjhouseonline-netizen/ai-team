@@ -498,7 +498,7 @@ async function saveCustomAgent(event) {
     const prompt = document.getElementById('agentPrompt').value;
     
     try {
-        const response = await fetch('/api/custom-agent', {
+        const response = await fetch('/api/custom-agents', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
@@ -506,7 +506,7 @@ async function saveCustomAgent(event) {
                 name: name,
                 role: role,
                 emoji: emoji,
-                system_prompt: `You are ${name}, a ${role}. ${prompt}`
+                instructions: `You are ${name}, a ${role}. ${prompt}`
             })
         });
         
@@ -567,24 +567,81 @@ function closePromptBuilder() {
     document.getElementById('promptBuilderModal').classList.remove('active');
 }
 
-function buildPrompt() {
+async function buildPrompt() {
     const input = document.getElementById('promptInput').value.trim();
     const style = document.getElementById('promptStyle').value;
+    const outputField = document.getElementById('promptOutput');
+    const generateBtn = document.querySelector('.btn-primary');
     
     if (!input) {
         alert('Please describe what you want help with');
         return;
     }
     
-    const styles = {
-        'detailed': `Please provide a comprehensive and detailed response to the following:\n\n${input}\n\nInclude:\n- Thorough explanation\n- Relevant examples\n- Step-by-step guidance\n- Best practices and tips\n- Potential challenges and solutions`,
-        'concise': `${input}\n\nProvide a concise, direct answer focusing on the key points.`,
-        'creative': `Here's what I need:\n\n${input}\n\nPlease approach this creatively with:\n- Original ideas\n- Unique perspectives\n- Engaging examples\n- Innovative solutions`,
-        'professional': `Request:\n\n${input}\n\nPlease provide a professional response with:\n- Formal language\n- Industry best practices\n- Expert-level insights\n- Professional recommendations`,
-        'casual': `Hey! ${input}\n\nKeep it friendly and casual, but still helpful!`
-    };
+    // Show loading state
+    const originalBtnText = generateBtn.textContent;
+    generateBtn.disabled = true;
+    generateBtn.textContent = 'Generating...';
+    outputField.value = 'AI is enhancing your prompt...';
     
-    document.getElementById('promptOutput').value = styles[style] || styles['detailed'];
+    try {
+        // Call AI to enhance the prompt
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                model: 'claude-sonnet-4.5',
+                agent: 'Prompt Builder',
+                message: `You are a prompt engineering expert. Transform this basic request into a detailed, effective prompt that will get the best results from an AI assistant.
+
+User's basic request: "${input}"
+
+Desired style: ${style}
+
+Create an enhanced prompt that:
+${style === 'detailed' ? '- Asks for comprehensive, detailed information\n- Requests examples and step-by-step guidance\n- Mentions best practices and potential challenges' : ''}
+${style === 'concise' ? '- Is clear and direct\n- Focuses on key points only\n- Avoids unnecessary elaboration' : ''}
+${style === 'creative' ? '- Encourages innovative thinking\n- Asks for unique perspectives\n- Requests engaging examples' : ''}
+${style === 'professional' ? '- Uses formal, professional language\n- Requests expert-level insights\n- Emphasizes industry best practices' : ''}
+${style === 'casual' ? '- Is friendly and conversational\n- Maintains approachability\n- Still clear about what is needed' : ''}
+
+Output ONLY the enhanced prompt, nothing else. Make it natural and conversational, not a list of instructions.`
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.response) {
+            // Display the AI-enhanced prompt
+            outputField.value = data.response.trim();
+        } else {
+            // Fallback to template if AI fails
+            const styles = {
+                'detailed': `Please provide a comprehensive and detailed response to the following:\n\n${input}\n\nInclude:\n- Thorough explanation\n- Relevant examples\n- Step-by-step guidance\n- Best practices and tips\n- Potential challenges and solutions`,
+                'concise': `${input}\n\nProvide a concise, direct answer focusing on the key points.`,
+                'creative': `Here's what I need:\n\n${input}\n\nPlease approach this creatively with:\n- Original ideas\n- Unique perspectives\n- Engaging examples\n- Innovative solutions`,
+                'professional': `Request:\n\n${input}\n\nPlease provide a professional response with:\n- Formal language\n- Industry best practices\n- Expert-level insights\n- Professional recommendations`,
+                'casual': `Hey! ${input}\n\nKeep it friendly and casual, but still helpful!`
+            };
+            outputField.value = styles[style] || styles['detailed'];
+        }
+    } catch (error) {
+        console.error('Error generating prompt:', error);
+        // Fallback to template on error
+        const styles = {
+            'detailed': `Please provide a comprehensive and detailed response to the following:\n\n${input}\n\nInclude:\n- Thorough explanation\n- Relevant examples\n- Step-by-step guidance\n- Best practices and tips\n- Potential challenges and solutions`,
+            'concise': `${input}\n\nProvide a concise, direct answer focusing on the key points.`,
+            'creative': `Here's what I need:\n\n${input}\n\nPlease approach this creatively with:\n- Original ideas\n- Unique perspectives\n- Engaging examples\n- Innovative solutions`,
+            'professional': `Request:\n\n${input}\n\nPlease provide a professional response with:\n- Formal language\n- Industry best practices\n- Expert-level insights\n- Professional recommendations`,
+            'casual': `Hey! ${input}\n\nKeep it friendly and casual, but still helpful!`
+        };
+        outputField.value = styles[style] || styles['detailed'];
+    } finally {
+        // Restore button state
+        generateBtn.disabled = false;
+        generateBtn.textContent = originalBtnText;
+    }
 }
 
 function usePrompt() {
@@ -604,8 +661,68 @@ function usePrompt() {
 // ================================================
 
 async function viewHistory() {
-    alert('Chat history view - Coming soon in next update!');
+    try {
+        const response = await fetch('/api/history', { credentials: 'include' });
+        const data = await response.json();
+        
+        if (!response.ok) {
+            alert('Error loading chat history');
+            toggleMenu();
+            return;
+        }
+        
+        const history = data.history || [];
+        
+        if (history.length === 0) {
+            alert('No chat history yet. Start chatting to build your history!');
+            toggleMenu();
+            return;
+        }
+        
+        // Create history modal
+        let historyHTML = '<div class="history-modal-backdrop" onclick="closeHistoryModal()">';
+        historyHTML += '<div class="history-modal" onclick="event.stopPropagation()">';
+        historyHTML += '<div class="history-header">';
+        historyHTML += '<h2>📜 Chat History</h2>';
+        historyHTML += '<button onclick="closeHistoryModal()" class="history-close">✕</button>';
+        historyHTML += '</div>';
+        historyHTML += '<div class="history-content">';
+        
+        history.forEach(item => {
+            const timestamp = new Date(item.timestamp).toLocaleString();
+            historyHTML += `
+                <div class="history-item">
+                    <div class="history-meta">
+                        <span class="history-agent">${item.agent}</span>
+                        <span class="history-time">${timestamp}</span>
+                    </div>
+                    <div class="history-message">
+                        <strong>You:</strong> ${item.message}
+                    </div>
+                    <div class="history-response">
+                        <strong>${item.agent}:</strong> ${item.response.substring(0, 200)}${item.response.length > 200 ? '...' : ''}
+                    </div>
+                </div>
+            `;
+        });
+        
+        historyHTML += '</div></div></div>';
+        
+        // Add to page
+        document.body.insertAdjacentHTML('beforeend', historyHTML);
+        
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error loading chat history');
+    }
     toggleMenu();
+}
+
+function closeHistoryModal() {
+    const modal = document.querySelector('.history-modal-backdrop');
+    if (modal) {
+        modal.remove();
+    }
 }
 
 async function clearAllChat() {
@@ -631,7 +748,7 @@ async function clearAllChat() {
 
 async function loadStats() {
     try {
-        const response = await fetch('/api/stats', { credentials: 'include' });
+        const response = await fetch('/api/user-stats', { credentials: 'include' });
         const data = await response.json();
         document.getElementById('messages-used').textContent = data.messages_today || 0;
         document.getElementById('daily-limit').textContent = data.daily_limit || 25;
