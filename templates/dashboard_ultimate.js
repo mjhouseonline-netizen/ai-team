@@ -567,24 +567,81 @@ function closePromptBuilder() {
     document.getElementById('promptBuilderModal').classList.remove('active');
 }
 
-function buildPrompt() {
+async function buildPrompt() {
     const input = document.getElementById('promptInput').value.trim();
     const style = document.getElementById('promptStyle').value;
+    const outputField = document.getElementById('promptOutput');
+    const generateBtn = document.querySelector('.btn-primary');
     
     if (!input) {
         alert('Please describe what you want help with');
         return;
     }
     
-    const styles = {
-        'detailed': `Please provide a comprehensive and detailed response to the following:\n\n${input}\n\nInclude:\n- Thorough explanation\n- Relevant examples\n- Step-by-step guidance\n- Best practices and tips\n- Potential challenges and solutions`,
-        'concise': `${input}\n\nProvide a concise, direct answer focusing on the key points.`,
-        'creative': `Here's what I need:\n\n${input}\n\nPlease approach this creatively with:\n- Original ideas\n- Unique perspectives\n- Engaging examples\n- Innovative solutions`,
-        'professional': `Request:\n\n${input}\n\nPlease provide a professional response with:\n- Formal language\n- Industry best practices\n- Expert-level insights\n- Professional recommendations`,
-        'casual': `Hey! ${input}\n\nKeep it friendly and casual, but still helpful!`
-    };
+    // Show loading state
+    const originalBtnText = generateBtn.textContent;
+    generateBtn.disabled = true;
+    generateBtn.textContent = 'Generating...';
+    outputField.value = 'AI is enhancing your prompt...';
     
-    document.getElementById('promptOutput').value = styles[style] || styles['detailed'];
+    try {
+        // Call AI to enhance the prompt
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                model: 'claude-sonnet-4.5',
+                agent: 'Prompt Builder',
+                message: `You are a prompt engineering expert. Transform this basic request into a detailed, effective prompt that will get the best results from an AI assistant.
+
+User's basic request: "${input}"
+
+Desired style: ${style}
+
+Create an enhanced prompt that:
+${style === 'detailed' ? '- Asks for comprehensive, detailed information\n- Requests examples and step-by-step guidance\n- Mentions best practices and potential challenges' : ''}
+${style === 'concise' ? '- Is clear and direct\n- Focuses on key points only\n- Avoids unnecessary elaboration' : ''}
+${style === 'creative' ? '- Encourages innovative thinking\n- Asks for unique perspectives\n- Requests engaging examples' : ''}
+${style === 'professional' ? '- Uses formal, professional language\n- Requests expert-level insights\n- Emphasizes industry best practices' : ''}
+${style === 'casual' ? '- Is friendly and conversational\n- Maintains approachability\n- Still clear about what is needed' : ''}
+
+Output ONLY the enhanced prompt, nothing else. Make it natural and conversational, not a list of instructions.`
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.response) {
+            // Display the AI-enhanced prompt
+            outputField.value = data.response.trim();
+        } else {
+            // Fallback to template if AI fails
+            const styles = {
+                'detailed': `Please provide a comprehensive and detailed response to the following:\n\n${input}\n\nInclude:\n- Thorough explanation\n- Relevant examples\n- Step-by-step guidance\n- Best practices and tips\n- Potential challenges and solutions`,
+                'concise': `${input}\n\nProvide a concise, direct answer focusing on the key points.`,
+                'creative': `Here's what I need:\n\n${input}\n\nPlease approach this creatively with:\n- Original ideas\n- Unique perspectives\n- Engaging examples\n- Innovative solutions`,
+                'professional': `Request:\n\n${input}\n\nPlease provide a professional response with:\n- Formal language\n- Industry best practices\n- Expert-level insights\n- Professional recommendations`,
+                'casual': `Hey! ${input}\n\nKeep it friendly and casual, but still helpful!`
+            };
+            outputField.value = styles[style] || styles['detailed'];
+        }
+    } catch (error) {
+        console.error('Error generating prompt:', error);
+        // Fallback to template on error
+        const styles = {
+            'detailed': `Please provide a comprehensive and detailed response to the following:\n\n${input}\n\nInclude:\n- Thorough explanation\n- Relevant examples\n- Step-by-step guidance\n- Best practices and tips\n- Potential challenges and solutions`,
+            'concise': `${input}\n\nProvide a concise, direct answer focusing on the key points.`,
+            'creative': `Here's what I need:\n\n${input}\n\nPlease approach this creatively with:\n- Original ideas\n- Unique perspectives\n- Engaging examples\n- Innovative solutions`,
+            'professional': `Request:\n\n${input}\n\nPlease provide a professional response with:\n- Formal language\n- Industry best practices\n- Expert-level insights\n- Professional recommendations`,
+            'casual': `Hey! ${input}\n\nKeep it friendly and casual, but still helpful!`
+        };
+        outputField.value = styles[style] || styles['detailed'];
+    } finally {
+        // Restore button state
+        generateBtn.disabled = false;
+        generateBtn.textContent = originalBtnText;
+    }
 }
 
 function usePrompt() {
@@ -691,7 +748,7 @@ async function clearAllChat() {
 
 async function loadStats() {
     try {
-        const response = await fetch('/api/stats', { credentials: 'include' });
+        const response = await fetch('/api/user-stats', { credentials: 'include' });
         const data = await response.json();
         document.getElementById('messages-used').textContent = data.messages_today || 0;
         document.getElementById('daily-limit').textContent = data.daily_limit || 25;
