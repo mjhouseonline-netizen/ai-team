@@ -2847,27 +2847,55 @@ def get_custom_agents():
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
-        cursor.execute("""
-            SELECT id, name, role, personality, system_prompt, created_at
-            FROM custom_agents
-            WHERE user_id = ?
-            ORDER BY created_at DESC
-        """, (current_user.id,))
+        # Check if emoji column exists
+        cursor.execute("PRAGMA table_info(custom_agents)")
+        columns = [col[1] for col in cursor.fetchall()]
+        has_emoji = 'emoji' in columns
+        
+        if has_emoji:
+            cursor.execute("""
+                SELECT id, name, role, emoji, personality, system_prompt, created_at
+                FROM custom_agents
+                WHERE user_id = ?
+                ORDER BY created_at DESC
+            """, (current_user.id,))
+        else:
+            cursor.execute("""
+                SELECT id, name, role, personality, system_prompt, created_at
+                FROM custom_agents
+                WHERE user_id = ?
+                ORDER BY created_at DESC
+            """, (current_user.id,))
         
         results = cursor.fetchall()
         conn.close()
         
-        agents = [
-            {
-                'id': row[0],
-                'name': row[1],
-                'role': row[2],
-                'personality': row[3],
-                'system_prompt': row[4],
-                'created_at': row[5]
-            }
-            for row in results
-        ]
+        if has_emoji:
+            agents = [
+                {
+                    'id': row[0],
+                    'name': row[1],
+                    'role': row[2],
+                    'emoji': row[3] or '🤖',
+                    'personality': row[4],
+                    'system_prompt': row[5],
+                    'created_at': row[6]
+                }
+                for row in results
+            ]
+        else:
+            agents = [
+                {
+                    'id': row[0],
+                    'name': row[1],
+                    'role': row[2],
+                    'emoji': '🤖',  # Default emoji
+                    'personality': row[3],
+                    'system_prompt': row[4],
+                    'created_at': row[5]
+                }
+                for row in results
+            ]
         
         return jsonify({'agents': agents}), 200
         
@@ -2883,33 +2911,59 @@ def create_custom_agent():
         data = request.json
         name = data.get('name')
         role = data.get('role')
-        personality = json.dumps(data.get('personality', {}))
-        system_prompt = data.get('system_prompt', '')
+        emoji = data.get('emoji', '🤖')  # Handle emoji from frontend
+        
+        # Handle both 'instructions' (from frontend) and 'system_prompt' (legacy)
+        instructions = data.get('instructions') or data.get('system_prompt', '')
+        
+        # Handle personality - can be JSON or string
+        personality_data = data.get('personality', {})
+        if isinstance(personality_data, dict):
+            personality = json.dumps(personality_data)
+        else:
+            personality = personality_data
         
         if not name or not role:
             return jsonify({'error': 'Name and role are required'}), 400
         
+        if not instructions:
+            return jsonify({'error': 'Instructions are required'}), 400
+        
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
+        # First check if emoji column exists, add if needed
+        cursor.execute("PRAGMA table_info(custom_agents)")
+        columns = [col[1] for col in cursor.fetchall()]
+        
+        if 'emoji' not in columns:
+            cursor.execute("ALTER TABLE custom_agents ADD COLUMN emoji TEXT DEFAULT '🤖'")
+            conn.commit()
+            print("✅ Added emoji column to custom_agents table")
+        
         cursor.execute("""
-            INSERT INTO custom_agents (user_id, name, role, personality, system_prompt)
-            VALUES (?, ?, ?, ?, ?)
-        """, (current_user.id, name, role, personality, system_prompt))
+            INSERT INTO custom_agents (user_id, name, role, emoji, personality, system_prompt)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (current_user.id, name, role, emoji, personality, instructions))
         
         agent_id = cursor.lastrowid
         conn.commit()
         conn.close()
         
-        print(f"✅ Created custom agent '{name}' for user {current_user.id}")
+        print(f"✅ Created custom agent '{name}' (emoji: {emoji}) for user {current_user.id}")
         
         return jsonify({
             'success': True,
-            'agent_id': agent_id
+            'agent_id': agent_id,
+            'name': name,
+            'role': role,
+            'emoji': emoji
         }), 201
         
     except Exception as e:
         print(f"❌ Error creating custom agent: {str(e)}")
+        import traceback
+        traceback.print_exc()  # Print full error for debugging
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/custom-agents/<int:agent_id>', methods=['DELETE'])
