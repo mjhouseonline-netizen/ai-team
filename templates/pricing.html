@@ -624,4 +624,14 @@
         // Auto-focus promo code input if code in URL
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
-     
+            if (urlParams.has('promo')) {
+                const promoInput = document.getElementById('promoCodeInput');
+                if (promoInput) {
+                    promoInput.value = urlParams.get('promo').toUpperCase();
+                    promoInput.focus();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
