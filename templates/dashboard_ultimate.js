@@ -498,7 +498,7 @@ async function saveCustomAgent(event) {
     const prompt = document.getElementById('agentPrompt').value;
     
     try {
-        const response = await fetch('/api/custom-agent', {
+        const response = await fetch('/api/custom-agents', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
@@ -506,7 +506,7 @@ async function saveCustomAgent(event) {
                 name: name,
                 role: role,
                 emoji: emoji,
-                system_prompt: `You are ${name}, a ${role}. ${prompt}`
+                instructions: `You are ${name}, a ${role}. ${prompt}`
             })
         });
         
