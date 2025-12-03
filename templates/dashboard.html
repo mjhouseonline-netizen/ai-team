@@ -899,14 +899,154 @@
                 bottom: 80px;
             }
 
+            /* ================================================
+               MOBILE FIX: HEADER - NO OVERLAP
+               ================================================ */
             .header {
+                padding: 8px 12px;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .header-left {
+                flex: 1;
+                min-width: 0; /* Allow shrinking */
+                gap: 8px;
+            }
+
+            .current-agent-info {
+                gap: 6px;
+                min-width: 0;
+                flex-shrink: 1;
+            }
+
+            .current-agent-avatar {
+                width: 28px;
+                height: 28px;
+                font-size: 14px;
+                flex-shrink: 0;
+            }
+
+            .current-agent-name {
+                font-size: 14px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            /* Hide model selector on mobile - accessible via menu */
+            .model-selector-header {
+                display: none !important;
+            }
+
+            .header-right {
+                gap: 8px;
+                flex-shrink: 0;
+            }
+
+            /* Shrink prompt builder button text on mobile */
+            .header-btn {
+                font-size: 12px;
+                padding: 6px 10px;
+                white-space: nowrap;
+            }
+
+            /* Make usage badge more compact */
+            .usage-badge {
+                font-size: 11px;
+                padding: 4px 8px;
+                white-space: nowrap;
+            }
+
+            .menu-btn {
+                padding: 6px 10px;
+                min-width: 36px;
+            }
+
+            /* ================================================
+               MOBILE FIX: DROPDOWN MENU - UPGRADE PLAN VISIBLE
+               ================================================ */
+            .dropdown-menu {
+                right: 8px;
+                min-width: 200px;
+                max-width: calc(100vw - 32px);
+            }
+
+            .dropdown-menu a {
+                font-size: 14px;
                 padding: 12px 16px;
             }
 
-            /* MOBILE FIX: Dynamic chat height with space for taskbar */
+            /* Make upgrade plan stand out on mobile */
+            .dropdown-menu a[href="/pricing"] {
+                background: linear-gradient(135deg, var(--primary), #0d8c6f);
+                color: white !important;
+                font-weight: 600;
+                border-radius: 8px;
+                margin: 4px;
+                padding: 12px;
+            }
+
+            /* ================================================
+               MOBILE FIX: RESPONSIVE CONTENT (IMAGES, CODE, ETC.)
+               ================================================ */
+            
+            /* Make all images responsive */
+            .message img,
+            .chat-container img {
+                max-width: 100% !important;
+                height: auto !important;
+                display: block;
+                border-radius: 8px;
+                margin: 8px 0;
+            }
+
+            /* Make code blocks responsive */
+            .message pre,
+            .message code {
+                max-width: 100%;
+                overflow-x: auto;
+                font-size: 12px;
+                word-wrap: break-word;
+                white-space: pre-wrap;
+            }
+
+            /* Make tables responsive */
+            .message table {
+                display: block;
+                max-width: 100%;
+                overflow-x: auto;
+                font-size: 12px;
+            }
+
+            /* Make generated content containers responsive */
+            .message .content,
+            .message > div,
+            .message > p {
+                max-width: 100%;
+                overflow-wrap: break-word;
+                word-wrap: break-word;
+                word-break: break-word;
+            }
+
+            /* Make floating preview responsive */
+            .floating-preview img {
+                max-width: 100%;
+                height: auto;
+            }
+
+            /* Make iframes responsive (for embedded content) */
+            .message iframe {
+                max-width: 100%;
+                width: 100%;
+            }
+
+            /* ================================================
+               MOBILE FIX: CHAT CONTAINER & INPUT
+               ================================================ */
             .chat-container {
                 padding: 16px;
-                padding-bottom: 200px !important; /* Space for input + browser taskbar */
+                padding-bottom: 200px !important;
                 max-height: calc(100vh - 100px);
                 overflow-y: auto;
                 -webkit-overflow-scrolling: touch;
@@ -917,11 +1057,6 @@
                 padding: 16px;
             }
 
-            .model-selector-header {
-                display: none;
-            }
-
-            /* MOBILE FIX: Fixed input above browser taskbar */
             .input-container {
                 position: fixed !important;
                 bottom: 0 !important;
@@ -948,19 +1083,17 @@
                 padding: 12px;
             }
 
-            /* Textarea on top */
             #messageInput {
                 width: 100%;
                 order: 1;
-                font-size: 16px !important; /* Prevents iOS zoom */
-                min-height: 48px; /* iOS touch target */
+                font-size: 16px !important;
+                min-height: 48px;
                 padding: 8px;
                 border: none;
                 background: transparent;
                 resize: none;
             }
 
-            /* Button row at bottom */
             .input-buttons-row {
                 order: 2;
                 display: flex;
@@ -968,7 +1101,6 @@
                 align-items: center;
             }
 
-            /* Make sure buttons are in a row */
             .input-options-container {
                 flex-shrink: 0;
             }
@@ -993,15 +1125,121 @@
                 padding: 12px 24px;
             }
 
-            /* Hide "Options" text on mobile, show only icon */
             .desktop-only {
                 display: none !important;
             }
 
-            /* File preview on mobile */
             .file-preview {
                 margin-top: 8px;
             }
+        }
+        /* ================================================
+           CHAT HISTORY MODAL
+           ================================================ */
+        
+        .history-modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .history-modal {
+            background: white;
+            border-radius: 16px;
+            max-width: 800px;
+            width: 100%;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        .history-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .history-header h2 {
+            margin: 0;
+            color: var(--text-primary);
+            font-size: 24px;
+        }
+        
+        .history-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            padding: 8px;
+            line-height: 1;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        
+        .history-close:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+        
+        .history-content {
+            padding: 24px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        
+        .history-item {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 1px solid var(--border);
+        }
+        
+        .history-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .history-agent {
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .history-time {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        .history-message,
+        .history-response {
+            margin-bottom: 8px;
+            line-height: 1.5;
+            color: var(--text-primary);
+        }
+        
+        .history-message strong,
+        .history-response strong {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+        
+        .history-response {
+            color: var(--text-secondary);
         }
     </style>
 </head>

@@ -604,8 +604,68 @@ function usePrompt() {
 // ================================================
 
 async function viewHistory() {
-    alert('Chat history view - Coming soon in next update!');
+    try {
+        const response = await fetch('/api/history', { credentials: 'include' });
+        const data = await response.json();
+        
+        if (!response.ok) {
+            alert('Error loading chat history');
+            toggleMenu();
+            return;
+        }
+        
+        const history = data.history || [];
+        
+        if (history.length === 0) {
+            alert('No chat history yet. Start chatting to build your history!');
+            toggleMenu();
+            return;
+        }
+        
+        // Create history modal
+        let historyHTML = '<div class="history-modal-backdrop" onclick="closeHistoryModal()">';
+        historyHTML += '<div class="history-modal" onclick="event.stopPropagation()">';
+        historyHTML += '<div class="history-header">';
+        historyHTML += '<h2>📜 Chat History</h2>';
+        historyHTML += '<button onclick="closeHistoryModal()" class="history-close">✕</button>';
+        historyHTML += '</div>';
+        historyHTML += '<div class="history-content">';
+        
+        history.forEach(item => {
+            const timestamp = new Date(item.timestamp).toLocaleString();
+            historyHTML += `
+                <div class="history-item">
+                    <div class="history-meta">
+                        <span class="history-agent">${item.agent}</span>
+                        <span class="history-time">${timestamp}</span>
+                    </div>
+                    <div class="history-message">
+                        <strong>You:</strong> ${item.message}
+                    </div>
+                    <div class="history-response">
+                        <strong>${item.agent}:</strong> ${item.response.substring(0, 200)}${item.response.length > 200 ? '...' : ''}
+                    </div>
+                </div>
+            `;
+        });
+        
+        historyHTML += '</div></div></div>';
+        
+        // Add to page
+        document.body.insertAdjacentHTML('beforeend', historyHTML);
+        
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error loading chat history');
+    }
     toggleMenu();
+}
+
+function closeHistoryModal() {
+    const modal = document.querySelector('.history-modal-backdrop');
+    if (modal) {
+        modal.remove();
+    }
 }
 
 async function clearAllChat() {
