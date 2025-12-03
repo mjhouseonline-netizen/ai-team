@@ -2695,16 +2695,18 @@ def apply_promo_upgrade():
         if result['tier'] != plan:
             return jsonify({'error': f'This code is for {result["tier"]} plan, not {plan}'}), 400
         
-        # Update user subscription
-        current_user.subscription_tier = plan
-        current_user.promo_code_used = code
-        db.session.commit()
-        
-        # Increment promo code usage in SQLite
+        # Update user subscription in SQLite database
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
-        # Get current usage
+        # Update user's subscription tier
+        cursor.execute("""
+            UPDATE users
+            SET subscription_tier = ?
+            WHERE id = ?
+        """, (plan, current_user.id))
+        
+        # Increment promo code usage
         cursor.execute("""
             SELECT times_used, single_use, max_uses
             FROM promo_codes
@@ -2737,6 +2739,9 @@ def apply_promo_upgrade():
         conn.commit()
         conn.close()
         
+        # Update current_user object in memory
+        current_user.subscription_tier = plan
+        
         return jsonify({
             'success': True,
             'message': f'Successfully upgraded to {plan} plan!',
@@ -2744,7 +2749,9 @@ def apply_promo_upgrade():
         }), 200
             
     except Exception as e:
-        db.session.rollback()
+        print(f"Error applying promo code: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 # ============================================

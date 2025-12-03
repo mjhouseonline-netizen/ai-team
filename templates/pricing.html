@@ -515,7 +515,7 @@
                 if (response.ok && data.valid) {
                     // Check if it's a free-for-life code
                     if (data.plan === 'freeforlife') {
-                        // Immediately apply it!
+                        // Check if user is logged in by trying to apply it
                         applyBtn.textContent = 'Applying...';
                         
                         try {
@@ -532,16 +532,32 @@
                             const applyData = await applyResponse.json();
 
                             if (applyResponse.ok) {
+                                // Success! User was logged in
                                 showMessage(`✅ SUCCESS! You now have UNLIMITED FREE access forever! Redirecting...`, 'success');
                                 setTimeout(() => {
                                     window.location.href = '/dashboard';
                                 }, 2000);
                                 return;
+                            } else if (applyResponse.status === 401) {
+                                // User not logged in - redirect to login with code
+                                showMessage('✅ Valid code! Redirecting to login to activate...', 'success');
+                                // Store code and redirect
+                                localStorage.setItem('pendingPromoCode', code);
+                                setTimeout(() => {
+                                    window.location.href = '/login?promo=' + code;
+                                }, 1500);
+                                return;
                             } else {
                                 showMessage('Error: ' + (applyData.error || 'Failed to apply code'), 'error');
                             }
                         } catch (error) {
-                            showMessage('Error applying code', 'error');
+                            // Likely not logged in - redirect to login
+                            showMessage('✅ Valid code! Please login to activate. Redirecting...', 'success');
+                            localStorage.setItem('pendingPromoCode', code);
+                            setTimeout(() => {
+                                window.location.href = '/login?promo=' + code;
+                            }, 1500);
+                            return;
                         }
                     } else {
                         // Regular discount code - store for later
@@ -657,7 +673,25 @@
         // Auto-focus promo code input if code in URL
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.has('promo')) {
+            
+            // Check for pending promo code (after login/signup)
+            const pendingCode = localStorage.getItem('pendingPromoCode');
+            if (pendingCode) {
+                // Remove from storage
+                localStorage.removeItem('pendingPromoCode');
+                
+                // Auto-fill and try to apply
+                const promoInput = document.getElementById('promoCodeInput');
+                if (promoInput) {
+                    promoInput.value = pendingCode;
+                    // Wait a moment then auto-click apply
+                    setTimeout(() => {
+                        applyPromoCode();
+                    }, 500);
+                }
+            }
+            // Otherwise check URL params
+            else if (urlParams.has('promo')) {
                 const promoInput = document.getElementById('promoCodeInput');
                 if (promoInput) {
                     promoInput.value = urlParams.get('promo').toUpperCase();
