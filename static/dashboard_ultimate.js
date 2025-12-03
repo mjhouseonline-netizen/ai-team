@@ -577,28 +577,100 @@ function buildPrompt() {
         return;
     }
     
-    // Create detailed, context-aware prompts based on style
+    // Create prompts using the 7 Pillars of Effective Prompting:
+    // 1. Task/Goal, 2. Context, 3. Exemplars, 4. Persona, 5. Format, 6. Tone, 7. Constraints
     let enhancedPrompt = '';
     
     switch(style) {
         case 'detailed':
-            enhancedPrompt = `I need comprehensive help with the following:\n\n${input}\n\nPlease provide:\n\n1. **Detailed Explanation**: Give me a thorough understanding of this topic, including key concepts, important considerations, and relevant background information.\n\n2. **Step-by-Step Guidance**: Break down the process or approach into clear, actionable steps I can follow.\n\n3. **Practical Examples**: Include real-world examples that illustrate the concepts and make them easier to understand.\n\n4. **Best Practices**: Share industry standards, tips from experts, and proven approaches that work well.\n\n5. **Potential Challenges**: Alert me to common pitfalls, mistakes to avoid, and how to troubleshoot issues if they arise.\n\n6. **Resources**: Suggest any helpful tools, references, or next steps I should explore.`;
+            enhancedPrompt = `TASK: ${input}
+
+ROLE: Act as an expert consultant with deep knowledge in this area.
+
+CONTEXT: I need comprehensive understanding and practical guidance. This is important for [my work/project/learning] and I want to make informed decisions.
+
+FORMAT: Please structure your response with:
+- Clear explanation of key concepts
+- Step-by-step action plan
+- Real-world examples demonstrating the concepts
+- Best practices and industry standards
+- Common pitfalls and how to avoid them
+- Recommended tools or next steps
+
+TONE: Professional yet accessible. Use clear explanations without oversimplifying.
+
+CONSTRAINTS: Focus on actionable, practical advice. If you need more information to give the best answer, ask specific clarifying questions.`;
             break;
             
         case 'concise':
-            enhancedPrompt = `${input}\n\nPlease provide a clear, direct response that:\n- Focuses on the essential information only\n- Uses simple, straightforward language\n- Gets straight to the point without unnecessary elaboration\n- Gives me exactly what I need to know`;
+            enhancedPrompt = `TASK: ${input}
+
+ROLE: Act as an efficient expert who values clarity and brevity.
+
+FORMAT: Provide a direct, focused response in 3-5 sentences that gives me exactly what I need to know.
+
+TONE: Clear, straightforward, no fluff.
+
+CONSTRAINTS: 
+- Essential information only
+- Skip background unless critical
+- Use simple language
+- Get straight to the answer`;
             break;
             
         case 'creative':
-            enhancedPrompt = `I'm looking for creative help with:\n\n${input}\n\nPlease approach this with fresh thinking:\n\n• Think outside the box - don't limit yourself to conventional approaches\n• Explore unique angles and innovative perspectives I might not have considered\n• Use engaging examples and vivid descriptions to bring ideas to life\n• Suggest creative solutions that are both practical and imaginative\n• Help me see this from different viewpoints to spark new ideas`;
+            enhancedPrompt = `TASK: ${input}
+
+ROLE: Act as a creative innovator and brainstorming partner with fresh perspectives.
+
+CONTEXT: I'm looking for unique, imaginative approaches that go beyond conventional thinking.
+
+FORMAT: Present your ideas as:
+- 2-3 creative concepts with vivid descriptions
+- Unexpected angles I might not have considered
+- Practical examples showing how ideas could work
+- Ways to blend creativity with feasibility
+
+TONE: Enthusiastic, inspiring, and imaginative while staying grounded.
+
+CONSTRAINTS: Ideas should be creative but implementable. Explain the "why" behind each suggestion.`;
             break;
             
         case 'professional':
-            enhancedPrompt = `Professional Request:\n\n${input}\n\nI require a professional-level response that includes:\n\n• Formal, business-appropriate language and tone\n• Expert insights based on industry best practices and current standards\n• Data-driven recommendations where applicable\n• Professional terminology and precise explanations\n• Strategic considerations and business implications\n• Actionable recommendations I can implement in a professional context`;
+            enhancedPrompt = `TASK: ${input}
+
+ROLE: Act as a senior business consultant with expertise in this domain.
+
+CONTEXT: This is for a professional/business context where strategic thinking and industry standards matter.
+
+FORMAT: Provide a business-focused analysis including:
+- Strategic considerations and business implications
+- Data-driven recommendations when applicable
+- Industry best practices and benchmarks
+- Risk assessment and mitigation strategies
+- Implementation roadmap
+
+TONE: Formal, authoritative, business-appropriate.
+
+CONSTRAINTS: Use professional terminology appropriately. Back recommendations with reasoning. Consider ROI and practical business constraints.`;
             break;
             
         case 'casual':
-            enhancedPrompt = `Hey! I could use some help with this:\n\n${input}\n\nKeep it friendly and conversational! I'm looking for advice that:\n- Feels like talking to a knowledgeable friend\n- Uses everyday language (no jargon unless necessary)\n- Is easy to understand and relate to\n- Still gives me solid, useful information\n- Maybe includes some personal examples or relatable scenarios`;
+            enhancedPrompt = `TASK: ${input}
+
+ROLE: Act as a knowledgeable friend who explains things in a relatable way.
+
+CONTEXT: I want solid advice without the formality. Help me understand this like you're chatting over coffee.
+
+FORMAT: Explain in a conversational way using:
+- Everyday language and relatable examples
+- Personal anecdotes or common scenarios
+- Practical tips I can use right away
+- Simple explanations of any necessary technical terms
+
+TONE: Friendly, warm, approachable. Like talking to someone who really gets it.
+
+CONSTRAINTS: Keep it conversational but still informative. No jargon unless you explain it simply.`;
             break;
             
         default:
