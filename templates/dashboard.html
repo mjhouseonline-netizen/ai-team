@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>AI Team - Ultimate Dashboard</title>
     <style>
         /* ================================================
@@ -903,11 +903,13 @@
                 padding: 12px 16px;
             }
 
-            /* MOBILE FIX: Dynamic chat height */
+            /* MOBILE FIX: Dynamic chat height with space for taskbar */
             .chat-container {
                 padding: 16px;
-                max-height: calc(100vh - 200px);
+                padding-bottom: 200px !important; /* Space for input + browser taskbar */
+                max-height: calc(100vh - 100px);
                 overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
             }
 
             .message.user {
@@ -919,37 +921,86 @@
                 display: none;
             }
 
-            /* MOBILE FIX: Sticky input at bottom */
+            /* MOBILE FIX: Fixed input above browser taskbar */
             .input-container {
-                position: sticky;
-                bottom: 0;
+                position: fixed !important;
+                bottom: 0 !important;
+                left: 0;
+                right: 0;
                 background: white;
-                z-index: 100;
-                padding-top: 12px;
-                box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+                z-index: 1000;
+                padding: 16px;
+                padding-bottom: max(20px, env(safe-area-inset-bottom));
+                box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+            }
+
+            .input-wrapper {
+                width: 100%;
             }
 
             .input-area {
-                flex-wrap: wrap;
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+                background: var(--bg-secondary);
+                border: 1px solid var(--border);
+                border-radius: 12px;
+                padding: 12px;
             }
 
+            /* Textarea on top */
             #messageInput {
                 width: 100%;
                 order: 1;
-                margin-bottom: 8px;
-                font-size: 16px; /* Prevents iOS zoom */
+                font-size: 16px !important; /* Prevents iOS zoom */
+                min-height: 48px; /* iOS touch target */
+                padding: 8px;
+                border: none;
+                background: transparent;
+                resize: none;
             }
 
-            .input-btn {
+            /* Button row at bottom */
+            .input-buttons-row {
                 order: 2;
-                padding: 10px;
-                font-size: 18px;
+                display: flex;
+                gap: 8px;
+                align-items: center;
+            }
+
+            /* Make sure buttons are in a row */
+            .input-options-container {
+                flex-shrink: 0;
+            }
+
+            .input-options-btn {
+                padding: 12px !important;
+                min-width: 48px;
+                min-height: 48px;
+                flex-shrink: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: white;
+                border: 1px solid var(--border);
+                border-radius: 8px;
             }
 
             .send-btn {
-                order: 3;
                 flex: 1;
-                min-width: 80px;
+                min-height: 48px;
+                font-size: 16px;
+                padding: 12px 24px;
+            }
+
+            /* Hide "Options" text on mobile, show only icon */
+            .desktop-only {
+                display: none !important;
+            }
+
+            /* File preview on mobile */
+            .file-preview {
+                margin-top: 8px;
             }
         }
     </style>
@@ -1140,27 +1191,6 @@
                 <div class="input-area">
                     <input type="file" id="fileInput" style="display:none;" accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.txt,.md,.csv,.doc,.docx,.xls,.xlsx">
                     
-                    <!-- Combined Options Button -->
-                    <div class="input-options-container">
-                        <button class="input-options-btn" id="inputOptionsBtn" onclick="toggleInputOptions()" title="Input Options">
-                            ➕ <span class="desktop-only">Options</span>
-                        </button>
-                        <div class="input-options-menu" id="inputOptionsMenu">
-                            <button onclick="document.getElementById('fileInput').click(); closeInputOptions();" class="option-item">
-                                <span class="option-icon">📎</span>
-                                <span class="option-text">Upload File</span>
-                            </button>
-                            <button onclick="toggleVoice(); closeInputOptions();" class="option-item">
-                                <span class="option-icon">🎤</span>
-                                <span class="option-text">Voice Input</span>
-                            </button>
-                            <button onclick="toggleImageMode(); closeInputOptions();" class="option-item">
-                                <span class="option-icon">🎨</span>
-                                <span class="option-text">AI Images</span>
-                            </button>
-                        </div>
-                    </div>
-                    
                     <textarea 
                         id="messageInput" 
                         placeholder="Message Luna..." 
@@ -1168,7 +1198,32 @@
                         onkeydown="handleKeyPress(event)"
                         oninput="autoResize(this)"
                     ></textarea>
-                    <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send</button>
+                    
+                    <!-- Buttons row for mobile -->
+                    <div class="input-buttons-row">
+                        <!-- Combined Options Button -->
+                        <div class="input-options-container">
+                            <button class="input-options-btn" id="inputOptionsBtn" onclick="toggleInputOptions()" title="Input Options">
+                                ➕<span class="desktop-only"> Options</span>
+                            </button>
+                            <div class="input-options-menu" id="inputOptionsMenu">
+                                <button onclick="document.getElementById('fileInput').click(); closeInputOptions();" class="option-item">
+                                    <span class="option-icon">📎</span>
+                                    <span class="option-text">Upload File</span>
+                                </button>
+                                <button onclick="toggleVoice(); closeInputOptions();" class="option-item">
+                                    <span class="option-icon">🎤</span>
+                                    <span class="option-text">Voice Input</span>
+                                </button>
+                                <button onclick="toggleImageMode(); closeInputOptions();" class="option-item">
+                                    <span class="option-icon">🎨</span>
+                                    <span class="option-text">AI Images</span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send</button>
+                    </div>
                 </div>
                 <div class="file-preview" id="filePreview">
                     <span id="fileName"></span>

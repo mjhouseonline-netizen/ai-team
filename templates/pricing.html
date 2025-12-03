@@ -13,7 +13,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1a4d2e 0%, #2d5016 100%);
+            background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
             min-height: 100vh;
             padding: 20px;
             color: #fff;
@@ -33,7 +33,7 @@
         .header h1 {
             font-size: 3em;
             margin-bottom: 20px;
-            background: linear-gradient(45deg, #90EE90, #FFD700);
+            background: linear-gradient(45deg, #10a37f, #10a37f);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -63,7 +63,7 @@
         .promo-section h3 {
             font-size: 1.5em;
             margin-bottom: 20px;
-            color: #FFD700;
+            color: #10a37f;
             text-align: center;
         }
 
@@ -91,13 +91,13 @@
 
         .promo-input:focus {
             outline: none;
-            border-color: #90EE90;
+            border-color: #10a37f;
             background: rgba(255, 255, 255, 0.15);
         }
 
         .apply-btn {
-            background: linear-gradient(135deg, #90EE90, #76c776);
-            color: #1a4d2e;
+            background: linear-gradient(135deg, #10a37f, #0d8c6f);
+            color: #10a37f;
             border: none;
             padding: 14px 32px;
             border-radius: 12px;
@@ -128,8 +128,8 @@
 
         .promo-message.success {
             background: rgba(144, 238, 144, 0.2);
-            border: 2px solid #90EE90;
-            color: #90EE90;
+            border: 2px solid #10a37f;
+            color: #10a37f;
             display: block;
         }
 
@@ -160,11 +160,11 @@
         .pricing-card:hover {
             transform: translateY(-10px);
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-            border-color: #90EE90;
+            border-color: #10a37f;
         }
 
         .pricing-card.featured {
-            border-color: #FFD700;
+            border-color: #10a37f;
             box-shadow: 0 10px 30px rgba(255, 215, 0, 0.3);
         }
 
@@ -172,8 +172,8 @@
             position: absolute;
             top: -15px;
             right: 20px;
-            background: #FFD700;
-            color: #1a4d2e;
+            background: #10a37f;
+            color: #10a37f;
             padding: 8px 20px;
             border-radius: 20px;
             font-weight: bold;
@@ -183,7 +183,7 @@
         .plan-name {
             font-size: 2em;
             margin-bottom: 15px;
-            color: #90EE90;
+            color: #10a37f;
         }
 
         .plan-price {
@@ -201,7 +201,7 @@
         .plan-price-new {
             font-size: 3em;
             font-weight: bold;
-            color: #FFD700;
+            color: #10a37f;
             margin-bottom: 10px;
         }
 
@@ -231,7 +231,7 @@
 
         .features-list li:before {
             content: "✓";
-            color: #90EE90;
+            color: #10a37f;
             font-weight: bold;
             margin-right: 12px;
             font-size: 1.2em;
@@ -240,8 +240,8 @@
         .select-button {
             width: 100%;
             padding: 18px;
-            background: linear-gradient(135deg, #90EE90, #76c776);
-            color: #1a4d2e;
+            background: linear-gradient(135deg, #10a37f, #0d8c6f);
+            color: #10a37f;
             border: none;
             border-radius: 12px;
             font-size: 1.1em;
@@ -256,7 +256,7 @@
         }
 
         .select-button.featured {
-            background: linear-gradient(135deg, #FFD700, #FFA500);
+            background: linear-gradient(135deg, #10a37f, #FFA500);
         }
 
         .select-button:disabled {
@@ -266,7 +266,7 @@
         }
 
         .current-plan {
-            background: #2d5016;
+            background: #0d8c6f;
             padding: 10px;
             border-radius: 8px;
             margin-top: 15px;
@@ -276,7 +276,7 @@
         .back-link {
             display: inline-block;
             margin-bottom: 30px;
-            color: #90EE90;
+            color: #10a37f;
             text-decoration: none;
             font-size: 1.1em;
         }
@@ -293,7 +293,7 @@
         .faq-section h2 {
             font-size: 2.5em;
             margin-bottom: 40px;
-            color: #90EE90;
+            color: #10a37f;
         }
 
         .faq-grid {
@@ -311,7 +311,7 @@
         }
 
         .faq-item h3 {
-            color: #FFD700;
+            color: #10a37f;
             margin-bottom: 15px;
             font-size: 1.3em;
         }
@@ -479,13 +479,13 @@
 
                 <div class="faq-item">
                     <h3>📧 Need help choosing?</h3>
-                    <p>Contact our team at support@aiteam.com and we'll help you find the perfect plan for your needs.</p>
+                    <p>Contact our team at <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="6b181e1b1b04191f2b0a021f0e0a0645080406">[email&#160;protected]</a> and we'll help you find the perfect plan for your needs.</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <script>
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
         let appliedPromoCode = null;
 
         async function applyPromoCode() {
@@ -624,12 +624,4 @@
         // Auto-focus promo code input if code in URL
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
-            const code = urlParams.get('code');
-            if (code) {
-                document.getElementById('promoCodeInput').value = code;
-                applyPromoCode();
-            }
-        });
-    </script>
-</body>
-</html>
+     
