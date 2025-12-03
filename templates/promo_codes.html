@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Promo Codes - AI Team</title>
+    <title>Admin - Promo Codes</title>
     <style>
         * {
             margin: 0;
@@ -11,501 +11,322 @@
             box-sizing: border-box;
         }
 
-        :root {
-            --primary: #10a37f;
-            --sidebar-bg: #1a1a1a;
-            --bg-main: #ffffff;
-            --bg-secondary: #f9fafb;
-            --text-primary: #374151;
-            --text-secondary: #6b7280;
-            --border: #e5e7eb;
-        }
-
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
+            background: #f9fafb;
+            min-height: 100vh;
+            padding: 40px 20px;
         }
 
-        /* Sidebar Navigation - Same as others */
-        .sidebar {
-            width: 260px;
-            background: var(--sidebar-bg);
-            color: white;
-            display: flex;
-            flex-direction: column;
-            border-right: 1px solid #333;
-        }
-
-        .sidebar-header {
-            padding: 20px;
-            border-bottom: 1px solid #333;
-        }
-
-        .sidebar-logo {
-            font-size: 18px;
-            font-weight: 700;
-            color: white;
-            margin-bottom: 4px;
-        }
-
-        .sidebar-subtitle {
-            font-size: 11px;
-            color: #888;
-        }
-
-        .nav-section {
-            padding: 20px 12px;
-            flex: 1;
-            overflow-y: auto;
-        }
-
-        .nav-title {
-            font-size: 11px;
-            font-weight: 600;
-            color: #888;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            padding: 8px 12px;
-            margin-top: 12px;
-        }
-
-        .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 10px 12px;
-            margin: 4px 0;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-            color: white;
-            text-decoration: none;
-        }
-
-        .nav-item:hover {
-            background: #2a2a2a;
-        }
-
-        .nav-item.active {
-            background: var(--primary);
-        }
-
-        .nav-icon {
-            font-size: 18px;
-            width: 24px;
-            text-align: center;
-        }
-
-        .nav-label {
-            font-size: 14px;
-        }
-
-        /* Main Content */
-        .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .header {
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
             background: white;
-            border-bottom: 1px solid var(--border);
-            padding: 16px 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
         }
 
-        .header h1 {
-            font-size: 24px;
-            color: var(--text-primary);
-            display: flex;
-            align-items: center;
-            gap: 12px;
+        h1 {
+            color: #10a37f;
+            margin-bottom: 30px;
         }
 
-        .header-actions {
-            display: flex;
-            gap: 12px;
+        .section {
+            margin-bottom: 40px;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 15px;
         }
 
-        .back-btn {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            padding: 8px 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            text-decoration: none;
-            color: var(--text-primary);
-            transition: all 0.2s;
-        }
-
-        .back-btn:hover {
-            background: #e5e7eb;
-        }
-
-        .create-btn {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-
-        .create-btn:hover {
-            background: #0d8c6f;
-        }
-
-        .content-area {
-            flex: 1;
-            overflow-y: auto;
-            padding: 24px;
-        }
-
-        /* Promo Codes Grid */
-        .promo-grid {
-            display: grid;
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-
-        .promo-card {
-            background: white;
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .promo-info {
-            flex: 1;
-        }
-
-        .promo-code {
-            font-size: 18px;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 8px;
-            font-family: monospace;
-        }
-
-        .promo-details {
-            display: flex;
-            gap: 20px;
-            font-size: 14px;
-            color: var(--text-secondary);
-        }
-
-        .promo-actions {
-            display: flex;
-            gap: 8px;
-        }
-
-        .btn {
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: none;
-        }
-
-        .btn-copy {
-            background: var(--primary);
-            color: white;
-        }
-
-        .btn-delete {
-            background: #ef4444;
-            color: white;
-        }
-
-        /* Modal */
-        .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 2000;
-        }
-
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background: white;
-            border-radius: 12px;
-            padding: 24px;
-            max-width: 500px;
-            width: 90%;
-        }
-
-        .modal-title {
-            font-size: 20px;
-            font-weight: 600;
+        .section h2 {
+            color: #2c3e50;
             margin-bottom: 20px;
         }
 
         .form-group {
-            margin-bottom: 16px;
+            margin-bottom: 20px;
         }
 
-        .form-label {
+        label {
             display: block;
-            font-size: 14px;
-            font-weight: 500;
             margin-bottom: 8px;
-            color: var(--text-primary);
+            font-weight: 600;
+            color: #2c3e50;
         }
 
-        .form-input, .form-select {
+        input, select {
             width: 100%;
-            padding: 10px 12px;
-            border: 1px solid var(--border);
+            padding: 12px;
+            border: 2px solid #ecf0f1;
             border-radius: 8px;
-            font-size: 14px;
+            font-size: 1em;
         }
 
-        .form-actions {
+        button {
+            padding: 12px 30px;
+            background: #10a37f;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #0d8c6f;
+            transform: translateY(-2px);
+        }
+
+        .codes-display {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .code-item {
+            padding: 15px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
             display: flex;
-            gap: 8px;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .code-text {
+            font-family: monospace;
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #10a37f;
+        }
+
+        .code-tier {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #667eea;
+            color: white;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .code-status {
+            font-size: 0.9em;
+            color: #7f8c8d;
+        }
+
+        .success {
+            color: #10a37f;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .error {
+            color: #e74c3c;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #10a37f;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
             margin-top: 20px;
         }
 
-        .btn-primary {
-            background: var(--primary);
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        th {
+            background: #10a37f;
             color: white;
-            flex: 1;
+            font-weight: 600;
         }
 
-        .btn-secondary {
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            flex: 1;
+        .used {
+            color: #e74c3c;
         }
 
-        /* Mobile */
-        @media (max-width: 768px) {
-            .sidebar {
-                position: fixed;
-                left: -260px;
-                top: 0;
-                bottom: 0;
-                z-index: 1000;
-                transition: left 0.3s;
-            }
-
-            .sidebar.active {
-                left: 0;
-            }
+        .available {
+            color: #10a37f;
         }
     </style>
 </head>
 <body>
-    <!-- Sidebar Navigation -->
-    <div class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <div class="sidebar-logo">🌿 AI Team</div>
-            <div class="sidebar-subtitle">Promo Code Manager</div>
-        </div>
+    <div class="container">
+        <a href="/dashboard" class="back-link">← Back to Dashboard</a>
+        
+        <h1>🎟️ Promo Code Management</h1>
 
-        <div class="nav-section">
-            <div class="nav-title">Main</div>
-            <a href="/" class="nav-item">
-                <span class="nav-icon">💬</span>
-                <span class="nav-label">Dashboard</span>
-            </a>
+        <!-- Generate Codes Section -->
+        <div class="section">
+            <h2>Generate New Promo Codes</h2>
+            
+            <div class="form-group">
+                <label>Tier:</label>
+                <select id="tier">
+                    <option value="freeforlife">Free For Life (Unlimited)</option>
+                    <option value="starter">Starter (100 msgs/day)</option>
+                    <option value="pro">Pro (500 msgs/day)</option>
+                </select>
+            </div>
 
-            <div class="nav-title">Admin Tools</div>
-            <a href="/admin" class="nav-item">
-                <span class="nav-icon">📊</span>
-                <span class="nav-label">Analytics</span>
-            </a>
-            <a href="/promo-codes" class="nav-item active">
-                <span class="nav-icon">🎟️</span>
-                <span class="nav-label">Promo Codes</span>
-            </a>
-            <a href="/automations" class="nav-item">
-                <span class="nav-icon">🔌</span>
-                <span class="nav-label">Automations</span>
-            </a>
+            <div class="form-group">
+                <label>Number of Codes:</label>
+                <input type="number" id="count" value="10" min="1" max="100">
+            </div>
 
-            <div class="nav-title">Settings</div>
-            <a href="/pricing" class="nav-item">
-                <span class="nav-icon">⭐</span>
-                <span class="nav-label">Pricing</span>
-            </a>
-            <a href="/logout" class="nav-item">
-                <span class="nav-icon">🚪</span>
-                <span class="nav-label">Logout</span>
-            </a>
-        </div>
-    </div>
+            <div class="form-group">
+                <label>Prefix (optional):</label>
+                <input type="text" id="prefix" placeholder="e.g., LAUNCH-">
+            </div>
 
-    <!-- Main Content -->
-    <div class="main-content">
-        <div class="header">
-            <h1>🎟️ Promo Codes</h1>
-            <div class="header-actions">
-                <button class="create-btn" onclick="openCreateModal()">+ Create Code</button>
-                <a href="/" class="back-btn">← Back</a>
+            <button onclick="generateCodes()">Generate Codes</button>
+
+            <div id="generateMessage"></div>
+
+            <div id="generatedCodes" class="codes-display" style="display: none;">
+                <h3>Generated Codes:</h3>
+                <div id="codesList"></div>
+                <button onclick="copyAllCodes()" style="margin-top: 15px;">📋 Copy All</button>
             </div>
         </div>
 
-        <div class="content-area">
-            <div class="promo-grid" id="promoGrid">
-                <div style="text-align: center; padding: 40px; color: var(--text-secondary);">Loading promo codes...</div>
+        <!-- View Existing Codes Section -->
+        <div class="section">
+            <h2>Existing Promo Codes</h2>
+            <button onclick="loadPromos()">🔄 Refresh List</button>
+            
+            <div id="promoList">
+                <p style="color: #7f8c8d; margin-top: 20px;">Click "Refresh List" to load promo codes</p>
             </div>
-        </div>
-    </div>
-
-    <!-- Create Promo Code Modal -->
-    <div class="modal" id="createModal">
-        <div class="modal-content">
-            <h2 class="modal-title">Create Promo Code</h2>
-            <form id="createForm" onsubmit="createPromoCode(event)">
-                <div class="form-group">
-                    <label class="form-label">Code</label>
-                    <input type="text" class="form-input" id="codeInput" required placeholder="WELCOME2024">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Plan</label>
-                    <select class="form-select" id="planInput" required>
-                        <option value="Starter">Starter ($10/month)</option>
-                        <option value="Pro">Pro ($30/month)</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Max Uses</label>
-                    <input type="number" class="form-input" id="maxUsesInput" value="100" min="1">
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Create Code</button>
-                    <button type="button" class="btn btn-secondary" onclick="closeCreateModal()">Cancel</button>
-                </div>
-            </form>
         </div>
     </div>
 
     <script>
-        async function loadPromoCodes() {
+        let generatedCodesArray = [];
+
+        async function generateCodes() {
+            const tier = document.getElementById('tier').value;
+            const count = parseInt(document.getElementById('count').value);
+            const prefix = document.getElementById('prefix').value.trim();
+            const messageDiv = document.getElementById('generateMessage');
+
+            if (count < 1 || count > 100) {
+                messageDiv.innerHTML = '<p class="error">❌ Please enter between 1 and 100 codes</p>';
+                return;
+            }
+
+            messageDiv.innerHTML = '<p style="color: #7f8c8d;">⏳ Generating codes...</p>';
+
             try {
-                const response = await fetch('/api/promo-codes', { credentials: 'include' });
+                const response = await fetch('/api/admin/generate-promo-codes', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    credentials: 'include',
+                    body: JSON.stringify({ tier, count, prefix })
+                });
+
                 const data = await response.json();
-                
-                const grid = document.getElementById('promoGrid');
-                if (data.codes && data.codes.length > 0) {
-                    grid.innerHTML = data.codes.map(code => `
-                        <div class="promo-card">
-                            <div class="promo-info">
-                                <div class="promo-code">${code.code}</div>
-                                <div class="promo-details">
-                                    <span>Plan: ${code.plan}</span>
-                                    <span>Uses: ${code.uses}/${code.max_uses}</span>
-                                    <span>Status: ${code.active ? '✅ Active' : '❌ Inactive'}</span>
-                                </div>
-                            </div>
-                            <div class="promo-actions">
-                                <button class="btn btn-copy" onclick="copyCode('${code.code}')">Copy</button>
-                                <button class="btn btn-delete" onclick="deleteCode(${code.id})">Delete</button>
-                            </div>
+
+                if (response.ok && data.success) {
+                    generatedCodesArray = data.codes;
+                    messageDiv.innerHTML = `<p class="success">✅ Generated ${data.count} codes!</p>`;
+                    
+                    // Display codes
+                    const codesDisplay = document.getElementById('generatedCodes');
+                    const codesList = document.getElementById('codesList');
+                    
+                    codesList.innerHTML = data.codes.map(code => `
+                        <div class="code-item">
+                            <span class="code-text">${code}</span>
+                            <span class="code-tier">${tier.toUpperCase()}</span>
                         </div>
                     `).join('');
+                    
+                    codesDisplay.style.display = 'block';
                 } else {
-                    grid.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-secondary);">No promo codes yet. Create your first one!</div>';
+                    messageDiv.innerHTML = `<p class="error">❌ ${data.error}</p>`;
                 }
             } catch (error) {
-                console.error('Error loading promo codes:', error);
+                messageDiv.innerHTML = '<p class="error">❌ Error generating codes</p>';
             }
         }
 
-        function openCreateModal() {
-            document.getElementById('createModal').classList.add('active');
-        }
-
-        function closeCreateModal() {
-            document.getElementById('createModal').classList.remove('active');
-            document.getElementById('createForm').reset();
-        }
-
-        async function createPromoCode(event) {
-            event.preventDefault();
-            
-            const code = document.getElementById('codeInput').value;
-            const plan = document.getElementById('planInput').value;
-            const maxUses = document.getElementById('maxUsesInput').value;
-            
-            try {
-                const response = await fetch('/api/promo-code', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({
-                        code: code,
-                        plan: plan,
-                        max_uses: maxUses
-                    })
-                });
-                
-                if (response.ok) {
-                    alert('✅ Promo code created!');
-                    closeCreateModal();
-                    loadPromoCodes();
-                } else {
-                    const data = await response.json();
-                    alert('Error: ' + (data.error || 'Failed to create code'));
-                }
-            } catch (error) {
-                alert('Error creating promo code');
-            }
-        }
-
-        function copyCode(code) {
-            navigator.clipboard.writeText(code).then(() => {
-                alert('✅ Code copied: ' + code);
+        function copyAllCodes() {
+            const codesText = generatedCodesArray.join('\n');
+            navigator.clipboard.writeText(codesText).then(() => {
+                alert('✅ All codes copied to clipboard!');
             });
         }
 
-        async function deleteCode(id) {
-            if (!confirm('Delete this promo code?')) return;
-            
+        async function loadPromos() {
+            const promoList = document.getElementById('promoList');
+            promoList.innerHTML = '<p style="color: #7f8c8d;">⏳ Loading...</p>';
+
             try {
-                const response = await fetch(`/api/promo-code/${id}`, {
-                    method: 'DELETE',
+                const response = await fetch('/api/admin/list-promo-codes', {
                     credentials: 'include'
                 });
-                
-                if (response.ok) {
-                    alert('✅ Code deleted');
-                    loadPromoCodes();
+
+                const data = await response.json();
+
+                if (response.ok && data.codes.length > 0) {
+                    promoList.innerHTML = `
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Tier</th>
+                                    <th>Usage</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.codes.map(code => `
+                                    <tr>
+                                        <td><span class="code-text">${code.code}</span></td>
+                                        <td><span class="code-tier">${code.tier.toUpperCase()}</span></td>
+                                        <td>${code.times_used} / ${code.max_uses}</td>
+                                        <td class="${code.times_used >= code.max_uses ? 'used' : 'available'}">
+                                            ${code.times_used >= code.max_uses ? '🔴 Used' : '🟢 Available'}
+                                        </td>
+                                        <td>${new Date(code.created_at).toLocaleDateString()}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                } else if (data.codes.length === 0) {
+                    promoList.innerHTML = '<p style="color: #7f8c8d;">No promo codes yet. Generate some above!</p>';
                 } else {
-                    alert('Error deleting code');
+                    promoList.innerHTML = `<p class="error">❌ ${data.error}</p>`;
                 }
             } catch (error) {
-                alert('Error deleting code');
+                promoList.innerHTML = '<p class="error">❌ Error loading promo codes</p>';
             }
         }
-
-        document.addEventListener('DOMContentLoaded', loadPromoCodes);
     </script>
 </body>
 </html>
