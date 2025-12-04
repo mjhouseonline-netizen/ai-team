@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profile - AI Team</title>
+    <title>My Profile - AI Team</title>
     <style>
         * {
             margin: 0;
@@ -13,41 +13,45 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f9fafb;
+            background: linear-gradient(135deg, #3aa76d 0%, #4fb883 100%);
             min-height: 100vh;
             padding: 20px;
             color: #374151;
         }
 
         .container {
-            max-width: 900px;
+            max-width: 1000px;
             margin: 0 auto;
         }
 
         .back-btn {
             display: inline-block;
             padding: 10px 20px;
-            background: #10a37f !important;
-            color: white !important;
+            background: rgba(255, 255, 255, 0.95) !important;
+            color: #10a37f !important;
             text-decoration: none;
             border-radius: 8px;
             font-weight: 600;
             margin-bottom: 20px;
             transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
 
         .back-btn:hover {
-            background: #0d8c6f !important;
+            background: white !important;
             transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
         }
 
-        .profile-header {
+        .profile-card {
             background: white;
             padding: 40px;
-            border-radius: 15px;
+            border-radius: 20px;
             margin-bottom: 30px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
-            text-align: center;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 30px;
         }
 
         .profile-avatar {
@@ -58,113 +62,69 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 3em;
+            font-size: 4em;
             color: white;
-            margin: 0 auto 20px;
+            flex-shrink: 0;
+            box-shadow: 0 8px 20px rgba(16, 163, 127, 0.3);
         }
 
-        .profile-header h1 {
+        .profile-info {
+            flex: 1;
+        }
+
+        .profile-info h1 {
             color: #10a37f;
-            font-size: 2em;
-            margin-bottom: 5px;
-        }
-
-        .profile-header p {
-            color: #6b7280;
-            font-size: 1.1em;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .stat-card {
-            background: white;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
-            text-align: center;
-        }
-
-        .stat-value {
             font-size: 2.5em;
-            font-weight: bold;
-            color: #10a37f;
             margin-bottom: 5px;
         }
 
-        .stat-label {
+        .profile-info p {
             color: #6b7280;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+        }
+
+        .tier-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-weight: 600;
             font-size: 0.95em;
         }
 
-        .section {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            margin-bottom: 20px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
-        }
-
-        .section h2 {
-            color: #10a37f;
-            font-size: 1.8em;
-            margin-bottom: 20px;
-        }
-
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 15px 0;
-            border-bottom: 1px solid #e5e7eb;
-        }
-
-        .info-row:last-child {
-            border-bottom: none;
-        }
-
-        .info-label {
-            font-weight: 600;
-            color: #374151;
-        }
-
-        .info-value {
-            color: #6b7280;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 0.9em;
-            font-weight: 600;
-        }
-
-        .badge-free {
+        .tier-free {
             background: #e5e7eb;
             color: #6b7280;
         }
 
-        .badge-starter {
+        .tier-starter {
             background: #dbeafe;
             color: #1e40af;
         }
 
-        .badge-pro {
+        .tier-pro {
             background: #d1fae5;
             color: #065f46;
         }
 
-        .badge-enterprise {
+        .tier-enterprise {
             background: #fef3c7;
             color: #92400e;
         }
 
+        .tier-freeforlife {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+        }
+
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
         .btn {
-            padding: 12px 24px;
+            padding: 10px 20px;
             background: #10a37f !important;
             color: white !important;
             border: none !important;
@@ -174,6 +134,7 @@
             text-decoration: none;
             display: inline-block;
             transition: all 0.3s;
+            font-size: 0.95em;
         }
 
         .btn:hover {
@@ -181,27 +142,131 @@
             transform: translateY(-2px);
         }
 
+        .btn-secondary {
+            background: #6b7280 !important;
+        }
+
+        .btn-secondary:hover {
+            background: #4b5563 !important;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .stat-value {
+            font-size: 3em;
+            font-weight: bold;
+            color: #10a37f;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            color: #6b7280;
+            font-size: 1em;
+            font-weight: 600;
+        }
+
+        .section {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .section h2 {
+            color: #10a37f;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .info-item {
+            padding: 15px;
+            background: #f9fafb;
+            border-radius: 10px;
+            border-left: 4px solid #10a37f;
+        }
+
+        .info-item label {
+            font-weight: 600;
+            color: #6b7280;
+            font-size: 0.9em;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .info-item .value {
+            color: #374151;
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+
         .activity-list {
             list-style: none;
         }
 
         .activity-item {
-            padding: 15px 0;
+            padding: 20px 0;
             border-bottom: 1px solid #e5e7eb;
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 20px;
+            transition: background 0.3s;
+        }
+
+        .activity-item:hover {
+            background: #f9fafb;
+            margin: 0 -15px;
+            padding-left: 15px;
+            padding-right: 15px;
+            border-radius: 8px;
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
         }
 
         .activity-icon {
-            width: 40px;
-            height: 40px;
+            width: 50px;
+            height: 50px;
             border-radius: 50%;
-            background: #f9fafb;
+            background: linear-gradient(135deg, #10a37f, #0d8c6f);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.2em;
+            font-size: 1.5em;
+            flex-shrink: 0;
         }
 
         .activity-content {
@@ -211,11 +276,53 @@
         .activity-title {
             font-weight: 600;
             color: #374151;
+            font-size: 1.05em;
+            margin-bottom: 3px;
         }
 
         .activity-time {
             font-size: 0.9em;
             color: #6b7280;
+        }
+
+        .usage-bar {
+            background: #e5e7eb;
+            height: 30px;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-top: 15px;
+            position: relative;
+        }
+
+        .usage-fill {
+            background: linear-gradient(90deg, #10a37f, #0d8c6f);
+            height: 100%;
+            transition: width 0.5s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        @media (max-width: 768px) {
+            .profile-card {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .profile-info h1 {
+                font-size: 2em;
+            }
+
+            .quick-actions {
+                justify-content: center;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -223,89 +330,113 @@
     <div class="container">
         <a href="/dashboard" class="back-btn">← Back to Dashboard</a>
 
-        <!-- Profile Header -->
-        <div class="profile-header">
+        <!-- Profile Card -->
+        <div class="profile-card">
             <div class="profile-avatar">👤</div>
-            <h1>{{ current_user.email.split('@')[0] }}</h1>
-            <p>{{ current_user.email }}</p>
+            <div class="profile-info">
+                <h1>{{ current_user.email.split('@')[0]|title }}</h1>
+                <p>{{ current_user.email }}</p>
+                <span class="tier-badge tier-{{ current_user.subscription_tier }}">
+                    {{ current_user.subscription_tier|upper }} MEMBER
+                </span>
+                <div class="quick-actions">
+                    <a href="/pricing" class="btn">Upgrade Plan</a>
+                    <a href="/settings" class="btn btn-secondary">Settings</a>
+                </div>
+            </div>
         </div>
 
-        <!-- Stats -->
+        <!-- Stats Grid -->
         <div class="stats-grid">
             <div class="stat-card">
+                <div class="stat-icon">💬</div>
                 <div class="stat-value" id="totalMessages">0</div>
                 <div class="stat-label">Total Messages</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value" id="todayMessages">0/{{ messages_per_day }}</div>
-                <div class="stat-label">Today's Messages</div>
+                <div class="stat-icon">📅</div>
+                <div class="stat-value" id="todayMessages">0</div>
+                <div class="stat-label">Messages Today</div>
             </div>
             <div class="stat-card">
+                <div class="stat-icon">🤖</div>
                 <div class="stat-value" id="customAgents">0</div>
                 <div class="stat-label">Custom Agents</div>
             </div>
             <div class="stat-card">
+                <div class="stat-icon">⭐</div>
                 <div class="stat-value" id="daysActive">{{ days_active }}</div>
                 <div class="stat-label">Days Active</div>
             </div>
         </div>
 
-        <!-- Account Info -->
+        <!-- Usage Section -->
         <div class="section">
-            <h2>📋 Account Information</h2>
-            
-            <div class="info-row">
-                <span class="info-label">Subscription Plan</span>
-                <span class="badge badge-{{ current_user.subscription_tier }}">
-                    {{ current_user.subscription_tier|upper }}
-                </span>
+            <h2>📊 Today's Usage</h2>
+            <p style="color: #6b7280; margin-bottom: 10px;">
+                You've used <strong id="usedToday">0</strong> of your <strong>{{ messages_per_day }}</strong> daily messages
+            </p>
+            <div class="usage-bar">
+                <div class="usage-fill" id="usageBar" style="width: 0%">
+                    <span id="usagePercent">0%</span>
+                </div>
             </div>
-            
-            <div class="info-row">
-                <span class="info-label">Email Address</span>
-                <span class="info-value">{{ current_user.email }}</span>
-            </div>
-            
-            <div class="info-row">
-                <span class="info-label">Member Since</span>
-                <span class="info-value">{{ current_user.created_at.strftime('%B %d, %Y') if current_user.created_at else 'N/A' }}</span>
-            </div>
-            
-            <div class="info-row">
-                <span class="info-label">Daily Message Limit</span>
-                <span class="info-value">{{ messages_per_day }} messages/day</span>
-            </div>
+        </div>
 
-            <div style="margin-top: 20px;">
-                <a href="/pricing" class="btn">Upgrade Plan</a>
-                <a href="/settings" class="btn" style="margin-left: 10px;">Settings</a>
+        <!-- Account Details -->
+        <div class="section">
+            <h2>📋 Account Details</h2>
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>Email Address</label>
+                    <div class="value">{{ current_user.email }}</div>
+                </div>
+                <div class="info-item">
+                    <label>Member Since</label>
+                    <div class="value">{{ current_user.created_at.strftime('%B %d, %Y') if current_user.created_at else 'N/A' }}</div>
+                </div>
+                <div class="info-item">
+                    <label>Subscription Plan</label>
+                    <div class="value">{{ current_user.subscription_tier|upper }}</div>
+                </div>
+                <div class="info-item">
+                    <label>Daily Message Limit</label>
+                    <div class="value">{{ messages_per_day }} messages</div>
+                </div>
             </div>
         </div>
 
         <!-- Recent Activity -->
         <div class="section">
-            <h2>📊 Recent Activity</h2>
+            <h2>📈 Recent Activity</h2>
             
             <ul class="activity-list" id="activityList">
                 <li class="activity-item">
                     <div class="activity-icon">💬</div>
                     <div class="activity-content">
                         <div class="activity-title">Chatted with Luna</div>
-                        <div class="activity-time">2 hours ago</div>
+                        <div class="activity-time">Research & Analysis • 2 hours ago</div>
                     </div>
                 </li>
                 <li class="activity-item">
                     <div class="activity-icon">🎨</div>
                     <div class="activity-content">
-                        <div class="activity-title">Generated image</div>
-                        <div class="activity-time">Yesterday</div>
+                        <div class="activity-title">Generated image with Ember</div>
+                        <div class="activity-time">Creative Direction • Yesterday</div>
                     </div>
                 </li>
                 <li class="activity-item">
                     <div class="activity-icon">🤖</div>
                     <div class="activity-content">
                         <div class="activity-title">Created custom agent</div>
-                        <div class="activity-time">3 days ago</div>
+                        <div class="activity-time">Agent Builder • 3 days ago</div>
+                    </div>
+                </li>
+                <li class="activity-item">
+                    <div class="activity-icon">📝</div>
+                    <div class="activity-content">
+                        <div class="activity-title">Worked with Sage on content</div>
+                        <div class="activity-time">Writing & Content • 5 days ago</div>
                     </div>
                 </li>
             </ul>
@@ -322,10 +453,18 @@
                 if (data.total_messages !== undefined) {
                     document.getElementById('totalMessages').textContent = data.total_messages;
                 }
+                
                 if (data.today_messages !== undefined) {
-                    document.getElementById('todayMessages').textContent = 
-                        data.today_messages + '/' + data.daily_limit;
+                    document.getElementById('todayMessages').textContent = data.today_messages;
+                    document.getElementById('usedToday').textContent = data.today_messages;
+                    
+                    // Update usage bar
+                    const limit = data.daily_limit || {{ messages_per_day }};
+                    const percentage = Math.min((data.today_messages / limit) * 100, 100);
+                    document.getElementById('usageBar').style.width = percentage + '%';
+                    document.getElementById('usagePercent').textContent = Math.round(percentage) + '%';
                 }
+                
                 if (data.custom_agents !== undefined) {
                     document.getElementById('customAgents').textContent = data.custom_agents;
                 }

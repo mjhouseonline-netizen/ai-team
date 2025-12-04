@@ -58,53 +58,6 @@
             opacity: 0.9;
         }
 
-        .promo-section {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 30px;
-            border-radius: 20px;
-            text-align: center;
-            margin-bottom: 40px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-
-        .promo-section h2 {
-            color: #10a37f;
-            margin-bottom: 20px;
-            font-size: 1.8em;
-        }
-
-        .promo-input {
-            display: flex;
-            gap: 15px;
-            max-width: 500px;
-            margin: 0 auto;
-            align-items: center;
-        }
-
-        .promo-input input {
-            flex: 1;
-            padding: 15px;
-            border: 2px solid #e5e7eb;
-            border-radius: 10px;
-            font-size: 1em;
-        }
-
-        .promo-input button {
-            padding: 15px 30px;
-            background: linear-gradient(135deg, #10a37f 0%, #0d8c6f 100%);
-            color: white !important;
-            border: none;
-            border-radius: 10px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .promo-input button:hover {
-            transform: scale(1.05);
-            box-shadow: 0 5px 20px rgba(16, 163, 127, 0.4);
-        }
-
         .pricing-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -270,15 +223,6 @@
             <p>Flexible pricing that grows with your needs</p>
         </div>
 
-        <!-- Promo Code Section -->
-        <div class="promo-section">
-            <h2>🎟️ Have a Promo Code?</h2>
-            <div class="promo-input">
-                <input type="text" id="promoCode" placeholder="ENTER CODE (E.G., MASTER2024)" />
-                <button onclick="applyPromo()">Apply Code</button>
-            </div>
-        </div>
-
         <!-- Pricing Cards -->
         <div class="pricing-grid">
             
@@ -399,39 +343,8 @@
     </div>
 
     <script>
-        function applyPromo() {
-            const code = document.getElementById('promoCode').value.trim();
-            if (!code) {
-                alert('Please enter a promo code');
-                return;
-            }
-
-            fetch('/api/redeem-promo-code', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ code: code })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert(data.message);
-                    window.location.href = '/dashboard'; // Redirect to dashboard
-                } else {
-                    alert(data.error || 'Invalid promo code');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Failed to validate promo code');
-            });
-        }
-
-        // Allow enter key to submit promo code
-        document.getElementById('promoCode').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                applyPromo();
-            }
-        });
+        // Pricing page script - no promo code functionality
+        // Promo codes can be redeemed on the Settings page
     </script>
 </body>
 </html>

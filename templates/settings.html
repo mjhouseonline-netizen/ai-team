@@ -53,6 +53,9 @@
             color: #10a37f;
             font-size: 2.5em;
             margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
         }
 
         .section {
@@ -77,17 +80,21 @@
             display: block;
             font-weight: 600;
             margin-bottom: 8px;
+            color: #374151;
         }
 
-        .form-group input {
+        .form-group input,
+        .form-group select {
             width: 100%;
             padding: 12px;
             border: 2px solid #e5e7eb;
             border-radius: 8px;
             font-size: 1em;
+            transition: border-color 0.3s;
         }
 
-        .form-group input:focus {
+        .form-group input:focus,
+        .form-group select:focus {
             outline: none;
             border-color: #10a37f;
         }
@@ -101,11 +108,21 @@
             font-weight: 600;
             cursor: pointer;
             font-size: 1em;
+            transition: all 0.3s;
         }
 
         .btn:hover {
             background: #0d8c6f !important;
             transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(16, 163, 127, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6b7280 !important;
+        }
+
+        .btn-secondary:hover {
+            background: #4b5563 !important;
         }
 
         .subscription-card {
@@ -122,6 +139,11 @@
             margin-bottom: 10px;
         }
 
+        .subscription-card p {
+            opacity: 0.9;
+            margin-bottom: 15px;
+        }
+
         .upgrade-btn {
             background: white !important;
             color: #10a37f !important;
@@ -130,6 +152,24 @@
             text-decoration: none;
             display: inline-block;
             font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .upgrade-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .promo-section {
+            background: #f9fafb;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .promo-section h3 {
+            color: #374151;
+            margin-bottom: 15px;
+            font-size: 1.2em;
         }
 
         .promo-input {
@@ -140,6 +180,93 @@
         .promo-input input {
             flex: 1;
         }
+
+        .setting-item {
+            padding: 15px 0;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+
+        .setting-item strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .setting-item p {
+            color: #6b7280;
+            font-size: 0.9em;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #10a37f;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .danger-zone {
+            border: 2px solid #ef4444;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .danger-zone h3 {
+            color: #ef4444;
+            margin-bottom: 15px;
+        }
+
+        .btn-danger {
+            background: #ef4444 !important;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626 !important;
+        }
     </style>
 </head>
 <body>
@@ -148,29 +275,119 @@
 
         <div class="header">
             <h1>⚙️ Settings</h1>
-            <p>Manage your account and preferences</p>
+            <p>Manage your account, subscription, and preferences</p>
         </div>
 
+        <!-- Subscription Section -->
         <div class="section">
-            <h2>💳 Subscription</h2>
+            <h2>💳 Subscription Management</h2>
+            
             <div class="subscription-card">
                 <div class="tier">{{ current_user.subscription_tier|upper }}</div>
-                <p>Current Plan</p>
+                <p>Your current subscription plan</p>
                 <a href="/pricing" class="upgrade-btn">View All Plans</a>
             </div>
-            
-            <h3>🎟️ Promo Code</h3>
-            <div class="promo-input">
-                <input type="text" id="promoCode" placeholder="Enter code">
-                <button class="btn" onclick="redeemPromo()">Redeem</button>
+
+            <!-- Promo Code Section -->
+            <div class="promo-section">
+                <h3>🎟️ Have a Promo Code?</h3>
+                <div class="promo-input">
+                    <input type="text" id="promoCode" placeholder="Enter your promo code">
+                    <button class="btn" onclick="redeemPromo()">Redeem</button>
+                </div>
             </div>
         </div>
 
+        <!-- Account Settings -->
         <div class="section">
-            <h2>👤 Account</h2>
+            <h2>👤 Account Information</h2>
+            
             <div class="form-group">
-                <label>Email</label>
+                <label>Email Address</label>
                 <input type="email" value="{{ current_user.email }}" readonly style="background: #f9fafb;">
+                <small style="color: #6b7280; display: block; margin-top: 5px;">Your email cannot be changed</small>
+            </div>
+
+            <div class="form-group">
+                <label>Display Name (Optional)</label>
+                <input type="text" id="displayName" placeholder="How should we address you?">
+            </div>
+
+            <button class="btn" onclick="saveProfile()">Save Changes</button>
+        </div>
+
+        <!-- Password Change -->
+        <div class="section">
+            <h2>🔒 Security</h2>
+            
+            <div class="form-group">
+                <label>Current Password</label>
+                <input type="password" id="currentPassword" placeholder="Enter your current password">
+            </div>
+
+            <div class="form-group">
+                <label>New Password</label>
+                <input type="password" id="newPassword" placeholder="Enter new password (min 8 characters)">
+            </div>
+
+            <div class="form-group">
+                <label>Confirm New Password</label>
+                <input type="password" id="confirmPassword" placeholder="Confirm your new password">
+            </div>
+
+            <button class="btn" onclick="changePassword()">Update Password</button>
+        </div>
+
+        <!-- Preferences -->
+        <div class="section">
+            <h2>🎨 Preferences</h2>
+            
+            <div class="setting-item">
+                <div>
+                    <strong>Email Notifications</strong>
+                    <p>Receive updates about new features and announcements</p>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="emailNotifs" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="setting-item">
+                <div>
+                    <strong>Voice Input</strong>
+                    <p>Enable voice-to-text for sending messages</p>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="voiceInput" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="setting-item">
+                <div>
+                    <strong>Sound Effects</strong>
+                    <p>Play sounds for message notifications</p>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="soundEffects" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <button class="btn" onclick="savePreferences()">Save Preferences</button>
+            </div>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="section">
+            <h2>⚠️ Danger Zone</h2>
+            
+            <div class="danger-zone">
+                <h3>Delete Account</h3>
+                <p style="margin-bottom: 15px;">Once you delete your account, there is no going back. All your data will be permanently removed.</p>
+                <button class="btn btn-danger" onclick="confirmDelete()">Delete My Account</button>
             </div>
         </div>
     </div>
@@ -178,6 +395,7 @@
     <script>
         function redeemPromo() {
             const code = document.getElementById('promoCode').value.trim();
+            
             if (!code) {
                 alert('Please enter a promo code');
                 return;
@@ -196,8 +414,139 @@
                 } else {
                     alert(data.error || 'Invalid promo code');
                 }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to redeem promo code');
             });
         }
+
+        function saveProfile() {
+            const name = document.getElementById('displayName').value;
+            
+            fetch('/api/update-profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Profile updated successfully!');
+                } else {
+                    alert('Failed to update profile');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to update profile');
+            });
+        }
+
+        function changePassword() {
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                alert('Please fill in all password fields');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                alert('New passwords do not match');
+                return;
+            }
+
+            if (newPassword.length < 8) {
+                alert('Password must be at least 8 characters');
+                return;
+            }
+
+            fetch('/api/change-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    current_password: currentPassword,
+                    new_password: newPassword
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Password changed successfully!');
+                    document.getElementById('currentPassword').value = '';
+                    document.getElementById('newPassword').value = '';
+                    document.getElementById('confirmPassword').value = '';
+                } else {
+                    alert(data.error || 'Failed to change password');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to change password');
+            });
+        }
+
+        function savePreferences() {
+            const preferences = {
+                email_notifications: document.getElementById('emailNotifs').checked,
+                voice_input: document.getElementById('voiceInput').checked,
+                sound_effects: document.getElementById('soundEffects').checked
+            };
+
+            fetch('/api/save-preferences', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(preferences)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Preferences saved successfully!');
+                } else {
+                    alert('Failed to save preferences');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to save preferences');
+            });
+        }
+
+        function confirmDelete() {
+            const confirmed = confirm('Are you ABSOLUTELY sure you want to delete your account? This action cannot be undone.');
+            
+            if (confirmed) {
+                const doubleCheck = confirm('Final warning: This will permanently delete all your data. Continue?');
+                
+                if (doubleCheck) {
+                    fetch('/api/delete-account', {
+                        method: 'DELETE'
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Account deleted. You will now be logged out.');
+                            window.location.href = '/logout';
+                        } else {
+                            alert('Failed to delete account');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Failed to delete account');
+                    });
+                }
+            }
+        }
+
+        // Enter key for promo code
+        document.getElementById('promoCode').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                redeemPromo();
+            }
+        });
     </script>
 </body>
 </html>
