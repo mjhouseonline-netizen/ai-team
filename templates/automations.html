@@ -879,10 +879,29 @@ sendMessage();</code></pre>
         }
 
         // Load data on page load
-        window.addEventListener('load', () => {
-            loadApiKey();
-            loadUsageStats();
-            loadWebhooks();
+        window.addEventListener('load', async () => {
+            try {
+                await loadApiKey();
+            } catch (e) {
+                console.error('Failed to load API key:', e);
+                document.getElementById('apiKey').textContent = 'Click "Regenerate" to create your API key';
+            }
+            
+            try {
+                await loadUsageStats();
+            } catch (e) {
+                console.error('Failed to load usage stats:', e);
+            }
+            
+            try {
+                await loadWebhooks();
+            } catch (e) {
+                console.error('Failed to load webhooks:', e);
+                const webhooksList = document.getElementById('webhooksList');
+                if (webhooksList) {
+                    webhooksList.innerHTML = '<p style="color: #666;">No webhooks configured yet. Click "Add Webhook" to create one.</p>';
+                }
+            }
         });
 
         // Zapier Guide Modal

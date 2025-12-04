@@ -1459,7 +1459,19 @@ def chat():
             
             custom_agent = cursor.fetchone()
             if custom_agent:
-                system_prompt = custom_agent[0]
+                # Wrap custom agent prompt with formatting rules
+                base_prompt = custom_agent[0]
+                system_prompt = f"""{base_prompt}
+
+CRITICAL FORMATTING RULES:
+- Write in natural, conversational paragraphs
+- Do NOT use asterisks (**), hashtags (##), dashes (---), or bullet points (•)
+- Do NOT use markdown formatting of any kind
+- Ask only ONE question per response (if you need to ask questions)
+- Write like you're talking to someone, not writing a document
+- Keep responses clear and focused
+
+Remember: Natural conversation only. No formatting."""
             else:
                 conn.close()
                 return jsonify({'error': f'Agent "{agent}" not found'}), 400

@@ -141,16 +141,24 @@ function autoResize(textarea) {
 
 function toggleImageMode() {
     imageMode = !imageMode;
-    const btn = document.getElementById('imageBtn');
     const input = document.getElementById('messageInput');
     
     if (imageMode) {
-        btn.classList.add('active');
         input.placeholder = '🎨 Describe the image you want to generate...';
+        input.style.borderColor = '#10a37f';
+        input.style.borderWidth = '2px';
+        // Visual feedback
+        const notification = document.createElement('div');
+        notification.textContent = '🎨 Image Mode Active!';
+        notification.style.cssText = 'position:fixed;top:20px;right:20px;background:#10a37f;color:white;padding:12px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:10000;font-weight:600;';
+        document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 2000);
     } else {
-        btn.classList.remove('active');
         input.placeholder = `Message ${currentAgent}...`;
+        input.style.borderColor = '';
+        input.style.borderWidth = '';
     }
+    input.focus();
 }
 
 // ================================================
