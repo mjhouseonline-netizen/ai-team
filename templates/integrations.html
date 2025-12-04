@@ -13,13 +13,13 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(180deg, #a8e6cf 0%, #56ab91 100%);
+            background: linear-gradient(135deg, #3aa76d 0%, #4fb883 100%);
             min-height: 100vh;
             padding: 20px;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
         }
 
@@ -27,65 +27,80 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.9);
+            padding: 20px 30px;
+            background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             border-radius: 20px;
             margin-bottom: 30px;
-            border: 3px solid rgba(76, 175, 80, 0.5);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
         }
 
         .logo {
             font-size: 2em;
-            color: #2e7d32;
+            color: #10a37f;
             font-weight: 700;
         }
 
         .back-btn {
-            padding: 10px 20px;
-            background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
-            color: #fff;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #10a37f 0%, #0d8c6f 100%);
+            color: #ffffff !important;
             border: none;
             border-radius: 10px;
             cursor: pointer;
             font-weight: 600;
             text-decoration: none;
             display: inline-block;
+            transition: all 0.3s;
+        }
+
+        .back-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(16, 163, 127, 0.4);
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 40px;
         }
 
         h1 {
-            color: #1b5e20;
+            color: #ffffff;
+            font-size: 2.5em;
             margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
 
         .subtitle {
-            color: #2e7d32;
-            margin-bottom: 30px;
+            color: rgba(255,255,255,0.9);
+            font-size: 1.2em;
         }
 
         .integrations-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 25px;
             margin-bottom: 30px;
         }
 
         .integration-card {
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.95);
             padding: 30px;
             border-radius: 20px;
-            border: 3px solid rgba(76, 175, 80, 0.3);
+            border: 2px solid rgba(255,255,255,0.5);
             transition: all 0.3s;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
         }
 
         .integration-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(76, 175, 80, 0.3);
+            box-shadow: 0 10px 30px rgba(16, 163, 127, 0.3);
+            border-color: #10a37f;
         }
 
         .integration-card.connected {
-            border-color: #4caf50;
-            background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(255, 255, 255, 0.9) 100%);
+            border-color: #10a37f;
+            background: linear-gradient(135deg, rgba(16, 163, 127, 0.1) 0%, rgba(255, 255, 255, 0.95) 100%);
         }
 
         .integration-header {
@@ -100,14 +115,14 @@
         }
 
         .status-badge {
-            padding: 5px 15px;
+            padding: 6px 16px;
             border-radius: 20px;
             font-size: 0.85em;
             font-weight: 600;
         }
 
         .status-badge.connected {
-            background: #4caf50;
+            background: #10a37f;
             color: white;
         }
 
@@ -117,16 +132,16 @@
         }
 
         .integration-name {
-            font-size: 1.5em;
-            color: #1b5e20;
+            font-size: 1.6em;
+            color: #10a37f;
             margin-bottom: 10px;
             font-weight: 700;
         }
 
         .integration-desc {
-            color: #2e7d32;
+            color: #374151;
             margin-bottom: 20px;
-            line-height: 1.5;
+            line-height: 1.6;
         }
 
         .form-group {
@@ -135,22 +150,24 @@
 
         .form-group label {
             display: block;
-            color: #2e7d32;
+            color: #10a37f;
             font-weight: 600;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
         }
 
         .form-group input {
             width: 100%;
             padding: 12px;
-            border: 2px solid rgba(76, 175, 80, 0.3);
+            border: 2px solid #e5e7eb;
             border-radius: 10px;
             font-size: 1em;
+            transition: all 0.3s;
         }
 
         .form-group input:focus {
             outline: none;
-            border-color: #4caf50;
+            border-color: #10a37f;
+            box-shadow: 0 0 0 3px rgba(16, 163, 127, 0.1);
         }
 
         .btn {
@@ -164,18 +181,18 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
-            color: white;
+            background: linear-gradient(135deg, #10a37f 0%, #0d8c6f 100%);
+            color: #ffffff !important;
         }
 
         .btn-primary:hover {
             transform: scale(1.05);
-            box-shadow: 0 5px 20px rgba(76, 175, 80, 0.4);
+            box-shadow: 0 5px 20px rgba(16, 163, 127, 0.4);
         }
 
         .btn-danger {
             background: linear-gradient(135deg, #f44336 0%, #c62828 100%);
-            color: white;
+            color: #ffffff !important;
         }
 
         .btn-danger:hover {
@@ -199,26 +216,28 @@
         }
 
         .success-message {
-            background: #4caf50;
+            background: #10a37f;
             color: white;
-            padding: 15px;
+            padding: 15px 20px;
             border-radius: 10px;
             margin-bottom: 20px;
             display: none;
+            box-shadow: 0 5px 20px rgba(16, 163, 127, 0.3);
         }
 
         .error-message {
             background: #f44336;
             color: white;
-            padding: 15px;
+            padding: 15px 20px;
             border-radius: 10px;
             margin-bottom: 20px;
             display: none;
+            box-shadow: 0 5px 20px rgba(244, 67, 54, 0.3);
         }
 
         .help-text {
             font-size: 0.85em;
-            color: #666;
+            color: #6b7280;
             margin-top: 5px;
         }
 
@@ -229,14 +248,42 @@
 
         .feature-list li {
             padding: 5px 0;
-            color: #2e7d32;
+            color: #374151;
         }
 
         .feature-list li::before {
             content: "✓ ";
-            color: #4caf50;
+            color: #10a37f;
             font-weight: bold;
             margin-right: 8px;
+        }
+
+        .category-header {
+            color: #ffffff;
+            font-size: 1.8em;
+            margin: 40px 0 20px 0;
+            font-weight: 700;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .category-desc {
+            color: rgba(255,255,255,0.9);
+            margin-bottom: 25px;
+            font-size: 1.1em;
+        }
+
+        @media (max-width: 768px) {
+            .integrations-grid {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            .category-header {
+                font-size: 1.5em;
+            }
         }
     </style>
 </head>
@@ -253,10 +300,15 @@
         <div class="error-message" id="errorMessage"></div>
 
         <!-- Page Header -->
-        <h1>Connect Your Services</h1>
-        <p class="subtitle">Connect your AI agents to powerful third-party services</p>
+        <div class="page-header">
+            <h1>🌟 Connect Your Services</h1>
+            <p class="subtitle">Supercharge your AI agents with powerful third-party integrations</p>
+        </div>
 
-        <!-- Integrations Grid -->
+        <!-- AI SERVICES -->
+        <h2 class="category-header">🤖 AI Services</h2>
+        <p class="category-desc">Connect advanced AI models for enhanced capabilities</p>
+        
         <div class="integrations-grid">
             
             <!-- Claude AI -->
@@ -270,9 +322,9 @@
                     Anthropic's advanced AI assistant with superior reasoning and coding abilities.
                 </div>
                 <ul class="feature-list">
-                    <li>Advanced reasoning</li>
-                    <li>Long context support</li>
-                    <li>Coding expertise</li>
+                    <li>Advanced reasoning capabilities</li>
+                    <li>Long context support (200K+ tokens)</li>
+                    <li>Expert coding assistance</li>
                 </ul>
                 
                 <div class="form-group">
@@ -295,12 +347,12 @@
                 </div>
                 <div class="integration-name">OpenAI</div>
                 <div class="integration-desc">
-                    Access ChatGPT for conversations and DALL-E for image generation.
+                    Access ChatGPT for conversations and DALL-E for AI image generation.
                 </div>
                 <ul class="feature-list">
-                    <li>ChatGPT conversation</li>
+                    <li>ChatGPT conversation (GPT-4)</li>
                     <li>DALL-E image generation</li>
-                    <li>GPT-4 capabilities</li>
+                    <li>Advanced AI capabilities</li>
                 </ul>
                 
                 <div class="form-group">
@@ -315,6 +367,50 @@
                 </div>
             </div>
 
+        </div>
+
+        <!-- PRODUCTIVITY TOOLS -->
+        <h2 class="category-header">📝 Productivity Tools</h2>
+        <p class="category-desc">Connect your workspace and note-taking apps</p>
+        
+        <div class="integrations-grid">
+
+            <!-- Notion -->
+            <div class="integration-card" id="card-notion">
+                <div class="integration-header">
+                    <div class="integration-icon">📋</div>
+                    <div class="status-badge disconnected" id="status-notion">Disconnected</div>
+                </div>
+                <div class="integration-name">Notion</div>
+                <div class="integration-desc">
+                    Connect your Notion workspace to create pages, databases, and manage content.
+                </div>
+                <ul class="feature-list">
+                    <li>Create and update pages</li>
+                    <li>Manage databases</li>
+                    <li>Sync your workspace</li>
+                </ul>
+                
+                <div class="form-group">
+                    <label for="notion-token">Notion Integration Token</label>
+                    <input type="password" id="notion-token" placeholder="secret_...">
+                    <div class="help-text">Get your token at notion.so/my-integrations</div>
+                </div>
+                
+                <div class="buttons">
+                    <button class="btn btn-primary" onclick="saveIntegration('notion')">Connect</button>
+                    <button class="btn btn-danger hidden" id="disconnect-notion" onclick="disconnectIntegration('notion')">Disconnect</button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- SOCIAL MEDIA -->
+        <h2 class="category-header">📱 Social Media</h2>
+        <p class="category-desc">Manage your social media presence across all platforms</p>
+        
+        <div class="integrations-grid">
+
             <!-- Facebook -->
             <div class="integration-card" id="card-facebook">
                 <div class="integration-header">
@@ -323,12 +419,12 @@
                 </div>
                 <div class="integration-name">Facebook</div>
                 <div class="integration-desc">
-                    Post updates, read posts, and manage your Facebook presence.
+                    Post updates, read posts, and manage your Facebook presence with AI.
                 </div>
                 <ul class="feature-list">
-                    <li>Post updates</li>
-                    <li>Read feed</li>
-                    <li>Manage comments</li>
+                    <li>Post updates automatically</li>
+                    <li>Read and analyze feed</li>
+                    <li>Manage comments and engagement</li>
                 </ul>
                 
                 <div class="form-group">
@@ -351,12 +447,12 @@
                 </div>
                 <div class="integration-name">Instagram</div>
                 <div class="integration-desc">
-                    Post photos, read comments, and grow your Instagram presence.
+                    Post photos, manage captions, and grow your Instagram presence with AI.
                 </div>
                 <ul class="feature-list">
-                    <li>Post photos</li>
-                    <li>Add captions</li>
-                    <li>View analytics</li>
+                    <li>Post photos with AI captions</li>
+                    <li>Schedule content</li>
+                    <li>View analytics and engagement</li>
                 </ul>
                 
                 <div class="form-group">
@@ -368,6 +464,118 @@
                 <div class="buttons">
                     <button class="btn btn-primary" onclick="saveIntegration('instagram')">Connect</button>
                     <button class="btn btn-danger hidden" id="disconnect-instagram" onclick="disconnectIntegration('instagram')">Disconnect</button>
+                </div>
+            </div>
+
+            <!-- Twitter/X -->
+            <div class="integration-card" id="card-twitter">
+                <div class="integration-header">
+                    <div class="integration-icon">🐦</div>
+                    <div class="status-badge disconnected" id="status-twitter">Disconnected</div>
+                </div>
+                <div class="integration-name">Twitter / X</div>
+                <div class="integration-desc">
+                    Post tweets, engage with followers, and grow your X presence with AI.
+                </div>
+                <ul class="feature-list">
+                    <li>Post tweets and threads</li>
+                    <li>Reply to mentions</li>
+                    <li>Analyze engagement</li>
+                </ul>
+                
+                <div class="form-group">
+                    <label for="twitter-token">Twitter API Bearer Token</label>
+                    <input type="password" id="twitter-token" placeholder="AAAA...">
+                    <div class="help-text">Get token from developer.twitter.com</div>
+                </div>
+                
+                <div class="buttons">
+                    <button class="btn btn-primary" onclick="saveIntegration('twitter')">Connect</button>
+                    <button class="btn btn-danger hidden" id="disconnect-twitter" onclick="disconnectIntegration('twitter')">Disconnect</button>
+                </div>
+            </div>
+
+            <!-- LinkedIn -->
+            <div class="integration-card" id="card-linkedin">
+                <div class="integration-header">
+                    <div class="integration-icon">💼</div>
+                    <div class="status-badge disconnected" id="status-linkedin">Disconnected</div>
+                </div>
+                <div class="integration-name">LinkedIn</div>
+                <div class="integration-desc">
+                    Share professional content and build your LinkedIn network with AI assistance.
+                </div>
+                <ul class="feature-list">
+                    <li>Post professional content</li>
+                    <li>Generate thought leadership</li>
+                    <li>Network intelligently</li>
+                </ul>
+                
+                <div class="form-group">
+                    <label for="linkedin-token">LinkedIn Access Token</label>
+                    <input type="password" id="linkedin-token" placeholder="AQ...">
+                    <div class="help-text">Get token from linkedin.com/developers</div>
+                </div>
+                
+                <div class="buttons">
+                    <button class="btn btn-primary" onclick="saveIntegration('linkedin')">Connect</button>
+                    <button class="btn btn-danger hidden" id="disconnect-linkedin" onclick="disconnectIntegration('linkedin')">Disconnect</button>
+                </div>
+            </div>
+
+            <!-- TikTok -->
+            <div class="integration-card" id="card-tiktok">
+                <div class="integration-header">
+                    <div class="integration-icon">🎵</div>
+                    <div class="status-badge disconnected" id="status-tiktok">Disconnected</div>
+                </div>
+                <div class="integration-name">TikTok</div>
+                <div class="integration-desc">
+                    Create viral content and manage your TikTok presence with AI creativity.
+                </div>
+                <ul class="feature-list">
+                    <li>Post video content</li>
+                    <li>Generate creative captions</li>
+                    <li>Trend analysis</li>
+                </ul>
+                
+                <div class="form-group">
+                    <label for="tiktok-token">TikTok Access Token</label>
+                    <input type="password" id="tiktok-token" placeholder="act...">
+                    <div class="help-text">Get token from developers.tiktok.com</div>
+                </div>
+                
+                <div class="buttons">
+                    <button class="btn btn-primary" onclick="saveIntegration('tiktok')">Connect</button>
+                    <button class="btn btn-danger hidden" id="disconnect-tiktok" onclick="disconnectIntegration('tiktok')">Disconnect</button>
+                </div>
+            </div>
+
+            <!-- YouTube -->
+            <div class="integration-card" id="card-youtube">
+                <div class="integration-header">
+                    <div class="integration-icon">🎥</div>
+                    <div class="status-badge disconnected" id="status-youtube">Disconnected</div>
+                </div>
+                <div class="integration-name">YouTube</div>
+                <div class="integration-desc">
+                    Upload videos, manage your channel, and grow your YouTube presence with AI.
+                </div>
+                <ul class="feature-list">
+                    <li>Upload and manage videos</li>
+                    <li>Generate descriptions & tags</li>
+                    <li>Analyze performance</li>
+                </ul>
+                
+                <div class="form-group">
+                    <label for="youtube-token">YouTube API Key</label>
+                    <input type="password" id="youtube-token" placeholder="AIza...">
+                    <div class="help-text">Get key from console.cloud.google.com</div>
+                </div>
+                
+                <div class="buttons">
+                    <button class="btn btn-primary" onclick="saveIntegration('youtube')">Connect</button>
+                    <button class="btn btn-danger hidden" id="disconnect-youtube" onclick="disconnectIntegration('youtube')">Disconnect</button>
                 </div>
             </div>
 
@@ -400,19 +608,31 @@
             let accessToken = null;
             
             // Get the appropriate credential
-            if (type === 'claude') {
-                apiKey = document.getElementById('claude-key').value;
-            } else if (type === 'openai') {
-                apiKey = document.getElementById('openai-key').value;
-            } else if (type === 'facebook') {
-                accessToken = document.getElementById('facebook-token').value;
-            } else if (type === 'instagram') {
-                accessToken = document.getElementById('instagram-token').value;
-            }
+            const inputMapping = {
+                'claude': 'claude-key',
+                'openai': 'openai-key',
+                'facebook': 'facebook-token',
+                'instagram': 'instagram-token',
+                'twitter': 'twitter-token',
+                'linkedin': 'linkedin-token',
+                'tiktok': 'tiktok-token',
+                'youtube': 'youtube-token',
+                'notion': 'notion-token'
+            };
             
-            if (!apiKey && !accessToken) {
+            const inputId = inputMapping[type];
+            const inputElement = document.getElementById(inputId);
+            
+            if (!inputElement || !inputElement.value) {
                 showError('Please enter your credentials');
                 return;
+            }
+            
+            // Determine if it's an API key or access token
+            if (type === 'claude' || type === 'openai' || type === 'youtube') {
+                apiKey = inputElement.value;
+            } else {
+                accessToken = inputElement.value;
             }
             
             try {
@@ -433,11 +653,7 @@
                     updateIntegrationUI(type, true);
                     
                     // Clear the input field
-                    if (apiKey) {
-                        document.getElementById(`${type}-key`).value = '';
-                    } else {
-                        document.getElementById(`${type}-token`).value = '';
-                    }
+                    inputElement.value = '';
                 } else {
                     showError(data.error || 'Failed to connect');
                 }
@@ -450,8 +666,10 @@
             if (!confirm(`Disconnect ${capitalize(type)}?`)) return;
             
             try {
-                const response = await fetch(`/api/integrations/delete/${type}`, {
-                    method: 'DELETE'
+                const response = await fetch('/api/integrations/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ integration_type: type })
                 });
                 
                 const data = await response.json();
@@ -477,31 +695,39 @@
                 status.textContent = 'Connected';
                 status.classList.remove('disconnected');
                 status.classList.add('connected');
-                disconnectBtn.classList.remove('hidden');
+                if (disconnectBtn) disconnectBtn.classList.remove('hidden');
             } else {
                 card.classList.remove('connected');
                 status.textContent = 'Disconnected';
                 status.classList.remove('connected');
                 status.classList.add('disconnected');
-                disconnectBtn.classList.add('hidden');
+                if (disconnectBtn) disconnectBtn.classList.add('hidden');
             }
         }
 
         function showSuccess(message) {
-            const el = document.getElementById('successMessage');
-            el.textContent = message;
-            el.style.display = 'block';
-            setTimeout(() => el.style.display = 'none', 3000);
+            const successMsg = document.getElementById('successMessage');
+            successMsg.textContent = message;
+            successMsg.style.display = 'block';
+            setTimeout(() => {
+                successMsg.style.display = 'none';
+            }, 5000);
         }
 
         function showError(message) {
-            const el = document.getElementById('errorMessage');
-            el.textContent = message;
-            el.style.display = 'block';
-            setTimeout(() => el.style.display = 'none', 3000);
+            const errorMsg = document.getElementById('errorMessage');
+            errorMsg.textContent = message;
+            errorMsg.style.display = 'block';
+            setTimeout(() => {
+                errorMsg.style.display = 'none';
+            }, 5000);
         }
 
         function capitalize(str) {
+            if (str === 'openai') return 'OpenAI';
+            if (str === 'youtube') return 'YouTube';
+            if (str === 'linkedin') return 'LinkedIn';
+            if (str === 'tiktok') return 'TikTok';
             return str.charAt(0).toUpperCase() + str.slice(1);
         }
     </script>
