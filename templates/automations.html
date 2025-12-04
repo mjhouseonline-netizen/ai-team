@@ -116,7 +116,7 @@
 
         .btn-primary {
             background: linear-gradient(135deg, #10a37f, #0d8c6f);
-            color: #ffffff;
+            color: #ffffff !important;
         }
 
         .btn-primary:hover {
@@ -127,7 +127,7 @@
 
         .btn-danger {
             background: linear-gradient(135deg, #ef4444, #dc2626);
-            color: white;
+            color: white !important;
         }
 
         .btn-danger:hover {
@@ -582,28 +582,40 @@ sendMessage();</code></pre>
         <!-- Rate Limits -->
         <div class="section">
             <h2>⏱️ Rate Limits & Quotas</h2>
+            <div class="alert alert-warning" style="margin-bottom: 20px;">
+                <strong>🔑 API Access Required:</strong> API and automation features are only available for <strong>Pro ($49/mo)</strong> and <strong>Enterprise ($99/mo)</strong> subscribers. Starter users can upgrade to Pro to unlock API access.
+            </div>
+
             <p>API usage follows your subscription tier limits:</p>
             
             <div class="stats-grid" style="margin-top: 20px;">
                 <div class="stat-card">
                     <div class="stat-label">Free Tier</div>
                     <div class="stat-value" style="font-size: 1.5em;">25/day</div>
-                    <p style="margin-top: 10px; opacity: 0.8;">Same as dashboard limit</p>
+                    <p style="margin-top: 10px; opacity: 0.8; color: #9ca3af;">No API Access</p>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Starter Tier</div>
-                    <div class="stat-value" style="font-size: 1.5em;">100/day</div>
-                    <p style="margin-top: 10px; opacity: 0.8;">$10/month</p>
+                    <div class="stat-value" style="font-size: 1.5em;">60/day</div>
+                    <p style="margin-top: 10px; opacity: 0.8;">$19/month</p>
+                    <p style="margin-top: 5px; opacity: 0.8; color: #9ca3af; font-size: 0.9em;">No API Access</p>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-label">Pro Tier</div>
-                    <div class="stat-value" style="font-size: 1.5em;">500/day</div>
-                    <p style="margin-top: 10px; opacity: 0.8;">$30/month</p>
+                <div class="stat-card" style="border: 2px solid #10a37f;">
+                    <div class="stat-label">Pro Tier ⭐</div>
+                    <div class="stat-value" style="font-size: 1.5em;">300/day</div>
+                    <p style="margin-top: 10px; opacity: 0.8;">$49/month</p>
+                    <p style="margin-top: 5px; color: #10a37f; font-weight: 600; font-size: 0.9em;">✅ API Access</p>
+                </div>
+                <div class="stat-card" style="border: 2px solid #10a37f;">
+                    <div class="stat-label">Enterprise Tier 🚀</div>
+                    <div class="stat-value" style="font-size: 1.5em;">1,000/day</div>
+                    <p style="margin-top: 10px; opacity: 0.8;">$99/month</p>
+                    <p style="margin-top: 5px; color: #10a37f; font-weight: 600; font-size: 0.9em;">✅ Full API Access</p>
                 </div>
             </div>
 
             <div class="alert alert-info" style="margin-top: 20px;">
-                <strong>💡 Note:</strong> API requests count toward your daily message limit. Upgrade your plan for higher limits!
+                <strong>💡 Note:</strong> API requests count toward your daily message limit. Upgrade to Pro or Enterprise for API access and higher limits!
             </div>
         </div>
 

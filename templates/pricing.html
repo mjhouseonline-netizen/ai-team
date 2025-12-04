@@ -23,6 +23,25 @@
             margin: 0 auto;
         }
 
+        .back-to-dashboard {
+            display: inline-block;
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.95) !important;
+            color: #10a37f !important;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .back-to-dashboard:hover {
+            background: white !important;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+
         .header {
             text-align: center;
             margin-bottom: 50px;
@@ -242,6 +261,9 @@
 </head>
 <body>
     <div class="container">
+        <!-- Back to Dashboard Button -->
+        <a href="/dashboard" class="back-to-dashboard">← Back to Dashboard</a>
+
         <!-- Header -->
         <div class="header">
             <h1>Choose Your Plan</h1>
@@ -393,7 +415,7 @@
             .then(data => {
                 if (data.success) {
                     alert(data.message);
-                    window.location.reload();
+                    window.location.href = '/dashboard'; // Redirect to dashboard
                 } else {
                     alert(data.error || 'Invalid promo code');
                 }
