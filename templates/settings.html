@@ -12,406 +12,192 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #3aa76d 0%, #4fb883 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f9fafb;
             min-height: 100vh;
             padding: 20px;
-            color: #fff;
+            color: #374151;
         }
 
         .container {
-            max-width: 1000px;
+            max-width: 900px;
             margin: 0 auto;
         }
 
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 40px;
-        }
-
-        .back-link {
-            display: inline-flex;
-            align-items: center;
-            color: #90EE90;
-            text-decoration: none;
-            font-size: 1.1em;
+        .back-btn {
+            display: inline-block;
             padding: 10px 20px;
-            background: rgba(16, 163, 127, 0.2);
-            border-radius: 10px;
-            transition: all 0.3s ease;
+            background: #10a37f !important;
+            color: white !important;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            transition: all 0.3s;
         }
 
-        .back-link:hover {
-            background: rgba(16, 163, 127, 0.3);
-            color: #90EE90;
-            transform: translateX(-5px);
+        .back-btn:hover {
+            background: #0d8c6f !important;
+            transform: translateY(-2px);
         }
 
-        .title-section {
-            text-align: center;
-            margin-bottom: 50px;
-        }
-
-        .title-section h1 {
-            font-size: 3em;
-            margin-bottom: 15px;
-            background: linear-gradient(45deg, #90EE90, #FFD700);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .title-section p {
-            font-size: 1.2em;
-            opacity: 0.9;
-        }
-
-        .settings-card {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 40px;
-            border: 2px solid rgba(144, 238, 144, 0.3);
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
             margin-bottom: 30px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
         }
 
-        .section-title {
+        .header h1 {
+            color: #10a37f;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .section {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .section h2 {
+            color: #10a37f;
             font-size: 1.8em;
-            margin-bottom: 25px;
-            color: #90EE90;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid rgba(144, 238, 144, 0.2);
+            margin-bottom: 20px;
         }
 
-        .setting-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px;
-            margin-bottom: 15px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            border: 1px solid rgba(144, 238, 144, 0.2);
-            transition: all 0.3s ease;
+        .form-group {
+            margin-bottom: 20px;
         }
 
-        .setting-row:hover {
-            background: rgba(144, 238, 144, 0.1);
-            border-color: #90EE90;
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
         }
 
-        .setting-info {
-            flex: 1;
-        }
-
-        .setting-label {
-            font-size: 1.2em;
-            font-weight: bold;
-            margin-bottom: 5px;
-            color: #90EE90;
-        }
-
-        .setting-description {
-            font-size: 0.95em;
-            opacity: 0.8;
-        }
-
-        .setting-action {
-            margin-left: 20px;
-        }
-
-        .button {
-            padding: 12px 25px;
-            border: none;
-            border-radius: 10px;
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
             font-size: 1em;
-            font-weight: bold;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #10a37f;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            background: #10a37f !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 8px;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
+            font-size: 1em;
+        }
+
+        .btn:hover {
+            background: #0d8c6f !important;
+            transform: translateY(-2px);
+        }
+
+        .subscription-card {
+            background: linear-gradient(135deg, #10a37f 0%, #0d8c6f 100%);
+            padding: 25px;
+            border-radius: 12px;
+            color: white;
+            margin-bottom: 20px;
+        }
+
+        .subscription-card .tier {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .upgrade-btn {
+            background: white !important;
+            color: #10a37f !important;
+            padding: 10px 20px;
+            border-radius: 8px;
             text-decoration: none;
             display: inline-block;
-        }
-
-        .button-primary {
-            background: linear-gradient(135deg, #10a37f, #0d8c6f);
-            color: #ffffff;
-        }
-
-        .button-primary:hover {
-            background: linear-gradient(135deg, #0d8c6f, #0a7a5f);
-            color: #ffffff;
-            transform: scale(1.05);
-            box-shadow: 0 5px 20px rgba(16, 163, 127, 0.4);
-        }
-
-        .button-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            color: #ffffff;
-            border: 2px solid #10a37f;
-        }
-
-        .button-secondary:hover {
-            background: rgba(16, 163, 127, 0.2);
-            border-color: #90EE90;
-            color: #ffffff;
-        }
-
-        .button-gold {
-            background: linear-gradient(135deg, #FFD700, #FFA500);
-            color: #ffffff;
-        }
-
-        .button-gold:hover {
-            transform: scale(1.05);
-            box-shadow: 0 5px 20px rgba(255, 215, 0, 0.4);
-            color: #ffffff;
-        }
-
-        .status-badge {
-            padding: 6px 15px;
-            border-radius: 20px;
-            font-size: 0.9em;
-            font-weight: bold;
-        }
-
-        .status-connected {
-            background: rgba(144, 238, 144, 0.3);
-            color: #90EE90;
-            border: 2px solid #90EE90;
-        }
-
-        .status-disconnected {
-            background: rgba(255, 255, 255, 0.1);
-            color: rgba(255, 255, 255, 0.6);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-        }
-
-        .promo-code-form {
-            display: flex;
-            gap: 15px;
-            margin-top: 15px;
+            font-weight: 600;
         }
 
         .promo-input {
+            display: flex;
+            gap: 10px;
+        }
+
+        .promo-input input {
             flex: 1;
-            padding: 15px;
-            border: 2px solid rgba(144, 238, 144, 0.3);
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.05);
-            color: #fff;
-            font-size: 1em;
-        }
-
-        .promo-input:focus {
-            outline: none;
-            border-color: #90EE90;
-            background: rgba(144, 238, 144, 0.1);
-        }
-
-        .message {
-            padding: 15px;
-            border-radius: 10px;
-            margin-top: 15px;
-            font-weight: bold;
-        }
-
-        .message-success {
-            background: rgba(144, 238, 144, 0.2);
-            border: 2px solid #90EE90;
-            color: #90EE90;
-        }
-
-        .message-error {
-            background: rgba(255, 100, 100, 0.2);
-            border: 2px solid #ff6464;
-            color: #ff6464;
-        }
-
-        @media (max-width: 768px) {
-            .setting-row {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 15px;
-            }
-
-            .setting-action {
-                margin-left: 0;
-                width: 100%;
-            }
-
-            .button {
-                width: 100%;
-            }
-
-            .title-section h1 {
-                font-size: 2em;
-            }
-
-            .promo-code-form {
-                flex-direction: column;
-            }
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <a href="/dashboard" class="back-btn">← Back to Dashboard</a>
+
         <div class="header">
-            <a href="/dashboard" class="back-link">← Back to Dashboard</a>
-        </div>
-
-        <div class="title-section">
             <h1>⚙️ Settings</h1>
-            <p>Manage your integrations and preferences</p>
+            <p>Manage your account and preferences</p>
         </div>
 
-        <!-- Subscription Section -->
-        <div class="settings-card">
-            <div class="section-title">💎 Subscription</div>
-            
-            <div class="setting-row">
-                <div class="setting-info">
-                    <div class="setting-label">Current Plan</div>
-                    <div class="setting-description">
-                        {% if user.subscription_tier == 'free' %}
-                            Free - 25 messages per day
-                        {% elif user.subscription_tier == 'freeforlife' %}
-                            Free For Life - Unlimited messages 🎉
-                        {% elif user.subscription_tier == 'starter' %}
-                            Starter - 100 messages per day
-                        {% elif user.subscription_tier == 'pro' %}
-                            Pro - 500 messages per day + API access
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="setting-action">
-                    {% if user.subscription_tier == 'free' %}
-                        <a href="/pricing" class="button button-gold">Upgrade Plan</a>
-                    {% else %}
-                        <a href="/pricing" class="button button-secondary">View Plans</a>
-                    {% endif %}
-                </div>
+        <div class="section">
+            <h2>💳 Subscription</h2>
+            <div class="subscription-card">
+                <div class="tier">{{ current_user.subscription_tier|upper }}</div>
+                <p>Current Plan</p>
+                <a href="/pricing" class="upgrade-btn">View All Plans</a>
             </div>
-
-            <div class="setting-row">
-                <div class="setting-info">
-                    <div class="setting-label">Promo Code</div>
-                    <div class="setting-description">Have a promo code? Redeem it here for special access</div>
-                    <div class="promo-code-form">
-                        <input type="text" id="promo-code" class="promo-input" placeholder="Enter promo code...">
-                        <button onclick="redeemPromoCode()" class="button button-primary">Redeem</button>
-                    </div>
-                    <div id="promo-message"></div>
-                </div>
+            
+            <h3>🎟️ Promo Code</h3>
+            <div class="promo-input">
+                <input type="text" id="promoCode" placeholder="Enter code">
+                <button class="btn" onclick="redeemPromo()">Redeem</button>
             </div>
         </div>
 
-        <!-- Integrations Section -->
-        <div class="settings-card">
-            <div class="section-title">🔗 Integrations</div>
-            
-            <div class="setting-row">
-                <div class="setting-info">
-                    <div class="setting-label">Notion</div>
-                    <div class="setting-description">Connect your Notion workspace to access your notes and databases</div>
-                </div>
-                <div class="setting-action">
-                    <span class="status-badge status-disconnected">Not Connected</span>
-                    <a href="/notion/auth" class="button button-primary" style="margin-left: 10px;">Connect</a>
-                </div>
-            </div>
-
-            <div class="setting-row">
-                <div class="setting-info">
-                    <div class="setting-label">API Access</div>
-                    <div class="setting-description">
-                        {% if user.subscription_tier == 'pro' %}
-                            Generate API keys for automation and integrations
-                        {% else %}
-                            Upgrade to Pro for API access
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="setting-action">
-                    {% if user.subscription_tier == 'pro' %}
-                        <a href="/automations" class="button button-primary">Manage Keys</a>
-                    {% else %}
-                        <a href="/pricing" class="button button-secondary">Upgrade</a>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <!-- Account Section -->
-        <div class="settings-card">
-            <div class="section-title">👤 Account</div>
-            
-            <div class="setting-row">
-                <div class="setting-info">
-                    <div class="setting-label">Profile</div>
-                    <div class="setting-description">View and edit your profile information</div>
-                </div>
-                <div class="setting-action">
-                    <a href="/profile" class="button button-secondary">Edit Profile</a>
-                </div>
-            </div>
-
-            <div class="setting-row">
-                <div class="setting-info">
-                    <div class="setting-label">Sign Out</div>
-                    <div class="setting-description">Log out of your account</div>
-                </div>
-                <div class="setting-action">
-                    <a href="/logout" class="button button-secondary">Sign Out</a>
-                </div>
+        <div class="section">
+            <h2>👤 Account</h2>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" value="{{ current_user.email }}" readonly style="background: #f9fafb;">
             </div>
         </div>
     </div>
 
     <script>
-        async function redeemPromoCode() {
-            const code = document.getElementById('promo-code').value.trim();
-            const messageDiv = document.getElementById('promo-message');
-            
+        function redeemPromo() {
+            const code = document.getElementById('promoCode').value.trim();
             if (!code) {
-                messageDiv.innerHTML = '<div class="message message-error">Please enter a promo code</div>';
+                alert('Please enter a promo code');
                 return;
             }
 
-            try {
-                const response = await fetch('/api/redeem-promo-code', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ code: code })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    messageDiv.innerHTML = `<div class="message message-success">🎉 ${data.message}</div>`;
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 2000);
+            fetch('/api/redeem-promo-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code: code })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    window.location.href = '/dashboard';
                 } else {
-                    messageDiv.innerHTML = `<div class="message message-error">${data.error}</div>`;
+                    alert(data.error || 'Invalid promo code');
                 }
-            } catch (error) {
-                messageDiv.innerHTML = '<div class="message message-error">Error redeeming code. Please try again.</div>';
-            }
+            });
         }
-
-        // Allow enter key to submit promo code
-        document.getElementById('promo-code').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                redeemPromoCode();
-            }
-        });
     </script>
 </body>
 </html>
