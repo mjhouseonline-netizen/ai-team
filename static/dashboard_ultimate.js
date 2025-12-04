@@ -723,6 +723,24 @@ async function viewHistory() {
             return;
         }
         
+        // Group ALL messages by agent (not by date)
+        const agentChats = {};
+        history.forEach(item => {
+            const agent = item.agent;
+            if (!agentChats[agent]) {
+                agentChats[agent] = {
+                    agent: agent,
+                    messages: [],
+                    lastTimestamp: item.timestamp
+                };
+            }
+            agentChats[agent].messages.push(item);
+            // Update last timestamp if this message is more recent
+            if (new Date(item.timestamp) > new Date(agentChats[agent].lastTimestamp)) {
+                agentChats[agent].lastTimestamp = item.timestamp;
+            }
+        });
+        
         // Create history modal
         let historyHTML = '<div class="history-modal-backdrop" onclick="closeHistoryModal()">';
         historyHTML += '<div class="history-modal" onclick="event.stopPropagation()">';
@@ -732,25 +750,53 @@ async function viewHistory() {
         historyHTML += '</div>';
         historyHTML += '<div class="history-content">';
         
-        history.forEach(item => {
-            const timestamp = new Date(item.timestamp).toLocaleString();
+        // Sort agents by most recent activity
+        const sortedAgents = Object.values(agentChats).sort((a, b) => 
+            new Date(b.lastTimestamp) - new Date(a.lastTimestamp)
+        );
+        
+        sortedAgents.forEach((agentChat, index) => {
+            const msgCount = agentChat.messages.length;
+            const firstMsg = agentChat.messages[0];
+            const lastDate = new Date(agentChat.lastTimestamp).toLocaleDateString();
+            const preview = firstMsg.message.substring(0, 80);
+            
+            // Get agent emoji
+            const agentEmojis = {
+                'Luna': '🌙',
+                'Mila': '🐉',
+                'Sage': '🦉',
+                'Ember': '🦁',
+                'Sol': '🐤',
+                'Nova': '🌌',
+                'Theo': '🐰'
+            };
+            const emoji = agentEmojis[agentChat.agent] || '🤖';
+            
             historyHTML += `
-                <div class="history-item">
-                    <div class="history-meta">
-                        <span class="history-agent">${item.agent}</span>
-                        <span class="history-time">${timestamp}</span>
+                <div class="history-item" onclick="loadAgentHistory('${escapeHtml(agentChat.agent)}', ${index})" style="cursor: pointer; transition: all 0.2s;">
+                    <div class="history-meta" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span class="history-agent" style="font-weight: 600; color: #10a37f; font-size: 16px;">
+                            ${emoji} ${escapeHtml(agentChat.agent)}
+                        </span>
+                        <span class="history-count" style="background: #10a37f; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600;">
+                            ${msgCount} messages
+                        </span>
                     </div>
-                    <div class="history-message">
-                        <strong>You:</strong> ${item.message}
+                    <div class="history-time" style="color: #666; font-size: 13px; margin-bottom: 6px;">
+                        Last active: ${lastDate}
                     </div>
-                    <div class="history-response">
-                        <strong>${item.agent}:</strong> ${item.response.substring(0, 200)}${item.response.length > 200 ? '...' : ''}
+                    <div class="history-preview" style="color: #374151; font-size: 14px; line-height: 1.4;">
+                        ${escapeHtml(preview)}${preview.length >= 80 ? '...' : ''}
                     </div>
                 </div>
             `;
         });
         
         historyHTML += '</div></div></div>';
+        
+        // Store agent chats for later access
+        window.agentHistory = sortedAgents;
         
         // Add to page
         document.body.insertAdjacentHTML('beforeend', historyHTML);
@@ -760,6 +806,38 @@ async function viewHistory() {
         alert('Error loading chat history');
     }
     toggleMenu();
+}
+
+function loadAgentHistory(agent, agentIndex) {
+    // Close history modal
+    closeHistoryModal();
+    
+    // Get agent's chat history
+    const agentChat = window.agentHistory[agentIndex];
+    if (!agentChat) return;
+    
+    // Switch to the agent
+    switchAgent(agent);
+    
+    // Clear current chat
+    const container = document.getElementById('chatContainer');
+    container.innerHTML = '';
+    
+    // Load ALL messages from this agent in chronological order
+    agentChat.messages.forEach(msg => {
+        addMessage(msg.message, 'user');
+        addMessage(msg.response, 'assistant');
+    });
+    
+    // Scroll to bottom
+    container.scrollTop = container.scrollHeight;
+    
+    // Show notification
+    const notification = document.createElement('div');
+    notification.textContent = `📜 Loaded ${agentChat.messages.length} messages with ${agent}`;
+    notification.style.cssText = 'position:fixed;top:20px;right:20px;background:#10a37f;color:white;padding:12px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:10000;font-weight:600;';
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 3000);
 }
 
 function closeHistoryModal() {

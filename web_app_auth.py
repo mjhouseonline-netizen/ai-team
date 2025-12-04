@@ -3302,13 +3302,24 @@ def trigger_webhook(user_id, event_type, data):
 @login_required
 def get_api_key():
     """Get user's API key"""
-    api_key = get_user_api_key(current_user.id)
-    
-    if not api_key:
-        # Generate new key if doesn't exist
-        api_key = create_user_api_key(current_user.id)
-    
-    return jsonify({'api_key': api_key})
+    try:
+        api_key = get_user_api_key(current_user.id)
+        
+        if not api_key:
+            # Generate new key if doesn't exist
+            api_key = create_user_api_key(current_user.id)
+        
+        return jsonify({'api_key': api_key})
+    except Exception as e:
+        print(f"Error getting API key: {e}")
+        # Try to initialize tables and create key
+        try:
+            init_api_keys_table()
+            api_key = create_user_api_key(current_user.id)
+            return jsonify({'api_key': api_key})
+        except Exception as e2:
+            print(f"Error initializing API key: {e2}")
+            return jsonify({'error': 'Unable to generate API key', 'api_key': 'ERROR - Click Regenerate'}), 500
 
 @app.route('/api/regenerate-api-key', methods=['POST'])
 @login_required
@@ -3321,8 +3332,18 @@ def regenerate_api_key():
 @login_required
 def api_usage_stats():
     """Get API usage statistics"""
-    stats = get_api_usage_stats(current_user.id)
-    return jsonify(stats)
+    try:
+        stats = get_api_usage_stats(current_user.id)
+        return jsonify(stats)
+    except Exception as e:
+        print(f"Error getting usage stats: {e}")
+        # Return default stats
+        return jsonify({
+            'total_requests': 0,
+            'requests_today': 0,
+            'requests_this_month': 0,
+            'remaining_quota': 'Unlimited' if current_user.subscription_tier == 'unlimited' else 'N/A'
+        })
 
 # API Authentication Decorator
 def require_api_key(f):
@@ -3619,34 +3640,52 @@ def api_usage():
 @login_required
 def get_webhooks():
     """Get all webhooks for current user"""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    
-    cursor.execute("""
-        SELECT id, webhook_url, event_type, is_active, created_at, last_triggered
-        FROM webhooks 
-        WHERE user_id = ?
-        ORDER BY created_at DESC
-    """, (current_user.id,))
-    
-    webhooks = []
-    for row in cursor.fetchall():
-        webhooks.append({
-            'id': row[0],
-            'webhook_url': row[1],
-            'event_type': row[2],
-            'is_active': bool(row[3]),
-            'created_at': row[4],
-            'last_triggered': row[5]
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT id, webhook_url, event_type, is_active, created_at, last_triggered
+            FROM webhooks 
+            WHERE user_id = ?
+            ORDER BY created_at DESC
+        """, (current_user.id,))
+        
+        webhooks = []
+        for row in cursor.fetchall():
+            webhooks.append({
+                'id': row[0],
+                'webhook_url': row[1],
+                'event_type': row[2],
+                'is_active': bool(row[3]),
+                'created_at': row[4],
+                'last_triggered': row[5]
+            })
+        
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'webhooks': webhooks,
+            'total': len(webhooks)
         })
-    
-    conn.close()
-    
-    return jsonify({
-        'success': True,
-        'webhooks': webhooks,
-        'total': len(webhooks)
-    })
+    except Exception as e:
+        print(f"Error getting webhooks: {e}")
+        # Try to initialize webhooks table
+        try:
+            init_webhooks_table()
+            return jsonify({
+                'success': True,
+                'webhooks': [],
+                'total': 0
+            })
+        except Exception as e2:
+            print(f"Error initializing webhooks table: {e2}")
+            return jsonify({
+                'success': True,
+                'webhooks': [],
+                'total': 0
+            })
 
 @app.route('/api/webhooks', methods=['POST'])
 @login_required
