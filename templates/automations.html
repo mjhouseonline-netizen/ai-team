@@ -13,10 +13,10 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1a4d2e 0%, #2d5f3f 100%);
+            background: #f9fafb;
             min-height: 100vh;
             padding: 20px;
-            color: #fff;
+            color: #374151;
         }
 
         .container {
@@ -28,78 +28,80 @@
             text-align: center;
             margin-bottom: 40px;
             padding: 30px;
-            background: rgba(255, 255, 255, 0.1);
+            background: white;
             border-radius: 15px;
-            backdrop-filter: blur(10px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
         }
 
         .header h1 {
             font-size: 3em;
             margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            color: #10a37f;
         }
 
         .header p {
             font-size: 1.2em;
-            opacity: 0.9;
+            color: #6b7280;
         }
 
         .back-btn {
             display: inline-block;
             padding: 12px 24px;
-            background: rgba(144, 238, 144, 0.2);
-            color: #90EE90;
+            background: #10a37f;
+            color: #ffffff;
             text-decoration: none;
             border-radius: 8px;
             margin-bottom: 20px;
-            border: 2px solid rgba(144, 238, 144, 0.4);
+            border: none;
             transition: all 0.3s;
+            font-weight: 600;
         }
 
         .back-btn:hover {
-            background: rgba(144, 238, 144, 0.3);
-            transform: translateX(-5px);
+            background: #0d8c6f;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(16, 163, 127, 0.3);
         }
 
         .section {
-            background: rgba(255, 255, 255, 0.1);
+            background: white;
             padding: 30px;
             border-radius: 15px;
             margin-bottom: 30px;
-            backdrop-filter: blur(10px);
-            border: 2px solid rgba(144, 238, 144, 0.3);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e5e7eb;
         }
 
         .section h2 {
             font-size: 2em;
             margin-bottom: 20px;
-            color: #FFD700;
+            color: #10a37f;
         }
 
         .section h3 {
             font-size: 1.5em;
             margin: 20px 0 15px 0;
-            color: #90EE90;
+            color: #374151;
         }
 
         .api-key-container {
-            background: rgba(0, 0, 0, 0.3);
+            background: #f9fafb;
             padding: 20px;
             border-radius: 10px;
             margin: 20px 0;
-            border: 2px solid rgba(144, 238, 144, 0.5);
+            border: 2px solid #10a37f;
         }
 
         .api-key {
             font-family: 'Courier New', monospace;
             font-size: 1.1em;
-            color: #FFD700;
-            background: rgba(0, 0, 0, 0.5);
+            color: #10a37f;
+            background: white;
             padding: 15px;
             border-radius: 8px;
             margin: 10px 0;
             word-break: break-all;
-            border: 1px solid rgba(255, 215, 0, 0.3);
+            border: 1px solid #e5e7eb;
         }
 
         .btn {
@@ -113,43 +115,44 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #90EE90, #3CB371);
-            color: #1a4d2e;
+            background: linear-gradient(135deg, #10a37f, #0d8c6f);
+            color: #ffffff;
         }
 
         .btn-primary:hover {
+            background: linear-gradient(135deg, #0d8c6f, #0a7a5f);
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(144, 238, 144, 0.4);
+            box-shadow: 0 5px 15px rgba(16, 163, 127, 0.4);
         }
 
         .btn-danger {
-            background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+            background: linear-gradient(135deg, #ef4444, #dc2626);
             color: white;
         }
 
         .btn-danger:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+            box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
         }
 
         .btn-copy {
-            background: rgba(255, 215, 0, 0.2);
-            color: #FFD700;
-            border: 2px solid rgba(255, 215, 0, 0.4);
+            background: #f9fafb;
+            color: #10a37f;
+            border: 2px solid #10a37f;
             margin-left: 10px;
         }
 
         .btn-copy:hover {
-            background: rgba(255, 215, 0, 0.3);
+            background: #f3f4f6;
         }
 
         .code-block {
-            background: #1a1a1a;
+            background: #1f2937;
             padding: 20px;
             border-radius: 10px;
             margin: 15px 0;
             overflow-x: auto;
-            border: 2px solid rgba(144, 238, 144, 0.3);
+            border: 1px solid #e5e7eb;
         }
 
         .code-block pre {
@@ -167,23 +170,31 @@
             display: flex;
             gap: 10px;
             margin-bottom: 20px;
-            border-bottom: 2px solid rgba(144, 238, 144, 0.3);
+            border-bottom: 2px solid #e5e7eb;
             padding-bottom: 10px;
         }
 
         .tab {
             padding: 12px 24px;
-            background: rgba(144, 238, 144, 0.1);
-            border: 2px solid rgba(144, 238, 144, 0.3);
+            background: #f9fafb;
+            border: 2px solid #e5e7eb;
             border-bottom: none;
             border-radius: 8px 8px 0 0;
             cursor: pointer;
             transition: all 0.3s;
+            color: #6b7280;
+            font-weight: 600;
         }
 
         .tab.active {
-            background: rgba(144, 238, 144, 0.3);
-            border-color: rgba(144, 238, 144, 0.6);
+            background: white;
+            border-color: #10a37f;
+            color: #10a37f;
+        }
+
+        .tab:hover {
+            background: white;
+            color: #10a37f;
         }
 
         .tab-content {
@@ -202,23 +213,24 @@
         }
 
         .stat-card {
-            background: rgba(144, 238, 144, 0.1);
+            background: #f9fafb;
             padding: 20px;
             border-radius: 10px;
-            border: 2px solid rgba(144, 238, 144, 0.3);
+            border: 1px solid #e5e7eb;
             text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
 
         .stat-value {
             font-size: 2.5em;
             font-weight: bold;
-            color: #FFD700;
+            color: #10a37f;
             margin-bottom: 5px;
         }
 
         .stat-label {
             font-size: 1em;
-            opacity: 0.9;
+            color: #6b7280;
         }
 
         .integration-grid {
@@ -229,27 +241,28 @@
         }
 
         .integration-card {
-            background: rgba(255, 255, 255, 0.05);
+            background: #f9fafb;
             padding: 25px;
             border-radius: 12px;
-            border: 2px solid rgba(144, 238, 144, 0.3);
+            border: 1px solid #e5e7eb;
             transition: all 0.3s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
 
         .integration-card:hover {
             transform: translateY(-5px);
-            border-color: rgba(144, 238, 144, 0.6);
-            box-shadow: 0 10px 30px rgba(144, 238, 144, 0.2);
+            border-color: #10a37f;
+            box-shadow: 0 10px 30px rgba(16, 163, 127, 0.1);
         }
 
         .integration-card h3 {
-            color: #90EE90;
+            color: #10a37f;
             margin-bottom: 15px;
         }
 
         .integration-card p {
             line-height: 1.6;
-            opacity: 0.9;
+            color: #6b7280;
         }
 
         .example-list {
@@ -259,12 +272,13 @@
 
         .example-list li {
             padding: 10px 0;
-            border-bottom: 1px solid rgba(144, 238, 144, 0.2);
+            border-bottom: 1px solid #e5e7eb;
+            color: #374151;
         }
 
         .example-list li:before {
             content: "→ ";
-            color: #FFD700;
+            color: #10a37f;
             font-weight: bold;
         }
 
@@ -276,21 +290,21 @@
         }
 
         .alert-info {
-            background: rgba(100, 181, 246, 0.2);
-            border-color: #64B5F6;
-            color: #E3F2FD;
+            background: #dbeafe;
+            border-color: #3b82f6;
+            color: #1e40af;
         }
 
         .alert-warning {
-            background: rgba(255, 193, 7, 0.2);
-            border-color: #FFC107;
-            color: #FFF9C4;
+            background: #fef3c7;
+            border-color: #f59e0b;
+            color: #92400e;
         }
 
         .alert-success {
-            background: rgba(76, 175, 80, 0.2);
-            border-color: #4CAF50;
-            color: #C8E6C9;
+            background: #d1fae5;
+            border-color: #10b981;
+            color: #065f46;
         }
 
         @media (max-width: 768px) {
@@ -628,49 +642,49 @@ sendMessage();</code></pre>
     </div>
 
     <!-- Zapier Setup Modal -->
-    <div id="zapierGuideModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 99999; padding: 20px; overflow-y: auto;">
-        <div style="max-width: 900px; margin: 40px auto; background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%); padding: 40px; border-radius: 15px; border: 3px solid #ffd23f;">
+    <div id="zapierGuideModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99999; padding: 20px; overflow-y: auto;">
+        <div style="max-width: 900px; margin: 40px auto; background: white; padding: 40px; border-radius: 15px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-                <h2 style="color: #fff; margin: 0;">⚡ Zapier Integration Guide</h2>
-                <button onclick="closeZapierGuide()" style="background: rgba(255,255,255,0.3); border: 2px solid #fff; color: #fff; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1.2em;">✕</button>
+                <h2 style="color: #10a37f; margin: 0;">⚡ Zapier Integration Guide</h2>
+                <button onclick="closeZapierGuide()" style="background: #f9fafb; border: 2px solid #e5e7eb; color: #374151; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1.2em; font-weight: 600;">✕</button>
             </div>
             
-            <div style="color: #fff; line-height: 1.8;">
-                <div style="background: rgba(255,255,255,0.2); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-                    <h3 style="color: #ffd23f; margin-top: 0;">📋 Quick Setup</h3>
+            <div style="color: #374151; line-height: 1.8;">
+                <div style="background: #f9fafb; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #e5e7eb;">
+                    <h3 style="color: #10a37f; margin-top: 0;">📋 Quick Setup</h3>
                     <ol style="padding-left: 20px;">
                         <li><strong>Copy your API Key</strong> from the section above</li>
                         <li><strong>In Zapier:</strong> Create a new Zap</li>
                         <li><strong>Choose a trigger</strong> (e.g., "New Email in Gmail")</li>
                         <li><strong>Add an action:</strong> Search for "Webhooks by Zapier"</li>
                         <li><strong>Select:</strong> POST request</li>
-                        <li><strong>URL:</strong> <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">https://ai-team.skillsoul.store/api/automate/chat</code></li>
+                        <li><strong>URL:</strong> <code style="background: #1f2937; color: #90EE90; padding: 2px 6px; border-radius: 4px;">https://ai-team.skillsoul.store/api/automate/chat</code></li>
                     </ol>
                 </div>
 
-                <div style="background: rgba(255,255,255,0.2); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-                    <h3 style="color: #ffd23f; margin-top: 0;">⚙️ Request Configuration</h3>
+                <div style="background: #f9fafb; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #e5e7eb;">
+                    <h3 style="color: #10a37f; margin-top: 0;">⚙️ Request Configuration</h3>
                     
                     <p><strong>Headers:</strong></p>
-                    <pre style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; overflow-x: auto;"><code>{
+                    <pre style="background: #1f2937; color: #90EE90; padding: 15px; border-radius: 8px; overflow-x: auto;"><code>{
   "X-API-Key": "YOUR_API_KEY_HERE",
   "Content-Type": "application/json"
 }</code></pre>
 
                     <p style="margin-top: 15px;"><strong>Request Body (JSON):</strong></p>
-                    <pre style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; overflow-x: auto;"><code>{
+                    <pre style="background: #1f2937; color: #90EE90; padding: 15px; border-radius: 8px; overflow-x: auto;"><code>{
   "message": "Analyze this email: {EMAIL_BODY}",
   "agent": "Luna"
 }</code></pre>
                 </div>
 
-                <div style="background: rgba(255,255,255,0.2); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-                    <h3 style="color: #ffd23f; margin-top: 0;">🤖 Available Agents</h3>
+                <div style="background: #f9fafb; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #e5e7eb;">
+                    <h3 style="color: #10a37f; margin-top: 0;">🤖 Available Agents</h3>
                     <p>Choose from: <strong>Luna, Mila, Sage, Ember, Sol, Nova, Theo</strong></p>
                 </div>
 
-                <div style="background: rgba(255,255,255,0.2); padding: 20px; border-radius: 10px;">
-                    <h3 style="color: #ffd23f; margin-top: 0;">💡 Example Zaps</h3>
+                <div style="background: #f9fafb; padding: 20px; border-radius: 10px; border: 1px solid #e5e7eb;">
+                    <h3 style="color: #10a37f; margin-top: 0;">💡 Example Zaps</h3>
                     <ul style="padding-left: 20px;">
                         <li><strong>Gmail → Luna → Google Sheets:</strong> Analyze emails and log insights</li>
                         <li><strong>Typeform → Sage → Slack:</strong> Summarize survey responses</li>
@@ -683,27 +697,27 @@ sendMessage();</code></pre>
     </div>
 
     <!-- Make.com Setup Modal -->
-    <div id="makeGuideModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 99999; padding: 20px; overflow-y: auto;">
-        <div style="max-width: 900px; margin: 40px auto; background: linear-gradient(135deg, #1a4d2e 0%, #2d5f3f 100%); padding: 40px; border-radius: 15px; border: 3px solid #90EE90;">
+    <div id="makeGuideModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99999; padding: 20px; overflow-y: auto;">
+        <div style="max-width: 900px; margin: 40px auto; background: white; padding: 40px; border-radius: 15px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-                <h2 style="color: #FFD700; margin: 0;">🎨 Make.com Integration Guide</h2>
-                <button onclick="closeMakeGuide()" style="background: rgba(255,107,107,0.3); border: 2px solid #ff6b6b; color: #fff; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1.2em;">✕</button>
+                <h2 style="color: #10a37f; margin: 0;">🎨 Make.com Integration Guide</h2>
+                <button onclick="closeMakeGuide()" style="background: #f9fafb; border: 2px solid #e5e7eb; color: #374151; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1.2em; font-weight: 600;">✕</button>
             </div>
 
-            <h3 style="color: #90EE90;">🚀 Quick Setup (3 Steps)</h3>
+            <h3 style="color: #10a37f;">🚀 Quick Setup (3 Steps)</h3>
             
-            <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; margin: 20px 0;">
-                <h4 style="color: #FFD700;">Step 1: Create Scenario in Make.com</h4>
-                <ol style="line-height: 1.8;">
-                    <li>Go to <a href="https://www.make.com" target="_blank" style="color: #90EE90;">Make.com</a></li>
+            <div style="background: #f9fafb; padding: 20px; border-radius: 10px; margin: 20px 0; border: 1px solid #e5e7eb;">
+                <h4 style="color: #10a37f;">Step 1: Create Scenario in Make.com</h4>
+                <ol style="line-height: 1.8; color: #374151;">
+                    <li>Go to <a href="https://www.make.com" target="_blank" style="color: #10a37f; font-weight: 600;">Make.com</a></li>
                     <li>Click "Create a new scenario"</li>
                     <li>Search for "HTTP" module</li>
                     <li>Select "Make a request"</li>
                 </ol>
             </div>
 
-            <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; margin: 20px 0;">
-                <h4 style="color: #FFD700;">Step 2: Configure HTTP Request</h4>
+            <div style="background: #f9fafb; padding: 20px; border-radius: 10px; margin: 20px 0; border: 1px solid #e5e7eb; color: #374151;">
+                <h4 style="color: #10a37f;">Step 2: Configure HTTP Request</h4>
                 <p><strong>URL:</strong></p>
                 <div class="code-block" style="margin: 10px 0;">
                     <pre><code>https://ai-team.skillsoul.store/api/chat</code></pre>
@@ -731,9 +745,9 @@ sendMessage();</code></pre>
                 <p><strong>Parse Response:</strong> ✅ Yes</p>
             </div>
 
-            <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; margin: 20px 0;">
-                <h4 style="color: #FFD700;">Step 3: Test & Activate</h4>
-                <ol style="line-height: 1.8;">
+            <div style="background: #f9fafb; padding: 20px; border-radius: 10px; margin: 20px 0; border: 1px solid #e5e7eb;">
+                <h4 style="color: #10a37f;">Step 3: Test & Activate</h4>
+                <ol style="line-height: 1.8; color: #374151;">
                     <li>Click "Run once" to test</li>
                     <li>Check the response</li>
                     <li>Turn on your scenario</li>
@@ -741,22 +755,22 @@ sendMessage();</code></pre>
                 </ol>
             </div>
 
-            <h3 style="color: #90EE90; margin-top: 30px;">📊 Example Scenarios:</h3>
+            <h3 style="color: #10a37f; margin-top: 30px;">📊 Example Scenarios:</h3>
             
             <div style="display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 20px;">
-                <div style="background: rgba(144,238,144,0.1); padding: 15px; border-radius: 8px; border: 1px solid rgba(144,238,144,0.3);">
-                    <strong>Email → AI Analysis → Spreadsheet</strong>
-                    <p style="margin: 10px 0; opacity: 0.9;">Gmail triggers → Send to Luna → Save analysis to Google Sheets</p>
+                <div style="background: #f9fafb; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb;">
+                    <strong style="color: #374151;">Email → AI Analysis → Spreadsheet</strong>
+                    <p style="margin: 10px 0; color: #6b7280;">Gmail triggers → Send to Luna → Save analysis to Google Sheets</p>
                 </div>
                 
-                <div style="background: rgba(144,238,144,0.1); padding: 15px; border-radius: 8px; border: 1px solid rgba(144,238,144,0.3);">
-                    <strong>Form → Summary → Slack</strong>
-                    <p style="margin: 10px 0; opacity: 0.9;">Typeform submission → Sage summarizes → Post to Slack channel</p>
+                <div style="background: #f9fafb; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb;">
+                    <strong style="color: #374151;">Form → Summary → Slack</strong>
+                    <p style="margin: 10px 0; color: #6b7280;">Typeform submission → Sage summarizes → Post to Slack channel</p>
                 </div>
                 
-                <div style="background: rgba(144,238,144,0.1); padding: 15px; border-radius: 8px; border: 1px solid rgba(144,238,144,0.3);">
-                    <strong>RSS → Content → Social Media</strong>
-                    <p style="margin: 10px 0; opacity: 0.9;">Blog RSS → Sage + Ember → Create posts → Share on Twitter/LinkedIn</p>
+                <div style="background: #f9fafb; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb;">
+                    <strong style="color: #374151;">RSS → Content → Social Media</strong>
+                    <p style="margin: 10px 0; color: #6b7280;">Blog RSS → Sage + Ember → Create posts → Share on Twitter/LinkedIn</p>
                 </div>
             </div>
 
@@ -771,18 +785,18 @@ sendMessage();</code></pre>
     </div>
 
     <!-- Add Webhook Modal -->
-    <div id="addWebhookModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 99999; padding: 20px; overflow-y: auto;">
-        <div style="max-width: 600px; margin: 100px auto; background: linear-gradient(135deg, #1a4d2e 0%, #2d5f3f 100%); padding: 40px; border-radius: 15px; border: 3px solid #90EE90;">
-            <h2 style="color: #FFD700; margin-bottom: 20px;">➕ Add Webhook</h2>
+    <div id="addWebhookModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99999; padding: 20px; overflow-y: auto;">
+        <div style="max-width: 600px; margin: 100px auto; background: white; padding: 40px; border-radius: 15px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+            <h2 style="color: #10a37f; margin-bottom: 20px;">➕ Add Webhook</h2>
             
             <div style="margin: 20px 0;">
-                <label style="display: block; margin-bottom: 10px; font-weight: 600;">Webhook URL:</label>
-                <input type="url" id="webhookUrl" placeholder="https://hook.make.com/..." style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid rgba(144,238,144,0.3); background: rgba(255,255,255,0.1); color: #fff; font-size: 1em;">
+                <label style="display: block; margin-bottom: 10px; font-weight: 600; color: #374151;">Webhook URL:</label>
+                <input type="url" id="webhookUrl" placeholder="https://hook.make.com/..." style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb; background: #f9fafb; color: #374151; font-size: 1em;">
             </div>
             
             <div style="margin: 20px 0;">
-                <label style="display: block; margin-bottom: 10px; font-weight: 600;">Event Type:</label>
-                <select id="eventType" style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid rgba(144,238,144,0.3); background: rgba(255,255,255,0.1); color: #fff; font-size: 1em;">
+                <label style="display: block; margin-bottom: 10px; font-weight: 600; color: #374151;">Event Type:</label>
+                <select id="eventType" style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb; background: #f9fafb; color: #374151; font-size: 1em;">
                     <option value="message.completed">message.completed</option>
                     <option value="image.generated">image.generated</option>
                     <option value="agent.response">agent.response</option>
