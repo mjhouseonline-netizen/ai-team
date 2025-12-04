@@ -13,7 +13,7 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #1a5f3f 0%, #2d8659 100%);
+            background: linear-gradient(135deg, #3aa76d 0%, #4fb883 100%);
             min-height: 100vh;
             padding: 20px;
         }
@@ -43,8 +43,8 @@
 
         .back-btn {
             padding: 10px 20px;
-            background: #90EE90;
-            color: #1a4d2e;
+            background: #10a37f;
+            color: white !important;
             border: none;
             border-radius: 8px;
             cursor: pointer;
@@ -54,7 +54,7 @@
         }
 
         .back-btn:hover {
-            background: #76d876;
+            background: #0d8c6f;
             transform: translateY(-2px);
         }
 
@@ -102,7 +102,7 @@
         .btn {
             padding: 12px 30px;
             background: #10a37f;
-            color: white;
+            color: white !important;
             border: none;
             border-radius: 8px;
             cursor: pointer;
@@ -172,8 +172,8 @@
 
         .copy-btn {
             padding: 5px 15px;
-            background: #90EE90;
-            color: #1a4d2e;
+            background: #10a37f;
+            color: white !important;
             border: none;
             border-radius: 5px;
             cursor: pointer;
@@ -182,7 +182,7 @@
         }
 
         .copy-btn:hover {
-            background: #76d876;
+            background: #0d8c6f;
         }
 
         table {
@@ -264,10 +264,11 @@
                 <div class="form-group">
                     <label for="tier">Tier:</label>
                     <select id="tier" name="tier" required>
-                        <option value="freeforlife">Free For Life (Unlimited)</option>
-                        <option value="pro">Pro ($30/month features)</option>
-                        <option value="starter">Starter ($10/month features)</option>
-                        <option value="free">Free (25 messages/day)</option>
+                        <option value="freeforlife">Free For Life (Unlimited messages)</option>
+                        <option value="enterprise">Enterprise ($99/mo - 1,000 msgs/day)</option>
+                        <option value="pro">Pro ($49/mo - 300 msgs/day)</option>
+                        <option value="starter">Starter ($19/mo - 60 msgs/day)</option>
+                        <option value="free">Free ($0/mo - 25 msgs/day)</option>
                     </select>
                 </div>
 
@@ -278,7 +279,7 @@
 
                 <div class="form-group">
                     <label for="prefix">Prefix (optional):</label>
-                    <input type="text" id="prefix" name="prefix" placeholder="e.g., BETA" maxlength="10">
+                    <input type="text" id="prefix" name="prefix" placeholder="e.g., LAUNCH2024" maxlength="10">
                 </div>
 
                 <button type="submit" class="btn">Generate Codes</button>
@@ -434,10 +435,11 @@
         // Format tier name
         function formatTier(tier) {
             const tiers = {
-                'free': 'Free',
-                'freeforlife': 'Free For Life',
-                'starter': 'Starter',
-                'pro': 'Pro'
+                'free': 'Free (25/day)',
+                'freeforlife': 'Free For Life (Unlimited)',
+                'starter': 'Starter ($19 - 60/day)',
+                'pro': 'Pro ($49 - 300/day)',
+                'enterprise': 'Enterprise ($99 - 1,000/day)'
             };
             return tiers[tier] || tier;
         }

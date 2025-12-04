@@ -62,6 +62,7 @@ STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY')
 STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET')
 STRIPE_STARTER_PRICE_ID = os.environ.get('STRIPE_STARTER_PRICE_ID')
 STRIPE_PRO_PRICE_ID = os.environ.get('STRIPE_PRO_PRICE_ID')
+STRIPE_ENTERPRISE_PRICE_ID = os.environ.get('STRIPE_ENTERPRISE_PRICE_ID', 'price_1SaVi1Fj4r8OeJwWeMQuODE5')  # $99/month Enterprise tier
 
 # File upload configuration
 UPLOAD_FOLDER = 'uploads'
@@ -503,7 +504,8 @@ def pricing():
     return render_template('pricing.html',
                          current_plan=current_user.subscription_tier,
                          starter_price_id=STRIPE_STARTER_PRICE_ID,
-                         pro_price_id=STRIPE_PRO_PRICE_ID)
+                         pro_price_id=STRIPE_PRO_PRICE_ID,
+                         enterprise_price_id=STRIPE_ENTERPRISE_PRICE_ID)
 
 
 @app.route('/create-checkout-session', methods=['POST'])
@@ -518,6 +520,8 @@ def create_checkout_session():
             plan_name = 'starter'
         elif price_id == STRIPE_PRO_PRICE_ID:
             plan_name = 'pro'
+        elif price_id == STRIPE_ENTERPRISE_PRICE_ID:
+            plan_name = 'enterprise'
         else:
             return jsonify({'error': 'Invalid price ID'}), 400
         

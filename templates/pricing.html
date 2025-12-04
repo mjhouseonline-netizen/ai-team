@@ -73,7 +73,7 @@
         .promo-input button {
             padding: 15px 30px;
             background: linear-gradient(135deg, #10a37f 0%, #0d8c6f 100%);
-            color: white;
+            color: white !important;
             border: none;
             border-radius: 10px;
             font-weight: 600;
@@ -178,7 +178,7 @@
             width: 100%;
             padding: 15px 30px;
             background: linear-gradient(135deg, #10a37f 0%, #0d8c6f 100%);
-            color: white;
+            color: white !important;
             border: none;
             border-radius: 12px;
             font-size: 1.1em;
@@ -194,7 +194,7 @@
 
         .select-button.current {
             background: #e5e7eb;
-            color: #6b7280;
+            color: #6b7280 !important;
             cursor: default;
         }
 
@@ -252,7 +252,7 @@
         <div class="promo-section">
             <h2>🎟️ Have a Promo Code?</h2>
             <div class="promo-input">
-                <input type="text" id="promoCode" placeholder="ENTER CODE (E.G., WELCOME2024)" />
+                <input type="text" id="promoCode" placeholder="ENTER CODE (E.G., MASTER2024)" />
                 <button onclick="applyPromo()">Apply Code</button>
             </div>
         </div>
@@ -274,7 +274,11 @@
                     <li>Notion integration</li>
                 </ul>
                 
+                {% if current_plan == 'free' %}
                 <button class="select-button current">Your Current Plan</button>
+                {% else %}
+                <button class="select-button" onclick="window.location.href='/dashboard'">Current: {{ current_plan }}</button>
+                {% endif %}
             </div>
 
             <!-- Starter Plan -->
@@ -293,7 +297,14 @@
                     <li>Priority support</li>
                 </ul>
                 
-                <button class="select-button" onclick="selectPlan('starter')">Select Starter</button>
+                {% if current_plan == 'starter' %}
+                <button class="select-button current">Your Current Plan</button>
+                {% else %}
+                <form action="/create-checkout-session" method="POST">
+                    <input type="hidden" name="price_id" value="{{ starter_price_id }}">
+                    <button type="submit" class="select-button">Select Starter</button>
+                </form>
+                {% endif %}
             </div>
 
             <!-- Pro Plan (Featured) -->
@@ -315,7 +326,14 @@
                     <li>Early access to new features</li>
                 </ul>
                 
-                <button class="select-button" onclick="selectPlan('pro')">Select Pro</button>
+                {% if current_plan == 'pro' %}
+                <button class="select-button current">Your Current Plan</button>
+                {% else %}
+                <form action="/create-checkout-session" method="POST">
+                    <input type="hidden" name="price_id" value="{{ pro_price_id }}">
+                    <button type="submit" class="select-button">Select Pro</button>
+                </form>
+                {% endif %}
             </div>
 
             <!-- Enterprise Plan -->
@@ -339,7 +357,14 @@
                     <li>Early access to all features</li>
                 </ul>
                 
-                <button class="select-button" onclick="selectPlan('enterprise')">Select Enterprise</button>
+                {% if current_plan == 'enterprise' %}
+                <button class="select-button current">Your Current Plan</button>
+                {% else %}
+                <form action="/create-checkout-session" method="POST">
+                    <input type="hidden" name="price_id" value="{{ enterprise_price_id }}">
+                    <button type="submit" class="select-button">Select Enterprise</button>
+                </form>
+                {% endif %}
             </div>
 
         </div>
@@ -359,18 +384,18 @@
                 return;
             }
 
-            fetch('/api/check-promo-code', {
+            fetch('/api/redeem-promo-code', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ code: code })
             })
             .then(response => response.json())
             .then(data => {
-                if (data.valid) {
-                    // Redirect to signup with promo code
-                    window.location.href = `/signup?promo=${code}`;
+                if (data.success) {
+                    alert(data.message);
+                    window.location.reload();
                 } else {
-                    alert(data.message || 'Invalid promo code');
+                    alert(data.error || 'Invalid promo code');
                 }
             })
             .catch(error => {
@@ -379,10 +404,12 @@
             });
         }
 
-        function selectPlan(plan) {
-            // Redirect to Stripe checkout or signup page
-            window.location.href = `/checkout?plan=${plan}`;
-        }
+        // Allow enter key to submit promo code
+        document.getElementById('promoCode').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                applyPromo();
+            }
+        });
     </script>
 </body>
 </html>
