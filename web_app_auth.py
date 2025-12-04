@@ -158,50 +158,110 @@ def load_user(user_id):
 SUBSCRIPTION_TIERS = {
     'free': {
         'name': 'Free',
+        'price': 0,
         'messages_per_day': 25,
         'agents_available': 7,
+        'api_access': False,
         'features': [
             '25 messages per day',
             'Access to all 7 agents',
-            'Basic chat history'
+            'Basic chat history',
+            'File upload & analysis',
+            'Notion integration'
         ]
     },
     'freeforlife': {
         'name': 'Free For Life',
+        'price': 0,
         'messages_per_day': -1,  # Unlimited
         'agents_available': 7,
+        'api_access': False,  # NO API access for promo users
         'features': [
             'Unlimited messages',
             'All 7 AI agents',
             'Full chat history',
-            'Priority support',
-            'Automation API access'
+            'File upload & analysis',
+            'Notion integration',
+            'Priority support'
         ]
     },
     'starter': {
         'name': 'Starter',
-        'price': 19,
-        'messages_per_day': 100,
+        'price': 19,  # Increased from $10
+        'messages_per_day': 60,  # Reduced from 100
         'agents_available': 7,
+        'api_access': False,  # NO API access
         'features': [
-            '100 messages per day',
+            '60 messages per day',
+            'Claude AI access',
             'All 7 AI agents',
-            'Full chat history'
+            'Full chat history',
+            'File upload & analysis',
+            'Notion integration',
+            'Priority support'
         ]
     },
     'pro': {
         'name': 'Pro',
-        'price': 49,
-        'messages_per_day': 500,
+        'price': 49,  # Increased from $30
+        'messages_per_day': 300,  # Reduced from 500
         'agents_available': 7,
+        'api_access': True,  # API access included
         'features': [
-            '500 messages per day',
+            '300 messages per day',
+            'Claude AI access',
             'All 7 AI agents',
             'Unlimited chat history',
-            'Automation API access'
+            'File upload & analysis',
+            'All integrations',
+            'API access & automation',
+            'Priority support',
+            'Early access to new features'
+        ]
+    },
+    'enterprise': {
+        'name': 'Enterprise',
+        'price': 99,  # New tier
+        'messages_per_day': 1000,
+        'agents_available': 7,
+        'api_access': True,
+        'features': [
+            '1,000 messages per day',
+            'Claude AI access',
+            'All 7 AI agents',
+            'Unlimited chat history',
+            'File upload & analysis',
+            'All integrations',
+            'Full API access & automation',
+            'Dedicated support',
+            'Custom agent training',
+            'White-label options',
+            'Early access to all features'
         ]
     }
 }
+
+# ============================================
+# HELPER FUNCTIONS
+# ============================================
+
+def is_paid_user(subscription_tier):
+    """Check if user is on a paid subscription (starter or pro)
+    
+    This prevents free and freeforlife users from using expensive Claude API,
+    saving significant costs. Only starter ($19/mo) and pro ($49/mo) subscribers
+    can access Claude AI models.
+    """
+    return subscription_tier in ['starter', 'pro', 'enterprise']
+
+def has_api_access(subscription_tier):
+    """Check if user has API access
+    
+    API access is a premium feature only available to Pro ($49/mo) and 
+    Enterprise ($99/mo) subscribers. This prevents API abuse and creates
+    a clear upgrade incentive from Starter to Pro.
+    """
+    return subscription_tier in ['pro', 'enterprise']
 
 # ============================================
 # DATABASE INITIALIZATION
@@ -1483,6 +1543,23 @@ def chat():
         tier, messages_today, last_reset = result
         tier_info = SUBSCRIPTION_TIERS.get(tier, SUBSCRIPTION_TIERS['free'])
         daily_limit = tier_info['messages_per_day']
+        
+        # ============================================
+        # BLOCK FREE USERS FROM CLAUDE API (COST SAVINGS)
+        # ============================================
+        # Claude API costs money per request. Only allow paid subscribers
+        # (starter and pro) to use Claude models to prevent API cost overruns
+        # from free and freeforlife promo code users.
+        if model_key in ['claude-sonnet-4.5', 'claude-opus-4', 'claude-haiku']:
+            if not is_paid_user(tier):
+                conn.close()
+                return jsonify({
+                    'error': 'Claude AI models are only available for paid subscribers. Upgrade to Starter ($19/mo) or Pro ($49/mo) to access Claude\'s advanced AI capabilities with superior reasoning and coding abilities.',
+                    'upgrade_required': True,
+                    'current_tier': tier,
+                    'available_tiers': ['starter', 'pro']
+                }), 403  # 403 Forbidden
+        # ============================================
         
         # Reset counter if it's a new day
         if last_reset:
@@ -3523,6 +3600,22 @@ def api_chat():
         result = cursor.fetchone()
         tier = result[0] if result else 'free'
         
+        # ============================================
+        # CHECK API ACCESS (PRO/ENTERPRISE ONLY)
+        # ============================================
+        # API access is a premium feature. Only Pro and Enterprise users
+        # can use the automation API to prevent abuse and ensure sustainability.
+        if not has_api_access(tier):
+            conn.close()
+            return jsonify({
+                'error': 'API access is only available for Pro ($49/mo) and Enterprise ($99/mo) subscribers.',
+                'upgrade_required': True,
+                'current_tier': tier,
+                'required_tiers': ['pro', 'enterprise'],
+                'upgrade_url': '/pricing'
+            }), 403  # 403 Forbidden
+        # ============================================
+        
         # Count today's messages (chat + API)
         cursor.execute("""
             SELECT COUNT(*) FROM chat_history 
@@ -3538,6 +3631,20 @@ def api_chat():
         
         total_messages = chat_messages + api_messages
         daily_limit = SUBSCRIPTION_TIERS[tier]['messages_per_day']
+        
+        # ============================================
+        # BLOCK FREE USERS FROM CLAUDE API (COST SAVINGS)
+        # ============================================
+        # This API endpoint always uses Claude. Block free/freeforlife users.
+        if not is_paid_user(tier):
+            conn.close()
+            return jsonify({
+                'error': 'Claude AI API access is only available for paid subscribers (Starter or Pro plans).',
+                'upgrade_required': True,
+                'current_tier': tier,
+                'available_tiers': ['starter', 'pro']
+            }), 403  # 403 Forbidden
+        # ============================================
         
         if total_messages >= daily_limit:
             conn.close()

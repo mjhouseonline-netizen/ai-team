@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Choose Your Plan - AI Team</title>
+    <title>Pricing - AI Team</title>
     <style>
         * {
             margin: 0;
@@ -12,367 +12,258 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f9fafb;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #3aa76d 0%, #4fb883 100%);
             min-height: 100vh;
-            padding: 20px;
-            color: #374151;
+            padding: 40px 20px;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
         }
 
         .header {
             text-align: center;
             margin-bottom: 50px;
-            padding-top: 40px;
+            color: white;
         }
 
         .header h1 {
             font-size: 3em;
-            margin-bottom: 20px;
-            background: linear-gradient(45deg, #10a37f, #0d8c6f);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            margin-bottom: 15px;
         }
 
         .header p {
             font-size: 1.3em;
             opacity: 0.9;
-            max-width: 600px;
-            margin: 0 auto;
         }
 
-        /* PROMO CODE SECTION - NEW */
         .promo-section {
-            background: white;
-            
-            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.95);
             padding: 30px;
-            margin-bottom: 40px;
-            border: 1px solid #e5e7eb;
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
-            margin-bottom: 40px;
-        }
-
-        .promo-section h3 {
-            font-size: 1.5em;
-            margin-bottom: 20px;
-            color: #10a37f;
+            border-radius: 20px;
             text-align: center;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
 
-        .promo-input-group {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 15px;
+        .promo-section h2 {
+            color: #10a37f;
+            margin-bottom: 20px;
+            font-size: 1.8em;
         }
 
         .promo-input {
+            display: flex;
+            gap: 15px;
+            max-width: 500px;
+            margin: 0 auto;
+            align-items: center;
+        }
+
+        .promo-input input {
             flex: 1;
-            padding: 14px 18px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 12px;
-            font-size: 16px;
-            text-transform: uppercase;
-            background: white;
-            color: #374151;
-            font-weight: 500;
+            padding: 15px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 1em;
         }
 
-        .promo-input::placeholder {
-            color: #9ca3af;
-        }
-
-        .promo-input:focus {
-            outline: none;
-            border-color: #10a37f;
-            background: white;
-        }
-
-        .apply-btn {
-            background: #10a37f;
+        .promo-input button {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #10a37f 0%, #0d8c6f 100%);
             color: white;
             border: none;
-            padding: 14px 32px;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: bold;
+            border-radius: 10px;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
         }
 
-        .apply-btn:hover {
+        .promo-input button:hover {
             transform: scale(1.05);
-            box-shadow: 0 5px 20px rgba(16, 163, 127, 0.3);
-        }
-
-        .apply-btn:disabled {
-            background: #666;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .promo-message {
-            padding: 12px 18px;
-            border-radius: 12px;
-            font-size: 14px;
-            display: none;
-            margin-top: 12px;
-        }
-
-        .promo-message.success {
-            background: rgba(144, 238, 144, 0.2);
-            border: 2px solid #10a37f;
-            color: #10a37f;
-            display: block;
-        }
-
-        .promo-message.error {
-            background: rgba(239, 68, 68, 0.2);
-            border: 2px solid #ef4444;
-            color: #fca5a5;
-            display: block;
+            box-shadow: 0 5px 20px rgba(16, 163, 127, 0.4);
         }
 
         .pricing-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 30px;
-            margin-bottom: 50px;
+            margin-top: 40px;
         }
 
         .pricing-card {
-            background: white;
-            
-            border-radius: 20px;
-            padding: 40px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 25px;
+            padding: 40px 30px;
+            text-align: center;
+            transition: all 0.3s;
             position: relative;
-            border: 1px solid #e5e7eb;
-            transition: all 0.3s ease;
+            border: 3px solid transparent;
         }
 
         .pricing-card:hover {
             transform: translateY(-10px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-            border-color: #10a37f;
+            box-shadow: 0 20px 40px rgba(16, 163, 127, 0.3);
         }
 
         .pricing-card.featured {
             border-color: #10a37f;
-            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.3);
+            transform: scale(1.05);
         }
 
-        .badge {
+        .pricing-card.featured::before {
+            content: 'MOST POPULAR';
             position: absolute;
             top: -15px;
-            right: 20px;
+            left: 50%;
+            transform: translateX(-50%);
             background: #10a37f;
             color: white;
             padding: 8px 20px;
             border-radius: 20px;
-            font-weight: bold;
-            font-size: 0.9em;
+            font-size: 0.85em;
+            font-weight: 700;
         }
 
         .plan-name {
-            font-size: 2em;
-            margin-bottom: 15px;
+            font-size: 1.8em;
             color: #10a37f;
+            font-weight: 700;
+            margin-bottom: 15px;
         }
 
         .plan-price {
             font-size: 3em;
-            font-weight: bold;
+            color: #374151;
+            font-weight: 700;
             margin-bottom: 10px;
         }
 
-        .plan-price.discounted {
-            text-decoration: line-through;
-            opacity: 0.5;
-            font-size: 1.5em;
-        }
-
-        .plan-price-new {
-            font-size: 3em;
-            font-weight: bold;
-            color: #10a37f;
-            margin-bottom: 10px;
-        }
-
-        .plan-price small {
+        .plan-price span {
             font-size: 0.4em;
-            opacity: 0.7;
+            color: #6b7280;
         }
 
         .plan-description {
-            opacity: 0.8;
+            color: #6b7280;
             margin-bottom: 30px;
-            min-height: 50px;
+            font-size: 1em;
         }
 
         .features-list {
             list-style: none;
-            margin-bottom: 30px;
+            margin: 30px 0;
             text-align: left;
         }
 
         .features-list li {
             padding: 12px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: #374151;
             display: flex;
             align-items: center;
+            font-size: 1em;
         }
 
-        .features-list li:before {
+        .features-list li::before {
             content: "✓";
             color: #10a37f;
             font-weight: bold;
-            margin-right: 12px;
             font-size: 1.2em;
+            margin-right: 12px;
         }
 
         .select-button {
             width: 100%;
-            padding: 18px;
-            background: #10a37f;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #10a37f 0%, #0d8c6f 100%);
             color: white;
             border: none;
             border-radius: 12px;
             font-size: 1.1em;
-            font-weight: bold;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.3s;
         }
 
         .select-button:hover {
             transform: scale(1.05);
-            box-shadow: 0 5px 20px rgba(16, 163, 127, 0.3);
+            box-shadow: 0 5px 20px rgba(16, 163, 127, 0.4);
         }
 
-        .select-button.featured {
-            background: linear-gradient(135deg, #10a37f, #FFA500);
+        .select-button.current {
+            background: #e5e7eb;
+            color: #6b7280;
+            cursor: default;
         }
 
-        .select-button:disabled {
-            background: #666;
-            cursor: not-allowed;
+        .select-button.current:hover {
             transform: none;
+            box-shadow: none;
         }
 
-        .current-plan {
-            background: #10a37f;
-            padding: 10px;
-            border-radius: 8px;
-            margin-top: 15px;
-            font-size: 0.9em;
-        }
-
-        .back-link {
+        .api-badge {
             display: inline-block;
-            margin-bottom: 30px;
-            color: #10a37f;
-            text-decoration: none;
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            color: #333;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 700;
+            margin-top: 10px;
+        }
+
+        .comparison-note {
+            text-align: center;
+            color: rgba(255,255,255,0.9);
+            margin-top: 50px;
             font-size: 1.1em;
         }
 
-        .back-link:hover {
-            text-decoration: underline;
-        }
-
-        .faq-section {
-            margin-top: 80px;
-            text-align: center;
-        }
-
-        .faq-section h2 {
-            font-size: 2.5em;
-            margin-bottom: 40px;
-            color: #10a37f;
-        }
-
-        .faq-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 30px;
-            text-align: left;
-        }
-
-        .faq-item {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 25px;
-            border-radius: 15px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .faq-item h3 {
-            color: #10a37f;
-            margin-bottom: 15px;
-            font-size: 1.3em;
-        }
-
-        .faq-item p {
-            opacity: 0.9;
-            line-height: 1.6;
-        }
-
         @media (max-width: 768px) {
-            .header h1 {
-                font-size: 2em;
-            }
-
             .pricing-grid {
                 grid-template-columns: 1fr;
             }
 
-            .faq-grid {
-                grid-template-columns: 1fr;
+            .pricing-card.featured {
+                transform: none;
             }
 
-            .promo-input-group {
-                flex-direction: column;
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .plan-price {
+                font-size: 2.5em;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <a href="/dashboard" class="back-link">← Back to Dashboard</a>
-        
+        <!-- Header -->
         <div class="header">
-            <h1>🦜 Choose Your Plan</h1>
-            <p>Unlock the full power of your AI Team with unlimited access to all 7 specialized agents</p>
+            <h1>Choose Your Plan</h1>
+            <p>Flexible pricing that grows with your needs</p>
         </div>
 
-        <!-- PROMO CODE SECTION - NEW -->
+        <!-- Promo Code Section -->
         <div class="promo-section">
-            <h3>🎟️ Have a Promo Code?</h3>
-            <div class="promo-input-group">
-                <input 
-                    type="text" 
-                    id="promoCodeInput" 
-                    class="promo-input" 
-                    placeholder="Enter code (e.g., WELCOME2024)"
-                    maxlength="50"
-                >
-                <button class="apply-btn" onclick="applyPromoCode()">Apply Code</button>
+            <h2>🎟️ Have a Promo Code?</h2>
+            <div class="promo-input">
+                <input type="text" id="promoCode" placeholder="ENTER CODE (E.G., WELCOME2024)" />
+                <button onclick="applyPromo()">Apply Code</button>
             </div>
-            <div id="promoMessage" class="promo-message"></div>
         </div>
 
+        <!-- Pricing Cards -->
         <div class="pricing-grid">
+            
             <!-- Free Plan -->
             <div class="pricing-card">
                 <div class="plan-name">Free</div>
-                <div class="plan-price" id="freePrice">
-                    $0
-                    <small>/month</small>
-                </div>
+                <div class="plan-price">$0<span>/month</span></div>
                 <div class="plan-description">Perfect for trying out AI Team</div>
                 
                 <ul class="features-list">
@@ -382,323 +273,116 @@
                     <li>Chat history</li>
                     <li>Notion integration</li>
                 </ul>
-
-                {% if current_plan == 'free' %}
-                    <div class="current-plan">✓ Your Current Plan</div>
-                {% else %}
-                    <button class="select-button" disabled>Current Plan Available</button>
-                {% endif %}
+                
+                <button class="select-button current">Your Current Plan</button>
             </div>
 
             <!-- Starter Plan -->
-            <div class="pricing-card" id="starterCard">
+            <div class="pricing-card">
                 <div class="plan-name">Starter</div>
-                <div id="starterPrice">
-                    <div class="plan-price">
-                        $10
-                        <small>/month</small>
-                    </div>
-                </div>
+                <div class="plan-price">$19<span>/month</span></div>
                 <div class="plan-description">For regular users who need more</div>
                 
                 <ul class="features-list">
-                    <li>100 messages per day</li>
+                    <li>60 messages per day</li>
+                    <li><strong>Claude AI access</strong></li>
                     <li>Access to all 7 AI agents</li>
                     <li>File upload & analysis</li>
-                    <li>Chat history</li>
+                    <li>Full chat history</li>
                     <li>Notion integration</li>
                     <li>Priority support</li>
                 </ul>
-
-                {% if current_plan == 'starter' %}
-                    <div class="current-plan">✓ Your Current Plan</div>
-                {% else %}
-                    <button type="button" class="select-button" id="starterBtn" onclick="subscribe('Starter')">Select Starter</button>
-                {% endif %}
+                
+                <button class="select-button" onclick="selectPlan('starter')">Select Starter</button>
             </div>
 
-            <!-- Pro Plan -->
-            <div class="pricing-card featured" id="proCard">
-                <div class="badge">MOST POPULAR</div>
+            <!-- Pro Plan (Featured) -->
+            <div class="pricing-card featured">
                 <div class="plan-name">Pro</div>
-                <div id="proPrice">
-                    <div class="plan-price">
-                        $30
-                        <small>/month</small>
-                    </div>
-                </div>
+                <div class="plan-price">$49<span>/month</span></div>
                 <div class="plan-description">For power users & professionals</div>
+                <div class="api-badge">✨ API ACCESS INCLUDED</div>
                 
                 <ul class="features-list">
-                    <li>500 messages per day</li>
+                    <li>300 messages per day</li>
+                    <li><strong>Claude AI access</strong></li>
                     <li>Access to all 7 AI agents</li>
                     <li>File upload & analysis</li>
-                    <li>Chat history</li>
-                    <li>Notion integration</li>
-                    <li>API access & automation</li>
+                    <li>Unlimited chat history</li>
+                    <li>All integrations</li>
+                    <li><strong>API access & automation</strong></li>
                     <li>Priority support</li>
                     <li>Early access to new features</li>
                 </ul>
-
-                {% if current_plan == 'pro' %}
-                    <div class="current-plan">✓ Your Current Plan</div>
-                {% else %}
-                    <button type="button" class="select-button featured" id="proBtn" onclick="subscribe('Pro')">Select Pro</button>
-                {% endif %}
+                
+                <button class="select-button" onclick="selectPlan('pro')">Select Pro</button>
             </div>
+
+            <!-- Enterprise Plan -->
+            <div class="pricing-card">
+                <div class="plan-name">Enterprise</div>
+                <div class="plan-price">$99<span>/month</span></div>
+                <div class="plan-description">For teams & businesses</div>
+                <div class="api-badge">🚀 FULL API ACCESS</div>
+                
+                <ul class="features-list">
+                    <li>1,000 messages per day</li>
+                    <li><strong>Claude AI access</strong></li>
+                    <li>Access to all 7 AI agents</li>
+                    <li>File upload & analysis</li>
+                    <li>Unlimited chat history</li>
+                    <li>All integrations</li>
+                    <li><strong>Full API access</strong></li>
+                    <li>Dedicated support</li>
+                    <li>Custom agent training</li>
+                    <li>White-label options</li>
+                    <li>Early access to all features</li>
+                </ul>
+                
+                <button class="select-button" onclick="selectPlan('enterprise')">Select Enterprise</button>
+            </div>
+
         </div>
 
-        <!-- FAQ Section -->
-        <div class="faq-section">
-            <h2>Frequently Asked Questions</h2>
-            <div class="faq-grid">
-                <div class="faq-item">
-                    <h3>🔄 Can I change plans?</h3>
-                    <p>Yes! You can upgrade or downgrade anytime. Changes take effect immediately, and we'll prorate the difference.</p>
-                </div>
-
-                <div class="faq-item">
-                    <h3>💳 What payment methods do you accept?</h3>
-                    <p>We accept all major credit cards, debit cards, and digital wallets through our secure Stripe payment processor.</p>
-                </div>
-
-                <div class="faq-item">
-                    <h3>🎟️ Do promo codes work with paid plans?</h3>
-                    <p>Yes! Promo codes can give you free access to Starter or Pro plans. Just enter your code above and click Subscribe!</p>
-                </div>
-
-                <div class="faq-item">
-                    <h3>🔒 Is my data secure?</h3>
-                    <p>Absolutely! We use bank-level encryption, and your data is stored securely. We never share your information with third parties.</p>
-                </div>
-
-                <div class="faq-item">
-                    <h3>🚫 What's your refund policy?</h3>
-                    <p>We offer a 7-day money-back guarantee. If you're not satisfied, contact us for a full refund - no questions asked.</p>
-                </div>
-
-                <div class="faq-item">
-                    <h3>📧 Need help choosing?</h3>
-                    <p>Contact our team at <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="9ae9efeaeaf5e8eedafbf3eefffbf7b4f9f5f7">[email&#160;protected]</a> and we'll help you find the perfect plan for your needs.</p>
-                </div>
-            </div>
+        <!-- Comparison Note -->
+        <div class="comparison-note">
+            <p>All plans include access to our 7 specialized AI agents and core features.</p>
+            <p>Need help choosing? <a href="/contact" style="color: #FFD700;">Contact us</a></p>
         </div>
     </div>
 
-    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
-        let appliedPromoCode = null;
-
-        async function applyPromoCode() {
-            const input = document.getElementById('promoCodeInput');
-            const code = input.value.trim().toUpperCase();
-            const message = document.getElementById('promoMessage');
-            const applyBtn = document.querySelector('.apply-btn');
-
+    <script>
+        function applyPromo() {
+            const code = document.getElementById('promoCode').value.trim();
             if (!code) {
-                showMessage('Please enter a promo code', 'error');
+                alert('Please enter a promo code');
                 return;
             }
 
-            applyBtn.disabled = true;
-            applyBtn.textContent = 'Checking...';
-
-            try {
-                const response = await fetch('/api/check-promo-code', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ code: code })
-                });
-
-                const data = await response.json();
-
-                if (response.ok && data.valid) {
-                    // Check if it's a free-for-life code
-                    if (data.plan === 'freeforlife') {
-                        // Check if user is logged in by trying to apply it
-                        applyBtn.textContent = 'Applying...';
-                        
-                        try {
-                            const applyResponse = await fetch('/api/apply-promo-upgrade', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                credentials: 'include',
-                                body: JSON.stringify({
-                                    code: code,
-                                    plan: 'freeforlife'
-                                })
-                            });
-
-                            const applyData = await applyResponse.json();
-
-                            if (applyResponse.ok) {
-                                // Success! User was logged in
-                                showMessage(`✅ SUCCESS! You now have UNLIMITED FREE access forever! Redirecting...`, 'success');
-                                setTimeout(() => {
-                                    window.location.href = '/dashboard';
-                                }, 2000);
-                                return;
-                            } else if (applyResponse.status === 401) {
-                                // User not logged in - redirect to login with code
-                                showMessage('✅ Valid code! Redirecting to login to activate...', 'success');
-                                // Store code and redirect
-                                localStorage.setItem('pendingPromoCode', code);
-                                setTimeout(() => {
-                                    window.location.href = '/login?promo=' + code;
-                                }, 1500);
-                                return;
-                            } else {
-                                showMessage('Error: ' + (applyData.error || 'Failed to apply code'), 'error');
-                            }
-                        } catch (error) {
-                            // Likely not logged in - redirect to login
-                            showMessage('✅ Valid code! Please login to activate. Redirecting...', 'success');
-                            localStorage.setItem('pendingPromoCode', code);
-                            setTimeout(() => {
-                                window.location.href = '/login?promo=' + code;
-                            }, 1500);
-                            return;
-                        }
-                    } else {
-                        // Regular discount code - store for later
-                        appliedPromoCode = {
-                            code: code,
-                            plan: data.plan
-                        };
-                        
-                        showMessage(`✅ Success! Code "${code}" applied! Click the ${data.plan} plan button to activate.`, 'success');
-                        updatePricing(data.plan);
-                    }
+            fetch('/api/check-promo-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code: code })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.valid) {
+                    // Redirect to signup with promo code
+                    window.location.href = `/signup?promo=${code}`;
                 } else {
-                    showMessage(data.message || 'Invalid or expired promo code', 'error');
-                    appliedPromoCode = null;
+                    alert(data.message || 'Invalid promo code');
                 }
-            } catch (error) {
-                showMessage('Error checking promo code', 'error');
-                appliedPromoCode = null;
-            }
-
-            applyBtn.disabled = false;
-            applyBtn.textContent = 'Apply Code';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to validate promo code');
+            });
         }
 
-        function showMessage(text, type) {
-            const message = document.getElementById('promoMessage');
-            message.textContent = text;
-            message.className = `promo-message ${type}`;
+        function selectPlan(plan) {
+            // Redirect to Stripe checkout or signup page
+            window.location.href = `/checkout?plan=${plan}`;
         }
-
-        function updatePricing(discountedPlan) {
-            // Reset all prices first
-            document.getElementById('starterPrice').innerHTML = `
-                <div class="plan-price">
-                    $10
-                    <small>/month</small>
-                </div>
-            `;
-            document.getElementById('proPrice').innerHTML = `
-                <div class="plan-price">
-                    $30
-                    <small>/month</small>
-                </div>
-            `;
-
-            // Apply discount to specific plan
-            if (discountedPlan === 'Starter') {
-                document.getElementById('starterPrice').innerHTML = `
-                    <div class="plan-price-new">
-                        FREE
-                        <small>/month</small>
-                    </div>
-                    <div class="plan-price discounted">
-                        was $10
-                    </div>
-                `;
-            } else if (discountedPlan === 'Pro') {
-                document.getElementById('proPrice').innerHTML = `
-                    <div class="plan-price-new">
-                        FREE
-                        <small>/month</small>
-                    </div>
-                    <div class="plan-price discounted">
-                        was $30
-                    </div>
-                `;
-            }
-        }
-
-        async function subscribe(plan) {
-            // If promo code is applied for this plan
-            if (appliedPromoCode && appliedPromoCode.plan === plan) {
-                // Apply promo code
-                try {
-                    const response = await fetch('/api/apply-promo-upgrade', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: 'include',
-                        body: JSON.stringify({
-                            code: appliedPromoCode.code,
-                            plan: plan
-                        })
-                    });
-
-                    const data = await response.json();
-
-                    if (response.ok) {
-                        alert(`✅ Success! You now have ${plan} plan for FREE!`);
-                        window.location.href = '/dashboard';
-                    } else {
-                        alert('Error: ' + (data.error || 'Failed to apply promo code'));
-                    }
-                } catch (error) {
-                    alert('Error applying promo code');
-                }
-            } else {
-                // Regular Stripe checkout - use form submission
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '/create-checkout-session';
-                
-                const priceIdInput = document.createElement('input');
-                priceIdInput.type = 'hidden';
-                priceIdInput.name = 'price_id';
-                priceIdInput.value = plan === 'Starter' ? '{{ starter_price_id }}' : '{{ pro_price_id }}';
-                
-                form.appendChild(priceIdInput);
-                document.body.appendChild(form);
-                form.submit();
-            }
-        }
-
-        // Auto-focus promo code input if code in URL
-        document.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            
-            // Check for pending promo code (after login/signup)
-            const pendingCode = localStorage.getItem('pendingPromoCode');
-            if (pendingCode) {
-                // Remove from storage
-                localStorage.removeItem('pendingPromoCode');
-                
-                // Auto-fill and try to apply
-                const promoInput = document.getElementById('promoCodeInput');
-                if (promoInput) {
-                    promoInput.value = pendingCode;
-                    // Wait a moment then auto-click apply
-                    setTimeout(() => {
-                        applyPromoCode();
-                    }, 500);
-                }
-            }
-            // Otherwise check URL params
-            else if (urlParams.has('promo')) {
-                const promoInput = document.getElementById('promoCodeInput');
-                if (promoInput) {
-                    promoInput.value = urlParams.get('promo').toUpperCase();
-                    promoInput.focus();
-                }
-            }
-        });
     </script>
 </body>
 </html>
