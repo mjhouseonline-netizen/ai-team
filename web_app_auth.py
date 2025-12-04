@@ -695,11 +695,74 @@ def handle_invoice_payment_failed(invoice):
         print(f"Error handling payment failure: {str(e)}")
 
 
+@app.route('/automations-test')
+@login_required
+def automations_test():
+    """Test endpoint to diagnose automations issues"""
+    return f"""
+    <html>
+    <head><title>Automations Test</title></head>
+    <body style="font-family: sans-serif; padding: 40px;">
+        <h1>Automations Test Page</h1>
+        <p>If you can see this, the route works!</p>
+        <p><strong>User ID:</strong> {current_user.id}</p>
+        <p><strong>Email:</strong> {current_user.email}</p>
+        <p><strong>Subscription:</strong> {current_user.subscription_tier}</p>
+        <hr>
+        <h2>Testing API Endpoints:</h2>
+        <div id="results"></div>
+        <script>
+            async function testEndpoints() {{
+                const results = document.getElementById('results');
+                
+                // Test API key endpoint
+                try {{
+                    const response = await fetch('/api/get-api-key');
+                    const data = await response.json();
+                    results.innerHTML += '<p>✅ /api/get-api-key: ' + JSON.stringify(data) + '</p>';
+                }} catch (e) {{
+                    results.innerHTML += '<p>❌ /api/get-api-key: ' + e.message + '</p>';
+                }}
+                
+                // Test usage stats
+                try {{
+                    const response = await fetch('/api/usage-stats');
+                    const data = await response.json();
+                    results.innerHTML += '<p>✅ /api/usage-stats: ' + JSON.stringify(data) + '</p>';
+                }} catch (e) {{
+                    results.innerHTML += '<p>❌ /api/usage-stats: ' + e.message + '</p>';
+                }}
+                
+                // Test webhooks
+                try {{
+                    const response = await fetch('/api/webhooks');
+                    const data = await response.json();
+                    results.innerHTML += '<p>✅ /api/webhooks: ' + JSON.stringify(data) + '</p>';
+                }} catch (e) {{
+                    results.innerHTML += '<p>❌ /api/webhooks: ' + e.message + '</p>';
+                }}
+            }}
+            testEndpoints();
+        </script>
+        <hr>
+        <p><a href="/automations">Try loading actual automations page</a></p>
+    </body>
+    </html>
+    """
+
 @app.route('/automations')
 @login_required
 def automations():
     """Automations page"""
-    return render_template('automations.html', user=current_user)
+    try:
+        print(f"DEBUG: Automations page accessed by user {current_user.id}")
+        print(f"DEBUG: User subscription tier: {current_user.subscription_tier}")
+        return render_template('automations.html', user=current_user)
+    except Exception as e:
+        print(f"ERROR: Automations page failed: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return f"Error loading automations page: {str(e)}", 500
 
 @app.route('/admin')
 @login_required
@@ -2347,10 +2410,6 @@ create_master_code()
 # GENERATE PROMO CODES
 # ============================================
 
-def generate_api_key():
-    """Generate a secure API key"""
-    return f"sk-{secrets.token_urlsafe(32)}"
-
 def create_api_key(user_id, name="Default"):
     """Create an API key for a user"""
     conn = sqlite3.connect(DB_PATH)
@@ -3303,30 +3362,93 @@ def trigger_webhook(user_id, event_type, data):
 def get_api_key():
     """Get user's API key"""
     try:
-        api_key = get_user_api_key(current_user.id)
+        print(f"DEBUG: get-api-key called for user {current_user.id}")
         
-        if not api_key:
-            # Generate new key if doesn't exist
-            api_key = create_user_api_key(current_user.id)
+        # Check if api_keys table exists
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='api_keys'")
+        table_exists = cursor.fetchone()
         
-        return jsonify({'api_key': api_key})
-    except Exception as e:
-        print(f"Error getting API key: {e}")
-        # Try to initialize tables and create key
-        try:
+        if not table_exists:
+            print("DEBUG: api_keys table doesn't exist, creating...")
+            conn.close()
             init_api_keys_table()
-            api_key = create_user_api_key(current_user.id)
-            return jsonify({'api_key': api_key})
-        except Exception as e2:
-            print(f"Error initializing API key: {e2}")
-            return jsonify({'error': 'Unable to generate API key', 'api_key': 'ERROR - Click Regenerate'}), 500
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+        
+        # Try to get existing key
+        cursor.execute("SELECT api_key FROM api_keys WHERE user_id = ? AND is_active = 1", (current_user.id,))
+        result = cursor.fetchone()
+        
+        if result:
+            api_key = result[0]
+            print(f"DEBUG: Found existing key for user {current_user.id}")
+        else:
+            # Generate new key
+            print(f"DEBUG: Generating new key for user {current_user.id}")
+            api_key = generate_api_key()
+            cursor.execute("""
+                INSERT INTO api_keys (user_id, api_key, name, is_active)
+                VALUES (?, ?, ?, 1)
+            """, (current_user.id, api_key, "Default API Key"))
+            conn.commit()
+        
+        conn.close()
+        return jsonify({'api_key': api_key}), 200
+        
+    except Exception as e:
+        print(f"ERROR in get-api-key: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        # Return a safe fallback
+        return jsonify({
+            'api_key': 'ERROR - Click Regenerate to create key',
+            'error': str(e)
+        }), 200  # Return 200 so page doesn't crash
 
 @app.route('/api/regenerate-api-key', methods=['POST'])
 @login_required
 def regenerate_api_key():
     """Regenerate user's API key"""
-    api_key = create_user_api_key(current_user.id)
-    return jsonify({'api_key': api_key})
+    try:
+        print(f"DEBUG: Regenerating API key for user {current_user.id}")
+        
+        # Ensure table exists
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='api_keys'")
+        if not cursor.fetchone():
+            conn.close()
+            init_api_keys_table()
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+        
+        # Deactivate old keys
+        cursor.execute("UPDATE api_keys SET is_active = 0 WHERE user_id = ?", (current_user.id,))
+        
+        # Generate new key
+        api_key = generate_api_key()
+        cursor.execute("""
+            INSERT INTO api_keys (user_id, api_key, name, is_active)
+            VALUES (?, ?, ?, 1)
+        """, (current_user.id, api_key, "Default API Key"))
+        
+        conn.commit()
+        conn.close()
+        
+        print(f"DEBUG: New key generated for user {current_user.id}")
+        return jsonify({'api_key': api_key, 'success': True}), 200
+        
+    except Exception as e:
+        print(f"ERROR regenerating API key: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'error': str(e),
+            'api_key': 'ERROR - Try again',
+            'success': False
+        }), 200  # Return 200 to prevent page crash
 
 @app.route('/api/usage-stats')
 @login_required
