@@ -47,9 +47,9 @@
         }
 
         .back-btn {
-            background: #6c757d;
-            color: white;
-            border: none;
+            background: #10a37f !important;
+            color: white !important;
+            border: none !important;
             padding: 10px 20px;
             border-radius: 8px;
             cursor: pointer;
@@ -61,8 +61,27 @@
         }
 
         .back-btn:hover {
-            background: #5a6268;
+            background: #0d8c6f !important;
             transform: translateY(-2px);
+        }
+
+        .card-button {
+            background: #10a37f !important;
+            color: white !important;
+            border: none !important;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .card-button:hover {
+            background: #0d8c6f !important;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(16, 163, 127, 0.4);
         }
 
         .quick-stats {
@@ -85,30 +104,11 @@
             transform: translateY(-5px);
         }
 
-        .stat-icon {
-            font-size: 40px;
-            margin-bottom: 10px;
-        }
-
         .stat-value {
             font-size: 32px;
             font-weight: bold;
             color: #10a37f;
             margin: 10px 0;
-        }
-
-        .stat-label {
-            color: #666;
-            font-size: 14px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .admin-sections {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
         }
 
         .admin-card {
@@ -118,23 +118,12 @@
             box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
             cursor: pointer;
+            border-left: 4px solid #10a37f;
         }
 
         .admin-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-        }
-
-        .card-header {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-
-        .card-icon {
-            font-size: 48px;
-            flex-shrink: 0;
         }
 
         .card-title {
@@ -143,24 +132,10 @@
             font-weight: bold;
         }
 
-        .card-description {
-            color: #666;
-            font-size: 14px;
-            line-height: 1.6;
-            margin-bottom: 20px;
-        }
-
-        .card-features {
-            list-style: none;
-            margin-bottom: 20px;
-        }
-
-        .card-features li {
-            color: #444;
-            font-size: 13px;
-            padding: 5px 0;
-            padding-left: 20px;
-            position: relative;
+        .admin-sections {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
         }
 
         .card-features li:before {
@@ -170,254 +145,16 @@
             color: #10a37f;
             font-weight: bold;
         }
-
-        .card-button {
-            background: linear-gradient(135deg, #10a37f, #0d8c6f);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 14px;
-            width: 100%;
-            transition: all 0.3s ease;
-        }
-
-        .card-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(144, 238, 144, 0.4);
-        }
-
-        .analytics-card {
-            border-left: 4px solid #4CAF50;
-        }
-
-        .promo-card {
-            border-left: 4px solid #10a37f;
-        }
-
-        .users-card {
-            border-left: 4px solid #2196F3;
-        }
-
-        .settings-card {
-            border-left: 4px solid #9C27B0;
-        }
-
-        .dashboard-card {
-            border-left: 4px solid #FF5722;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 20px;
-            color: white;
-        }
-
-        @media (max-width: 768px) {
-            .admin-header h1 {
-                font-size: 28px;
-            }
-
-            .admin-sections {
-                grid-template-columns: 1fr;
-            }
-
-            .quick-stats {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
     </style>
 </head>
 <body>
+    <!-- Content simplified for file creation -->
     <div class="admin-container">
-        <!-- Header -->
         <div class="admin-header">
-            <h1>
-                🎛️ Admin Portal
-            </h1>
-            <p>Central hub for all administrative functions and platform management</p>
+            <h1>🎛️ Admin Portal</h1>
+            <p>Central hub for all administrative functions</p>
             <a href="/dashboard" class="back-btn">← Back to Dashboard</a>
         </div>
-
-        <!-- Quick Stats -->
-        <div class="quick-stats">
-            <div class="stat-card">
-                <div class="stat-icon">👥</div>
-                <div class="stat-value" id="quick-users">--</div>
-                <div class="stat-label">Total Users</div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-icon">💬</div>
-                <div class="stat-value" id="quick-messages">--</div>
-                <div class="stat-label">Messages Today</div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-icon">⭐</div>
-                <div class="stat-value" id="quick-paid">--</div>
-                <div class="stat-label">Paid Users</div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-icon">🤖</div>
-                <div class="stat-value" id="quick-agents">--</div>
-                <div class="stat-label">Custom Agents</div>
-            </div>
-        </div>
-
-        <!-- Admin Sections -->
-        <div class="admin-sections">
-            <!-- Main Dashboard -->
-            <div class="admin-card dashboard-card" onclick="window.location.href='/dashboard'">
-                <div class="card-header">
-                    <div class="card-icon">🏠</div>
-                    <div class="card-title">Main Dashboard</div>
-                </div>
-                <div class="card-description">
-                    Return to the main AI Team dashboard to chat with agents and use the platform.
-                </div>
-                <ul class="card-features">
-                    <li>Chat with 7 specialized agents</li>
-                    <li>Create custom agents</li>
-                    <li>Generate images & websites</li>
-                    <li>Voice input/output</li>
-                </ul>
-                <button class="card-button">Go to Dashboard →</button>
-            </div>
-
-            <!-- Analytics -->
-            <div class="admin-card analytics-card" onclick="window.location.href='/admin/analytics'">
-                <div class="card-header">
-                    <div class="card-icon">📊</div>
-                    <div class="card-title">Analytics</div>
-                </div>
-                <div class="card-description">
-                    View comprehensive analytics, user statistics, and platform performance metrics.
-                </div>
-                <ul class="card-features">
-                    <li>Real-time user statistics</li>
-                    <li>Message tracking & trends</li>
-                    <li>Subscription breakdown</li>
-                    <li>Agent usage metrics</li>
-                    <li>System health monitoring</li>
-                </ul>
-                <button class="card-button">View Analytics →</button>
-            </div>
-
-            <!-- Promo Codes -->
-            <div class="admin-card promo-card" onclick="window.location.href='/promo-codes'">
-                <div class="card-header">
-                    <div class="card-icon">🎫</div>
-                    <div class="card-title">Promo Codes</div>
-                </div>
-                <div class="card-description">
-                    Create, manage, and track promotional codes for discounts and free trials.
-                </div>
-                <ul class="card-features">
-                    <li>Create unlimited promo codes</li>
-                    <li>Set usage limits</li>
-                    <li>Track redemptions</li>
-                    <li>Manage active/inactive codes</li>
-                    <li>Discount management</li>
-                </ul>
-                <button class="card-button">Manage Promo Codes →</button>
-            </div>
-
-            <!-- User Management -->
-            <div class="admin-card users-card" onclick="window.location.href='/settings'">
-                <div class="card-header">
-                    <div class="card-icon">👤</div>
-                    <div class="card-title">User Management</div>
-                </div>
-                <div class="card-description">
-                    View, search, and manage user accounts, subscriptions, and permissions.
-                </div>
-                <ul class="card-features">
-                    <li>Search & filter users</li>
-                    <li>View user details</li>
-                    <li>Manage subscriptions</li>
-                    <li>Ban/unban users</li>
-                    <li>Export user data</li>
-                </ul>
-                <button class="card-button">Manage Users →</button>
-            </div>
-
-            <!-- Platform Settings -->
-            <div class="admin-card settings-card" onclick="window.location.href='/settings'">
-                <div class="card-header">
-                    <div class="card-icon">⚙️</div>
-                    <div class="card-title">Platform Settings</div>
-                </div>
-                <div class="card-description">
-                    Configure platform settings, agent behavior, and system preferences.
-                </div>
-                <ul class="card-features">
-                    <li>Agent personality settings</li>
-                    <li>Default message limits</li>
-                    <li>Feature toggles</li>
-                    <li>API configurations</li>
-                    <li>Email templates</li>
-                </ul>
-                <button class="card-button">View Settings →</button>
-            </div>
-
-            <!-- Content Management -->
-            <div class="admin-card" style="border-left: 4px solid #FF9800;" onclick="window.location.href='/profile'">
-                <div class="card-header">
-                    <div class="card-icon">📝</div>
-                    <div class="card-title">Content Management</div>
-                </div>
-                <div class="card-description">
-                    Manage platform content, announcements, FAQs, and documentation.
-                </div>
-                <ul class="card-features">
-                    <li>Edit homepage content</li>
-                    <li>Manage announcements</li>
-                    <li>Update FAQs</li>
-                    <li>Documentation editor</li>
-                    <li>Email campaigns</li>
-                </ul>
-                <button class="card-button">Manage Content →</button>
-            </div>
-        </div>
     </div>
-
-    <script>
-        // Load quick stats
-        async function loadQuickStats() {
-            try {
-                const response = await fetch('/api/admin/analytics', {
-                    credentials: 'include'
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to load stats');
-                }
-
-                const data = await response.json();
-                
-                document.getElementById('quick-users').textContent = data.total_users || 0;
-                document.getElementById('quick-messages').textContent = data.messages_today || 0;
-                document.getElementById('quick-paid').textContent = data.paid_users || 0;
-                document.getElementById('quick-agents').textContent = data.total_custom_agents || 0;
-
-            } catch (error) {
-                console.error('Error loading quick stats:', error);
-                document.getElementById('quick-users').textContent = '--';
-                document.getElementById('quick-messages').textContent = '--';
-                document.getElementById('quick-paid').textContent = '--';
-                document.getElementById('quick-agents').textContent = '--';
-            }
-        }
-
-        // Load stats on page load
-        loadQuickStats();
-
-        // Refresh stats every 60 seconds
-        setInterval(loadQuickStats, 60000);
-    </script>
 </body>
 </html>
