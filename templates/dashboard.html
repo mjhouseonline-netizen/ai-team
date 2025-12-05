@@ -2076,6 +2076,153 @@
             textarea.style.height = 'auto';
             textarea.style.height = Math.min(textarea.scrollHeight, 150) + 'px';
         }
+
+        // ============================================
+        // IMAGE GENERATION FUNCTIONALITY
+        // ============================================
+        
+        let imageMode = false;
+
+        function toggleImageMode() {
+            imageMode = !imageMode;
+            const input = document.getElementById('messageInput');
+            const sendBtn = document.getElementById('sendButton');
+            
+            if (imageMode) {
+                input.placeholder = '🎨 Describe the image you want to generate...';
+                input.style.borderColor = '#10a37f';
+                input.style.borderWidth = '2px';
+                
+                // Visual feedback
+                showNotification('🎨 Image Mode Active! Describe what you want to see.');
+                
+                // Change button color
+                if (sendBtn) {
+                    sendBtn.style.background = 'linear-gradient(135deg, #10a37f, #0d8c6f)';
+                }
+            } else {
+                input.placeholder = 'Message ' + getCurrentAgent() + '...';
+                input.style.borderColor = '';
+                input.style.borderWidth = '';
+                
+                if (sendBtn) {
+                    sendBtn.style.background = '';
+                }
+            }
+        }
+
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.textContent = message;
+            notification.style.cssText = `
+                position: fixed;
+                top: 80px;
+                right: 20px;
+                background: linear-gradient(135deg, #10a37f, #0d8c6f);
+                color: white;
+                padding: 15px 20px;
+                border-radius: 10px;
+                box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+                z-index: 10000;
+                font-weight: 600;
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transition = 'opacity 0.3s';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // Override sendMessage to handle image generation
+        const originalSendMessage = sendMessage;
+        sendMessage = async function() {
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value.trim();
+            
+            if (!message) return;
+            
+            const currentAgent = getCurrentAgent();
+            const selectedModel = document.getElementById('modelSelect')?.value || 'gemini-2.0-flash';
+            
+            // Disable send button
+            const sendBtn = document.getElementById('sendButton');
+            if (sendBtn) sendBtn.disabled = true;
+            
+            // Check if in image mode
+            if (imageMode) {
+                // Display user message
+                displayUserMessage(`🎨 Generate: ${message}`, null);
+                
+                // Clear input
+                messageInput.value = '';
+                autoResize(messageInput);
+                
+                try {
+                    const response = await fetch('/api/generate-image-free', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            message: message,
+                            prompt: message,
+                            agent: currentAgent
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok && data.image_url) {
+                        // Display image
+                        displayImageMessage(data.image_url, data.response || 'Here\'s your generated image!');
+                        
+                        // Turn off image mode
+                        imageMode = false;
+                        messageInput.placeholder = 'Message ' + currentAgent + '...';
+                        messageInput.style.borderColor = '';
+                        messageInput.style.borderWidth = '';
+                        if (sendBtn) sendBtn.style.background = '';
+                    } else {
+                        displayErrorMessage(data.error || 'Failed to generate image');
+                    }
+                } catch (error) {
+                    console.error('Image generation error:', error);
+                    displayErrorMessage('Network error. Please try again.');
+                }
+                
+                if (sendBtn) sendBtn.disabled = false;
+                return;
+            }
+            
+            // Normal message (use original function)
+            await originalSendMessage();
+            
+            if (sendBtn) sendBtn.disabled = false;
+        };
+
+        function displayImageMessage(imageUrl, text) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message assistant-message';
+            messageDiv.innerHTML = `
+                <div class="message-avatar">🎨</div>
+                <div class="message-content">
+                    <p>${text}</p>
+                    <img src="${imageUrl}" alt="Generated image" style="max-width: 100%; border-radius: 12px; margin-top: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); cursor: pointer;" onclick="window.open('${imageUrl}', '_blank')">
+                    <div style="margin-top: 10px; font-size: 12px; color: #6b7280;">
+                        <a href="${imageUrl}" target="_blank" download style="color: #10a37f; text-decoration: none; font-weight: 600;">⬇️ Download Image</a>
+                        <span style="margin-left: 15px; color: #9ca3af;">Powered by Pollinations.ai (Free)</span>
+                    </div>
+                </div>
+            `;
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        console.log('✅ Image generation functionality loaded!');
     </script>
 
     <!-- Agent Library Modal -->
