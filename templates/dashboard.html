@@ -1557,7 +1557,7 @@
                 </div>
             </a>
 
-            <a href="/admin" class="agent-item" id="adminSidebarLink" style="display: none; text-decoration: none; color: white;">
+            <a href="/admin" class="agent-item" id="adminSidebarLink" style="{% if current_user.id != 1 %}display: none;{% endif %} text-decoration: none; color: white;">
                 <div class="agent-avatar" style="background: linear-gradient(135deg, #f093fb, #f5576c);">👨‍💼</div>
                 <div class="agent-info">
                     <div class="agent-name">Admin Portal</div>
@@ -1565,7 +1565,7 @@
                 </div>
             </a>
 
-            <a href="/promo-codes" class="agent-item" id="promoSidebarLink" style="display: none; text-decoration: none; color: white;">
+            <a href="/promo-codes" class="agent-item" id="promoSidebarLink" style="{% if current_user.id != 1 %}display: none;{% endif %} text-decoration: none; color: white;">
                 <div class="agent-avatar" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">🎫</div>
                 <div class="agent-info">
                     <div class="agent-name">Promo Codes</div>
@@ -1706,7 +1706,10 @@
             <a href="#" onclick="viewHistory(); return false;">📜 Chat History</a>
             <a href="#" onclick="clearAllChat(); return false;">🗑️ Clear Chats</a>
             <a href="/automations">🔌 Automations</a>
-            <a href="/admin" id="adminLink" style="display:none;">⚙️ Admin</a>
+            {% if current_user.id == 1 %}
+            <a href="/admin" id="adminLink">⚙️ Admin</a>
+            <a href="/promo-codes">🎟️ Promo Codes</a>
+            {% endif %}
             <a href="/logout">🚪 Logout</a>
         </div>
 
