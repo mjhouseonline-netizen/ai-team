@@ -342,8 +342,86 @@ def init_database():
     conn.close()
     print("✅ Database initialization complete")
 
+def init_promo_codes_table():
+    """Initialize promo codes table"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    # Create promo_codes table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS promo_codes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code TEXT UNIQUE NOT NULL,
+            tier TEXT NOT NULL,
+            max_uses INTEGER DEFAULT 1,
+            times_used INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            expires_at TIMESTAMP,
+            is_active BOOLEAN DEFAULT 1,
+            single_use BOOLEAN DEFAULT 0
+        )
+    """)
+    
+    # Check if times_used column exists (migration)
+    cursor.execute("PRAGMA table_info(promo_codes)")
+    existing_columns = [col[1] for col in cursor.fetchall()]
+    
+    if 'times_used' not in existing_columns:
+        try:
+            print("Adding times_used column to promo_codes table...")
+            cursor.execute("ALTER TABLE promo_codes ADD COLUMN times_used INTEGER DEFAULT 0")
+            print("✅ Added times_used column")
+        except sqlite3.OperationalError as e:
+            print(f"Warning: Could not add times_used column: {e}")
+    
+    if 'is_active' not in existing_columns:
+        try:
+            print("Adding is_active column to promo_codes table...")
+            cursor.execute("ALTER TABLE promo_codes ADD COLUMN is_active BOOLEAN DEFAULT 1")
+            print("✅ Added is_active column")
+        except sqlite3.OperationalError as e:
+            print(f"Warning: Could not add is_active column: {e}")
+    
+    if 'single_use' not in existing_columns:
+        try:
+            print("Adding single_use column to promo_codes table...")
+            cursor.execute("ALTER TABLE promo_codes ADD COLUMN single_use BOOLEAN DEFAULT 0")
+            print("✅ Added single_use column")
+        except sqlite3.OperationalError as e:
+            print(f"Warning: Could not add single_use column: {e}")
+    
+    # Create promo_code_usage table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS promo_code_usage (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            promo_code_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (promo_code_id) REFERENCES promo_codes (id),
+            FOREIGN KEY (user_id) REFERENCES users (id),
+            UNIQUE(promo_code_id, user_id)
+        )
+    """)
+    
+    # Insert default MASTER2024 code if it doesn't exist
+    cursor.execute("SELECT COUNT(*) FROM promo_codes WHERE code = 'MASTER2024'")
+    if cursor.fetchone()[0] == 0:
+        print("Creating default MASTER2024 promo code...")
+        cursor.execute("""
+            INSERT INTO promo_codes (code, tier, max_uses, times_used, is_active, single_use)
+            VALUES ('MASTER2024', 'enterprise', -1, 0, 1, 0)
+        """)
+        print("✅ MASTER2024 code created (Enterprise tier, unlimited uses)")
+    else:
+        print("✅ MASTER2024 code already exists")
+    
+    conn.commit()
+    conn.close()
+    print("✅ Promo codes tables initialized")
+
 # Initialize database on startup
 init_database()
+init_promo_codes_table()
 
 # ============================================
 # PUBLIC PAGES
@@ -2390,78 +2468,6 @@ def health():
 # ============================================
 # PROMO CODE SYSTEM
 # ============================================
-
-# ============================================
-# DATABASE INITIALIZATION - ADD PROMO CODES TABLE
-# ============================================
-
-def init_promo_codes_table():
-    """Initialize promo codes table with migration support"""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    
-    # Create promo_codes table
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS promo_codes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            code TEXT UNIQUE NOT NULL,
-            tier TEXT NOT NULL,
-            max_uses INTEGER DEFAULT 1,
-            times_used INTEGER DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            expires_at TIMESTAMP,
-            is_active BOOLEAN DEFAULT 1,
-            single_use BOOLEAN DEFAULT 0
-        )
-    """)
-    
-    # Check if times_used column exists (migration)
-    cursor.execute("PRAGMA table_info(promo_codes)")
-    existing_columns = [col[1] for col in cursor.fetchall()]
-    
-    if 'times_used' not in existing_columns:
-        try:
-            print("Adding times_used column to promo_codes table...")
-            cursor.execute("ALTER TABLE promo_codes ADD COLUMN times_used INTEGER DEFAULT 0")
-            print("✅ Added times_used column")
-        except sqlite3.OperationalError as e:
-            print(f"Warning: Could not add times_used column: {e}")
-    
-    if 'is_active' not in existing_columns:
-        try:
-            print("Adding is_active column to promo_codes table...")
-            cursor.execute("ALTER TABLE promo_codes ADD COLUMN is_active BOOLEAN DEFAULT 1")
-            print("✅ Added is_active column")
-        except sqlite3.OperationalError as e:
-            print(f"Warning: Could not add is_active column: {e}")
-    
-    if 'single_use' not in existing_columns:
-        try:
-            print("Adding single_use column to promo_codes table...")
-            cursor.execute("ALTER TABLE promo_codes ADD COLUMN single_use BOOLEAN DEFAULT 0")
-            print("✅ Added single_use column")
-        except sqlite3.OperationalError as e:
-            print(f"Warning: Could not add single_use column: {e}")
-    
-    # Create promo_code_usage table
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS promo_code_usage (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            promo_code_id INTEGER NOT NULL,
-            user_id INTEGER NOT NULL,
-            used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (promo_code_id) REFERENCES promo_codes (id),
-            FOREIGN KEY (user_id) REFERENCES users (id),
-            UNIQUE(promo_code_id, user_id)
-        )
-    """)
-    
-    conn.commit()
-    conn.close()
-    print("✅ Promo codes tables initialized")
-
-# Call this after your existing init_database()
-init_promo_codes_table()
 
 # ============================================
 # API KEYS FOR AUTOMATION
