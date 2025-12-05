@@ -1515,19 +1515,148 @@ def route_to_model(model_key, system_prompt, history, new_message):
             return call_claude_with_history('claude-sonnet-4-20250514', system_prompt, history, new_message, 2000)
         raise
 
+def call_ai_with_image(model_key, system_prompt, history, message, image_path):
+    """Call AI model with image vision capabilities"""
+    import base64
+    
+    # Read and encode image
+    with open(image_path, 'rb') as f:
+        image_data = base64.b64encode(f.read()).decode('utf-8')
+    
+    # Determine image type
+    ext = image_path.rsplit('.', 1)[1].lower()
+    media_type = f"image/{ext}" if ext != 'jpg' else "image/jpeg"
+    
+    if model_key not in MODELS:
+        model_key = 'gemini-2.0-flash'  # Default to free model
+    
+    config = MODELS[model_key]
+    provider = config['provider']
+    model_id = config['model_id']
+    
+    try:
+        if provider == 'anthropic':
+            # Claude vision
+            client = anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
+            
+            messages = []
+            # Add history
+            for msg in history:
+                messages.append({"role": "user", "content": msg['user']})
+                messages.append({"role": "assistant", "content": msg['assistant']})
+            
+            # Add current message with image
+            messages.append({
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": media_type,
+                            "data": image_data
+                        }
+                    },
+                    {
+                        "type": "text",
+                        "text": message or "What's in this image?"
+                    }
+                ]
+            })
+            
+            response = client.messages.create(
+                model=model_id,
+                max_tokens=2000,
+                system=system_prompt,
+                messages=messages
+            )
+            return response.content[0].text
+            
+        elif provider == 'openai':
+            # GPT-4 Vision
+            messages = [{"role": "system", "content": system_prompt}]
+            
+            # Add history
+            for msg in history:
+                messages.append({"role": "user", "content": msg['user']})
+                messages.append({"role": "assistant", "content": msg['assistant']})
+            
+            # Add current message with image
+            messages.append({
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": message or "What's in this image?"},
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:{media_type};base64,{image_data}"
+                        }
+                    }
+                ]
+            })
+            
+            response = openai_client.chat.completions.create(
+                model="gpt-4o",  # Use vision model
+                messages=messages,
+                max_tokens=2000
+            )
+            return response.choices[0].message.content
+            
+        elif provider == 'google':
+            # Gemini vision
+            from PIL import Image
+            genai.configure(api_key=os.environ.get('GOOGLE_API_KEY'))
+            
+            img = Image.open(image_path)
+            gemini_model = genai.GenerativeModel(model_id)
+            
+            # Build prompt with history
+            prompt_parts = []
+            if system_prompt:
+                prompt_parts.append(system_prompt)
+            
+            for msg in history:
+                prompt_parts.append(f"User: {msg['user']}")
+                prompt_parts.append(f"Assistant: {msg['assistant']}")
+            
+            prompt_parts.append(message or "What's in this image?")
+            full_prompt = "\n\n".join(prompt_parts)
+            
+            response = gemini_model.generate_content([full_prompt, img])
+            return response.text
+            
+        else:
+            raise Exception(f"Provider {provider} doesn't support image vision")
+            
+    except Exception as e:
+        print(f"Error in image vision: {e}")
+        # Fallback: describe that an image was sent
+        return f"I can see you've sent an image, but I encountered an error processing it: {str(e)}"
+
 @app.route('/api/chat', methods=['POST'])
 @login_required
 def chat():
-    """Send message to AI agent with conversation history and multi-model support"""
+    """Send message to AI agent with conversation history, multi-model support, and file uploads"""
     try:
-        data = request.json
-        message = data.get('message')
-        agent = data.get('agent', 'Ember')
-        model_key = data.get('model', 'claude-sonnet-4.5')  # NEW: Model selection
-        attached_file = data.get('file')
+        # Handle both JSON and FormData (for file uploads)
+        if request.is_json:
+            # JSON request (old format)
+            data = request.json
+            message = data.get('message')
+            agent = data.get('agent', 'Ember')
+            model_key = data.get('model', 'claude-sonnet-4.5')
+            attached_file = data.get('file')
+            uploaded_file = None
+        else:
+            # FormData request (new format with file upload)
+            message = request.form.get('message', '')
+            agent = request.form.get('agent', 'Luna')
+            model_key = request.form.get('model', 'gemini-2.0-flash')
+            attached_file = None
+            uploaded_file = request.files.get('file')
         
-        if not message:
-            return jsonify({'error': 'Message required'}), 400
+        if not message and not uploaded_file:
+            return jsonify({'error': 'Message or file required'}), 400
         
         # Check message limit and reset if needed
         conn = sqlite3.connect(DB_PATH)
@@ -1623,8 +1752,41 @@ Remember: Natural conversation only. No formatting."""
         # Get conversation history (last 20 messages for context)
         history = get_conversation_history(current_user.id, agent, limit=20)
         
-        # Handle file attachments (simplified for text files)
-        if attached_file and 'filepath' in attached_file:
+        # Handle file uploads from FormData
+        file_info = None
+        if uploaded_file:
+            # Save the uploaded file
+            filename = secure_filename(uploaded_file.filename)
+            user_folder = os.path.join(UPLOAD_FOLDER, str(current_user.id))
+            os.makedirs(user_folder, exist_ok=True)
+            
+            filepath = os.path.join(user_folder, filename)
+            uploaded_file.save(filepath)
+            
+            file_extension = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+            
+            file_info = {
+                'filename': filename,
+                'filepath': filepath,
+                'extension': file_extension
+            }
+            
+            # For text files, read content
+            if file_extension in ['txt', 'md', 'csv', 'json', 'py', 'js', 'html', 'css']:
+                try:
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        file_content = f.read()[:10000]  # Limit to 10k chars
+                    if message:
+                        message = f"{message}\n\nFile: {filename}\nContent:\n{file_content}"
+                    else:
+                        message = f"File: {filename}\nContent:\n{file_content}"
+                except Exception as e:
+                    print(f"Error reading file: {e}")
+                    if not message:
+                        message = f"I received a file named {filename} but couldn't read its content."
+        
+        # Handle file attachments (JSON format - old system)
+        elif attached_file and 'filepath' in attached_file:
             filepath = attached_file['filepath']
             if os.path.exists(filepath):
                 filename = attached_file.get('original_filename', 'file')
@@ -1638,11 +1800,21 @@ Remember: Natural conversation only. No formatting."""
                         pass  # If file reading fails, just use original message
         
         # Route to selected model with conversation history
-        ai_response = route_to_model(model_key, system_prompt, history, message)
+        # For images, we need special handling
+        if file_info and file_info['extension'] in ['png', 'jpg', 'jpeg', 'gif', 'webp']:
+            # Image file - use vision models
+            ai_response = call_ai_with_image(model_key, system_prompt, history, message, file_info['filepath'])
+        else:
+            # Text-only or text file
+            ai_response = route_to_model(model_key, system_prompt, history, message)
         
         # Save to chat history
         saved_message = message
-        if attached_file and 'original_filename' in attached_file:
+        if file_info:
+            # New file upload system
+            saved_message = f"📎 {file_info['filename']}\n{message}" if message else f"📎 {file_info['filename']}"
+        elif attached_file and 'original_filename' in attached_file:
+            # Old file system
             saved_message = f"📎 {attached_file['original_filename']}\n{message}"
         
         cursor.execute("""
@@ -1662,6 +1834,7 @@ Remember: Natural conversation only. No formatting."""
         conn.close()
         
         return jsonify({
+            'success': True,
             'response': ai_response,
             'agent': agent,
             'model_used': model_key
