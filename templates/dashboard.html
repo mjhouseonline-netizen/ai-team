@@ -848,10 +848,33 @@
             align-items: center;
             justify-content: space-between;
             font-size: 13px;
+            gap: 10px;
         }
 
         .file-preview.active {
             display: flex;
+        }
+
+        .file-preview #fileName {
+            flex: 1;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .remove-file-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+
+        .remove-file-btn:hover {
+            background: #ef4444;
+            color: white;
         }
 
         /* ================================================
@@ -1582,7 +1605,7 @@
                     <span class="model-label">Model:</span>
                     <select id="modelSelect" class="model-select">
                         <optgroup label="Claude (Anthropic)">
-                            <option value="claude-sonnet-4.5" selected>Sonnet 4.5</option>
+                            <option value="claude-sonnet-4.5">Sonnet 4.5</option>
                             <option value="claude-opus-4">Opus 4</option>
                             <option value="claude-haiku-4.5">Haiku 4.5</option>
                         </optgroup>
@@ -1592,7 +1615,7 @@
                             <option value="gpt-4o-mini">GPT-4o Mini</option>
                         </optgroup>
                         <optgroup label="Gemini (Google)">
-                            <option value="gemini-2.0-flash">Gemini 2.0 FREE</option>
+                            <option value="gemini-2.0-flash" selected>Gemini 2.0 FREE</option>
                             <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
                         </optgroup>
                     </select>
@@ -1883,6 +1906,172 @@
             } else if (desktopText) {
                 desktopText.style.display = 'inline';
             }
+        }
+
+        // File Upload System with Preview
+        let uploadedFile = null;
+
+        // Handle file selection
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                uploadedFile = file;
+                showFilePreview(file);
+            }
+        });
+
+        function showFilePreview(file) {
+            const preview = document.getElementById('filePreview');
+            const fileName = document.getElementById('fileName');
+            
+            // Show file name and size
+            const fileSize = (file.size / 1024).toFixed(1) + ' KB';
+            fileName.textContent = `📎 ${file.name} (${fileSize})`;
+            
+            // Show preview container
+            preview.style.display = 'flex';
+        }
+
+        function removeFile() {
+            uploadedFile = null;
+            document.getElementById('fileInput').value = '';
+            document.getElementById('filePreview').style.display = 'none';
+        }
+
+        // Send Message Function
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            const modelSelect = document.getElementById('modelSelect');
+            const model = modelSelect.value;
+            
+            if (!message && !uploadedFile) {
+                return; // Don't send empty messages
+            }
+            
+            // Disable send button
+            const sendBtn = document.getElementById('sendBtn');
+            sendBtn.disabled = true;
+            sendBtn.textContent = 'Sending...';
+            
+            // Create FormData
+            const formData = new FormData();
+            formData.append('message', message);
+            formData.append('model', model);
+            
+            // Add file if uploaded
+            if (uploadedFile) {
+                formData.append('file', uploadedFile);
+            }
+            
+            // Add current agent
+            const currentAgent = getCurrentAgent();
+            formData.append('agent', currentAgent);
+            
+            try {
+                // Display user message immediately
+                displayUserMessage(message, uploadedFile);
+                
+                // Clear input and file
+                input.value = '';
+                removeFile();
+                autoResize(input);
+                
+                // Send to backend
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayAssistantMessage(data.response);
+                } else {
+                    displayErrorMessage(data.error || 'Failed to send message');
+                }
+            } catch (error) {
+                console.error('Error sending message:', error);
+                displayErrorMessage('Network error. Please try again.');
+            } finally {
+                // Re-enable send button
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Send';
+            }
+        }
+
+        function getCurrentAgent() {
+            // Get currently selected agent from sidebar
+            const activeAgent = document.querySelector('.agent-item.active');
+            if (activeAgent) {
+                const agentName = activeAgent.querySelector('strong');
+                return agentName ? agentName.textContent : 'Luna';
+            }
+            return 'Luna'; // Default
+        }
+
+        function displayUserMessage(message, file) {
+            const container = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message user-message';
+            
+            let content = '<div class="message-content">';
+            if (file) {
+                const fileType = file.type.split('/')[0];
+                if (fileType === 'image') {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.style.maxWidth = '300px';
+                        img.style.borderRadius = '8px';
+                        img.style.marginBottom = '8px';
+                        messageDiv.querySelector('.message-content').prepend(img);
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    content += `<div style="background: #f3f4f6; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; display: inline-block;">📎 ${file.name}</div><br>`;
+                }
+            }
+            content += message + '</div>';
+            messageDiv.innerHTML = content;
+            
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function displayAssistantMessage(message) {
+            const container = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message assistant-message';
+            messageDiv.innerHTML = '<div class="message-content">' + message + '</div>';
+            
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function displayErrorMessage(error) {
+            const container = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message assistant-message';
+            messageDiv.innerHTML = '<div class="message-content" style="color: #ef4444;">⚠️ ' + error + '</div>';
+            
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Handle Enter key
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        // Auto-resize textarea
+        function autoResize(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 150) + 'px';
         }
     </script>
 
