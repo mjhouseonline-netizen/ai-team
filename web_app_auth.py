@@ -2771,15 +2771,19 @@ def create_promo_codes(tier, count, prefix=""):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
+    # Set max_uses based on tier - unlimited for most tiers
+    # Use -1 for unlimited, 1 for single-use
+    max_uses = -1  # Default: unlimited uses
+    
     codes = []
     for i in range(count):
         code = f"{prefix}{generate_promo_code(8)}" if prefix else generate_promo_code(12)
         
         try:
             cursor.execute("""
-                INSERT INTO promo_codes (code, tier, max_uses)
-                VALUES (?, ?, 1)
-            """, (code, tier))
+                INSERT INTO promo_codes (code, tier, max_uses, is_active, single_use)
+                VALUES (?, ?, ?, 1, 0)
+            """, (code, tier, max_uses))
             codes.append(code)
         except sqlite3.IntegrityError:
             # Code already exists, try again
@@ -2821,8 +2825,8 @@ def validate_promo_code(code):
     if single_use and times_used >= 1:
         return False, "This promo code has already been used"
     
-    # For multi-use codes, check against max_uses
-    if not single_use and times_used >= max_uses:
+    # For multi-use codes, check against max_uses (skip if max_uses is -1 = unlimited)
+    if not single_use and max_uses != -1 and times_used >= max_uses:
         return False, "This promo code has reached its maximum uses"
     
     if expires_at:

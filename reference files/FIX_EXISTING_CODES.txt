@@ -1,0 +1,75 @@
+🔧 FIX EXISTING PROMO CODES IN DATABASE
+
+Run this in Render Shell to fix ALL existing codes:
+
+═══════════════════════════════════════════
+
+python3 << 'ENDPY'
+import sqlite3
+
+conn = sqlite3.connect('ai_team.db')
+c = conn.cursor()
+
+print("=== BEFORE FIX ===\n")
+
+# Show current state
+c.execute("SELECT code, tier, max_uses, times_used FROM promo_codes")
+codes = c.fetchall()
+
+for code in codes:
+    status = "❌ LIMITED" if code[2] == 1 else "✅ UNLIMITED"
+    print(f"{code[0]}: tier={code[1]}, max_uses={code[2]}, times_used={code[3]} {status}")
+
+print(f"\nTotal codes: {len(codes)}")
+
+# Update ALL codes to unlimited
+print("\n=== APPLYING FIX ===\n")
+c.execute("""
+    UPDATE promo_codes 
+    SET max_uses = -1, 
+        times_used = 0,
+        is_active = 1,
+        single_use = 0
+""")
+
+affected = c.rowcount
+conn.commit()
+
+print(f"✅ Updated {affected} promo codes!")
+
+print("\n=== AFTER FIX ===\n")
+
+# Show updated state
+c.execute("SELECT code, tier, max_uses, times_used FROM promo_codes")
+codes = c.fetchall()
+
+for code in codes:
+    status = "✅ UNLIMITED" if code[2] == -1 else "⚠️ LIMITED"
+    print(f"{code[0]}: tier={code[1]}, max_uses={code[2]}, times_used={code[3]} {status}")
+
+conn.close()
+
+print("\n🎉 ALL CODES NOW HAVE UNLIMITED USES!")
+ENDPY
+
+═══════════════════════════════════════════
+
+WHAT THIS DOES:
+
+1. Shows current state (max_uses = 1)
+2. Updates ALL codes:
+   - max_uses → -1 (unlimited)
+   - times_used → 0 (reset counter)
+   - is_active → 1 (active)
+   - single_use → 0 (multi-use)
+3. Shows updated state (max_uses = -1)
+
+═══════════════════════════════════════════
+
+AFTER RUNNING:
+
+ALL existing codes will work unlimited times! ✅
+
+Test: Try redeeming an old code again → Works! ✅
+
+═══════════════════════════════════════════

@@ -1,0 +1,62 @@
+⚡ PROMO CODE QUICK FIX - 3 STEPS
+
+═══════════════════════════════════════════
+
+THE PROBLEM:
+Codes work when generated BUT can only be used ONCE
+After first redemption: "Maximum uses reached" ❌
+
+═══════════════════════════════════════════
+
+THE BUG:
+max_uses was hardcoded to 1 (single use)
+Should be -1 (unlimited uses)
+
+═══════════════════════════════════════════
+
+FIX IN 3 STEPS:
+
+STEP 1: DEPLOY FIXED BACKEND
+
+Download web_app_auth.py from outputs
+cp ~/Downloads/web_app_auth.py ./web_app_auth.py
+
+git add web_app_auth.py
+git commit -m "Fix: Unlimited promo code uses"
+git push
+
+Wait 2-3 minutes for Render deployment
+
+STEP 2: FIX EXISTING CODES
+
+In Render Shell (see FIX_EXISTING_CODES.txt):
+- Updates all codes: max_uses = -1
+- Resets times_used = 0
+- Makes all codes unlimited
+
+STEP 3: TEST
+
+1. Generate new code via admin panel
+2. Give to User A → Redeem → Works ✅
+3. Give SAME code to User B → Redeem → Works ✅
+4. Unlimited redemptions! ✅
+
+═══════════════════════════════════════════
+
+WHAT'S FIXED:
+
+✅ New codes: max_uses = -1 (unlimited)
+✅ Old codes: Updated to unlimited
+✅ Validation: Skips check when max_uses = -1
+✅ Multiple people can use same code
+
+═══════════════════════════════════════════
+
+RESULT:
+
+BEFORE: Code works once → "Maximum uses reached"
+AFTER:  Code works unlimited times for everyone! ✅
+
+═══════════════════════════════════════════
+
+That's it! Your promo codes now work properly! 🎉
