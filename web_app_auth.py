@@ -3439,7 +3439,7 @@ def create_custom_agent():
     try:
         data = request.json
         name = data.get('name')
-        role = data.get('role')
+        description = data.get('role') or data.get('description')  # Accept both for compatibility
         emoji = data.get('emoji', '🤖')  # Handle emoji from frontend
         
         # Handle both 'instructions' (from frontend) and 'system_prompt' (legacy)
@@ -3452,8 +3452,8 @@ def create_custom_agent():
         else:
             personality = personality_data
         
-        if not name or not role:
-            return jsonify({'error': 'Name and role are required'}), 400
+        if not name or not description:
+            return jsonify({'error': 'Name and description are required'}), 400
         
         if not instructions:
             return jsonify({'error': 'Instructions are required'}), 400
@@ -3470,10 +3470,11 @@ def create_custom_agent():
             conn.commit()
             print("✅ Added emoji column to custom_agents table")
         
+        # Use description column (not role)
         cursor.execute("""
-            INSERT INTO custom_agents (user_id, name, role, emoji, personality, system_prompt)
+            INSERT INTO custom_agents (user_id, name, description, emoji, personality, system_prompt)
             VALUES (?, ?, ?, ?, ?, ?)
-        """, (current_user.id, name, role, emoji, personality, instructions))
+        """, (current_user.id, name, description, emoji, personality, instructions))
         
         agent_id = cursor.lastrowid
         conn.commit()
@@ -3485,7 +3486,7 @@ def create_custom_agent():
             'success': True,
             'agent_id': agent_id,
             'name': name,
-            'role': role,
+            'description': description,
             'emoji': emoji
         }), 201
         
