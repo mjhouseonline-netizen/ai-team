@@ -3432,6 +3432,7 @@ def get_custom_agents():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/custom-agents', methods=['POST'])
+@app.route('/api/custom-agent/create', methods=['POST'])  # Alias for frontend compatibility
 @login_required
 def create_custom_agent():
     """Create a new custom agent"""
