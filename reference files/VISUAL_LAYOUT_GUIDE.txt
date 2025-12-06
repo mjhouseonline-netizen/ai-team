@@ -1,0 +1,248 @@
+📸 CHAT HISTORY & SHAREABLE LINKS - VISUAL GUIDE
+
+═══════════════════════════════════════════════════════════════════
+
+WHAT IT WILL LOOK LIKE:
+
+═══════════════════════════════════════════════════════════════════
+
+HEADER WITH HISTORY BUTTON:
+
+┌──────────────────────────────────────────────────────────────┐
+│  🌙 Luna    Model: Gemini 2.0 FREE ▼   │  🎯 Prompt    📜    👤 │
+│                                          │  Builder  History    │
+└──────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════
+
+HISTORY DROPDOWN MENU:
+
+Click "📜 History" button →
+
+┌────────────────────────────────┐
+│  ✨ New Chat                   │
+│  Start fresh conversation      │
+├────────────────────────────────┤
+│  TODAY                         │
+│  🌙 Market research for Q1  3m │ ←── Can click to load
+│  🦉 Project timeline         1h │ ←── Hover shows delete
+│  🌱 Blog post ideas         2h │
+├────────────────────────────────┤
+│  YESTERDAY                     │
+│  🔥 Brand strategy          12h│
+│  ☀️ Business plan          18h│
+├────────────────────────────────┤
+│  LAST 7 DAYS                   │
+│  ⚡ Code review            3d  │
+│  🌿 Implementation plan    5d  │
+└────────────────────────────────┘
+
+Features:
+• Scrollable list
+• Grouped by date
+• Shows agent icon
+• Auto-generated title
+• Time ago
+• Delete on hover
+• Click to load
+
+═══════════════════════════════════════════════════════════════════
+
+SHAREABLE LINKS SECTION (Sidebar):
+
+┌──────────────────────────────────────┐
+│  🔗 Shareable Links                  │
+│                                      │
+│  Share direct links to agents:      │
+│                                      │
+│  ┌────────────────────────────────┐ │
+│  │ 🌙  Luna (Research)            │ │
+│  │     ai-team.../agent/Luna      │ │
+│  │                         [Copy] │ │
+│  └────────────────────────────────┘ │
+│                                      │
+│  ┌────────────────────────────────┐ │
+│  │ 🦉  Mila (Planning)            │ │
+│  │     ai-team.../agent/Mila      │ │
+│  │                         [Copy] │ │
+│  └────────────────────────────────┘ │
+│                                      │
+│  ┌────────────────────────────────┐ │
+│  │ 🌱  Sage (Writing)             │ │
+│  │     ai-team.../agent/Sage      │ │
+│  │                         [Copy] │ │
+│  └────────────────────────────────┘ │
+│                                      │
+│  💡 Can embed in iframes or share   │
+└──────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════
+
+USER FLOW:
+
+SCENARIO 1: View Past Chats
+
+1. User clicks "📜 History" button
+2. Dropdown opens showing all conversations
+3. User sees chat from yesterday: "🌙 Market research for Q1"
+4. Clicks on it
+5. Chat loads with all previous messages
+6. User can continue the conversation
+7. Messages auto-save to that conversation
+
+SCENARIO 2: Start New Chat
+
+1. User clicks "📜 History"
+2. Clicks "✨ New Chat" at top
+3. Chat clears
+4. Fresh conversation starts
+5. First message creates new conversation
+6. Auto-title generated from first message
+
+SCENARIO 3: Delete Old Chat
+
+1. User clicks "📜 History"
+2. Hovers over old conversation
+3. Delete button (🗑️) appears
+4. Clicks delete
+5. Confirms deletion
+6. Chat removed from list
+
+SCENARIO 4: Share Agent Link
+
+1. User scrolls sidebar to "🔗 Shareable Links"
+2. Sees Luna's link: ai-team.skillsoul.store/agent/Luna
+3. Clicks "Copy" button
+4. Link copied to clipboard
+5. Pastes in email/Twitter/website
+6. Visitors click link → Opens Luna directly
+
+═══════════════════════════════════════════════════════════════════
+
+CONVERSATION CARD DESIGN:
+
+Normal State:
+┌──────────────────────────────┐
+│ 🌙  Market research for Q1   │  ←── Agent icon + Title
+│     3 minutes ago            │  ←── Time
+└──────────────────────────────┘
+
+Hover State:
+┌──────────────────────────────┐
+│ 🌙  Market research for Q1  🗑│  ←── Delete button appears
+│     3 minutes ago            │
+└──────────────────────────────┘
+
+Active State (Currently loaded):
+┌──────────────────────────────┐
+││🌙  Market research for Q1   │  ←── Green border on left
+││    3 minutes ago            │
+└──────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════
+
+EXTERNAL AGENT PAGE:
+
+When someone visits: ai-team.skillsoul.store/agent/Luna
+
+┌────────────────────────────────────────┐
+│  🌿 AI Team                            │
+├────────────────────────────────────────┤
+│                                        │
+│         🌙                             │
+│      Luna                              │
+│   Research & Analysis Specialist       │
+│                                        │
+│   I help with:                         │
+│   • Market research                    │
+│   • Data analysis                      │
+│   • Strategic insights                 │
+│   • Competitive analysis               │
+│                                        │
+│   ┌──────────────────────────┐        │
+│   │  Sign Up to Chat →       │        │
+│   └──────────────────────────┘        │
+│                                        │
+│   Already have account? Login         │
+│                                        │
+└────────────────────────────────────────┘
+
+If logged in → Goes directly to dashboard with Luna selected
+
+═══════════════════════════════════════════════════════════════════
+
+EMBED EXAMPLE:
+
+Your website HTML:
+
+<iframe 
+  src="https://ai-team.skillsoul.store/agent/Luna"
+  width="100%" 
+  height="600px"
+  style="border: 1px solid #e5e7eb; border-radius: 12px;">
+</iframe>
+
+Visitors see Luna chat interface embedded in your site!
+
+═══════════════════════════════════════════════════════════════════
+
+COLOR SCHEME:
+
+History Dropdown:
+• Background: White (#ffffff)
+• Border: Light gray (#e5e7eb)
+• Hover: Light gray (#f9fafb)
+• Active: Light green (#e6f7f2)
+• Delete button: Red (#ef4444)
+
+New Chat Button:
+• Background: Gradient green (#10a37f → #0d8c6f)
+• Text: White
+• Hover: Lift effect
+
+Share Links:
+• Background: White (#ffffff)
+• Border: Light gray (#e5e7eb)
+• Copy button: Green (#10a37f)
+• Hover: Darker green (#0d8c6f)
+
+═══════════════════════════════════════════════════════════════════
+
+MOBILE RESPONSIVE:
+
+On mobile devices (<768px):
+
+• History button stays in header
+• Dropdown becomes full width
+• Covers entire screen
+• Scrollable list
+• Touch-friendly tap targets
+• Swipe to delete (optional)
+
+═══════════════════════════════════════════════════════════════════
+
+ANIMATIONS:
+
+Dropdown Open:
+• Smooth fade in (0.2s)
+• Slight slide down effect
+
+Conversation Hover:
+• Background color transition (0.2s)
+• Delete button fade in
+
+Active Conversation:
+• Green left border
+• Light green background
+
+Delete Confirmation:
+• Slide out animation
+• Fade effect
+
+═══════════════════════════════════════════════════════════════════
+
+This is what your users will experience! 
+
+Professional, intuitive, and beautiful! 🎨✨
+
+═══════════════════════════════════════════════════════════════════
