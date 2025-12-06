@@ -2201,6 +2201,7 @@
             </div>
             <div class="form-actions">
                 <button class="btn btn-primary" onclick="buildPrompt()">Generate Prompt</button>
+                <button class="btn btn-secondary" onclick="copyPrompt()">📋 Copy Prompt</button>
                 <button class="btn btn-secondary" onclick="usePrompt()">Use This Prompt</button>
             </div>
         </div>
@@ -3076,6 +3077,26 @@ Please provide your response following these guidelines.`;
             
             // Show notification
             showNotification('Prompt copied to message input!');
+        }
+
+        function copyPrompt() {
+            const prompt = document.getElementById('promptOutput').value;
+            if (!prompt) {
+                alert('Please generate a prompt first!');
+                return;
+            }
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(prompt).then(() => {
+                showNotification('✅ Prompt copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                // Fallback method
+                const textarea = document.getElementById('promptOutput');
+                textarea.select();
+                document.execCommand('copy');
+                showNotification('✅ Prompt copied to clipboard!');
+            });
         }
 
         // ============================================
