@@ -3375,21 +3375,26 @@ def get_custom_agents():
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
-        # Check if emoji column exists
+        # Check which columns exist
         cursor.execute("PRAGMA table_info(custom_agents)")
         columns = [col[1] for col in cursor.fetchall()]
         has_emoji = 'emoji' in columns
+        has_description = 'description' in columns
+        has_role = 'role' in columns
+        
+        # Use description if available, fallback to role for old tables
+        desc_column = 'description' if has_description else 'role'
         
         if has_emoji:
-            cursor.execute("""
-                SELECT id, name, role, emoji, personality, system_prompt, created_at
+            cursor.execute(f"""
+                SELECT id, name, {desc_column}, emoji, personality, system_prompt, created_at
                 FROM custom_agents
                 WHERE user_id = ?
                 ORDER BY created_at DESC
             """, (current_user.id,))
         else:
-            cursor.execute("""
-                SELECT id, name, role, personality, system_prompt, created_at
+            cursor.execute(f"""
+                SELECT id, name, {desc_column}, personality, system_prompt, created_at
                 FROM custom_agents
                 WHERE user_id = ?
                 ORDER BY created_at DESC
@@ -3403,7 +3408,8 @@ def get_custom_agents():
                 {
                     'id': row[0],
                     'name': row[1],
-                    'role': row[2],
+                    'description': row[2],  # Always return as 'description' for frontend
+                    'role': row[2],  # Also include as 'role' for backwards compatibility
                     'emoji': row[3] or '🤖',
                     'personality': row[4],
                     'system_prompt': row[5],
@@ -3416,7 +3422,8 @@ def get_custom_agents():
                 {
                     'id': row[0],
                     'name': row[1],
-                    'role': row[2],
+                    'description': row[2],  # Always return as 'description' for frontend
+                    'role': row[2],  # Also include as 'role' for backwards compatibility
                     'emoji': '🤖',  # Default emoji
                     'personality': row[3],
                     'system_prompt': row[4],
@@ -3429,6 +3436,8 @@ def get_custom_agents():
         
     except Exception as e:
         print(f"❌ Error loading custom agents: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/custom-agents', methods=['POST'])

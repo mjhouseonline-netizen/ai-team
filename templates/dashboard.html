@@ -159,6 +159,37 @@
             text-overflow: ellipsis;
         }
 
+        /* Custom Agent Delete Button */
+        .custom-agent-item {
+            position: relative;
+        }
+
+        .delete-agent-btn {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: 14px;
+            cursor: pointer;
+            opacity: 0;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        .custom-agent-item:hover .delete-agent-btn {
+            opacity: 1;
+        }
+
+        .delete-agent-btn:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.5);
+            transform: translateY(-50%) scale(1.1);
+        }
+
         .sidebar-footer {
             padding: 12px;
             border-top: 1px solid #333;
@@ -2884,7 +2915,119 @@
         // Load conversations on page load
         document.addEventListener('DOMContentLoaded', function() {
             loadConversations();
+            loadCustomAgents();  // Load custom agents on page load
         });
+
+        // ============================================
+        // CUSTOM AGENTS LOADING
+        // ============================================
+
+        function loadCustomAgents() {
+            fetch('/api/custom-agents')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.agents && data.agents.length > 0) {
+                        displayCustomAgents(data.agents);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading custom agents:', error);
+                });
+        }
+
+        function displayCustomAgents(agents) {
+            const container = document.getElementById('customAgentsList');
+            const title = document.getElementById('customAgentsTitle');
+            
+            if (!container) return;
+            
+            // Show the section title
+            if (title) {
+                title.style.display = 'block';
+            }
+            
+            // Clear existing content
+            container.innerHTML = '';
+            
+            // Add each custom agent
+            agents.forEach(agent => {
+                const agentDiv = document.createElement('div');
+                agentDiv.className = 'agent-item custom-agent-item';
+                agentDiv.onclick = () => selectCustomAgent(agent.id, agent.name, agent.emoji || '🤖', agent.description || agent.role);
+                
+                agentDiv.innerHTML = `
+                    <div class="agent-avatar" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+                        ${agent.emoji || '🤖'}
+                    </div>
+                    <div class="agent-info">
+                        <div class="agent-name">${agent.name}</div>
+                        <div class="agent-role">${agent.description || agent.role || 'Custom Agent'}</div>
+                    </div>
+                    <button class="delete-agent-btn" onclick="deleteCustomAgent(event, ${agent.id})" title="Delete agent">
+                        🗑️
+                    </button>
+                `;
+                
+                container.appendChild(agentDiv);
+            });
+        }
+
+        function selectCustomAgent(agentId, name, emoji, description) {
+            // Store custom agent info
+            currentAgent = name;
+            currentAgentEmoji = emoji;
+            currentAgentId = agentId;
+            
+            // Update header
+            document.getElementById('currentAgent').innerHTML = `
+                <span style="font-size: 20px; margin-right: 8px;">${emoji}</span>
+                ${name}
+            `;
+            
+            // Update all agent items to remove active class
+            document.querySelectorAll('.agent-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Add active class to clicked agent
+            event.target.closest('.agent-item').classList.add('active');
+            
+            // Clear chat for new agent
+            document.getElementById('chatContainer').innerHTML = `
+                <div class="welcome">
+                    <h2>${emoji} Hi! I'm ${name}</h2>
+                    <p>${description}</p>
+                </div>
+            `;
+            
+            // Start new conversation
+            startNewChat();
+        }
+
+        function deleteCustomAgent(event, agentId) {
+            event.stopPropagation(); // Prevent agent selection
+            
+            if (!confirm('Are you sure you want to delete this custom agent?')) {
+                return;
+            }
+            
+            fetch(`/api/custom-agents/${agentId}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('✅ Agent deleted successfully!');
+                    loadCustomAgents(); // Reload the list
+                } else {
+                    alert('Error deleting agent: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to delete agent. Please try again.');
+            });
+        }
 
         // ============================================
         // IMPROVED MESSAGE FORMATTING
