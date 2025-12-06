@@ -1470,6 +1470,240 @@
         .history-response {
             color: var(--text-secondary);
         }
+
+        /* ============================================
+           CHAT HISTORY DROPDOWN STYLES
+           ============================================ */
+        
+        .history-btn {
+            background: linear-gradient(135deg, #10a37f, #0d8c6f);
+            color: white !important;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .history-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(16, 163, 127, 0.4);
+        }
+
+        .history-dropdown {
+            position: absolute;
+            top: 60px;
+            right: 280px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            min-width: 350px;
+            max-width: 400px;
+            display: none;
+            z-index: 1000;
+            border: 1px solid #e5e7eb;
+        }
+
+        .history-dropdown.active {
+            display: block;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 1px solid #f3f4f6;
+            position: relative;
+        }
+
+        .history-item:hover {
+            background: #f9fafb;
+        }
+
+        .history-item.active {
+            background: #e6f7f2;
+            border-left: 3px solid #10a37f;
+        }
+
+        .history-item.history-new-chat {
+            background: linear-gradient(135deg, #10a37f, #0d8c6f);
+            color: white;
+            border: none;
+            font-weight: 600;
+        }
+
+        .history-item.history-new-chat:hover {
+            transform: translateY(-2px);
+        }
+
+        .history-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f3f4f6;
+            border-radius: 8px;
+        }
+
+        .history-new-chat .history-icon {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .history-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .history-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: #1f2937;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .history-new-chat .history-title {
+            color: white;
+        }
+
+        .history-time {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 2px;
+        }
+
+        .history-new-chat .history-time {
+            color: rgba(255,255,255,0.8);
+        }
+
+        .history-delete {
+            background: none;
+            border: none;
+            color: #ef4444;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            display: none;
+            transition: all 0.2s;
+        }
+
+        .history-item:hover .history-delete {
+            display: block;
+        }
+
+        .history-delete:hover {
+            background: #fee2e2;
+        }
+
+        .history-group-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 12px 16px 8px 16px;
+            background: #f9fafb;
+        }
+
+        /* Share Links Section */
+        .share-links-section {
+            padding: 15px;
+            background: #f9fafb;
+            border-radius: 12px;
+            margin: 15px 0;
+        }
+
+        .share-link-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border: 1px solid #e5e7eb;
+            transition: all 0.2s;
+        }
+
+        .share-link-item:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .share-link-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .share-link-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .share-link-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .share-link-name {
+            font-weight: 600;
+            color: #1f2937;
+            font-size: 13px;
+        }
+
+        .share-link-url {
+            font-size: 10px;
+            color: #6b7280;
+            font-family: monospace;
+            background: #f3f4f6;
+            padding: 3px 6px;
+            border-radius: 4px;
+            margin-top: 3px;
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .copy-link-btn {
+            background: #10a37f;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 600;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .copy-link-btn:hover {
+            background: #0d8c6f;
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+            .history-dropdown {
+                right: 20px;
+                left: 20px;
+                min-width: auto;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1580,6 +1814,71 @@
                     <div class="agent-role">Premium Features</div>
                 </div>
             </a>
+
+            <!-- Shareable Agent Links -->
+            <div class="section-title" style="margin-top: 20px;">🔗 Shareable Links</div>
+            
+            <div class="share-links-section">
+                <p style="font-size: 12px; color: #e5e7eb; margin-bottom: 12px;">
+                    Share direct links to agents:
+                </p>
+                
+                <div class="share-link-item">
+                    <div class="share-link-info">
+                        <div class="share-link-icon">🌙</div>
+                        <div class="share-link-details">
+                            <div class="share-link-name">Luna</div>
+                            <div class="share-link-url">{{ request.host_url }}agent/Luna</div>
+                        </div>
+                    </div>
+                    <button class="copy-link-btn" onclick="copyShareLink('{{ request.host_url }}agent/Luna')">
+                        Copy
+                    </button>
+                </div>
+                
+                <div class="share-link-item">
+                    <div class="share-link-info">
+                        <div class="share-link-icon">🦉</div>
+                        <div class="share-link-details">
+                            <div class="share-link-name">Mila</div>
+                            <div class="share-link-url">{{ request.host_url }}agent/Mila</div>
+                        </div>
+                    </div>
+                    <button class="copy-link-btn" onclick="copyShareLink('{{ request.host_url }}agent/Mila')">
+                        Copy
+                    </button>
+                </div>
+                
+                <div class="share-link-item">
+                    <div class="share-link-info">
+                        <div class="share-link-icon">🌱</div>
+                        <div class="share-link-details">
+                            <div class="share-link-name">Sage</div>
+                            <div class="share-link-url">{{ request.host_url }}agent/Sage</div>
+                        </div>
+                    </div>
+                    <button class="copy-link-btn" onclick="copyShareLink('{{ request.host_url }}agent/Sage')">
+                        Copy
+                    </button>
+                </div>
+                
+                <div class="share-link-item">
+                    <div class="share-link-info">
+                        <div class="share-link-icon">🔥</div>
+                        <div class="share-link-details">
+                            <div class="share-link-name">Ember</div>
+                            <div class="share-link-url">{{ request.host_url }}agent/Ember</div>
+                        </div>
+                    </div>
+                    <button class="copy-link-btn" onclick="copyShareLink('{{ request.host_url }}agent/Ember')">
+                        Copy
+                    </button>
+                </div>
+                
+                <p style="font-size: 10px; color: #9ca3af; margin-top: 10px;">
+                    💡 Embed in iframes or share directly
+                </p>
+            </div>
         </div>
 
         <div class="sidebar-footer">
@@ -1626,6 +1925,17 @@
                 <button class="header-btn" onclick="openPromptBuilder()">
                     🎯 Prompt Builder
                 </button>
+                <button class="history-btn" id="historyBtn" onclick="toggleHistoryDropdown()">
+                    📜 History
+                </button>
+                
+                <!-- History Dropdown Menu -->
+                <div class="history-dropdown" id="historyDropdownMenu">
+                    <div style="padding: 20px; text-align: center; color: #6b7280;">
+                        Loading...
+                    </div>
+                </div>
+                
                 <div class="usage-badge">
                     <span id="messages-used">0</span>/<span id="daily-limit">25</span> today
                 </div>
@@ -2223,6 +2533,309 @@
         }
 
         console.log('✅ Image generation functionality loaded!');
+
+        // ============================================
+        // CHAT HISTORY DROPDOWN MODULE
+        // ============================================
+
+        let currentConversationId = null;
+        let conversations = [];
+
+        // Load all conversations from API
+        async function loadConversations() {
+            try {
+                const response = await fetch('/api/conversations', {
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) throw new Error('Failed to load conversations');
+                
+                const data = await response.json();
+                conversations = data.conversations || [];
+                
+                updateHistoryDropdown();
+                
+            } catch (error) {
+                console.error('Error loading conversations:', error);
+            }
+        }
+
+        // Update the history dropdown menu with conversations
+        function updateHistoryDropdown() {
+            const dropdown = document.getElementById('historyDropdownMenu');
+            if (!dropdown) return;
+            
+            if (conversations.length === 0) {
+                dropdown.innerHTML = `
+                    <div style="padding: 20px; text-align: center; color: #6b7280;">
+                        <p>No chat history yet</p>
+                        <p style="font-size: 12px; margin-top: 5px;">Start a conversation to see it here!</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Group conversations by date
+            const grouped = groupConversationsByDate(conversations);
+            
+            let html = '<div style="max-height: 400px; overflow-y: auto;">';
+            
+            // Add "New Chat" button at top
+            html += `
+                <div class="history-item history-new-chat" onclick="startNewChat()">
+                    <div class="history-icon">✨</div>
+                    <div class="history-content">
+                        <div class="history-title">New Chat</div>
+                        <div class="history-time">Start fresh conversation</div>
+                    </div>
+                </div>
+                <div style="border-bottom: 1px solid #e5e7eb; margin: 10px 0;"></div>
+            `;
+            
+            // Add conversations by date group
+            for (const [groupName, convs] of Object.entries(grouped)) {
+                html += `<div class="history-group-label">${groupName}</div>`;
+                
+                convs.forEach(conv => {
+                    const isActive = currentConversationId === conv.id;
+                    html += `
+                        <div class="history-item ${isActive ? 'active' : ''}" onclick="loadConversation(${conv.id})">
+                            <div class="history-icon">${getAgentIcon(conv.agent)}</div>
+                            <div class="history-content">
+                                <div class="history-title">${conv.title}</div>
+                                <div class="history-time">${formatTime(conv.updated_at)}</div>
+                            </div>
+                            <button class="history-delete" onclick="deleteConversation(${conv.id}, event)">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                                </svg>
+                            </button>
+                        </div>
+                    `;
+                });
+            }
+            
+            html += '</div>';
+            dropdown.innerHTML = html;
+        }
+
+        // Group conversations by date
+        function groupConversationsByDate(conversations) {
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            const lastWeek = new Date(today);
+            lastWeek.setDate(lastWeek.getDate() - 7);
+            
+            const groups = {
+                'Today': [],
+                'Yesterday': [],
+                'Last 7 Days': [],
+                'Older': []
+            };
+            
+            conversations.forEach(conv => {
+                const convDate = new Date(conv.updated_at);
+                const convDay = new Date(convDate.getFullYear(), convDate.getMonth(), convDate.getDate());
+                
+                if (convDay.getTime() === today.getTime()) {
+                    groups['Today'].push(conv);
+                } else if (convDay.getTime() === yesterday.getTime()) {
+                    groups['Yesterday'].push(conv);
+                } else if (convDate >= lastWeek) {
+                    groups['Last 7 Days'].push(conv);
+                } else {
+                    groups['Older'].push(conv);
+                }
+            });
+            
+            // Remove empty groups
+            Object.keys(groups).forEach(key => {
+                if (groups[key].length === 0) delete groups[key];
+            });
+            
+            return groups;
+        }
+
+        // Get agent icon emoji
+        function getAgentIcon(agentName) {
+            const icons = {
+                'Luna': '🌙',
+                'Mila': '🦉',
+                'Sage': '🌱',
+                'Ember': '🔥',
+                'Sol': '☀️',
+                'Nova': '⚡',
+                'Theo': '🌿'
+            };
+            return icons[agentName] || '🤖';
+        }
+
+        // Format timestamp
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diffMinutes = Math.floor((now - date) / 60000);
+            
+            if (diffMinutes < 1) return 'Just now';
+            if (diffMinutes < 60) return `${diffMinutes}m ago`;
+            if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)}h ago`;
+            
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+
+        // Load specific conversation
+        async function loadConversation(convId) {
+            try {
+                // Close dropdown
+                toggleHistoryDropdown();
+                
+                const response = await fetch(`/api/conversation/${convId}`, {
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) throw new Error('Failed to load conversation');
+                
+                const data = await response.json();
+                
+                // Clear current chat
+                const chatContainer = document.getElementById('chatContainer');
+                chatContainer.innerHTML = '';
+                
+                // Set current conversation
+                currentConversationId = data.id;
+                
+                // Switch to the conversation's agent
+                if (data.agent) {
+                    switchAgent(data.agent);
+                }
+                
+                // Load messages
+                data.messages.forEach(msg => {
+                    displayUserMessage(msg.message, null);
+                    displayAssistantMessage(msg.response);
+                });
+                
+                // Update dropdown to show active conversation
+                updateHistoryDropdown();
+                
+                showNotification(`Loaded: ${data.title}`);
+                
+            } catch (error) {
+                console.error('Error loading conversation:', error);
+                showNotification('Failed to load conversation', 'error');
+            }
+        }
+
+        // Start new chat
+        function startNewChat() {
+            // Clear chat container
+            const chatContainer = document.getElementById('chatContainer');
+            chatContainer.innerHTML = '';
+            
+            // Reset conversation ID
+            currentConversationId = null;
+            
+            // Show welcome message
+            const currentAgent = getCurrentAgent();
+            const welcomeMsg = document.createElement('div');
+            welcomeMsg.className = 'welcome';
+            welcomeMsg.innerHTML = `
+                <h2>Hi! I'm ${currentAgent} ${getAgentIcon(currentAgent)}</h2>
+                <p>I'm ready to help you. What can I do for you today?</p>
+            `;
+            chatContainer.appendChild(welcomeMsg);
+            
+            // Close dropdown
+            toggleHistoryDropdown();
+            
+            // Update dropdown
+            updateHistoryDropdown();
+            
+            showNotification('Started new chat');
+        }
+
+        // Delete conversation
+        async function deleteConversation(convId, event) {
+            event.stopPropagation();
+            
+            if (!confirm('Delete this conversation?')) return;
+            
+            try {
+                const response = await fetch(`/api/conversation/${convId}/delete`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) throw new Error('Failed to delete');
+                
+                // Remove from local array
+                conversations = conversations.filter(c => c.id !== convId);
+                
+                // If this was the current conversation, start new chat
+                if (currentConversationId === convId) {
+                    startNewChat();
+                } else {
+                    updateHistoryDropdown();
+                }
+                
+                showNotification('Conversation deleted');
+                
+            } catch (error) {
+                console.error('Error deleting conversation:', error);
+                showNotification('Failed to delete conversation', 'error');
+            }
+        }
+
+        // Toggle history dropdown
+        function toggleHistoryDropdown() {
+            const dropdown = document.getElementById('historyDropdownMenu');
+            if (!dropdown) return;
+            
+            const isVisible = dropdown.style.display === 'block';
+            
+            // Hide all dropdowns first
+            document.querySelectorAll('.dropdown-menu, .user-dropdown').forEach(d => {
+                d.style.display = 'none';
+                d.classList.remove('active', 'show');
+            });
+            
+            if (!isVisible) {
+                dropdown.style.display = 'block';
+                dropdown.classList.add('active');
+                // Load latest conversations
+                loadConversations();
+            }
+        }
+
+        // Copy shareable link to clipboard
+        function copyShareLink(url) {
+            navigator.clipboard.writeText(url).then(() => {
+                showNotification('Link copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                showNotification('Failed to copy link', 'error');
+            });
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const historyBtn = document.getElementById('historyBtn');
+            const dropdown = document.getElementById('historyDropdownMenu');
+            
+            if (historyBtn && dropdown && !historyBtn.contains(event.target) && !dropdown.contains(event.target)) {
+                dropdown.style.display = 'none';
+                dropdown.classList.remove('active');
+            }
+        });
+
+        // Load conversations on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadConversations();
+        });
+
+        console.log('✅ Chat History module loaded!');
     </script>
 
     <!-- Agent Library Modal -->
