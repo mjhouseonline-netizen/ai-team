@@ -334,6 +334,38 @@ def init_database():
             message TEXT NOT NULL,
             response TEXT NOT NULL,
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            conversation_id INTEGER,
+            FOREIGN KEY (user_id) REFERENCES users (id),
+            FOREIGN KEY (conversation_id) REFERENCES conversations (id)
+        )
+    """)
+    
+    # Add conversations table for grouping chats into sessions
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS conversations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            agent_name TEXT NOT NULL,
+            title TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            is_active BOOLEAN DEFAULT 1,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+    """)
+    
+    # Add custom_agents table for user-created agents
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS custom_agents (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            description TEXT,
+            personality TEXT,
+            system_prompt TEXT,
+            share_code TEXT UNIQUE,
+            is_public BOOLEAN DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users (id)
         )
     """)
@@ -554,6 +586,68 @@ def api_login():
 def dashboard():
     """AI Team Dashboard"""
     return render_template('dashboard.html', user=current_user)
+
+# ============================================
+# SHAREABLE AGENT LINKS (Public Agent Access)
+# ============================================
+
+@app.route('/agent/<agent_name>')
+def agent_link(agent_name):
+    """Shareable link for specific agent - works without login for embedding"""
+    # Validate agent name
+    valid_agents = ['Luna', 'Mila', 'Sage', 'Ember', 'Sol', 'Nova', 'Theo']
+    
+    if agent_name not in valid_agents:
+        return "Agent not found", 404
+    
+    # If logged in, redirect to dashboard with agent selected
+    if current_user.is_authenticated:
+        return render_template('dashboard.html', user=current_user, selected_agent=agent_name)
+    
+    # If not logged in, show agent page with login prompt
+    return render_template('agent_public.html', agent_name=agent_name)
+
+@app.route('/custom/<share_code>')
+def custom_agent_link(share_code):
+    """Shareable link for custom agent"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT id, name, description, personality, is_public
+            FROM custom_agents
+            WHERE share_code = ?
+        """, (share_code,))
+        
+        result = cursor.fetchone()
+        conn.close()
+        
+        if not result:
+            return "Custom agent not found", 404
+        
+        agent_id, name, description, personality, is_public = result
+        
+        # If not public, require login
+        if not is_public and not current_user.is_authenticated:
+            return redirect('/login')
+        
+        # If logged in, show dashboard with custom agent
+        if current_user.is_authenticated:
+            return render_template('dashboard.html', 
+                                 user=current_user, 
+                                 custom_agent_id=agent_id,
+                                 custom_agent_name=name)
+        
+        # Show public custom agent page
+        return render_template('custom_agent_public.html', 
+                             agent_name=name,
+                             description=description,
+                             share_code=share_code)
+        
+    except Exception as e:
+        print(f"Error loading custom agent: {str(e)}")
+        return "Error loading agent", 500
 
 # ============================================
 # SETTINGS PAGE (FOR NOTION INTEGRATION)
@@ -2171,6 +2265,161 @@ def get_history():
         return jsonify({'error': str(e)}), 500
 
 # ============================================
+# CONVERSATION MANAGEMENT (Chat History Sessions)
+# ============================================
+
+@app.route('/api/conversations')
+@login_required
+def get_conversations():
+    """Get all conversation sessions for current user"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT id, agent_name, title, created_at, updated_at
+            FROM conversations
+            WHERE user_id = ? AND is_active = 1
+            ORDER BY updated_at DESC
+            LIMIT 50
+        """, (current_user.id,))
+        
+        results = cursor.fetchall()
+        conn.close()
+        
+        conversations = []
+        for row in results:
+            conversations.append({
+                'id': row[0],
+                'agent': row[1],
+                'title': row[2] or 'New conversation',
+                'created_at': row[3],
+                'updated_at': row[4]
+            })
+        
+        return jsonify({'conversations': conversations}), 200
+        
+    except Exception as e:
+        print(f"Error getting conversations: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/conversation/<int:conv_id>')
+@login_required
+def get_conversation(conv_id):
+    """Get specific conversation with all messages"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        # Verify conversation belongs to user
+        cursor.execute("""
+            SELECT agent_name, title FROM conversations
+            WHERE id = ? AND user_id = ?
+        """, (conv_id, current_user.id))
+        
+        conv_result = cursor.fetchone()
+        if not conv_result:
+            conn.close()
+            return jsonify({'error': 'Conversation not found'}), 404
+        
+        agent_name, title = conv_result
+        
+        # Get all messages in this conversation
+        cursor.execute("""
+            SELECT message, response, timestamp
+            FROM chat_history
+            WHERE conversation_id = ? AND user_id = ?
+            ORDER BY timestamp ASC
+        """, (conv_id, current_user.id))
+        
+        messages = []
+        for row in cursor.fetchall():
+            messages.append({
+                'message': row[0],
+                'response': row[1],
+                'timestamp': row[2]
+            })
+        
+        conn.close()
+        
+        return jsonify({
+            'id': conv_id,
+            'agent': agent_name,
+            'title': title,
+            'messages': messages
+        }), 200
+        
+    except Exception as e:
+        print(f"Error getting conversation: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/conversation/new', methods=['POST'])
+@login_required
+def create_conversation():
+    """Create a new conversation session"""
+    try:
+        data = request.json
+        agent_name = data.get('agent', 'Luna')
+        title = data.get('title', 'New conversation')
+        
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            INSERT INTO conversations (user_id, agent_name, title, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?)
+        """, (current_user.id, agent_name, title, datetime.utcnow().isoformat(), datetime.utcnow().isoformat()))
+        
+        conv_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'conversation_id': conv_id,
+            'agent': agent_name,
+            'title': title
+        }), 200
+        
+    except Exception as e:
+        print(f"Error creating conversation: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/conversation/<int:conv_id>/delete', methods=['POST'])
+@login_required
+def delete_conversation(conv_id):
+    """Delete a conversation (soft delete)"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        # Verify ownership
+        cursor.execute("""
+            SELECT id FROM conversations
+            WHERE id = ? AND user_id = ?
+        """, (conv_id, current_user.id))
+        
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({'error': 'Conversation not found'}), 404
+        
+        # Soft delete
+        cursor.execute("""
+            UPDATE conversations
+            SET is_active = 0
+            WHERE id = ?
+        """, (conv_id,))
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'success': True}), 200
+        
+    except Exception as e:
+        print(f"Error deleting conversation: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# ============================================
 # AUTOMATION API (for programmatic access)
 # ============================================
 
@@ -2771,19 +3020,15 @@ def create_promo_codes(tier, count, prefix=""):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
-    # Set max_uses based on tier - unlimited for most tiers
-    # Use -1 for unlimited, 1 for single-use
-    max_uses = -1  # Default: unlimited uses
-    
     codes = []
     for i in range(count):
         code = f"{prefix}{generate_promo_code(8)}" if prefix else generate_promo_code(12)
         
         try:
             cursor.execute("""
-                INSERT INTO promo_codes (code, tier, max_uses, is_active, single_use)
-                VALUES (?, ?, ?, 1, 0)
-            """, (code, tier, max_uses))
+                INSERT INTO promo_codes (code, tier, max_uses)
+                VALUES (?, ?, 1)
+            """, (code, tier))
             codes.append(code)
         except sqlite3.IntegrityError:
             # Code already exists, try again
@@ -2825,8 +3070,8 @@ def validate_promo_code(code):
     if single_use and times_used >= 1:
         return False, "This promo code has already been used"
     
-    # For multi-use codes, check against max_uses (skip if max_uses is -1 = unlimited)
-    if not single_use and max_uses != -1 and times_used >= max_uses:
+    # For multi-use codes, check against max_uses
+    if not single_use and times_used >= max_uses:
         return False, "This promo code has reached its maximum uses"
     
     if expires_at:
