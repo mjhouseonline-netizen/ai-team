@@ -3547,8 +3547,36 @@ Please provide your response following these guidelines.`;
         }
 
         console.log('✅ Chat History module loaded!');
+        
+        // ============================================
+        // FIX: Agent routing issue
+        // ============================================
+        
+        // Override getCurrentAgent to always use the global variable
+        window.getCurrentAgent = function() {
+            console.log('🎯 getCurrentAgent called, returning:', currentAgent);
+            return currentAgent || 'Luna';
+        };
+        
+        // Intercept fetch calls to /api/chat and ensure correct agent
+        const originalFetch = window.fetch;
+        window.fetch = function(url, options) {
+            if (url === '/api/chat' && options && options.method === 'POST') {
+                if (options.body instanceof FormData) {
+                    // Check if agent is set correctly
+                    const agent = options.body.get('agent');
+                    console.log('📤 Original agent in FormData:', agent);
+                    
+                    // Force it to use currentAgent
+                    options.body.set('agent', currentAgent || 'Luna');
+                    console.log('📤 Updated agent to:', currentAgent);
+                }
+            }
+            return originalFetch.apply(this, arguments);
+        };
+        
+        console.log('✅ Agent routing fix applied!');
     </script>
-
     <!-- Agent Library Modal -->
     <div id="agentLibraryModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; overflow-y: auto;">
         <div style="max-width: 1200px; margin: 40px auto; background: white; border-radius: 20px; padding: 30px; position: relative;">
