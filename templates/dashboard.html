@@ -842,6 +842,28 @@
             }
         }
 
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.8;
+                transform: scale(1.02);
+            }
+        }
+
         .option-item {
             display: flex;
             align-items: center;
@@ -2503,6 +2525,114 @@
             }
         }
 
+        // ============================================
+        // VOICE INPUT FUNCTIONALITY
+        // ============================================
+        
+        let isRecording = false;
+        let recognition = null;
+
+        function toggleVoice() {
+            if (!isRecording) {
+                startVoiceRecording();
+            } else {
+                stopVoiceRecording();
+            }
+        }
+
+        function startVoiceRecording() {
+            // Check browser support
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                alert('❌ Voice input is not supported in your browser. Please use Chrome, Edge, or Safari.');
+                return;
+            }
+            
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+            
+            // Show visual indicator
+            showVoiceStatus('🎤 Listening... Speak now!');
+            isRecording = true;
+            
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                document.getElementById('messageInput').value = transcript;
+                stopVoiceRecording();
+                showNotification('✅ Voice input captured!');
+            };
+            
+            recognition.onerror = function(event) {
+                console.error('Voice recognition error:', event.error);
+                let errorMsg = 'Voice input error';
+                if (event.error === 'no-speech') {
+                    errorMsg = 'No speech detected. Please try again.';
+                } else if (event.error === 'not-allowed') {
+                    errorMsg = 'Microphone access denied. Please allow microphone access in your browser settings.';
+                }
+                stopVoiceRecording();
+                showNotification('❌ ' + errorMsg);
+            };
+            
+            recognition.onend = function() {
+                stopVoiceRecording();
+            };
+            
+            try {
+                recognition.start();
+            } catch (error) {
+                console.error('Error starting recognition:', error);
+                stopVoiceRecording();
+                showNotification('❌ Could not start voice input');
+            }
+        }
+
+        function stopVoiceRecording() {
+            if (recognition) {
+                try {
+                    recognition.stop();
+                } catch (e) {
+                    // Already stopped
+                }
+            }
+            hideVoiceStatus();
+            isRecording = false;
+        }
+
+        function showVoiceStatus(message) {
+            let status = document.getElementById('voiceStatus');
+            if (!status) {
+                status = document.createElement('div');
+                status.id = 'voiceStatus';
+                status.style.cssText = `
+                    position: fixed;
+                    top: 80px;
+                    right: 20px;
+                    background: linear-gradient(135deg, #ef4444, #dc2626);
+                    color: white;
+                    padding: 16px 24px;
+                    border-radius: 12px;
+                    font-weight: 600;
+                    box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
+                    z-index: 10000;
+                    animation: slideIn 0.3s ease-out, pulse 1.5s ease-in-out infinite;
+                    font-size: 15px;
+                `;
+                document.body.appendChild(status);
+            }
+            status.textContent = message;
+            status.style.display = 'block';
+        }
+
+        function hideVoiceStatus() {
+            const status = document.getElementById('voiceStatus');
+            if (status) {
+                status.style.display = 'none';
+            }
+        }
+
         function showNotification(message) {
             const notification = document.createElement('div');
             notification.textContent = message;
@@ -2953,7 +3083,7 @@
             agents.forEach(agent => {
                 const agentDiv = document.createElement('div');
                 agentDiv.className = 'agent-item custom-agent-item';
-                agentDiv.onclick = () => selectCustomAgent(agent.id, agent.name, agent.emoji || '🤖', agent.description || agent.role);
+                agentDiv.onclick = (e) => selectCustomAgent(e, agent.id, agent.name, agent.emoji || '🤖', agent.description || agent.role);
                 
                 agentDiv.innerHTML = `
                     <div class="agent-avatar" style="background: linear-gradient(135deg, #667eea, #764ba2);">
@@ -2972,7 +3102,9 @@
             });
         }
 
-        function selectCustomAgent(agentId, name, emoji, description) {
+        function selectCustomAgent(event, agentId, name, emoji, description) {
+            event.stopPropagation();
+            
             // Store custom agent info
             currentAgent = name;
             currentAgentEmoji = emoji;

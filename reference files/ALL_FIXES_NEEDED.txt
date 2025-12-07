@@ -1,0 +1,406 @@
+🔧 5 CRITICAL FIXES NEEDED
+
+═══════════════════════════════════════════════════════════════════
+
+ISSUES TO FIX:
+
+1. ❌ Can't save display name (no backend route or function)
+2. ❌ No visual indicator for voice input status
+3. ❌ Voice settings not accessible
+4. ❌ No avatar/image upload for custom agents
+5. ❌ Custom agent doesn't work when clicked (FIXED!)
+
+═══════════════════════════════════════════════════════════════════
+
+FIX #5: CUSTOM AGENT CLICK - ✅ DONE
+
+Problem: selectCustomAgent function didn't receive event parameter
+Solution: Changed function signature and onclick handler
+
+BEFORE:
+```javascript
+agentDiv.onclick = () => selectCustomAgent(agent.id, name...);
+function selectCustomAgent(agentId, name...) {
+    event.target.closest('.agent-item')  // ERROR: event undefined!
+}
+```
+
+AFTER:
+```javascript
+agentDiv.onclick = (e) => selectCustomAgent(e, agent.id, name...);
+function selectCustomAgent(event, agentId, name...) {
+    event.target.closest('.agent-item')  // Works!
+}
+```
+
+Result: Custom agents now clickable and selectable! ✅
+
+═══════════════════════════════════════════════════════════════════
+
+FIX #1: DISPLAY NAME SAVING
+
+NEEDED CHANGES:
+
+Backend (web_app_auth.py):
+1. Add display_name column to users table
+2. Add /api/profile/update route
+
+```python
+# In init_db() function:
+if 'display_name' not in existing_columns:
+    cursor.execute("ALTER TABLE users ADD COLUMN display_name TEXT")
+    print("✅ Added display_name column")
+
+# New route:
+@app.route('/api/profile/update', methods=['POST'])
+@login_required
+def update_profile():
+    data = request.json
+    display_name = data.get('display_name', '').strip()
+    
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE users 
+        SET display_name = ?
+        WHERE id = ?
+    """, (display_name, current_user.id))
+    conn.commit()
+    conn.close()
+    
+    return jsonify({'success': True})
+```
+
+Frontend (settings page):
+Add JavaScript function to save:
+
+```javascript
+function saveProfile() {
+    const displayName = document.getElementById('displayName').value;
+    
+    fetch('/api/profile/update', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({display_name: displayName})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Profile updated successfully!');
+        }
+    });
+}
+```
+
+═══════════════════════════════════════════════════════════════════
+
+FIX #2: VOICE INPUT VISUAL INDICATOR
+
+NEEDED CHANGES:
+
+Add visual feedback for voice recording:
+
+CSS:
+```css
+.voice-recording {
+    background: #ef4444 !important;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.voice-status {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: #ef4444;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 1000;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+```
+
+JavaScript:
+```javascript
+let isRecording = false;
+let recognition = null;
+
+function toggleVoice() {
+    if (!isRecording) {
+        startVoiceRecording();
+    } else {
+        stopVoiceRecording();
+    }
+}
+
+function startVoiceRecording() {
+    if (!('webkitSpeechRecognition' in window)) {
+        alert('Voice input not supported in your browser');
+        return;
+    }
+    
+    recognition = new webkitSpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    
+    // Show visual indicator
+    showVoiceStatus('🎤 Listening...');
+    isRecording = true;
+    
+    recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        document.getElementById('messageInput').value = transcript;
+        stopVoiceRecording();
+    };
+    
+    recognition.onerror = function(event) {
+        console.error('Voice recognition error:', event.error);
+        stopVoiceRecording();
+    };
+    
+    recognition.start();
+}
+
+function stopVoiceRecording() {
+    if (recognition) {
+        recognition.stop();
+    }
+    hideVoiceStatus();
+    isRecording = false;
+}
+
+function showVoiceStatus(message) {
+    let status = document.getElementById('voiceStatus');
+    if (!status) {
+        status = document.createElement('div');
+        status.id = 'voiceStatus';
+        status.className = 'voice-status';
+        document.body.appendChild(status);
+    }
+    status.textContent = message;
+    status.style.display = 'block';
+}
+
+function hideVoiceStatus() {
+    const status = document.getElementById('voiceStatus');
+    if (status) {
+        status.style.display = 'none';
+    }
+}
+```
+
+═══════════════════════════════════════════════════════════════════
+
+FIX #3: VOICE SETTINGS PANEL
+
+Add voice settings accessible from dropdown:
+
+HTML (in settings or dashboard):
+```html
+<div id="voiceSettingsModal" class="modal">
+    <div class="modal-content">
+        <h2>🎤 Voice Settings</h2>
+        
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="autoPlayVoice" checked>
+                Auto-play voice responses
+            </label>
+        </div>
+        
+        <div class="form-group">
+            <label>Voice Speed</label>
+            <input type="range" id="voiceSpeed" min="0.5" max="2" step="0.1" value="1">
+            <span id="voiceSpeedValue">1.0x</span>
+        </div>
+        
+        <div class="form-group">
+            <label>Voice Pitch</label>
+            <input type="range" id="voicePitch" min="0" max="2" step="0.1" value="1">
+            <span id="voicePitchValue">1.0</span>
+        </div>
+        
+        <button onclick="saveVoiceSettings()">Save Settings</button>
+    </div>
+</div>
+```
+
+JavaScript:
+```javascript
+function openVoiceSettings() {
+    document.getElementById('voiceSettingsModal').style.display = 'flex';
+}
+
+function saveVoiceSettings() {
+    const settings = {
+        autoPlay: document.getElementById('autoPlayVoice').checked,
+        speed: document.getElementById('voiceSpeed').value,
+        pitch: document.getElementById('voicePitch').value
+    };
+    
+    localStorage.setItem('voiceSettings', JSON.stringify(settings));
+    alert('Voice settings saved!');
+}
+```
+
+═══════════════════════════════════════════════════════════════════
+
+FIX #4: AVATAR UPLOAD FOR CUSTOM AGENTS
+
+NEEDED CHANGES:
+
+Update custom agent modal to include image upload:
+
+HTML:
+```html
+<div class="form-group">
+    <label class="form-label">Agent Avatar (Optional)</label>
+    <input type="file" id="agentAvatar" accept="image/*" 
+           onchange="previewAgentAvatar(this)">
+    <div id="avatarPreview" style="margin-top: 10px;">
+        <!-- Preview shows here -->
+    </div>
+</div>
+```
+
+JavaScript:
+```javascript
+function previewAgentAvatar(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('avatarPreview');
+            preview.innerHTML = `
+                <img src="${e.target.result}" 
+                     style="width: 100px; height: 100px; 
+                            border-radius: 50%; object-fit: cover;">
+            `;
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function createCustomAgent() {
+    const name = document.getElementById('customAgentName').value.trim();
+    const description = document.getElementById('customAgentDesc').value.trim();
+    const personality = document.getElementById('customAgentPersonality').value.trim();
+    const avatarFile = document.getElementById('agentAvatar').files[0];
+    
+    if (!name || !description || !personality) {
+        alert('Please fill in all required fields!');
+        return;
+    }
+    
+    // Convert image to base64 if provided
+    if (avatarFile) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const avatarData = e.target.result;
+            sendCustomAgentData(name, description, personality, avatarData);
+        };
+        reader.readAsDataURL(avatarFile);
+    } else {
+        sendCustomAgentData(name, description, personality, null);
+    }
+}
+
+function sendCustomAgentData(name, description, personality, avatar) {
+    fetch('/api/custom-agent/create', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            name: name,
+            role: description,
+            instructions: personality,
+            emoji: '🤖',
+            avatar_image: avatar  // Base64 image data
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('✅ Custom agent created!');
+            closeCustomAgentModal();
+            setTimeout(() => location.reload(), 1000);
+        }
+    });
+}
+```
+
+Backend (web_app_auth.py):
+```python
+# Add avatar_image column to custom_agents table
+if 'avatar_image' not in columns:
+    cursor.execute("ALTER TABLE custom_agents ADD COLUMN avatar_image TEXT")
+
+# In create_custom_agent route:
+avatar_image = data.get('avatar_image')  # Base64 string
+
+cursor.execute("""
+    INSERT INTO custom_agents 
+    (user_id, name, description, emoji, personality, 
+     system_prompt, avatar_image)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+""", (current_user.id, name, description, emoji, 
+      personality, instructions, avatar_image))
+```
+
+Display avatar in sidebar:
+```javascript
+// In displayCustomAgents():
+const avatarHTML = agent.avatar_image 
+    ? `<img src="${agent.avatar_image}" style="width: 100%; height: 100%; 
+             object-fit: cover; border-radius: 50%;">`
+    : agent.emoji || '🤖';
+
+agentDiv.innerHTML = `
+    <div class="agent-avatar">
+        ${avatarHTML}
+    </div>
+    ...
+`;
+```
+
+═══════════════════════════════════════════════════════════════════
+
+PRIORITY ORDER:
+
+1. Fix #5 (Custom agent click) - ✅ ALREADY DONE
+2. Fix #2 (Voice visual feedback) - HIGH PRIORITY
+3. Fix #1 (Display name save) - MEDIUM PRIORITY
+4. Fix #4 (Avatar upload) - NICE TO HAVE
+5. Fix #3 (Voice settings) - NICE TO HAVE
+
+═══════════════════════════════════════════════════════════════════
+
+RECOMMENDATION:
+
+Would you like me to implement all of these fixes now? I can create
+updated files with:
+1. Custom agent click fix (done)
+2. Voice input with visual feedback
+3. Profile name saving
+4. Avatar upload for custom agents
+5. Voice settings panel
+
+Or would you prefer I focus on specific fixes first?
+
+═══════════════════════════════════════════════════════════════════
