@@ -361,14 +361,40 @@ def init_database():
             user_id INTEGER NOT NULL,
             name TEXT NOT NULL,
             description TEXT,
+            emoji TEXT DEFAULT '🤖',
             personality TEXT,
             system_prompt TEXT,
             share_code TEXT UNIQUE,
-            is_public BOOLEAN DEFAULT 0,
+            is_public BOOLEAN DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users (id)
         )
     """)
+    
+    # Check if emoji column exists and add if missing (for existing tables)
+    cursor.execute("PRAGMA table_info(custom_agents)")
+    columns = [col[1] for col in cursor.fetchall()]
+    
+    if 'emoji' not in columns:
+        try:
+            cursor.execute("ALTER TABLE custom_agents ADD COLUMN emoji TEXT DEFAULT '🤖'")
+            print("✅ Added emoji column to custom_agents")
+        except sqlite3.OperationalError as e:
+            print(f"⚠️  Could not add emoji column: {e}")
+    
+    if 'share_code' not in columns:
+        try:
+            cursor.execute("ALTER TABLE custom_agents ADD COLUMN share_code TEXT UNIQUE")
+            print("✅ Added share_code column to custom_agents")
+        except sqlite3.OperationalError as e:
+            print(f"⚠️  Could not add share_code column: {e}")
+    
+    if 'is_public' not in columns:
+        try:
+            cursor.execute("ALTER TABLE custom_agents ADD COLUMN is_public INTEGER DEFAULT 1")
+            print("✅ Added is_public column to custom_agents")
+        except sqlite3.OperationalError as e:
+            print(f"⚠️  Could not add is_public column: {e}")
     
     conn.commit()
     conn.close()
