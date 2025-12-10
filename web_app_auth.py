@@ -949,6 +949,58 @@ def agent_link(agent_name):
     # If not logged in, show agent page with login prompt
     return render_template('agent_public.html', agent_name=agent_name)
 
+@app.route('/admin/test-custom-link/<share_code>')
+def test_custom_link(share_code):
+    """Test if a share code exists in database"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        # Check what share_codes exist
+        cursor.execute("SELECT id, name, share_code FROM custom_agents")
+        all_agents = cursor.fetchall()
+        
+        # Try to find this specific share_code
+        cursor.execute("SELECT id, name FROM custom_agents WHERE share_code = ?", (share_code,))
+        matching_agent = cursor.fetchone()
+        
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'looking_for': share_code,
+            'found': matching_agent is not None,
+            'matching_agent': {
+                'id': matching_agent[0],
+                'name': matching_agent[1]
+            } if matching_agent else None,
+            'all_agents_in_db': [
+                {
+                    'id': a[0],
+                    'name': a[1],
+                    'share_code': a[2],
+                    'matches': a[2] == share_code
+                } for a in all_agents
+            ]
+        }), 200
+        
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+@app.route('/test-route-works')
+def test_route():
+    """Simple test to verify routes are being registered"""
+    return jsonify({
+        'success': True,
+        'message': 'Routes are working!',
+        'custom_route_should_work': True
+    })
+
 @app.route('/custom/<share_code>')
 def custom_agent_link(share_code):
     """Shareable link for custom agent"""
@@ -972,12 +1024,20 @@ def custom_agent_link(share_code):
             select_cols.append('emoji')
         
         query = f"SELECT {', '.join(select_cols)} FROM custom_agents WHERE share_code = ?"
+        
+        print(f"🔍 Looking for share_code: {share_code}")
+        print(f"🔍 Query: {query}")
+        
         cursor.execute(query, (share_code,))
         
         result = cursor.fetchone()
+        
+        print(f"🔍 Result: {result}")
+        
         conn.close()
         
         if not result:
+            print(f"❌ No agent found with share_code: {share_code}")
             return "Custom agent not found. Please check the link and try again.", 404
         
         # Parse results based on available columns
@@ -996,18 +1056,23 @@ def custom_agent_link(share_code):
         
         emoji = result[idx] if 'emoji' in columns else '🤖'
         
+        print(f"✅ Found agent: {name} (ID: {agent_id})")
+        
         # If not public, require login
         if not is_public and not current_user.is_authenticated:
+            print(f"🔒 Agent not public, redirecting to login")
             return redirect('/login')
         
         # If logged in, show dashboard with custom agent active
         if current_user.is_authenticated:
+            print(f"👤 User logged in, showing dashboard")
             return render_template('dashboard.html', 
                                  user=current_user, 
                                  custom_agent_id=agent_id,
                                  custom_agent_name=name)
         
         # Not logged in - redirect to signup with agent context
+        print(f"📝 Not logged in, redirecting to signup")
         session['pending_agent'] = {
             'id': agent_id,
             'name': name,
