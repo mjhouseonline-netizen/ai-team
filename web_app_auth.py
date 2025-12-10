@@ -452,8 +452,146 @@ def init_promo_codes_table():
     print("✅ Promo codes tables initialized")
 
 # Initialize database on startup
-init_database()
-init_promo_codes_table()
+try:
+    init_database()
+    init_promo_codes_table()
+    print("✅ Database initialization completed successfully")
+except Exception as e:
+    print(f"⚠️  Database initialization error: {str(e)}")
+    import traceback
+    traceback.print_exc()
+
+# ============================================
+# ADMIN ROUTES FOR DATABASE SETUP
+# ============================================
+
+@app.route('/admin/init-database-emergency')
+def emergency_database_init():
+    """Emergency database initialization - visit this URL to fix database"""
+    try:
+        # Force database initialization
+        init_database()
+        init_promo_codes_table()
+        
+        # Check if custom_agents table exists and has correct columns
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute("PRAGMA table_info(custom_agents)")
+        columns = [col[1] for col in cursor.fetchall()]
+        
+        missing_columns = []
+        
+        if 'emoji' not in columns:
+            cursor.execute("ALTER TABLE custom_agents ADD COLUMN emoji TEXT DEFAULT '🤖'")
+            missing_columns.append('emoji')
+        
+        if 'share_code' not in columns:
+            cursor.execute("ALTER TABLE custom_agents ADD COLUMN share_code TEXT UNIQUE")
+            missing_columns.append('share_code')
+        
+        if 'is_public' not in columns:
+            cursor.execute("ALTER TABLE custom_agents ADD COLUMN is_public BOOLEAN DEFAULT 1")
+            missing_columns.append('is_public')
+        
+        conn.commit()
+        
+        # Verify all tables exist
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        tables = [row[0] for row in cursor.fetchall()]
+        
+        conn.close()
+        
+        result = {
+            'success': True,
+            'message': 'Database initialized successfully!',
+            'tables': tables,
+            'missing_columns_added': missing_columns if missing_columns else 'None - all columns present'
+        }
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+@app.route('/admin/create-default-agent/<int:user_id>')
+def create_default_agent(user_id):
+    """Create default custom agent for user - visit /admin/create-default-agent/1"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        # Check if user exists
+        cursor.execute("SELECT id, email FROM users WHERE id = ?", (user_id,))
+        user = cursor.fetchone()
+        
+        if not user:
+            return jsonify({
+                'success': False,
+                'error': f'User with ID {user_id} not found',
+                'hint': 'Sign up at /register first, then try /admin/create-default-agent/1'
+            }), 404
+        
+        # Generate share code
+        import secrets
+        share_code = secrets.token_urlsafe(12)
+        
+        # Create agent
+        name = "Skill & Soul Agent"
+        description = "knows about my brand and style and builds on my ideas"
+        emoji = "🤖"
+        system_prompt = """**Tone:** Thorough and educational
+**Length:** Comprehensive with examples
+**Format:** Well-structured with headings and sections
+
+BRAND CONTEXT:
+- SKILL & SOUL STUDIO helps overwhelmed creators
+- Target audience: overwhelmed solo business owners
+- Brand values: No fake urgency, honest approach
+- Aim for clarity without stress
+- Short paragraphs, simple sentences
+- Honest, grounded tone
+
+STYLE RULES:
+- Short paragraphs (2-3 sentences)
+- Simple vocabulary
+- Conversational tone
+- Clarify, don't overwhelm"""
+        
+        cursor.execute("""
+            INSERT INTO custom_agents 
+            (user_id, name, description, emoji, personality, system_prompt, share_code, is_public)
+            VALUES (?, ?, ?, ?, '{}', ?, ?, 1)
+        """, (user_id, name, description, emoji, system_prompt, share_code))
+        
+        agent_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        
+        share_url = f"{request.host_url}custom/{share_code}"
+        
+        return jsonify({
+            'success': True,
+            'message': 'Agent created successfully!',
+            'agent_id': agent_id,
+            'name': name,
+            'share_code': share_code,
+            'share_url': share_url,
+            'instructions': 'Refresh your dashboard to see the agent!'
+        }), 200
+        
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
 
 # ============================================
 # PUBLIC PAGES
