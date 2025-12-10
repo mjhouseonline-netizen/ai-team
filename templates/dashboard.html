@@ -190,6 +190,32 @@
             transform: translateY(-50%) scale(1.1);
         }
 
+        .share-agent-btn {
+            position: absolute;
+            right: 40px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(16, 163, 127, 0.1);
+            border: 1px solid rgba(16, 163, 127, 0.3);
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: 14px;
+            cursor: pointer;
+            opacity: 0;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        .custom-agent-item:hover .share-agent-btn {
+            opacity: 1;
+        }
+
+        .share-agent-btn:hover {
+            background: rgba(16, 163, 127, 0.2);
+            border-color: rgba(16, 163, 127, 0.5);
+            transform: translateY(-50%) scale(1.1);
+        }
+
         .sidebar-footer {
             padding: 12px;
             border-top: 1px solid #333;
@@ -2260,83 +2286,7 @@
         </div>
     </div>
 
-   <script>
-    // ============================================
-    // AGENT SELECTION FUNCTION - ADD THIS FIRST
-    // ============================================
-
-    var currentAgent = 'Luna';
-    var currentAgentEmoji = '🌙';
-    var currentAgentId = null;
-
-    function selectAgent(name, emoji, role) {
-        console.log('Switching to agent:', name);
-        
-        currentAgent = name;
-        currentAgentEmoji = emoji;
-        currentAgentId = null;
-        
-        // Update header
-        const agentNameDisplay = document.getElementById('currentAgentName');
-        const agentAvatarDisplay = document.getElementById('currentAgentAvatar');
-        
-        if (agentNameDisplay) {
-            agentNameDisplay.textContent = name;
-        }
-        
-        if (agentAvatarDisplay) {
-            agentAvatarDisplay.textContent = emoji;
-        }
-        
-        // Remove active from all agents
-        document.querySelectorAll('.agent-item').forEach(item => {
-            item.classList.remove('active');
-        });
-        
-        // Add active to clicked agent
-        const clickedAgent = event?.target?.closest('.agent-item');
-        if (clickedAgent) {
-            clickedAgent.classList.add('active');
-        }
-        
-        // Update placeholder
-        const messageInput = document.getElementById('messageInput');
-        if (messageInput) {
-            messageInput.placeholder = `Message ${name}...`;
-        }
-        
-        // Show welcome message
-        const chatContainer = document.getElementById('chatContainer');
-        if (chatContainer) {
-            const welcomeMessages = {
-                'Luna': "I'm your research analyst. How can I help you today?",
-                'Mila': "I'm your organization expert. Ready to plan something?",
-                'Sage': "I'm your content writer. Need help with writing?",
-                'Ember': "I'm your creative director. Let's create something amazing!",
-                'Sol': "I'm your strategic thinker. What's your goal?",
-                'Nova': "I'm your tech expert. Got a technical challenge?",
-                'Theo': "I'm your implementation specialist. Let's build something!"
-            };
-            
-            chatContainer.innerHTML = `
-                <div class="welcome">
-                    <h2>Hi! I'm ${name} ${emoji}</h2>
-                    <p>${welcomeMessages[name] || "I'm ready to help!"}</p>
-                </div>
-            `;
-        }
-        
-        console.log('✅ Switched to', name);
-    }
-
-    function getCurrentAgent() {
-        return currentAgent || 'Luna';
-    }
-
-    // ============================================
-    // YOUR EXISTING CODE CONTINUES BELOW
-    // ============================================
-
+    <script>
         // Combined Input Options Dropdown
         function toggleInputOptions() {
             const menu = document.getElementById('inputOptionsMenu');
@@ -3159,7 +3109,19 @@
             agents.forEach(agent => {
                 const agentDiv = document.createElement('div');
                 agentDiv.className = 'agent-item custom-agent-item';
-                agentDiv.onclick = (e) => selectCustomAgent(e, agent.id, agent.name, agent.emoji || '🤖', agent.description || agent.role);
+                agentDiv.onclick = (e) => {
+                    // Don't trigger if clicking share or delete buttons
+                    if (!e.target.closest('.share-agent-btn') && !e.target.closest('.delete-agent-btn')) {
+                        selectCustomAgent(e, agent.id, agent.name, agent.emoji || '🤖', agent.description || agent.role);
+                    }
+                };
+                
+                // Build share button HTML if share_url exists
+                const shareButtonHTML = agent.share_url ? `
+                    <button class="share-agent-btn" onclick="showCustomAgentShare(event, '${agent.name}', '${agent.share_url}')" title="Share agent">
+                        🔗
+                    </button>
+                ` : '';
                 
                 agentDiv.innerHTML = `
                     <div class="agent-avatar" style="background: linear-gradient(135deg, #667eea, #764ba2);">
@@ -3169,12 +3131,88 @@
                         <div class="agent-name">${agent.name}</div>
                         <div class="agent-role">${agent.description || agent.role || 'Custom Agent'}</div>
                     </div>
+                    ${shareButtonHTML}
                     <button class="delete-agent-btn" onclick="deleteCustomAgent(event, ${agent.id})" title="Delete agent">
                         🗑️
                     </button>
                 `;
                 
                 container.appendChild(agentDiv);
+            });
+        }
+
+        function showCustomAgentShare(event, agentName, shareUrl) {
+            event.stopPropagation();
+            
+            // Create modal
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.7);
+                z-index: 10000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            `;
+            
+            modal.innerHTML = `
+                <div style="background: white; padding: 40px; border-radius: 20px; max-width: 500px; width: 90%;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 style="margin: 0; color: #1f2937;">🔗 Share ${agentName}</h2>
+                        <button onclick="this.closest('div').parentElement.remove()" 
+                                style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280;">✕</button>
+                    </div>
+                    
+                    <p style="color: #6b7280; margin-bottom: 20px;">
+                        Anyone with this link can use your custom agent:
+                    </p>
+                    
+                    <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin-bottom: 20px; 
+                                font-family: monospace; font-size: 14px; word-break: break-all; color: #374151;">
+                        ${shareUrl}
+                    </div>
+                    
+                    <div style="display: flex; gap: 12px;">
+                        <button onclick="copyCustomAgentLink('${shareUrl}')" 
+                                style="flex: 1; padding: 12px; background: linear-gradient(135deg, #10a37f, #0d8c6f); 
+                                       color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                            📋 Copy Link
+                        </button>
+                        <button onclick="this.closest('div').parentElement.parentElement.remove()" 
+                                style="padding: 12px 24px; background: #f3f4f6; color: #374151; border: none; 
+                                       border-radius: 8px; font-weight: 600; cursor: pointer;">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // Close on background click
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+            
+            document.body.appendChild(modal);
+        }
+
+        function copyCustomAgentLink(url) {
+            navigator.clipboard.writeText(url).then(() => {
+                showNotification('✅ Link copied to clipboard!');
+            }).catch(err => {
+                // Fallback
+                const textarea = document.createElement('textarea');
+                textarea.value = url;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showNotification('✅ Link copied to clipboard!');
             });
         }
 
@@ -3547,36 +3585,8 @@ Please provide your response following these guidelines.`;
         }
 
         console.log('✅ Chat History module loaded!');
-        
-        // ============================================
-        // FIX: Agent routing issue
-        // ============================================
-        
-        // Override getCurrentAgent to always use the global variable
-        window.getCurrentAgent = function() {
-            console.log('🎯 getCurrentAgent called, returning:', currentAgent);
-            return currentAgent || 'Luna';
-        };
-        
-        // Intercept fetch calls to /api/chat and ensure correct agent
-        const originalFetch = window.fetch;
-        window.fetch = function(url, options) {
-            if (url === '/api/chat' && options && options.method === 'POST') {
-                if (options.body instanceof FormData) {
-                    // Check if agent is set correctly
-                    const agent = options.body.get('agent');
-                    console.log('📤 Original agent in FormData:', agent);
-                    
-                    // Force it to use currentAgent
-                    options.body.set('agent', currentAgent || 'Luna');
-                    console.log('📤 Updated agent to:', currentAgent);
-                }
-            }
-            return originalFetch.apply(this, arguments);
-        };
-        
-        console.log('✅ Agent routing fix applied!');
     </script>
+
     <!-- Agent Library Modal -->
     <div id="agentLibraryModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; overflow-y: auto;">
         <div style="max-width: 1200px; margin: 40px auto; background: white; border-radius: 20px; padding: 30px; position: relative;">
