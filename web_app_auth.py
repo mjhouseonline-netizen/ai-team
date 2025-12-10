@@ -1027,6 +1027,16 @@ def test_route():
         'custom_route_should_work': True
     })
 
+@app.route('/test-before-custom')
+def test_before_custom():
+    """Test route immediately before custom route"""
+    return "Routes work here!"
+
+@app.route('/custom/test-simple')
+def test_simple_custom():
+    """Test with hardcoded path"""
+    return "Hardcoded custom route works!"
+
 @app.route('/custom/<string:share_code>')
 def custom_agent_link(share_code):
     """Shareable link for custom agent"""
