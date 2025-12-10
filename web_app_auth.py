@@ -537,11 +537,52 @@ def create_default_agent(user_id):
                 'hint': 'Sign up at /register first, then try /admin/create-default-agent/1'
             }), 404
         
-        # Generate share code
+        # Check if agent already exists for this user
+        cursor.execute("SELECT id, name, share_code FROM custom_agents WHERE user_id = ?", (user_id,))
+        existing_agent = cursor.fetchone()
+        
+        if existing_agent:
+            agent_id, name, share_code = existing_agent
+            
+            # If agent exists but has no share_code, add one
+            if not share_code:
+                import secrets
+                share_code = secrets.token_urlsafe(12)
+                cursor.execute("UPDATE custom_agents SET share_code = ?, is_public = 1 WHERE id = ?", 
+                             (share_code, agent_id))
+                conn.commit()
+                conn.close()
+                
+                share_url = f"{request.host_url}custom/{share_code}"
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'Added share code to existing agent!',
+                    'agent_id': agent_id,
+                    'name': name,
+                    'share_code': share_code,
+                    'share_url': share_url,
+                    'instructions': 'Refresh your dashboard to see the share link!'
+                }), 200
+            else:
+                # Agent already has share code
+                conn.close()
+                share_url = f"{request.host_url}custom/{share_code}"
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'Agent already exists with share code!',
+                    'agent_id': agent_id,
+                    'name': name,
+                    'share_code': share_code,
+                    'share_url': share_url,
+                    'instructions': 'Agent is ready to share!'
+                }), 200
+        
+        # Create new agent
         import secrets
         share_code = secrets.token_urlsafe(12)
         
-        # Create agent
         name = "Skill & Soul Agent"
         description = "knows about my brand and style and builds on my ideas"
         emoji = "🤖"
