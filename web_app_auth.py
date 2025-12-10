@@ -1001,7 +1001,7 @@ def test_route():
         'custom_route_should_work': True
     })
 
-@app.route('/custom/<share_code>')
+@app.route('/custom/<string:share_code>')
 def custom_agent_link(share_code):
     """Shareable link for custom agent"""
     try:
@@ -4924,6 +4924,27 @@ def toggle_webhook(webhook_id):
 # ============================================
 # RUN APPLICATION
 # ============================================
+
+@app.route('/admin/list-routes')
+def list_routes():
+    """List all registered Flask routes"""
+    routes = []
+    for rule in app.url_map.iter_rules():
+        routes.append({
+            'endpoint': rule.endpoint,
+            'methods': list(rule.methods),
+            'path': str(rule)
+        })
+    
+    # Check specifically for custom route
+    custom_routes = [r for r in routes if 'custom' in r['path'].lower()]
+    
+    return jsonify({
+        'success': True,
+        'total_routes': len(routes),
+        'custom_routes': custom_routes,
+        'all_routes': sorted(routes, key=lambda x: x['path'])
+    })
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
