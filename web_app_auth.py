@@ -465,6 +465,67 @@ except Exception as e:
 # ADMIN ROUTES FOR DATABASE SETUP
 # ============================================
 
+@app.route('/admin/check-agents')
+def check_agents():
+    """Check all custom agents and their share codes"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        # Get all custom agents
+        cursor.execute("""
+            SELECT id, user_id, name, description, emoji, share_code, is_public, created_at
+            FROM custom_agents
+        """)
+        
+        agents = cursor.fetchall()
+        conn.close()
+        
+        if not agents:
+            return jsonify({
+                'success': True,
+                'total_agents': 0,
+                'message': 'No custom agents found',
+                'agents': []
+            }), 200
+        
+        agent_list = []
+        for agent in agents:
+            agent_id, user_id, name, desc, emoji, share_code, is_public, created = agent
+            
+            agent_info = {
+                'id': agent_id,
+                'user_id': user_id,
+                'name': name,
+                'description': desc,
+                'emoji': emoji,
+                'share_code': share_code,
+                'is_public': bool(is_public),
+                'created_at': created
+            }
+            
+            if share_code:
+                agent_info['share_url'] = f"{request.host_url}custom/{share_code}"
+                agent_info['status'] = '✅ Has share code'
+            else:
+                agent_info['status'] = '❌ Missing share code'
+            
+            agent_list.append(agent_info)
+        
+        return jsonify({
+            'success': True,
+            'total_agents': len(agents),
+            'agents': agent_list
+        }), 200
+        
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
 @app.route('/admin/init-database-emergency')
 def emergency_database_init():
     """Emergency database initialization - visit this URL to fix database"""
