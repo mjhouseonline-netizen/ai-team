@@ -109,8 +109,14 @@ if NOTION_AVAILABLE:
 else:
     print("⚠️  Notion integration disabled")
 
-# Database path
-DB_PATH = 'users.db'
+# Database path - use persistent disk if available, fallback to current directory
+import os
+if os.path.exists('/data'):
+    DB_PATH = '/data/ai_team.db'
+    print("✅ Using persistent disk: /data/ai_team.db")
+else:
+    DB_PATH = 'ai_team.db'
+    print("⚠️  No persistent disk found, using local: ai_team.db")
 
 # Helper function for database connection
 def get_db_connection():
