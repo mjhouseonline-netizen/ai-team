@@ -3381,56 +3381,59 @@ def get_custom_agents():
         has_emoji = 'emoji' in columns
         has_description = 'description' in columns
         has_role = 'role' in columns
+        has_share_code = 'share_code' in columns
         
         # Use description if available, fallback to role for old tables
         desc_column = 'description' if has_description else 'role'
         
+        # Build SELECT query with optional share_code
+        select_columns = f"id, name, {desc_column}"
         if has_emoji:
-            cursor.execute(f"""
-                SELECT id, name, {desc_column}, emoji, personality, system_prompt, created_at
-                FROM custom_agents
-                WHERE user_id = ?
-                ORDER BY created_at DESC
-            """, (current_user.id,))
-        else:
-            cursor.execute(f"""
-                SELECT id, name, {desc_column}, personality, system_prompt, created_at
-                FROM custom_agents
-                WHERE user_id = ?
-                ORDER BY created_at DESC
-            """, (current_user.id,))
+            select_columns += ", emoji"
+        select_columns += ", personality, system_prompt"
+        if has_share_code:
+            select_columns += ", share_code"
+        select_columns += ", created_at"
+        
+        cursor.execute(f"""
+            SELECT {select_columns}
+            FROM custom_agents
+            WHERE user_id = ?
+            ORDER BY created_at DESC
+        """, (current_user.id,))
         
         results = cursor.fetchall()
         conn.close()
         
-        if has_emoji:
-            agents = [
-                {
-                    'id': row[0],
-                    'name': row[1],
-                    'description': row[2],  # Always return as 'description' for frontend
-                    'role': row[2],  # Also include as 'role' for backwards compatibility
-                    'emoji': row[3] or '🤖',
-                    'personality': row[4],
-                    'system_prompt': row[5],
-                    'created_at': row[6]
-                }
-                for row in results
-            ]
-        else:
-            agents = [
-                {
-                    'id': row[0],
-                    'name': row[1],
-                    'description': row[2],  # Always return as 'description' for frontend
-                    'role': row[2],  # Also include as 'role' for backwards compatibility
-                    'emoji': '🤖',  # Default emoji
-                    'personality': row[3],
-                    'system_prompt': row[4],
-                    'created_at': row[5]
-                }
-                for row in results
-            ]
+        # Build agent objects
+        agents = []
+        for row in results:
+            idx = 0
+            agent = {
+                'id': row[idx],
+                'name': row[idx+1],
+                'description': row[idx+2],
+                'role': row[idx+2],
+            }
+            idx = 3
+            
+            if has_emoji:
+                agent['emoji'] = row[idx] or '🤖'
+                idx += 1
+            else:
+                agent['emoji'] = '🤖'
+            
+            agent['personality'] = row[idx]
+            agent['system_prompt'] = row[idx+1]
+            idx += 2
+            
+            if has_share_code and row[idx]:
+                agent['share_code'] = row[idx]
+                agent['share_url'] = f"{request.host_url}custom/{row[idx]}"
+                idx += 1
+            
+            agent['created_at'] = row[idx]
+            agents.append(agent)
         
         return jsonify({'agents': agents}), 200
         
@@ -3474,20 +3477,51 @@ def create_custom_agent():
         cursor.execute("PRAGMA table_info(custom_agents)")
         columns = [col[1] for col in cursor.fetchall()]
         
+        # Check and add missing columns
         if 'emoji' not in columns:
             cursor.execute("ALTER TABLE custom_agents ADD COLUMN emoji TEXT DEFAULT '🤖'")
             conn.commit()
             print("✅ Added emoji column to custom_agents table")
         
+        if 'share_code' not in columns:
+            cursor.execute("ALTER TABLE custom_agents ADD COLUMN share_code TEXT UNIQUE")
+            conn.commit()
+            print("✅ Added share_code column to custom_agents table")
+        
+        if 'is_public' not in columns:
+            cursor.execute("ALTER TABLE custom_agents ADD COLUMN is_public BOOLEAN DEFAULT 1")
+            conn.commit()
+            print("✅ Added is_public column to custom_agents table")
+        
+        # Generate unique share code
+        import secrets
+        share_code = secrets.token_urlsafe(12)
+        
         # Use description column (not role)
         cursor.execute("""
-            INSERT INTO custom_agents (user_id, name, description, emoji, personality, system_prompt)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (current_user.id, name, description, emoji, personality, instructions))
+            INSERT INTO custom_agents (user_id, name, description, emoji, personality, system_prompt, share_code, is_public)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+        """, (current_user.id, name, description, emoji, personality, instructions, share_code))
         
         agent_id = cursor.lastrowid
         conn.commit()
         conn.close()
+        
+        print(f"✅ Created custom agent '{name}' (emoji: {emoji}) for user {current_user.id}")
+        print(f"   Share link: /custom/{share_code}")
+        
+        # Generate full share URL
+        share_url = f"{request.host_url}custom/{share_code}"
+        
+        return jsonify({
+            'success': True,
+            'agent_id': agent_id,
+            'name': name,
+            'description': description,
+            'emoji': emoji,
+            'share_code': share_code,
+            'share_url': share_url
+        }), 201
         
         print(f"✅ Created custom agent '{name}' (emoji: {emoji}) for user {current_user.id}")
         
