@@ -472,11 +472,25 @@ def check_agents():
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
-        # Get all custom agents
-        cursor.execute("""
-            SELECT id, user_id, name, description, emoji, share_code, is_public, created_at
-            FROM custom_agents
-        """)
+        # First check what columns exist
+        cursor.execute("PRAGMA table_info(custom_agents)")
+        columns = [col[1] for col in cursor.fetchall()]
+        
+        # Build SELECT query based on available columns
+        select_cols = ['id', 'user_id', 'name']
+        if 'description' in columns:
+            select_cols.append('description')
+        if 'emoji' in columns:
+            select_cols.append('emoji')
+        if 'share_code' in columns:
+            select_cols.append('share_code')
+        if 'is_public' in columns:
+            select_cols.append('is_public')
+        if 'created_at' in columns:
+            select_cols.append('created_at')
+        
+        query = f"SELECT {', '.join(select_cols)} FROM custom_agents"
+        cursor.execute(query)
         
         agents = cursor.fetchall()
         conn.close()
@@ -486,36 +500,124 @@ def check_agents():
                 'success': True,
                 'total_agents': 0,
                 'message': 'No custom agents found',
-                'agents': []
+                'agents': [],
+                'available_columns': columns,
+                'missing_columns': [c for c in ['emoji', 'share_code', 'is_public'] if c not in columns]
             }), 200
         
         agent_list = []
         for agent in agents:
-            agent_id, user_id, name, desc, emoji, share_code, is_public, created = agent
-            
+            idx = 0
             agent_info = {
-                'id': agent_id,
-                'user_id': user_id,
-                'name': name,
-                'description': desc,
-                'emoji': emoji,
-                'share_code': share_code,
-                'is_public': bool(is_public),
-                'created_at': created
+                'id': agent[idx],
+                'user_id': agent[idx+1],
+                'name': agent[idx+2]
             }
+            idx = 3
             
-            if share_code:
-                agent_info['share_url'] = f"{request.host_url}custom/{share_code}"
-                agent_info['status'] = '✅ Has share code'
+            if 'description' in columns:
+                agent_info['description'] = agent[idx]
+                idx += 1
+            
+            if 'emoji' in columns:
+                agent_info['emoji'] = agent[idx]
+                idx += 1
             else:
-                agent_info['status'] = '❌ Missing share code'
+                agent_info['emoji'] = '🤖 (default)'
+            
+            if 'share_code' in columns:
+                share_code = agent[idx]
+                agent_info['share_code'] = share_code
+                idx += 1
+                
+                if share_code:
+                    agent_info['share_url'] = f"{request.host_url}custom/{share_code}"
+                    agent_info['status'] = '✅ Has share code'
+                else:
+                    agent_info['status'] = '❌ Missing share code'
+            else:
+                agent_info['share_code'] = None
+                agent_info['status'] = '❌ share_code column missing'
+            
+            if 'is_public' in columns:
+                agent_info['is_public'] = bool(agent[idx])
+                idx += 1
+            
+            if 'created_at' in columns:
+                agent_info['created_at'] = agent[idx]
             
             agent_list.append(agent_info)
         
         return jsonify({
             'success': True,
             'total_agents': len(agents),
-            'agents': agent_list
+            'agents': agent_list,
+            'available_columns': columns,
+            'missing_columns': [c for c in ['emoji', 'share_code', 'is_public'] if c not in columns]
+        }), 200
+        
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+@app.route('/admin/force-add-columns')
+def force_add_columns():
+    """Force add missing columns to custom_agents table"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        # Check current columns
+        cursor.execute("PRAGMA table_info(custom_agents)")
+        columns_before = [col[1] for col in cursor.fetchall()]
+        
+        added_columns = []
+        errors = []
+        
+        # Try to add emoji column
+        if 'emoji' not in columns_before:
+            try:
+                cursor.execute("ALTER TABLE custom_agents ADD COLUMN emoji TEXT DEFAULT '🤖'")
+                conn.commit()
+                added_columns.append('emoji')
+            except Exception as e:
+                errors.append(f"emoji: {str(e)}")
+        
+        # Try to add share_code column
+        if 'share_code' not in columns_before:
+            try:
+                cursor.execute("ALTER TABLE custom_agents ADD COLUMN share_code TEXT")
+                conn.commit()
+                added_columns.append('share_code')
+            except Exception as e:
+                errors.append(f"share_code: {str(e)}")
+        
+        # Try to add is_public column
+        if 'is_public' not in columns_before:
+            try:
+                cursor.execute("ALTER TABLE custom_agents ADD COLUMN is_public INTEGER DEFAULT 1")
+                conn.commit()
+                added_columns.append('is_public')
+            except Exception as e:
+                errors.append(f"is_public: {str(e)}")
+        
+        # Check columns after
+        cursor.execute("PRAGMA table_info(custom_agents)")
+        columns_after = [col[1] for col in cursor.fetchall()]
+        
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'columns_before': columns_before,
+            'columns_after': columns_after,
+            'added_columns': added_columns if added_columns else 'None - all already present',
+            'errors': errors if errors else 'None',
+            'message': f"Added {len(added_columns)} columns successfully" if added_columns else "All columns already present"
         }), 200
         
     except Exception as e:
