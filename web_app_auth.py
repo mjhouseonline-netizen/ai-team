@@ -1037,9 +1037,10 @@ def test_simple_custom():
     """Test with hardcoded path"""
     return "Hardcoded custom route works!"
 
-@app.route('/custom/<string:share_code>')
+@app.route('/custom/<path:share_code>')
 def custom_agent_link(share_code):
     """Shareable link for custom agent"""
+    print(f"🔥 ROUTE MATCHED! share_code = {share_code}")
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
