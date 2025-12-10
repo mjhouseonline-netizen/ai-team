@@ -614,40 +614,71 @@ def custom_agent_link(share_code):
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
-        cursor.execute("""
-            SELECT id, name, description, personality, is_public
-            FROM custom_agents
-            WHERE share_code = ?
-        """, (share_code,))
+        # Check which columns exist
+        cursor.execute("PRAGMA table_info(custom_agents)")
+        columns = [col[1] for col in cursor.fetchall()]
+        
+        # Build query based on available columns
+        select_cols = ['id', 'name']
+        if 'description' in columns:
+            select_cols.append('description')
+        if 'system_prompt' in columns:
+            select_cols.append('system_prompt')
+        if 'is_public' in columns:
+            select_cols.append('is_public')
+        if 'emoji' in columns:
+            select_cols.append('emoji')
+        
+        query = f"SELECT {', '.join(select_cols)} FROM custom_agents WHERE share_code = ?"
+        cursor.execute(query, (share_code,))
         
         result = cursor.fetchone()
         conn.close()
         
         if not result:
-            return "Custom agent not found", 404
+            return "Custom agent not found. Please check the link and try again.", 404
         
-        agent_id, name, description, personality, is_public = result
+        # Parse results based on available columns
+        agent_id = result[0]
+        name = result[1]
+        idx = 2
+        
+        description = result[idx] if 'description' in columns else 'Custom Agent'
+        idx += 1 if 'description' in columns else 0
+        
+        system_prompt = result[idx] if 'system_prompt' in columns else ''
+        idx += 1 if 'system_prompt' in columns else 0
+        
+        is_public = result[idx] if 'is_public' in columns else True
+        idx += 1 if 'is_public' in columns else 0
+        
+        emoji = result[idx] if 'emoji' in columns else '🤖'
         
         # If not public, require login
         if not is_public and not current_user.is_authenticated:
             return redirect('/login')
         
-        # If logged in, show dashboard with custom agent
+        # If logged in, show dashboard with custom agent active
         if current_user.is_authenticated:
             return render_template('dashboard.html', 
                                  user=current_user, 
                                  custom_agent_id=agent_id,
                                  custom_agent_name=name)
         
-        # Show public custom agent page
-        return render_template('custom_agent_public.html', 
-                             agent_name=name,
-                             description=description,
-                             share_code=share_code)
+        # Not logged in - redirect to signup with agent context
+        session['pending_agent'] = {
+            'id': agent_id,
+            'name': name,
+            'share_code': share_code
+        }
+        flash(f'Sign up to use {name}!')
+        return redirect('/register')
         
     except Exception as e:
-        print(f"Error loading custom agent: {str(e)}")
-        return "Error loading agent", 500
+        print(f"❌ Error loading custom agent: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return f"Error loading agent: {str(e)}", 500
 
 # ============================================
 # SETTINGS PAGE (FOR NOTION INTEGRATION)
