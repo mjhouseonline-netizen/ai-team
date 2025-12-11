@@ -1047,6 +1047,7 @@ def test_simple_custom():
 def custom_agent_link(share_code):
     """Shareable link for custom agent"""
     print(f"🔥 ROUTE MATCHED! share_code = {share_code}")
+    print(f"📁 Using database: {DB_PATH}")
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
@@ -1069,7 +1070,14 @@ def custom_agent_link(share_code):
         query = f"SELECT {', '.join(select_cols)} FROM custom_agents WHERE share_code = ?"
         
         print(f"🔍 Looking for share_code: {share_code}")
+        print(f"🔍 Share code length: {len(share_code)}")
+        print(f"🔍 Share code repr: {repr(share_code)}")
         print(f"🔍 Query: {query}")
+        
+        # Debug: Show ALL share_codes in database
+        cursor.execute("SELECT id, name, share_code FROM custom_agents")
+        all_codes = cursor.fetchall()
+        print(f"📊 ALL agents in DB: {all_codes}")
         
         cursor.execute(query, (share_code,))
         
