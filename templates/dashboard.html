@@ -2051,14 +2051,25 @@
 
     <!-- Main Content -->
     <div class="main-content">
+        {% if is_guest %}
+        <!-- Guest Mode Banner -->
+        <div style="background: linear-gradient(135deg, #10a37f, #0d8c6f); color: white; padding: 12px 20px; text-align: center; font-size: 14px; border-bottom: 2px solid #0a8060;">
+            <span style="font-weight: 600;">👻 Guest Mode</span> — 
+            <span style="opacity: 0.95;">Using: <strong>{{ custom_agent_name }}</strong></span>
+            <span style="opacity: 0.8; margin-left: 16px; font-size: 13px;">
+                💡 <a href="/signup" style="color: white; text-decoration: underline;">Sign up</a> to save your chat history
+            </span>
+        </div>
+        {% endif %}
+        
         <!-- Header -->
         <div class="header">
             <div class="header-left">
                 <div class="current-agent-info">
-                    <div class="current-agent-avatar" id="currentAgentAvatar" style="background: linear-gradient(135deg, #667eea, #764ba2);">
-                        🌙
+                    <div class="current-agent-avatar" id="currentAgentAvatar" style="background: linear-gradient(135deg, {% if is_guest %}#10a37f, #0d8c6f{% else %}#667eea, #764ba2{% endif %});">
+                        {% if is_guest %}🤖{% else %}🌙{% endif %}
                     </div>
-                    <div class="current-agent-name" id="currentAgentName">Luna</div>
+                    <div class="current-agent-name" id="currentAgentName">{% if is_guest and custom_agent_name %}{{ custom_agent_name }}{% else %}Luna{% endif %}</div>
                 </div>
 
                 <div class="model-selector-header">
@@ -2187,8 +2198,13 @@
         <!-- Chat Container -->
         <div class="chat-container" id="chatContainer">
             <div class="welcome">
+                {% if is_guest and custom_agent_name %}
+                <h2>Hi! I'm {{ custom_agent_name }} 🤖</h2>
+                <p>How can I help you today?</p>
+                {% else %}
                 <h2>Hi! I'm Luna 🌙</h2>
                 <p>I'm your research analyst. How can I help you today?</p>
+                {% endif %}
             </div>
         </div>
 
@@ -2200,7 +2216,7 @@
                     
                     <textarea 
                         id="messageInput" 
-                        placeholder="Message Luna..." 
+                        placeholder="Message {% if is_guest and custom_agent_name %}{{ custom_agent_name }}{% else %}Luna{% endif %}..." 
                         rows="1"
                         onkeydown="handleKeyPress(event)"
                         oninput="autoResize(this)"
