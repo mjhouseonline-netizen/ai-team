@@ -2040,6 +2040,23 @@
         {% endif %}
         <!-- End Shareable Links -->
 
+        <!-- Guest Mode Info Banner -->
+        {% if is_guest %}
+        <div style="margin-top: auto; padding: 16px; background: linear-gradient(135deg, #10a37f, #0d8c6f); border-radius: 12px; margin: 16px;">
+            <div style="color: white; font-size: 13px; text-align: center; margin-bottom: 8px;">
+                <span style="font-weight: 600;">👻 Guest Mode</span>
+            </div>
+            <div style="color: rgba(255,255,255,0.9); font-size: 12px; text-align: center;">
+                Using: <strong>{{ custom_agent_name }}</strong>
+            </div>
+            <div style="margin-top: 12px; text-align: center;">
+                <a href="/signup" style="display: inline-block; background: rgba(255,255,255,0.2); color: white; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 500;">
+                    💡 Sign up to save history
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
         {% if not is_guest %}
         <div class="sidebar-footer">
             <button class="new-agent-btn" onclick="openCustomAgentModal()">
@@ -2051,17 +2068,6 @@
 
     <!-- Main Content -->
     <div class="main-content">
-        {% if is_guest %}
-        <!-- Guest Mode Banner -->
-        <div style="background: linear-gradient(135deg, #10a37f, #0d8c6f); color: white; padding: 12px 20px; text-align: center; font-size: 14px; border-bottom: 2px solid #0a8060;">
-            <span style="font-weight: 600;">👻 Guest Mode</span> — 
-            <span style="opacity: 0.95;">Using: <strong>{{ custom_agent_name }}</strong></span>
-            <span style="opacity: 0.8; margin-left: 16px; font-size: 13px;">
-                💡 <a href="/signup" style="color: white; text-decoration: underline;">Sign up</a> to save your chat history
-            </span>
-        </div>
-        {% endif %}
-        
         <!-- Header -->
         <div class="header">
             <div class="header-left">
@@ -3651,39 +3657,9 @@ Please provide your response following these guidelines.`;
             sessionStorage.setItem('currentAgent', agentName);
             sessionStorage.setItem('customAgentId', agentId);
             
-            // Update active state
-            document.querySelectorAll('.agent-item').forEach(item => {
-                item.classList.remove('active');
-            });
-            event.currentTarget.classList.add('active');
-            
-            // Clear chat for new agent
-            const chatMessages = document.getElementById('chatMessages');
-            if (chatMessages) {
-                chatMessages.innerHTML = `
-                    <div class="message assistant-message">
-                        <div class="message-avatar">🤖</div>
-                        <div class="message-content">
-                            <h2>Hi! I'm ${agentName}</h2>
-                            <p>How can I help you today?</p>
-                        </div>
-                    </div>
-                `;
-            }
+            // The welcome message should already be showing the correct agent
+            // No need to manipulate the DOM here
         }
-
-        // Guest Mode: Auto-select custom agent on page load
-        {% if is_guest and custom_agent_id %}
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('👻 Guest mode: Auto-selecting custom agent');
-            setTimeout(function() {
-                const customAgentButton = document.querySelector('.agent-item.active');
-                if (customAgentButton) {
-                    customAgentButton.click();
-                }
-            }, 500);
-        });
-        {% endif %}
 
         console.log('✅ Chat History module loaded!');
     </script>
