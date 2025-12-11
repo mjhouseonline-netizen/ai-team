@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>AI Team - Ultimate Dashboard</title>
+    
+    {% if is_guest and guest_restrictions %}
+    <!-- Guest Mode Restrictions -->
+    {{ guest_restrictions | safe }}
+    {% endif %}
+    
     <style>
         /* ================================================
            ULTIMATE AI TEAM DASHBOARD
@@ -1835,7 +1841,7 @@
         }
     </style>
 </head>
-<body>
+<body {% if is_guest %}class="guest-mode"{% endif %}>
     <!-- Mobile Sidebar Toggle -->
     <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" style="display: none;">☰</button>
 
@@ -1849,6 +1855,8 @@
         </div>
 
         <div class="agents-section">
+            {% if not is_guest %}
+            <!-- Core Agents - Hidden for guests -->
             <div class="section-title">Core Agents</div>
             
             <div class="agent-item active agent-luna" onclick="selectAgent('Luna', '🌙', 'Research & Analysis')">
@@ -1906,10 +1914,27 @@
                     <div class="agent-role">Implementation</div>
                 </div>
             </div>
+            {% endif %}
+            <!-- End Core Agents -->
 
+            {% if is_guest %}
+            <!-- Guest Mode: Show only the shared custom agent -->
+            <div class="section-title">Your Agent</div>
+            <div class="agent-item active" onclick="selectCustomAgent({{ custom_agent_id }}, '{{ custom_agent_name }}')">
+                <div class="agent-avatar" style="background: linear-gradient(135deg, #10a37f, #0d8c6f);">🤖</div>
+                <div class="agent-info">
+                    <div class="agent-name">{{ custom_agent_name }}</div>
+                    <div class="agent-role">Custom Agent</div>
+                </div>
+            </div>
+            {% else %}
+            <!-- Regular Mode: Show custom agents list -->
             <div class="section-title" id="customAgentsTitle" style="display: none;">Custom Agents</div>
             <div id="customAgentsList"></div>
+            {% endif %}
 
+            {% if not is_guest %}
+            <!-- Settings & Tools - Hidden for guests -->
             <div class="section-title" style="margin-top: 20px;">Settings & Tools</div>
             
             <a href="/automations" class="agent-item" style="text-decoration: none; color: white;">
@@ -1943,8 +1968,11 @@
                     <div class="agent-role">Premium Features</div>
                 </div>
             </a>
+            {% endif %}
+            <!-- End Settings & Tools -->
 
-            <!-- Shareable Agent Links -->
+            {% if not is_guest %}
+            <!-- Shareable Agent Links - Hidden for guests -->
             <div class="section-title" style="margin-top: 20px;">🔗 Shareable Links</div>
             
             <div class="share-links-section">
@@ -2009,12 +2037,16 @@
                 </p>
             </div>
         </div>
+        {% endif %}
+        <!-- End Shareable Links -->
 
+        {% if not is_guest %}
         <div class="sidebar-footer">
             <button class="new-agent-btn" onclick="openCustomAgentModal()">
                 ✨ Create Custom Agent
             </button>
         </div>
+        {% endif %}
     </div>
 
     <!-- Main Content -->
@@ -3583,6 +3615,59 @@ Please provide your response following these guidelines.`;
                 alert('Failed to create custom agent. Please try again.');
             });
         }
+
+        // Custom Agent Selection Function
+        function selectCustomAgent(agentId, agentName) {
+            console.log('🎯 Selecting custom agent:', agentName);
+            
+            // Update current agent display
+            const currentAgentName = document.getElementById('currentAgentName');
+            if (currentAgentName) {
+                currentAgentName.textContent = agentName;
+            }
+            
+            const currentAgentAvatar = document.getElementById('currentAgentAvatar');
+            if (currentAgentAvatar) {
+                currentAgentAvatar.textContent = '🤖';
+            }
+            
+            // Store in sessionStorage
+            sessionStorage.setItem('currentAgent', agentName);
+            sessionStorage.setItem('customAgentId', agentId);
+            
+            // Update active state
+            document.querySelectorAll('.agent-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+            
+            // Clear chat for new agent
+            const chatMessages = document.getElementById('chatMessages');
+            if (chatMessages) {
+                chatMessages.innerHTML = `
+                    <div class="message assistant-message">
+                        <div class="message-avatar">🤖</div>
+                        <div class="message-content">
+                            <h2>Hi! I'm ${agentName}</h2>
+                            <p>How can I help you today?</p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // Guest Mode: Auto-select custom agent on page load
+        {% if is_guest and custom_agent_id %}
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('👻 Guest mode: Auto-selecting custom agent');
+            setTimeout(function() {
+                const customAgentButton = document.querySelector('.agent-item.active');
+                if (customAgentButton) {
+                    customAgentButton.click();
+                }
+            }, 500);
+        });
+        {% endif %}
 
         console.log('✅ Chat History module loaded!');
     </script>
