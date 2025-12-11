@@ -1045,17 +1045,9 @@ def test_simple_custom():
 
 @app.route('/custom/<path:share_code>')
 def custom_agent_link(share_code):
-    """Shareable link for custom agent"""
+    """Shareable link for custom agent - works without login"""
     print(f"🔥 ROUTE MATCHED! share_code = {share_code}")
     print(f"📁 Using database: {DB_PATH}")
-    
-    # TEMPORARY TEST: Just redirect to register to see if that works
-    if not current_user.is_authenticated:
-        print(f"🧪 TEST: User not authenticated, redirecting to signup")
-        flash(f'Sign up to use this custom agent!')
-        return redirect('/signup')
-    
-    print(f"👤 User IS authenticated, proceeding with database lookup")
     
     try:
         conn = sqlite3.connect(DB_PATH)
@@ -1065,106 +1057,48 @@ def custom_agent_link(share_code):
         cursor.execute("PRAGMA table_info(custom_agents)")
         columns = [col[1] for col in cursor.fetchall()]
         
-        # Build query based on available columns
-        select_cols = ['id', 'name']
-        if 'description' in columns:
-            select_cols.append('description')
-        if 'system_prompt' in columns:
-            select_cols.append('system_prompt')
-        if 'is_public' in columns:
-            select_cols.append('is_public')
-        if 'emoji' in columns:
-            select_cols.append('emoji')
-        
-        query = f"SELECT {', '.join(select_cols)} FROM custom_agents WHERE share_code = ?"
-        
-        print(f"🔍 Looking for share_code: {share_code}")
-        print(f"🔍 Share code length: {len(share_code)}")
-        print(f"🔍 Share code repr: {repr(share_code)}")
-        print(f"🔍 Query: {query}")
-        
-        # Debug: Show ALL share_codes in database
+        # Get all agents (simple approach for now)
         cursor.execute("SELECT id, name, share_code FROM custom_agents")
-        all_codes = cursor.fetchall()
-        print(f"📊 ALL agents in DB: {all_codes}")
+        all_agents = cursor.fetchall()
+        print(f"📊 ALL agents in DB: {all_agents}")
         
-        # EMERGENCY FIX: If there's only one agent and the share_code is in the right ballpark, use it
-        result = None
-        if len(all_codes) == 1:
-            db_id, db_name, db_share_code = all_codes[0]
-            # Check if codes are similar (case-insensitive, stripped)
+        # Find the agent by comparing share codes
+        agent_found = None
+        for agent in all_agents:
+            db_id, db_name, db_share_code = agent
             if db_share_code and share_code:
-                input_normalized = str(share_code).lower().strip()
-                db_normalized = str(db_share_code).lower().strip()
-                print(f"🔬 Comparing: input='{input_normalized}' vs db='{db_normalized}'")
-                
-                if input_normalized == db_normalized or input_normalized in db_normalized or db_normalized in input_normalized:
-                    print(f"✅ MATCH! Using agent ID {db_id}")
-                    # Fetch the full agent data by ID
-                    print(f"🔍 Executing: SELECT {', '.join(select_cols)} FROM custom_agents WHERE id = {db_id}")
-                    cursor.execute(f"SELECT {', '.join(select_cols)} FROM custom_agents WHERE id = ?", (db_id,))
-                    result = cursor.fetchone()
-                    print(f"🔍 Retrieved by ID: {result}")
-                    
-                    if not result:
-                        print(f"❌ ID query failed! Trying SELECT *")
-                        cursor.execute("SELECT * FROM custom_agents WHERE id = ?", (db_id,))
-                        result = cursor.fetchone()
-                        print(f"🔍 SELECT * result: {result}")
+                if str(db_share_code).strip().lower() == str(share_code).strip().lower():
+                    print(f"✅ MATCH! Found agent: {db_name} (ID: {db_id})")
+                    agent_found = (db_id, db_name)
+                    break
         
-        if not result:
-            # Try the regular parameterized query as backup
-            cursor.execute(query, (share_code,))
-            result = cursor.fetchone()
-        
-        print(f"🔍 Final Result: {result}")
-        
-        conn.close()
-        
-        if not result:
+        if not agent_found:
             print(f"❌ No agent found with share_code: {share_code}")
             return "Custom agent not found. Please check the link and try again.", 404
         
-        # Parse results based on available columns
-        agent_id = result[0]
-        name = result[1]
-        idx = 2
+        agent_id, agent_name = agent_found
         
-        description = result[idx] if 'description' in columns else 'Custom Agent'
-        idx += 1 if 'description' in columns else 0
-        
-        system_prompt = result[idx] if 'system_prompt' in columns else ''
-        idx += 1 if 'system_prompt' in columns else 0
-        
-        is_public = result[idx] if 'is_public' in columns else True
-        idx += 1 if 'is_public' in columns else 0
-        
-        emoji = result[idx] if 'emoji' in columns else '🤖'
-        
-        print(f"✅ Found agent: {name} (ID: {agent_id})")
-        
-        # If not public, require login
-        if not is_public and not current_user.is_authenticated:
-            print(f"🔒 Agent not public, redirecting to login")
-            return redirect('/login')
-        
-        # If logged in, show dashboard with custom agent active
+        # Show the dashboard with custom agent active
+        # Works for both logged in and guest users!
         if current_user.is_authenticated:
-            print(f"👤 User logged in, showing dashboard")
+            print(f"👤 Logged in user accessing agent")
             return render_template('dashboard.html', 
                                  user=current_user, 
                                  custom_agent_id=agent_id,
-                                 custom_agent_name=name)
-        
-        # Not logged in - redirect to signup with agent context
-        print(f"📝 Not logged in, redirecting to signup")
-        session['pending_agent'] = {
-            'id': agent_id,
-            'name': name,
-            'share_code': share_code
-        }
-        flash(f'Sign up to use {name}!')
-        return redirect('/signup')
+                                 custom_agent_name=agent_name)
+        else:
+            print(f"👻 Guest user accessing agent (no login required)")
+            # Create a guest user object for the template
+            class GuestUser:
+                id = 0
+                email = "guest"
+                is_authenticated = False
+            
+            return render_template('dashboard.html', 
+                                 user=GuestUser(), 
+                                 custom_agent_id=agent_id,
+                                 custom_agent_name=agent_name,
+                                 is_guest=True)
         
     except Exception as e:
         print(f"❌ Error loading custom agent: {str(e)}")
