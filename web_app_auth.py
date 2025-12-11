@@ -1048,6 +1048,15 @@ def custom_agent_link(share_code):
     """Shareable link for custom agent"""
     print(f"🔥 ROUTE MATCHED! share_code = {share_code}")
     print(f"📁 Using database: {DB_PATH}")
+    
+    # TEMPORARY TEST: Just redirect to register to see if that works
+    if not current_user.is_authenticated:
+        print(f"🧪 TEST: User not authenticated, redirecting to register")
+        flash(f'Sign up to use this custom agent!')
+        return redirect('/register')
+    
+    print(f"👤 User IS authenticated, proceeding with database lookup")
+    
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
@@ -1092,9 +1101,16 @@ def custom_agent_link(share_code):
                 if input_normalized == db_normalized or input_normalized in db_normalized or db_normalized in input_normalized:
                     print(f"✅ MATCH! Using agent ID {db_id}")
                     # Fetch the full agent data by ID
+                    print(f"🔍 Executing: SELECT {', '.join(select_cols)} FROM custom_agents WHERE id = {db_id}")
                     cursor.execute(f"SELECT {', '.join(select_cols)} FROM custom_agents WHERE id = ?", (db_id,))
                     result = cursor.fetchone()
                     print(f"🔍 Retrieved by ID: {result}")
+                    
+                    if not result:
+                        print(f"❌ ID query failed! Trying SELECT *")
+                        cursor.execute("SELECT * FROM custom_agents WHERE id = ?", (db_id,))
+                        result = cursor.fetchone()
+                        print(f"🔍 SELECT * result: {result}")
         
         if not result:
             # Try the regular parameterized query as backup
