@@ -1091,8 +1091,18 @@ def custom_agent_link(share_code):
             # Create a guest user object for the template
             class GuestUser:
                 id = 0
-                email = "guest"
+                email = "guest@ai-team.com"
                 is_authenticated = False
+                subscription_tier = "free"
+                stripe_customer_id = None
+                stripe_subscription_id = None
+                messages_today = 0
+                last_message_reset = None
+                api_key = None
+                google_ai_api_key = None
+                
+                def get_id(self):
+                    return 0
             
             return render_template('dashboard.html', 
                                  user=GuestUser(), 
