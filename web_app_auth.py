@@ -1085,7 +1085,8 @@ def custom_agent_link(share_code):
             return render_template('dashboard.html', 
                                  user=current_user, 
                                  custom_agent_id=agent_id,
-                                 custom_agent_name=agent_name)
+                                 custom_agent_name=agent_name,
+                                 auto_select_custom_agent=True)  # Trigger auto-selection
         else:
             print(f"👻 Guest user accessing agent (no login required)")
             # Create a guest user object for the template
@@ -1106,13 +1107,74 @@ def custom_agent_link(share_code):
             
             guest = GuestUser()
             
-            # Pass as BOTH user AND current_user to override Flask-Login
+            # Inject CSS and JS to hide core agents and show only custom agent
+            guest_restrictions = f"""
+            <style>
+            /* Hide core agents section for guests */
+            .sidebar-section:has(.agent-button[data-agent-type="core"]) {{
+                display: none !important;
+            }}
+            /* Hide all core agent buttons */
+            .agent-button[data-agent-type="core"],
+            .core-agents-list,
+            #core-agents {{
+                display: none !important;
+            }}
+            /* Hide settings, automations, upgrade for guests */
+            .sidebar-section:has(a[href*="settings"]),
+            .sidebar-section:has(a[href*="automations"]),
+            .sidebar-section:has(a[href*="upgrade"]) {{
+                display: none !important;
+            }}
+            </style>
+            <script>
+            (function() {{
+                console.log('🔒 Guest mode: Restricting to custom agent only');
+                
+                // Hide core agents on DOM load
+                document.addEventListener('DOMContentLoaded', function() {{
+                    // Hide core agents
+                    const coreAgentsSection = document.querySelector('.core-agents-section');
+                    if (coreAgentsSection) coreAgentsSection.style.display = 'none';
+                    
+                    // Force select custom agent
+                    console.log('🎯 Auto-selecting custom agent: {agent_name}');
+                    
+                    // Set in localStorage
+                    localStorage.setItem('guestMode', 'true');
+                    localStorage.setItem('guestAgentId', '{agent_id}');
+                    localStorage.setItem('guestAgentName', '{agent_name}');
+                    
+                    // Prevent switching agents
+                    window.isGuestMode = true;
+                    window.guestAgentId = {agent_id};
+                    window.guestAgentName = '{agent_name}';
+                }});
+                
+                // Block agent switching for guests
+                document.addEventListener('click', function(e) {{
+                    const agentButton = e.target.closest('.agent-button');
+                    if (agentButton && window.isGuestMode) {{
+                        const agentId = agentButton.dataset.agentId;
+                        if (agentId != window.guestAgentId) {{
+                            e.preventDefault();
+                            e.stopPropagation();
+                            alert('Guest mode: You can only use {agent_name}');
+                            return false;
+                        }}
+                    }}
+                }}, true);
+            }})();
+            </script>
+            """
+            
             return render_template('dashboard.html', 
                                  user=guest,
-                                 current_user=guest,  # Override Flask-Login's current_user
+                                 current_user=guest,
                                  custom_agent_id=agent_id,
                                  custom_agent_name=agent_name,
-                                 is_guest=True)
+                                 is_guest=True,
+                                 guest_restrictions=guest_restrictions)
         
     except Exception as e:
         print(f"❌ Error loading custom agent: {str(e)}")
