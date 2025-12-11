@@ -1079,6 +1079,11 @@ def custom_agent_link(share_code):
         all_codes = cursor.fetchall()
         print(f"📊 ALL agents in DB: {all_codes}")
         
+        # Try a simple direct query first
+        cursor.execute(f"SELECT * FROM custom_agents WHERE share_code = '{share_code}'")
+        direct_result = cursor.fetchone()
+        print(f"🔬 Direct query result: {direct_result}")
+        
         cursor.execute(query, (share_code,))
         
         result = cursor.fetchone()
