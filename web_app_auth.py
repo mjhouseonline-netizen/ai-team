@@ -1079,14 +1079,34 @@ def custom_agent_link(share_code):
         all_codes = cursor.fetchall()
         print(f"📊 ALL agents in DB: {all_codes}")
         
-        # Try a simple direct query first
-        cursor.execute(f"SELECT * FROM custom_agents WHERE share_code = '{share_code}'")
-        direct_result = cursor.fetchone()
-        print(f"🔬 Direct query result: {direct_result}")
+        # Try with TRIM to remove any whitespace
+        cursor.execute(f"SELECT * FROM custom_agents WHERE TRIM(share_code) = TRIM(?)", (share_code,))
+        trim_result = cursor.fetchone()
+        print(f"🔬 TRIM query result: {trim_result}")
+        
+        # If TRIM doesn't work, try LIKE
+        if not trim_result:
+            cursor.execute(f"SELECT * FROM custom_agents WHERE share_code LIKE ?", (f"%{share_code}%",))
+            like_result = cursor.fetchone()
+            print(f"🔬 LIKE query result: {like_result}")
         
         cursor.execute(query, (share_code,))
         
         result = cursor.fetchone()
+        
+        # If regular query fails, use the TRIM result
+        if not result and trim_result:
+            print(f"⚠️ Regular query failed, using TRIM result")
+            result = trim_result
+        
+        # Last resort: if there's only one agent and the code is similar, use it
+        if not result and len(all_codes) == 1:
+            db_code = all_codes[0][2]
+            if db_code and share_code.lower().strip() == db_code.lower().strip():
+                print(f"⚠️ Fallback: Using only agent (codes match when normalized)")
+                # Fetch the full agent data
+                cursor.execute(f"SELECT {', '.join(select_cols)} FROM custom_agents WHERE id = ?", (all_codes[0][0],))
+                result = cursor.fetchone()
         
         print(f"🔍 Result: {result}")
         
