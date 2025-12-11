@@ -1104,8 +1104,12 @@ def custom_agent_link(share_code):
                 def get_id(self):
                     return 0
             
+            guest = GuestUser()
+            
+            # Pass as BOTH user AND current_user to override Flask-Login
             return render_template('dashboard.html', 
-                                 user=GuestUser(), 
+                                 user=guest,
+                                 current_user=guest,  # Override Flask-Login's current_user
                                  custom_agent_id=agent_id,
                                  custom_agent_name=agent_name,
                                  is_guest=True)
