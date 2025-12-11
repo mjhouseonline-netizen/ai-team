@@ -1051,9 +1051,9 @@ def custom_agent_link(share_code):
     
     # TEMPORARY TEST: Just redirect to register to see if that works
     if not current_user.is_authenticated:
-        print(f"🧪 TEST: User not authenticated, redirecting to register")
+        print(f"🧪 TEST: User not authenticated, redirecting to signup")
         flash(f'Sign up to use this custom agent!')
-        return redirect('/register')
+        return redirect('/signup')
     
     print(f"👤 User IS authenticated, proceeding with database lookup")
     
@@ -1164,7 +1164,7 @@ def custom_agent_link(share_code):
             'share_code': share_code
         }
         flash(f'Sign up to use {name}!')
-        return redirect('/register')
+        return redirect('/signup')
         
     except Exception as e:
         print(f"❌ Error loading custom agent: {str(e)}")
