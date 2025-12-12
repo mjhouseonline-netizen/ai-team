@@ -50,6 +50,14 @@
             height: 100vh;
             width: 100vw;
         }
+        
+        /* Guest mode body flex fix */
+        body.guest-mode {
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: stretch !important;
+            justify-content: flex-start !important;
+        }
 
         /* ================================================
            LEFT SIDEBAR - AGENTS
@@ -253,19 +261,21 @@
            ================================================ */
 
         .main-content {
-            flex: 1;
+            flex: 1; /* Take remaining space in flex container */
             display: grid;
             grid-template-rows: auto 1fr auto; /* Header, Chat, Input */
+            align-content: start; /* CRITICAL: Start from top, don't center */
             position: relative;
             overflow: hidden;
             background: var(--bg-main); /* White background */
-            height: 100vh;
         }
         
         /* Force grid layout for guest mode */
         body.guest-mode .main-content {
             display: grid !important;
             grid-template-rows: auto 1fr auto !important;
+            align-content: start !important; /* Force start alignment */
+            align-items: start !important; /* Also align items to start */
         }
         
         body.guest-mode .header {
@@ -279,6 +289,7 @@
         body.guest-mode .chat-container {
             grid-row: 2;
             overflow-y: auto;
+            min-height: 400px; /* Ensure it has some height */
         }
         
         body.guest-mode .input-container {
