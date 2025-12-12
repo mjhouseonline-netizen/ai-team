@@ -1912,6 +1912,31 @@
     </style>
 </head>
 <body {% if is_guest %}class="guest-mode"{% endif %}>
+    <!-- DIAGNOSTIC OVERLAY -->
+    {% if is_guest %}
+    <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: red; color: white; padding: 30px; z-index: 99999; border: 5px solid yellow; font-size: 18px;">
+        <h1 style="color: yellow;">🔍 GUEST MODE DIAGNOSTIC</h1>
+        <p><strong>is_guest:</strong> {{ is_guest }}</p>
+        <p><strong>custom_agent_name:</strong> {{ custom_agent_name }}</p>
+        <p><strong>custom_agent_id:</strong> {{ custom_agent_id }}</p>
+        <p><strong>Body class:</strong> <script>document.write(document.body.className || 'NONE');</script></p>
+        <button onclick="this.parentElement.style.display='none'" style="background: yellow; color: black; padding: 10px; border: none; cursor: pointer; margin-top: 10px;">Close Diagnostic</button>
+    </div>
+    <script>
+        console.log('=== GUEST MODE DEBUG ===');
+        console.log('is_guest:', '{{ is_guest }}');
+        console.log('custom_agent_name:', '{{ custom_agent_name }}');
+        console.log('custom_agent_id:', '{{ custom_agent_id }}');
+        console.log('Body className:', document.body.className);
+        console.log('Main content exists:', !!document.querySelector('.main-content'));
+        const mainContent = document.querySelector('.main-content');
+        if (mainContent) {
+            console.log('Main content computed style:', window.getComputedStyle(mainContent));
+        }
+    </script>
+    {% endif %}
+    <!-- END DIAGNOSTIC -->
+    
     <!-- Mobile Sidebar Toggle -->
     <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" style="display: none;">☰</button>
 
