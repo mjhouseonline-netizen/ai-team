@@ -308,19 +308,6 @@
             flex-shrink: 0; /* Don't shrink */
             z-index: 10; /* Ensure it's on top */
         }
-        
-        /* DEBUG MODE - Remove after testing */
-        body.guest-mode .header {
-            background: #ffe0e0 !important; /* Light red - should be at TOP */
-        }
-        
-        body.guest-mode .chat-container {
-            background: #e0f0ff !important; /* Light blue - should be in MIDDLE */
-        }
-        
-        body.guest-mode .input-container {
-            background: #e0ffe0 !important; /* Light green - should be at BOTTOM */
-        }
 
         .header-left {
             display: flex;
@@ -3327,19 +3314,62 @@
             });
         }
 
-        function selectCustomAgent(event, agentId, name, emoji, description) {
-            event.stopPropagation();
+        function selectCustomAgent(eventOrId, agentIdOrName, name, emoji, description) {
+            console.log('🎯 Selecting custom agent');
+            
+            // Handle both call signatures:
+            // 1. selectCustomAgent(agentId, agentName) - 2 params for guest mode
+            // 2. selectCustomAgent(event, agentId, name, emoji, description) - 5 params for normal mode
+            
+            let event, agentId, agentName, agentEmoji, agentDescription;
+            
+            if (arguments.length === 2) {
+                // Guest mode call: selectCustomAgent(agentId, agentName)
+                event = null;
+                agentId = eventOrId;
+                agentName = agentIdOrName;
+                agentEmoji = '🤖';
+                agentDescription = 'How can I help you today?';
+            } else {
+                // Normal mode call: selectCustomAgent(event, agentId, name, emoji, description)
+                event = eventOrId;
+                agentId = agentIdOrName;
+                agentName = name;
+                agentEmoji = emoji;
+                agentDescription = description;
+                
+                if (event) {
+                    event.stopPropagation();
+                }
+            }
+            
+            console.log('Selected:', agentName);
             
             // Store custom agent info
-            currentAgent = name;
-            currentAgentEmoji = emoji;
+            currentAgent = agentName;
+            currentAgentEmoji = agentEmoji;
             currentAgentId = agentId;
             
-            // Update header
-            document.getElementById('currentAgent').innerHTML = `
-                <span style="font-size: 20px; margin-right: 8px;">${emoji}</span>
-                ${name}
-            `;
+            // Update header - try both possible element IDs
+            const currentAgentHeader = document.getElementById('currentAgent');
+            const currentAgentName = document.getElementById('currentAgentName');
+            const currentAgentAvatar = document.getElementById('currentAgentAvatar');
+            
+            if (currentAgentHeader) {
+                currentAgentHeader.innerHTML = `
+                    <span style="font-size: 20px; margin-right: 8px;">${agentEmoji}</span>
+                    ${agentName}
+                `;
+            }
+            
+            if (currentAgentName) {
+                currentAgentName.textContent = agentName;
+            }
+            
+            if (currentAgentAvatar) {
+                currentAgentAvatar.textContent = agentEmoji;
+                currentAgentAvatar.style.background = 'linear-gradient(135deg, #10a37f, #0d8c6f)';
+            }
             
             // Update all agent items to remove active class
             document.querySelectorAll('.agent-item').forEach(item => {
@@ -3347,18 +3377,33 @@
             });
             
             // Add active class to clicked agent
-            event.target.closest('.agent-item').classList.add('active');
+            if (event && event.target) {
+                const agentItem = event.target.closest('.agent-item');
+                if (agentItem) {
+                    agentItem.classList.add('active');
+                }
+            }
+            
+            // Store in sessionStorage
+            sessionStorage.setItem('currentAgent', agentName);
+            sessionStorage.setItem('customAgentId', agentId);
+            sessionStorage.setItem('currentAgentEmoji', agentEmoji);
             
             // Clear chat for new agent
-            document.getElementById('chatContainer').innerHTML = `
-                <div class="welcome">
-                    <h2>${emoji} Hi! I'm ${name}</h2>
-                    <p>${description}</p>
-                </div>
-            `;
+            const chatContainer = document.getElementById('chatContainer');
+            if (chatContainer) {
+                chatContainer.innerHTML = `
+                    <div class="welcome">
+                        <h2>${agentEmoji} Hi! I'm ${agentName}</h2>
+                        <p>${agentDescription}</p>
+                    </div>
+                `;
+            }
             
-            // Start new conversation
-            startNewChat();
+            // Start new conversation if function exists
+            if (typeof startNewChat === 'function') {
+                startNewChat();
+            }
         }
 
         function deleteCustomAgent(event, agentId) {
@@ -3696,28 +3741,6 @@ Please provide your response following these guidelines.`;
         }
 
         // Custom Agent Selection Function
-        function selectCustomAgent(agentId, agentName) {
-            console.log('🎯 Selecting custom agent:', agentName);
-            
-            // Update current agent display
-            const currentAgentName = document.getElementById('currentAgentName');
-            if (currentAgentName) {
-                currentAgentName.textContent = agentName;
-            }
-            
-            const currentAgentAvatar = document.getElementById('currentAgentAvatar');
-            if (currentAgentAvatar) {
-                currentAgentAvatar.textContent = '🤖';
-            }
-            
-            // Store in sessionStorage
-            sessionStorage.setItem('currentAgent', agentName);
-            sessionStorage.setItem('customAgentId', agentId);
-            
-            // The welcome message should already be showing the correct agent
-            // No need to manipulate the DOM here
-        }
-
         console.log('✅ Chat History module loaded!');
     </script>
 
@@ -3854,6 +3877,67 @@ Please provide your response following these guidelines.`;
             }
         }
     </style>
+
+    <script>
+        // Inline selectAgent function as fallback
+        if (typeof selectAgent === 'undefined') {
+            function selectAgent(agentName, emoji, role) {
+                console.log('🎯 Selecting agent:', agentName);
+                
+                // Update header display
+                const currentAgentName = document.getElementById('currentAgentName');
+                const currentAgentAvatar = document.getElementById('currentAgentAvatar');
+                
+                if (currentAgentName) {
+                    currentAgentName.textContent = agentName;
+                }
+                
+                if (currentAgentAvatar) {
+                    currentAgentAvatar.textContent = emoji;
+                    // Update gradient color based on agent
+                    const gradients = {
+                        'Luna': 'linear-gradient(135deg, #667eea, #764ba2)',
+                        'Mila': 'linear-gradient(135deg, #f093fb, #f5576c)',
+                        'Sage': 'linear-gradient(135deg, #4facfe, #00f2fe)',
+                        'Ember': 'linear-gradient(135deg, #fa709a, #fee140)',
+                        'Sol': 'linear-gradient(135deg, #ffecd2, #fcb69f)',
+                        'Nova': 'linear-gradient(135deg, #a8edea, #fed6e3)',
+                        'Theo': 'linear-gradient(135deg, #fbc2eb, #a6c1ee)'
+                    };
+                    currentAgentAvatar.style.background = gradients[agentName] || 'linear-gradient(135deg, #667eea, #764ba2)';
+                }
+                
+                // Update active state in sidebar
+                document.querySelectorAll('.agent-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                
+                // Find and activate the clicked agent
+                const clickedAgent = event ? event.currentTarget : document.querySelector(`.agent-${agentName.toLowerCase()}`);
+                if (clickedAgent) {
+                    clickedAgent.classList.add('active');
+                }
+                
+                // Store in session
+                sessionStorage.setItem('currentAgent', agentName);
+                sessionStorage.setItem('currentAgentEmoji', emoji);
+                sessionStorage.setItem('currentAgentRole', role);
+                
+                // Clear chat and show welcome for new agent
+                const chatContainer = document.getElementById('chatContainer');
+                if (chatContainer) {
+                    chatContainer.innerHTML = `
+                        <div class="welcome">
+                            <h2>Hi! I'm ${agentName} ${emoji}</h2>
+                            <p>${role ? role + '. ' : ''}How can I help you today?</p>
+                        </div>
+                    `;
+                }
+                
+                console.log('✅ Agent switched to:', agentName);
+            }
+        }
+    </script>
 
     <script src="/static/dashboard_ultimate.js"></script>
 </body>

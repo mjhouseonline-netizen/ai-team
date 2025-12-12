@@ -1,0 +1,106 @@
+🔧 FIX: "table custom_agents has no column named emoji"
+
+═══════════════════════════════════════════════════════════════════
+
+PROBLEM: The custom_agents table is missing the emoji column
+
+SOLUTION: Run the database init route FIRST to add missing columns
+
+═══════════════════════════════════════════════════════════════════
+
+STEP 1: DEPLOY UPDATED BACKEND (if not done already)
+
+```bash
+cp ~/Downloads/web_app_auth.py ./web_app_auth.py
+git add web_app_auth.py
+git commit -m "Fix: Add missing columns to custom_agents"
+git push
+```
+
+Wait 3 minutes for deployment...
+
+═══════════════════════════════════════════════════════════════════
+
+STEP 2: ADD MISSING COLUMNS
+
+Visit this URL FIRST:
+
+https://ai-team.skillsoul.store/admin/init-database-emergency
+
+You should see:
+```json
+{
+  "success": true,
+  "message": "Database initialized successfully!",
+  "missing_columns_added": ["emoji", "share_code", "is_public"]
+}
+```
+
+✅ This adds the missing columns!
+
+═══════════════════════════════════════════════════════════════════
+
+STEP 3: NOW CREATE/UPDATE YOUR AGENT
+
+After Step 2 succeeds, visit:
+
+https://ai-team.skillsoul.store/admin/create-default-agent/1
+
+You should see:
+```json
+{
+  "success": true,
+  "message": "Added share code to existing agent!",
+  "share_url": "https://ai-team.skillsoul.store/custom/abc123..."
+}
+```
+
+✅ Agent now has share code!
+
+═══════════════════════════════════════════════════════════════════
+
+STEP 4: REFRESH DASHBOARD
+
+Hard refresh: Ctrl+Shift+R (Windows) or Cmd+Shift+R (Mac)
+
+═══════════════════════════════════════════════════════════════════
+
+STEP 5: TEST SHARE LINK
+
+1. Hover over "Skill & Soul Agent"
+2. Click 🔗
+3. Copy link
+4. Open in incognito
+5. Should redirect to signup (not error!)
+
+═══════════════════════════════════════════════════════════════════
+
+WHY TWO STEPS?
+
+Step 2: Adds missing columns to table structure
+Step 3: Updates your agent with share code
+
+You need the columns BEFORE you can insert data into them!
+
+═══════════════════════════════════════════════════════════════════
+
+CORRECT ORDER:
+
+1. Deploy backend
+2. Visit /admin/init-database-emergency (adds columns)
+3. Visit /admin/create-default-agent/1 (adds share code)
+4. Refresh dashboard
+5. Test share link
+
+═══════════════════════════════════════════════════════════════════
+
+IF YOU GET ERRORS:
+
+Error at Step 2: Copy full error and send to me
+Error at Step 3: Make sure Step 2 succeeded first
+
+═══════════════════════════════════════════════════════════════════
+
+FOLLOW THESE STEPS IN ORDER! 🎯
+
+═══════════════════════════════════════════════════════════════════

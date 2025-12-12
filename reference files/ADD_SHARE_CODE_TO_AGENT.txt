@@ -1,0 +1,111 @@
+🔧 FIX: "Custom agent not found"
+
+═══════════════════════════════════════════════════════════════════
+
+PROBLEM: Your agent exists but has NO share_code in database
+
+SOLUTION: Add share_code to your existing agent
+
+═══════════════════════════════════════════════════════════════════
+
+STEP 1: DEPLOY UPDATED BACKEND
+
+```bash
+cp ~/Downloads/web_app_auth.py ./web_app_auth.py
+git add web_app_auth.py
+git commit -m "Fix: Add share code to existing agents"
+git push
+```
+
+Wait 3 minutes...
+
+═══════════════════════════════════════════════════════════════════
+
+STEP 2: ADD SHARE CODE TO YOUR AGENT
+
+Visit this URL in your browser:
+
+https://ai-team.skillsoul.store/admin/create-default-agent/1
+
+You'll see ONE of these responses:
+
+RESPONSE A - Share code added:
+```json
+{
+  "success": true,
+  "message": "Added share code to existing agent!",
+  "name": "Skill & Soul Agent",
+  "share_code": "abc123xyz789",
+  "share_url": "https://ai-team.skillsoul.store/custom/abc123xyz789"
+}
+```
+✅ Perfect! Your agent now has a share code!
+
+RESPONSE B - Already has share code:
+```json
+{
+  "success": true,
+  "message": "Agent already exists with share code!",
+  "share_url": "https://ai-team.skillsoul.store/custom/abc123xyz789"
+}
+```
+✅ Great! Your agent already has a share code!
+
+═══════════════════════════════════════════════════════════════════
+
+STEP 3: REFRESH DASHBOARD
+
+Hard refresh: Ctrl+Shift+R (Windows) or Cmd+Shift+R (Mac)
+
+Now when you:
+1. Hover over "Skill & Soul Agent"
+2. Click 🔗
+3. Copy the link
+4. Open in incognito
+
+It will work! No more "Custom agent not found"!
+
+═══════════════════════════════════════════════════════════════════
+
+WHAT WAS WRONG:
+
+Your agent was created like this:
+┌────┬──────────────────┬────────────┐
+│ id │ name             │ share_code │
+├────┼──────────────────┼────────────┤
+│ 1  │ Skill & Soul     │ NULL       │ ❌ No code!
+└────┴──────────────────┴────────────┘
+
+After visiting /admin/create-default-agent/1:
+┌────┬──────────────────┬──────────────────┐
+│ id │ name             │ share_code       │
+├────┼──────────────────┼──────────────────┤
+│ 1  │ Skill & Soul     │ Vx4K_7jQm9nP    │ ✅ Has code!
+└────┴──────────────────┴──────────────────┘
+
+Now the share link works!
+
+═══════════════════════════════════════════════════════════════════
+
+WHAT THE UPDATED ROUTE DOES:
+
+When you visit /admin/create-default-agent/1, it now:
+
+1. Checks if user exists
+2. Checks if agent already exists
+3. If agent exists WITHOUT share_code → Adds one
+4. If agent exists WITH share_code → Returns existing URL
+5. If no agent exists → Creates new one with share_code
+
+So it's smart - it won't create duplicates!
+
+═══════════════════════════════════════════════════════════════════
+
+DEPLOY AND TEST:
+
+1. Deploy (Step 1) → Wait 3 min
+2. Visit admin URL (Step 2) → Get share code
+3. Refresh dashboard (Step 3) → See share button
+4. Test link → Works! 🎉
+
+═══════════════════════════════════════════════════════════════════
