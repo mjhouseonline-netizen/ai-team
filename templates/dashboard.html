@@ -1914,24 +1914,60 @@
 <body {% if is_guest %}class="guest-mode"{% endif %}>
     <!-- DIAGNOSTIC OVERLAY -->
     {% if is_guest %}
-    <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: red; color: white; padding: 30px; z-index: 99999; border: 5px solid yellow; font-size: 18px;">
+    <div id="diagnosticBox" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: red; color: white; padding: 30px; z-index: 99999; border: 5px solid yellow; font-size: 14px; max-width: 600px; max-height: 80vh; overflow-y: auto;">
         <h1 style="color: yellow;">🔍 GUEST MODE DIAGNOSTIC</h1>
         <p><strong>is_guest:</strong> {{ is_guest }}</p>
         <p><strong>custom_agent_name:</strong> {{ custom_agent_name }}</p>
         <p><strong>custom_agent_id:</strong> {{ custom_agent_id }}</p>
-        <p><strong>Body class:</strong> <script>document.write(document.body.className || 'NONE');</script></p>
-        <button onclick="this.parentElement.style.display='none'" style="background: yellow; color: black; padding: 10px; border: none; cursor: pointer; margin-top: 10px;">Close Diagnostic</button>
+        <p><strong>Body class:</strong> <span id="bodyClass"></span></p>
+        <hr style="border-color: yellow;">
+        <p><strong>Main-content exists:</strong> <span id="mainExists"></span></p>
+        <p><strong>Main-content display:</strong> <span id="mainDisplay"></span></p>
+        <p><strong>Main-content position:</strong> <span id="mainPosition"></span></p>
+        <p><strong>Main-content left:</strong> <span id="mainLeft"></span></p>
+        <p><strong>Main-content top:</strong> <span id="mainTop"></span></p>
+        <p><strong>Main-content width:</strong> <span id="mainWidth"></span></p>
+        <p><strong>Main-content height:</strong> <span id="mainHeight"></span></p>
+        <p><strong>Main-content visibility:</strong> <span id="mainVisibility"></span></p>
+        <p><strong>Main-content opacity:</strong> <span id="mainOpacity"></span></p>
+        <p><strong>Main-content z-index:</strong> <span id="mainZIndex"></span></p>
+        <button onclick="document.getElementById('diagnosticBox').style.display='none'" style="background: yellow; color: black; padding: 10px; border: none; cursor: pointer; margin-top: 10px;">Close Diagnostic</button>
     </div>
     <script>
         console.log('=== GUEST MODE DEBUG ===');
-        console.log('is_guest:', '{{ is_guest }}');
-        console.log('custom_agent_name:', '{{ custom_agent_name }}');
-        console.log('custom_agent_id:', '{{ custom_agent_id }}');
-        console.log('Body className:', document.body.className);
-        console.log('Main content exists:', !!document.querySelector('.main-content'));
+        document.getElementById('bodyClass').textContent = document.body.className || 'NONE';
+        
         const mainContent = document.querySelector('.main-content');
+        document.getElementById('mainExists').textContent = !!mainContent ? 'YES ✓' : 'NO ✗';
+        
         if (mainContent) {
-            console.log('Main content computed style:', window.getComputedStyle(mainContent));
+            const styles = window.getComputedStyle(mainContent);
+            document.getElementById('mainDisplay').textContent = styles.display;
+            document.getElementById('mainPosition').textContent = styles.position;
+            document.getElementById('mainLeft').textContent = styles.left;
+            document.getElementById('mainTop').textContent = styles.top;
+            document.getElementById('mainWidth').textContent = styles.width;
+            document.getElementById('mainHeight').textContent = styles.height;
+            document.getElementById('mainVisibility').textContent = styles.visibility;
+            document.getElementById('mainOpacity').textContent = styles.opacity;
+            document.getElementById('mainZIndex').textContent = styles.zIndex;
+            
+            console.log('Main-content computed styles:', {
+                display: styles.display,
+                position: styles.position,
+                left: styles.left,
+                top: styles.top,
+                right: styles.right,
+                bottom: styles.bottom,
+                width: styles.width,
+                height: styles.height,
+                visibility: styles.visibility,
+                opacity: styles.opacity,
+                zIndex: styles.zIndex,
+                background: styles.background
+            });
+        } else {
+            console.error('Main-content div NOT FOUND!');
         }
     </script>
     {% endif %}
