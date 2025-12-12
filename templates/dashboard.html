@@ -278,6 +278,10 @@
             grid-template-rows: auto 1fr auto !important;
             z-index: 1 !important;
             background: var(--bg-main) !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            width: calc(100vw - 280px) !important;
+            height: 100vh !important;
         }
         
         body.guest-mode .header {
@@ -286,6 +290,9 @@
             display: flex !important;
             position: relative !important;
             z-index: 2 !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            min-height: 60px !important;
         }
         
         body.guest-mode .dropdown-menu {
@@ -300,6 +307,8 @@
             display: block !important;
             position: relative !important;
             z-index: 2 !important;
+            visibility: visible !important;
+            opacity: 1 !important;
         }
         
         body.guest-mode .input-container {
@@ -308,6 +317,9 @@
             display: block !important;
             position: relative !important;
             z-index: 2 !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            min-height: 80px !important;
         }
 
         /* Header */
@@ -2125,9 +2137,9 @@
     </div>
 
     <!-- Main Content -->
-    <div class="main-content">
+    <div class="main-content" {% if is_guest %}style="position: absolute; left: 280px; right: 0; top: 0; bottom: 0; display: grid; grid-template-rows: auto 1fr auto; background: white; z-index: 1; visibility: visible; opacity: 1;"{% endif %}>
         <!-- Header -->
-        <div class="header">
+        <div class="header" {% if is_guest %}style="background: #ffe0e0; display: flex; min-height: 60px;"{% endif %}>
             <div class="header-left">
                 <div class="current-agent-info">
                     <div class="current-agent-avatar" id="currentAgentAvatar" style="background: linear-gradient(135deg, {% if is_guest %}#10a37f, #0d8c6f{% else %}#667eea, #764ba2{% endif %});">
@@ -2260,7 +2272,7 @@
         </div>
 
         <!-- Chat Container -->
-        <div class="chat-container" id="chatContainer">
+        <div class="chat-container" id="chatContainer" {% if is_guest %}style="background: #e0f0ff; display: block; min-height: 400px; overflow-y: auto;"{% endif %}>
             <div class="welcome">
                 {% if is_guest and custom_agent_name %}
                 <h2>Hi! I'm {{ custom_agent_name }} 🤖</h2>
@@ -2273,7 +2285,7 @@
         </div>
 
         <!-- Input Container -->
-        <div class="input-container">
+        <div class="input-container" {% if is_guest %}style="background: #e0ffe0; display: block; min-height: 80px;"{% endif %}>
             <div class="input-wrapper">
                 <div class="input-area">
                     <input type="file" id="fileInput" style="display:none;" accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.txt,.md,.csv,.doc,.docx,.xls,.xlsx">
