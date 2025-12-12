@@ -264,6 +264,7 @@
             grid-template-rows: auto 1fr auto;
             background: var(--bg-main);
             overflow: hidden;
+            z-index: 1; /* Ensure it's visible */
         }
         
         /* Force grid layout for guest mode with absolute positioning */
@@ -275,11 +276,16 @@
             bottom: 0 !important;
             display: grid !important;
             grid-template-rows: auto 1fr auto !important;
+            z-index: 1 !important;
+            background: var(--bg-main) !important;
         }
         
         body.guest-mode .header {
             grid-row: 1;
             background: #ffe0e0 !important; /* DEBUG: Light red */
+            display: flex !important;
+            position: relative !important;
+            z-index: 2 !important;
         }
         
         body.guest-mode .dropdown-menu {
@@ -291,11 +297,17 @@
             overflow-y: auto;
             min-height: 400px; /* Ensure it has some height */
             background: #e0f0ff !important; /* DEBUG: Light blue */
+            display: block !important;
+            position: relative !important;
+            z-index: 2 !important;
         }
         
         body.guest-mode .input-container {
             grid-row: 3;
             background: #e0ffe0 !important; /* DEBUG: Light green */
+            display: block !important;
+            position: relative !important;
+            z-index: 2 !important;
         }
 
         /* Header */
