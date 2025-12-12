@@ -254,36 +254,35 @@
 
         .main-content {
             flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start; /* Start from top */
-            align-items: stretch; /* Stretch children horizontally */
+            display: grid;
+            grid-template-rows: auto 1fr auto; /* Header, Chat, Input */
             position: relative;
             overflow: hidden;
             background: var(--bg-main); /* White background */
+            height: 100vh;
         }
         
-        /* CRITICAL: Force guest mode layout to work correctly */
+        /* Force grid layout for guest mode */
         body.guest-mode .main-content {
-            display: flex !important;
-            flex-direction: column !important;
-            justify-content: flex-start !important;
-            align-content: flex-start !important;
+            display: grid !important;
+            grid-template-rows: auto 1fr auto !important;
         }
         
         body.guest-mode .header {
-            order: 1 !important;
-            flex-shrink: 0 !important;
+            grid-row: 1;
+        }
+        
+        body.guest-mode .dropdown-menu {
+            grid-row: 1;
         }
         
         body.guest-mode .chat-container {
-            order: 2 !important;
-            flex: 1 !important;
+            grid-row: 2;
+            overflow-y: auto;
         }
         
         body.guest-mode .input-container {
-            order: 3 !important;
-            flex-shrink: 0 !important;
+            grid-row: 3;
         }
 
         /* Header */
@@ -297,6 +296,19 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
             flex-shrink: 0; /* Don't shrink */
             z-index: 10; /* Ensure it's on top */
+        }
+        
+        /* DEBUG MODE - Remove after testing */
+        body.guest-mode .header {
+            background: #ffe0e0 !important; /* Light red - should be at TOP */
+        }
+        
+        body.guest-mode .chat-container {
+            background: #e0f0ff !important; /* Light blue - should be in MIDDLE */
+        }
+        
+        body.guest-mode .input-container {
+            background: #e0ffe0 !important; /* Light green - should be at BOTTOM */
         }
 
         .header-left {
@@ -629,13 +641,10 @@
 
         /* Chat Container */
         .chat-container {
-            flex: 1; /* Take remaining space */
             overflow-y: auto;
             overflow-x: hidden;
             padding: 24px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            display: block; /* Simple block display */
         }
 
         .welcome {
@@ -643,6 +652,7 @@
             padding: 60px 20px;
             width: 100%;
             max-width: 1400px;
+            margin: 0 auto;
         }
 
         .welcome h2 {

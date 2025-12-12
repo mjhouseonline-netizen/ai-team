@@ -1,0 +1,151 @@
+🚨 EMERGENCY LAYOUT FIX V4 - FORCEFUL APPROACH
+
+═══════════════════════════════════════════════════════════════════
+
+ISSUE
+
+Layout still broken after previous fixes:
+- Header appearing at BOTTOM instead of TOP
+- Chat welcome message at bottom
+- Empty white space taking up most of screen
+
+═══════════════════════════════════════════════════════════════════
+
+ROOT CAUSE
+
+Something is overriding the flexbox layout, causing elements to be
+pushed to the bottom. Could be:
+- JavaScript manipulation
+- Mobile CSS overrides
+- Browser rendering quirks
+- Conflicting CSS rules
+
+═══════════════════════════════════════════════════════════════════
+
+NUCLEAR OPTION - FORCEFUL FIX
+
+Added explicit CSS with !important to FORCE correct layout:
+
+```css
+/* CRITICAL: Force guest mode layout to work correctly */
+body.guest-mode .main-content {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    align-content: flex-start !important;
+}
+
+body.guest-mode .header {
+    order: 1 !important;
+    flex-shrink: 0 !important;
+}
+
+body.guest-mode .chat-container {
+    order: 2 !important;
+    flex: 1 !important;
+}
+
+body.guest-mode .input-container {
+    order: 3 !important;
+    flex-shrink: 0 !important;
+}
+```
+
+This uses:
+- !important to override any conflicting rules
+- flexbox order property to force correct sequence
+- flex-shrink: 0 to prevent header/input from collapsing
+- flex: 1 to make chat-container fill space
+
+═══════════════════════════════════════════════════════════════════
+
+ADDITIONAL CHANGES
+
+1. **Body CSS**
+   - Added explicit flex-direction: row
+   - Added align-items: stretch
+   - Added width: 100vw
+
+2. **Main-content CSS**
+   - Added justify-content: flex-start
+   - Added align-items: stretch
+   - Removed height: 100vh (redundant)
+
+3. **Chat-container CSS**
+   - Changed to use flexbox internally
+   - Added flex-direction: column
+   - Added align-items: center
+   - Removed margin: 0 auto
+   - Removed max-width/min-height
+
+═══════════════════════════════════════════════════════════════════
+
+DEPLOYMENT
+
+```bash
+cp ~/Downloads/dashboard.html ./templates/dashboard.html
+git add templates/dashboard.html
+git commit -m "Fix: Nuclear option for layout - forceful CSS with !important"
+git push
+```
+
+Wait 3 minutes for Render auto-deploy
+
+═══════════════════════════════════════════════════════════════════
+
+TESTING
+
+1. **Clear ALL browser cache**
+   - Important! Old CSS might be cached
+
+2. **Hard refresh**
+   - Ctrl+Shift+R (Windows/Linux)
+   - Cmd+Shift+R (Mac)
+
+3. **Test in incognito**
+   ```
+   https://ai-team.skillsoul.store/custom/XnmkbneT4iO3nj4o
+   ```
+
+4. **What to look for**:
+   ✅ Header at TOP of white area
+   ✅ Welcome message below header
+   ✅ Input at BOTTOM of white area
+   ✅ No empty space above content
+
+═══════════════════════════════════════════════════════════════════
+
+IF THIS STILL DOESN'T WORK
+
+There might be a deeper issue with:
+1. JavaScript modifying the DOM
+2. Browser-specific rendering bug
+3. Conflicting external CSS
+4. Template rendering issue
+
+Next steps would be to:
+- Check browser console for errors
+- Inspect element to see computed CSS
+- Try different browser
+- Check if regular (non-guest) dashboard works
+
+═══════════════════════════════════════════════════════════════════
+
+WHY THIS SHOULD WORK
+
+Using !important + flexbox order is the "nuclear option" - it
+overrides almost everything. If this doesn't work, the issue is
+likely JavaScript-based or a template rendering problem, not CSS.
+
+The order property in flexbox explicitly controls visual order
+regardless of DOM order, so even if something is trying to move
+elements around, this should force them into the correct positions.
+
+═══════════════════════════════════════════════════════════════════
+
+DEPLOY THIS VERSION NOW!
+
+This is a forceful fix that should override any conflicting CSS.
+Clear cache, hard refresh, and test!
+
+═══════════════════════════════════════════════════════════════════
