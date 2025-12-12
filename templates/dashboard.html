@@ -1934,41 +1934,44 @@
         <button onclick="document.getElementById('diagnosticBox').style.display='none'" style="background: yellow; color: black; padding: 10px; border: none; cursor: pointer; margin-top: 10px;">Close Diagnostic</button>
     </div>
     <script>
-        console.log('=== GUEST MODE DEBUG ===');
-        document.getElementById('bodyClass').textContent = document.body.className || 'NONE';
-        
-        const mainContent = document.querySelector('.main-content');
-        document.getElementById('mainExists').textContent = !!mainContent ? 'YES ✓' : 'NO ✗';
-        
-        if (mainContent) {
-            const styles = window.getComputedStyle(mainContent);
-            document.getElementById('mainDisplay').textContent = styles.display;
-            document.getElementById('mainPosition').textContent = styles.position;
-            document.getElementById('mainLeft').textContent = styles.left;
-            document.getElementById('mainTop').textContent = styles.top;
-            document.getElementById('mainWidth').textContent = styles.width;
-            document.getElementById('mainHeight').textContent = styles.height;
-            document.getElementById('mainVisibility').textContent = styles.visibility;
-            document.getElementById('mainOpacity').textContent = styles.opacity;
-            document.getElementById('mainZIndex').textContent = styles.zIndex;
+        // Wait for DOM to fully load before checking
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('=== GUEST MODE DEBUG (DOM Loaded) ===');
+            document.getElementById('bodyClass').textContent = document.body.className || 'NONE';
             
-            console.log('Main-content computed styles:', {
-                display: styles.display,
-                position: styles.position,
-                left: styles.left,
-                top: styles.top,
-                right: styles.right,
-                bottom: styles.bottom,
-                width: styles.width,
-                height: styles.height,
-                visibility: styles.visibility,
-                opacity: styles.opacity,
-                zIndex: styles.zIndex,
-                background: styles.background
-            });
-        } else {
-            console.error('Main-content div NOT FOUND!');
-        }
+            const mainContent = document.querySelector('.main-content');
+            document.getElementById('mainExists').textContent = !!mainContent ? 'YES ✓' : 'NO ✗';
+            
+            if (mainContent) {
+                const styles = window.getComputedStyle(mainContent);
+                document.getElementById('mainDisplay').textContent = styles.display;
+                document.getElementById('mainPosition').textContent = styles.position;
+                document.getElementById('mainLeft').textContent = styles.left;
+                document.getElementById('mainTop').textContent = styles.top;
+                document.getElementById('mainWidth').textContent = styles.width;
+                document.getElementById('mainHeight').textContent = styles.height;
+                document.getElementById('mainVisibility').textContent = styles.visibility;
+                document.getElementById('mainOpacity').textContent = styles.opacity;
+                document.getElementById('mainZIndex').textContent = styles.zIndex;
+                
+                console.log('Main-content computed styles:', {
+                    display: styles.display,
+                    position: styles.position,
+                    left: styles.left,
+                    top: styles.top,
+                    right: styles.right,
+                    bottom: styles.bottom,
+                    width: styles.width,
+                    height: styles.height,
+                    visibility: styles.visibility,
+                    opacity: styles.opacity,
+                    zIndex: styles.zIndex,
+                    background: styles.background
+                });
+            } else {
+                console.error('Main-content div NOT FOUND even after DOM loaded!');
+            }
+        });
     </script>
     {% endif %}
     <!-- END DIAGNOSTIC -->
