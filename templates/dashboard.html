@@ -44,19 +44,9 @@
             margin: 0;
             padding: 0;
             overflow: hidden;
-            display: flex;
-            flex-direction: row; /* Explicit row direction */
-            align-items: stretch; /* Stretch children vertically */
             height: 100vh;
             width: 100vw;
-        }
-        
-        /* Guest mode body flex fix */
-        body.guest-mode {
-            display: flex !important;
-            flex-direction: row !important;
-            align-items: stretch !important;
-            justify-content: flex-start !important;
+            position: relative; /* For absolute children */
         }
 
         /* ================================================
@@ -64,14 +54,18 @@
            ================================================ */
 
         .sidebar {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
             width: 280px;
             background: var(--sidebar-bg);
             color: white;
             display: flex;
             flex-direction: column;
             border-right: 1px solid #333;
-            position: relative;
             z-index: 100;
+            overflow-y: auto;
         }
 
         .sidebar-header {
@@ -261,25 +255,31 @@
            ================================================ */
 
         .main-content {
-            flex: 1; /* Take remaining space in flex container */
+            position: absolute;
+            left: 280px; /* Width of sidebar */
+            right: 0;
+            top: 0;
+            bottom: 0;
             display: grid;
-            grid-template-rows: auto 1fr auto; /* Header, Chat, Input */
-            align-content: start; /* CRITICAL: Start from top, don't center */
-            position: relative;
+            grid-template-rows: auto 1fr auto;
+            background: var(--bg-main);
             overflow: hidden;
-            background: var(--bg-main); /* White background */
         }
         
-        /* Force grid layout for guest mode */
+        /* Force grid layout for guest mode with absolute positioning */
         body.guest-mode .main-content {
+            position: absolute !important;
+            left: 280px !important;
+            right: 0 !important;
+            top: 0 !important;
+            bottom: 0 !important;
             display: grid !important;
             grid-template-rows: auto 1fr auto !important;
-            align-content: start !important; /* Force start alignment */
-            align-items: start !important; /* Also align items to start */
         }
         
         body.guest-mode .header {
             grid-row: 1;
+            background: #ffe0e0 !important; /* DEBUG: Light red */
         }
         
         body.guest-mode .dropdown-menu {
@@ -290,10 +290,12 @@
             grid-row: 2;
             overflow-y: auto;
             min-height: 400px; /* Ensure it has some height */
+            background: #e0f0ff !important; /* DEBUG: Light blue */
         }
         
         body.guest-mode .input-container {
             grid-row: 3;
+            background: #e0ffe0 !important; /* DEBUG: Light green */
         }
 
         /* Header */
