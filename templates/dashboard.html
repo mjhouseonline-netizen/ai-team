@@ -1914,24 +1914,36 @@
 <body {% if is_guest %}class="guest-mode"{% endif %}>
     <!-- DIAGNOSTIC OVERLAY -->
     {% if is_guest %}
-    <div id="diagnosticBox" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: red; color: white; padding: 30px; z-index: 99999; border: 5px solid yellow; font-size: 14px; max-width: 600px; max-height: 80vh; overflow-y: auto;">
-        <h1 style="color: yellow;">🔍 GUEST MODE DIAGNOSTIC</h1>
+    <div id="diagnosticBox" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: red; color: white; padding: 30px; z-index: 99999; border: 5px solid yellow; font-size: 12px; max-width: 700px; max-height: 80vh; overflow-y: auto;">
+        <h1 style="color: yellow; font-size: 20px;">🔍 GUEST MODE DIAGNOSTIC</h1>
         <p><strong>is_guest:</strong> {{ is_guest }}</p>
         <p><strong>custom_agent_name:</strong> {{ custom_agent_name }}</p>
-        <p><strong>custom_agent_id:</strong> {{ custom_agent_id }}</p>
         <p><strong>Body class:</strong> <span id="bodyClass"></span></p>
+        
         <hr style="border-color: yellow;">
-        <p><strong>Main-content exists:</strong> <span id="mainExists"></span></p>
-        <p><strong>Main-content display:</strong> <span id="mainDisplay"></span></p>
-        <p><strong>Main-content position:</strong> <span id="mainPosition"></span></p>
-        <p><strong>Main-content left:</strong> <span id="mainLeft"></span></p>
-        <p><strong>Main-content top:</strong> <span id="mainTop"></span></p>
-        <p><strong>Main-content width:</strong> <span id="mainWidth"></span></p>
-        <p><strong>Main-content height:</strong> <span id="mainHeight"></span></p>
-        <p><strong>Main-content visibility:</strong> <span id="mainVisibility"></span></p>
-        <p><strong>Main-content opacity:</strong> <span id="mainOpacity"></span></p>
-        <p><strong>Main-content z-index:</strong> <span id="mainZIndex"></span></p>
-        <button onclick="document.getElementById('diagnosticBox').style.display='none'" style="background: yellow; color: black; padding: 10px; border: none; cursor: pointer; margin-top: 10px;">Close Diagnostic</button>
+        <h2 style="color: yellow; font-size: 16px;">Main Content:</h2>
+        <p><strong>Exists:</strong> <span id="mainExists"></span></p>
+        <p><strong>display:</strong> <span id="mainDisplay"></span> | <strong>width:</strong> <span id="mainWidth"></span> | <strong>height:</strong> <span id="mainHeight"></span></p>
+        
+        <hr style="border-color: yellow;">
+        <h2 style="color: yellow; font-size: 16px;">Header:</h2>
+        <p><strong>Exists:</strong> <span id="headerExists"></span></p>
+        <p><strong>display:</strong> <span id="headerDisplay"></span> | <strong>background:</strong> <span id="headerBg"></span></p>
+        <p><strong>width:</strong> <span id="headerWidth"></span> | <strong>height:</strong> <span id="headerHeight"></span></p>
+        
+        <hr style="border-color: yellow;">
+        <h2 style="color: yellow; font-size: 16px;">Chat Container:</h2>
+        <p><strong>Exists:</strong> <span id="chatExists"></span></p>
+        <p><strong>display:</strong> <span id="chatDisplay"></span> | <strong>background:</strong> <span id="chatBg"></span></p>
+        <p><strong>width:</strong> <span id="chatWidth"></span> | <strong>height:</strong> <span id="chatHeight"></span></p>
+        
+        <hr style="border-color: yellow;">
+        <h2 style="color: yellow; font-size: 16px;">Input Container:</h2>
+        <p><strong>Exists:</strong> <span id="inputExists"></span></p>
+        <p><strong>display:</strong> <span id="inputDisplay"></span> | <strong>background:</strong> <span id="inputBg"></span></p>
+        <p><strong>width:</strong> <span id="inputWidth"></span> | <strong>height:</strong> <span id="inputHeight"></span></p>
+        
+        <button onclick="document.getElementById('diagnosticBox').style.display='none'" style="background: yellow; color: black; padding: 10px; border: none; cursor: pointer; margin-top: 10px; font-weight: bold;">Close - See Content Behind</button>
     </div>
     <script>
         // Wait for DOM to fully load before checking
@@ -1939,37 +1951,54 @@
             console.log('=== GUEST MODE DEBUG (DOM Loaded) ===');
             document.getElementById('bodyClass').textContent = document.body.className || 'NONE';
             
+            // Check main-content
             const mainContent = document.querySelector('.main-content');
             document.getElementById('mainExists').textContent = !!mainContent ? 'YES ✓' : 'NO ✗';
             
             if (mainContent) {
-                const styles = window.getComputedStyle(mainContent);
-                document.getElementById('mainDisplay').textContent = styles.display;
-                document.getElementById('mainPosition').textContent = styles.position;
-                document.getElementById('mainLeft').textContent = styles.left;
-                document.getElementById('mainTop').textContent = styles.top;
-                document.getElementById('mainWidth').textContent = styles.width;
-                document.getElementById('mainHeight').textContent = styles.height;
-                document.getElementById('mainVisibility').textContent = styles.visibility;
-                document.getElementById('mainOpacity').textContent = styles.opacity;
-                document.getElementById('mainZIndex').textContent = styles.zIndex;
-                
-                console.log('Main-content computed styles:', {
-                    display: styles.display,
-                    position: styles.position,
-                    left: styles.left,
-                    top: styles.top,
-                    right: styles.right,
-                    bottom: styles.bottom,
-                    width: styles.width,
-                    height: styles.height,
-                    visibility: styles.visibility,
-                    opacity: styles.opacity,
-                    zIndex: styles.zIndex,
-                    background: styles.background
-                });
-            } else {
-                console.error('Main-content div NOT FOUND even after DOM loaded!');
+                const mainStyles = window.getComputedStyle(mainContent);
+                document.getElementById('mainDisplay').textContent = mainStyles.display;
+                document.getElementById('mainWidth').textContent = mainStyles.width;
+                document.getElementById('mainHeight').textContent = mainStyles.height;
+            }
+            
+            // Check header
+            const header = document.querySelector('.header');
+            document.getElementById('headerExists').textContent = !!header ? 'YES ✓' : 'NO ✗';
+            
+            if (header) {
+                const headerStyles = window.getComputedStyle(header);
+                document.getElementById('headerDisplay').textContent = headerStyles.display;
+                document.getElementById('headerBg').textContent = headerStyles.backgroundColor;
+                document.getElementById('headerWidth').textContent = headerStyles.width;
+                document.getElementById('headerHeight').textContent = headerStyles.height;
+                console.log('Header styles:', headerStyles.backgroundColor, headerStyles.display, headerStyles.width, headerStyles.height);
+            }
+            
+            // Check chat-container
+            const chat = document.querySelector('.chat-container');
+            document.getElementById('chatExists').textContent = !!chat ? 'YES ✓' : 'NO ✗';
+            
+            if (chat) {
+                const chatStyles = window.getComputedStyle(chat);
+                document.getElementById('chatDisplay').textContent = chatStyles.display;
+                document.getElementById('chatBg').textContent = chatStyles.backgroundColor;
+                document.getElementById('chatWidth').textContent = chatStyles.width;
+                document.getElementById('chatHeight').textContent = chatStyles.height;
+                console.log('Chat styles:', chatStyles.backgroundColor, chatStyles.display, chatStyles.width, chatStyles.height);
+            }
+            
+            // Check input-container
+            const input = document.querySelector('.input-container');
+            document.getElementById('inputExists').textContent = !!input ? 'YES ✓' : 'NO ✗';
+            
+            if (input) {
+                const inputStyles = window.getComputedStyle(input);
+                document.getElementById('inputDisplay').textContent = inputStyles.display;
+                document.getElementById('inputBg').textContent = inputStyles.backgroundColor;
+                document.getElementById('inputWidth').textContent = inputStyles.width;
+                document.getElementById('inputHeight').textContent = inputStyles.height;
+                console.log('Input styles:', inputStyles.backgroundColor, inputStyles.display, inputStyles.width, inputStyles.height);
             }
         });
     </script>
