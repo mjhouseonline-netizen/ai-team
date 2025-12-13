@@ -1923,6 +1923,51 @@
     <script>
         console.log('🎯 GUEST MODE ACTIVE - Starting visibility enforcement');
 
+        // CRITICAL FIX: Move main-content out of sidebar if it's stuck inside
+        (function() {
+            function fixDOMStructure() {
+                console.log('🔧 Fixing DOM structure...');
+
+                const sidebar = document.querySelector('.sidebar');
+                const mainContent = document.querySelector('.main-content');
+                const body = document.body;
+
+                // If main-content is inside sidebar, move it out!
+                if (mainContent && sidebar && sidebar.contains(mainContent)) {
+                    console.log('❌ ERROR: main-content is inside sidebar! Moving it...');
+                    body.appendChild(mainContent);
+                    console.log('✅ Moved main-content to body');
+                }
+
+                // Also move header, chat, input if they're in the wrong place
+                const header = document.querySelector('.header');
+                const chat = document.querySelector('.chat-container');
+                const input = document.querySelector('.input-container');
+
+                if (mainContent) {
+                    if (header && !mainContent.contains(header)) {
+                        console.log('❌ Header in wrong place, moving...');
+                        mainContent.appendChild(header);
+                    }
+                    if (chat && !mainContent.contains(chat)) {
+                        console.log('❌ Chat in wrong place, moving...');
+                        mainContent.appendChild(chat);
+                    }
+                    if (input && !mainContent.contains(input)) {
+                        console.log('❌ Input in wrong place, moving...');
+                        mainContent.appendChild(input);
+                    }
+                }
+            }
+
+            // Run as soon as possible
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', fixDOMStructure);
+            } else {
+                fixDOMStructure();
+            }
+        })();
+
         // FORCE ELEMENTS VISIBLE - Set properties individually for precision
         (function() {
             function forceGuestModeVisible() {
@@ -2278,6 +2323,7 @@
         </div>
         {% endif %}
     </div>
+    <!-- END SIDEBAR - Main content should start here -->
 
     <!-- Main Content -->
     <div class="main-content" {% if is_guest %}style="position: absolute !important; left: 280px !important; right: 0 !important; top: 0 !important; bottom: 0 !important; display: grid !important; grid-template-rows: auto 1fr auto !important; background: #ffffff !important; z-index: 10 !important; visibility: visible !important; opacity: 1 !important;"{% endif %}>
