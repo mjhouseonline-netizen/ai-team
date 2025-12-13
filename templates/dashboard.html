@@ -269,18 +269,19 @@
         
         /* Force grid layout for guest mode with absolute positioning */
         body.guest-mode .main-content {
-            position: absolute !important;
+            position: fixed !important;  /* Changed from absolute to fixed */
             left: 280px !important;
             right: 0 !important;
             top: 0 !important;
             bottom: 0 !important;
             display: grid !important;
             grid-template-rows: auto 1fr auto !important;
-            z-index: 1 !important;
-            background: var(--bg-main) !important;
+            z-index: 1000 !important;  /* Much higher z-index */
+            background: #ffffff !important;
             visibility: visible !important;
             opacity: 1 !important;
             width: calc(100vw - 280px) !important;
+            min-width: 500px !important;
             height: 100vh !important;
         }
         
@@ -293,6 +294,8 @@
             visibility: visible !important;
             opacity: 1 !important;
             min-height: 60px !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
         }
         
         body.guest-mode .dropdown-menu {
@@ -309,6 +312,8 @@
             z-index: 2 !important;
             visibility: visible !important;
             opacity: 1 !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
         }
         
         body.guest-mode .input-container {
@@ -320,6 +325,8 @@
             visibility: visible !important;
             opacity: 1 !important;
             min-height: 80px !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
         }
 
         /* Header */
