@@ -1914,7 +1914,7 @@
 <body {% if is_guest %}class="guest-mode"{% endif %}>
     {% if is_guest %}
     <script>
-        // FORCE ELEMENTS VISIBLE - Run immediately and after DOM load
+        // FORCE ELEMENTS VISIBLE - Set properties individually for precision
         (function() {
             function forceGuestModeVisible() {
                 console.log('🔧 FORCING GUEST MODE VISIBLE');
@@ -1925,26 +1925,64 @@
                 const input = document.querySelector('.input-container');
                 
                 if (mainContent) {
-                    mainContent.style.cssText = 'position: absolute !important; left: 280px !important; right: 0 !important; top: 0 !important; bottom: 0 !important; background: white !important; overflow: hidden !important; visibility: visible !important; opacity: 1 !important; display: block !important;';
-                    console.log('✅ Main-content forced visible');
+                    mainContent.style.position = 'absolute';
+                    mainContent.style.left = '280px';  // CRITICAL: After sidebar!
+                    mainContent.style.right = '0';
+                    mainContent.style.top = '0';
+                    mainContent.style.bottom = '0';
+                    mainContent.style.background = 'white';
+                    mainContent.style.overflow = 'hidden';
+                    mainContent.style.visibility = 'visible';
+                    mainContent.style.opacity = '1';
+                    mainContent.style.display = 'block';
+                    console.log('✅ Main-content forced visible at left:280px');
                 }
                 
                 if (header) {
-                    header.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; right: 0 !important; height: 70px !important; background: #ffe0e0 !important; display: flex !important; z-index: 3 !important; visibility: visible !important; opacity: 1 !important;';
+                    header.style.position = 'absolute';
+                    header.style.top = '0';
+                    header.style.left = '0';
+                    header.style.right = '0';
+                    header.style.height = '70px';
+                    header.style.background = '#ffe0e0';
+                    header.style.display = 'flex';
+                    header.style.zIndex = '3';
+                    header.style.visibility = 'visible';
+                    header.style.opacity = '1';
                     console.log('✅ Header forced visible');
                 }
                 
                 if (chat) {
-                    chat.style.cssText = 'position: absolute !important; top: 70px !important; left: 0 !important; right: 0 !important; bottom: 150px !important; background: #e0f0ff !important; display: block !important; overflow-y: auto !important; z-index: 2 !important; padding: 20px !important; visibility: visible !important; opacity: 1 !important;';
+                    chat.style.position = 'absolute';
+                    chat.style.top = '70px';
+                    chat.style.left = '0';
+                    chat.style.right = '0';
+                    chat.style.bottom = '150px';
+                    chat.style.background = '#e0f0ff';
+                    chat.style.display = 'block';
+                    chat.style.overflowY = 'auto';
+                    chat.style.zIndex = '2';
+                    chat.style.padding = '20px';
+                    chat.style.visibility = 'visible';
+                    chat.style.opacity = '1';
                     console.log('✅ Chat forced visible');
                 }
                 
                 if (input) {
-                    input.style.cssText = 'position: absolute !important; bottom: 0 !important; left: 0 !important; right: 0 !important; height: 150px !important; background: #e0ffe0 !important; display: block !important; z-index: 3 !important; visibility: visible !important; opacity: 1 !important;';
+                    input.style.position = 'absolute';
+                    input.style.bottom = '0';
+                    input.style.left = '0';
+                    input.style.right = '0';
+                    input.style.height = '150px';
+                    input.style.background = '#e0ffe0';
+                    input.style.display = 'block';
+                    input.style.zIndex = '3';
+                    input.style.visibility = 'visible';
+                    input.style.opacity = '1';
                     console.log('✅ Input forced visible');
                 }
                 
-                console.log('🎯 Guest mode force complete');
+                console.log('🎯 Guest mode force complete - main at left:280px');
             }
             
             // Run immediately
@@ -1954,7 +1992,7 @@
                 forceGuestModeVisible();
             }
             
-            // Also run after a short delay to override any other scripts
+            // Also run after delays
             setTimeout(forceGuestModeVisible, 100);
             setTimeout(forceGuestModeVisible, 500);
             setTimeout(forceGuestModeVisible, 1000);
