@@ -1966,6 +1966,20 @@
             } else {
                 fixDOMStructure();
             }
+
+            // Add extra click handler for guest mode dropdowns
+            document.addEventListener('click', function(event) {
+                const userMenu = document.querySelector('.user-menu');
+                const userDropdown = document.getElementById('userDropdown');
+
+                // Close user dropdown if clicking outside
+                if (userDropdown && userDropdown.classList.contains('show')) {
+                    if (!event.target.closest('.user-menu')) {
+                        userDropdown.classList.remove('show');
+                        console.log('✅ Closed user dropdown');
+                    }
+                }
+            });
         })();
 
         // FORCE ELEMENTS VISIBLE - Set properties individually for precision
