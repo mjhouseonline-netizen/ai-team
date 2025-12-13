@@ -1911,78 +1911,98 @@
         }
     </style>
 </head>
-<body {% if is_guest %}class="guest-mode"{% endif %}>
+<body {% if is_guest %}class="guest-mode" style="background: #f0f0f0 !important; overflow: auto !important;"{% endif %}>
     {% if is_guest %}
     <script>
+        console.log('🎯 GUEST MODE ACTIVE - Starting visibility enforcement');
+
         // FORCE ELEMENTS VISIBLE - Set properties individually for precision
         (function() {
             function forceGuestModeVisible() {
                 console.log('🔧 FORCING GUEST MODE VISIBLE');
-                
+
                 const mainContent = document.querySelector('.main-content');
                 const header = document.querySelector('.header');
                 const chat = document.querySelector('.chat-container');
                 const input = document.querySelector('.input-container');
+                const welcome = document.querySelector('.welcome');
                 
                 if (mainContent) {
-                    mainContent.style.position = 'absolute';
-                    mainContent.style.left = '280px';  // CRITICAL: After sidebar!
-                    mainContent.style.right = '0';
-                    mainContent.style.top = '0';
-                    mainContent.style.bottom = '0';
-                    mainContent.style.background = 'white';
-                    mainContent.style.overflow = 'hidden';
-                    mainContent.style.visibility = 'visible';
-                    mainContent.style.opacity = '1';
-                    mainContent.style.display = 'grid';  // CRITICAL: Use grid layout!
-                    mainContent.style.gridTemplateRows = 'auto 1fr auto';
+                    console.log('📍 Main content element found, forcing styles...');
+                    mainContent.style.cssText = `
+                        position: absolute !important;
+                        left: 280px !important;
+                        right: 0 !important;
+                        top: 0 !important;
+                        bottom: 0 !important;
+                        background: #ffffff !important;
+                        display: grid !important;
+                        grid-template-rows: auto 1fr auto !important;
+                        visibility: visible !important;
+                        opacity: 1 !important;
+                        z-index: 10 !important;
+                    `;
                     console.log('✅ Main-content forced visible at left:280px with grid layout');
+                    console.log('📐 Computed style:', window.getComputedStyle(mainContent).display);
                 }
                 
                 if (header) {
-                    header.style.position = 'relative';  // Use relative for grid child
-                    header.style.gridRow = '1';  // First row in grid
-                    header.style.background = 'white';
-                    header.style.borderBottom = '1px solid #e5e7eb';
-                    header.style.display = 'flex';
-                    header.style.zIndex = '3';
-                    header.style.visibility = 'visible';
-                    header.style.opacity = '1';
-                    // Force all children visible
+                    console.log('📍 Header found, forcing visible with color...');
+                    header.style.cssText = `
+                        grid-row: 1 !important;
+                        background: #ffe0e0 !important;
+                        display: flex !important;
+                        position: relative !important;
+                        z-index: 20 !important;
+                        visibility: visible !important;
+                        opacity: 1 !important;
+                        padding: 12px 24px !important;
+                        border-bottom: 1px solid #e5e7eb !important;
+                    `;
+                    // Force all children visible with color
                     header.querySelectorAll('*').forEach(el => {
                         el.style.visibility = 'visible';
                         el.style.opacity = '1';
+                        el.style.color = '#000000';
                     });
                     console.log('✅ Header forced visible in grid row 1');
                 }
                 
                 if (chat) {
-                    chat.style.position = 'relative';  // Use relative for grid child
-                    chat.style.gridRow = '2';  // Second row in grid (takes remaining space)
-                    chat.style.background = '#f9fafb';
-                    chat.style.display = 'block';
-                    chat.style.overflowY = 'auto';
-                    chat.style.zIndex = '2';
-                    chat.style.padding = '20px';
-                    chat.style.visibility = 'visible';
-                    chat.style.opacity = '1';
-                    // Force all children visible
+                    console.log('📍 Chat container found, forcing visible with blue bg...');
+                    chat.style.cssText = `
+                        grid-row: 2 !important;
+                        background: #e0f0ff !important;
+                        display: block !important;
+                        position: relative !important;
+                        z-index: 15 !important;
+                        visibility: visible !important;
+                        opacity: 1 !important;
+                        overflow-y: auto !important;
+                        padding: 20px !important;
+                    `;
+                    // Force all children visible with dark text
                     chat.querySelectorAll('*').forEach(el => {
                         el.style.visibility = 'visible';
                         el.style.opacity = '1';
+                        el.style.color = '#000000';
                     });
                     console.log('✅ Chat forced visible in grid row 2');
                 }
                 
                 if (input) {
-                    input.style.position = 'relative';  // Use relative for grid child
-                    input.style.gridRow = '3';  // Third row in grid
-                    input.style.background = 'white';
-                    input.style.borderTop = '1px solid #e5e7eb';
-                    input.style.display = 'block';
-                    input.style.zIndex = '3';
-                    input.style.visibility = 'visible';
-                    input.style.opacity = '1';
+                    console.log('📍 Input container found, forcing visible with green bg...');
+                    input.style.cssText = `
+                        grid-row: 3 !important;
+                        background: #e0ffe0 !important;
+                        display: block !important;
+                        position: relative !important;
+                        z-index: 20 !important;
+                        visibility: visible !important;
+                        opacity: 1 !important;
+                        padding: 16px 24px !important;
+                        border-top: 1px solid #e5e7eb !important;
+                    `;
                     // Force all children visible
                     input.querySelectorAll('*').forEach(el => {
                         el.style.visibility = 'visible';
@@ -1990,8 +2010,27 @@
                     });
                     console.log('✅ Input forced visible in grid row 3');
                 }
-                
-                console.log('🎯 Guest mode force complete - main at left:280px');
+
+                if (welcome) {
+                    console.log('📍 Welcome found, forcing visible...');
+                    welcome.style.visibility = 'visible';
+                    welcome.style.opacity = '1';
+                    welcome.style.display = 'block';
+                    welcome.querySelectorAll('*').forEach(el => {
+                        el.style.visibility = 'visible';
+                        el.style.opacity = '1';
+                        el.style.color = '#000000';
+                        el.style.display = 'block';
+                    });
+                }
+
+                console.log('🎯 Guest mode force complete - all elements styled');
+                console.log('📊 Element positions:', {
+                    mainContent: mainContent?.getBoundingClientRect(),
+                    header: header?.getBoundingClientRect(),
+                    chat: chat?.getBoundingClientRect(),
+                    input: input?.getBoundingClientRect()
+                });
             }
             
             // Run immediately
@@ -2234,9 +2273,9 @@
     </div>
 
     <!-- Main Content -->
-    <div class="main-content">
+    <div class="main-content" {% if is_guest %}style="position: absolute !important; left: 280px !important; right: 0 !important; top: 0 !important; bottom: 0 !important; display: grid !important; grid-template-rows: auto 1fr auto !important; background: #ffffff !important; z-index: 10 !important; visibility: visible !important; opacity: 1 !important;"{% endif %}>
         <!-- Header -->
-        <div class="header">
+        <div class="header" {% if is_guest %}style="grid-row: 1 !important; background: #ffe0e0 !important; display: flex !important; position: relative !important; z-index: 20 !important; visibility: visible !important; opacity: 1 !important; padding: 12px 24px !important; border-bottom: 1px solid #e5e7eb !important;"{% endif %}>
             <div class="header-left">
                 <div class="current-agent-info">
                     <div class="current-agent-avatar" id="currentAgentAvatar" style="background: linear-gradient(135deg, {% if is_guest %}#10a37f, #0d8c6f{% else %}#667eea, #764ba2{% endif %});">
@@ -2369,7 +2408,7 @@
         </div>
 
         <!-- Chat Container -->
-        <div class="chat-container" id="chatContainer">
+        <div class="chat-container" id="chatContainer" {% if is_guest %}style="grid-row: 2 !important; background: #e0f0ff !important; display: block !important; position: relative !important; z-index: 15 !important; visibility: visible !important; opacity: 1 !important; overflow-y: auto !important; padding: 20px !important;"{% endif %}>
             <div class="welcome">
                 {% if is_guest and custom_agent_name %}
                 <h2>Hi! I'm {{ custom_agent_name }} 🤖</h2>
@@ -2382,7 +2421,7 @@
         </div>
 
         <!-- Input Container -->
-        <div class="input-container">
+        <div class="input-container" {% if is_guest %}style="grid-row: 3 !important; background: #e0ffe0 !important; display: block !important; position: relative !important; z-index: 20 !important; visibility: visible !important; opacity: 1 !important; padding: 16px 24px !important; border-top: 1px solid #e5e7eb !important;"{% endif %}>
             <div class="input-wrapper">
                 <div class="input-area">
                     <input type="file" id="fileInput" style="display:none;" accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.txt,.md,.csv,.doc,.docx,.xls,.xlsx">
