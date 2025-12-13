@@ -1,0 +1,187 @@
+🚨 EMERGENCY FIX - INLINE STYLES FOR GUEST MODE
+
+═══════════════════════════════════════════════════════════════════
+
+CRITICAL ISSUE
+
+Guest mode is showing COMPLETELY BLANK white screen despite all CSS
+fixes. This suggests the CSS isn't being applied at all for some reason.
+
+═══════════════════════════════════════════════════════════════════
+
+NUCLEAR APPROACH: INLINE STYLES
+
+Added inline styles DIRECTLY to HTML elements for guest mode. This
+completely bypasses external CSS and should work no matter what.
+
+**Changes Made:**
+
+1. **main-content div** (line ~2140)
+   ```html
+   <div class="main-content" 
+        {% if is_guest %}style="position: absolute; left: 280px; 
+        right: 0; top: 0; bottom: 0; display: grid; 
+        grid-template-rows: auto 1fr auto; background: white; 
+        z-index: 1; visibility: visible; opacity: 1;"{% endif %}>
+   ```
+
+2. **header div** (line ~2142)
+   ```html
+   <div class="header" 
+        {% if is_guest %}style="background: #ffe0e0; 
+        display: flex; min-height: 60px;"{% endif %}>
+   ```
+
+3. **chat-container div** (line ~2275)
+   ```html
+   <div class="chat-container" id="chatContainer" 
+        {% if is_guest %}style="background: #e0f0ff; 
+        display: block; min-height: 400px; 
+        overflow-y: auto;"{% endif %}>
+   ```
+
+4. **input-container div** (line ~2288)
+   ```html
+   <div class="input-container" 
+        {% if is_guest %}style="background: #e0ffe0; 
+        display: block; min-height: 80px;"{% endif %}>
+   ```
+
+═══════════════════════════════════════════════════════════════════
+
+WHY THIS SHOULD WORK
+
+Inline styles have the HIGHEST CSS specificity (even higher than 
+!important in external CSS). They can't be overridden by any 
+external stylesheet.
+
+If this doesn't work, the issue is NOT CSS - it's one of these:
+1. Template not rendering (is_guest not set)
+2. HTML not being generated
+3. JavaScript error preventing display
+4. Browser cache not clearing
+5. Backend issue
+
+═══════════════════════════════════════════════════════════════════
+
+DEPLOYMENT
+
+```bash
+cp ~/Downloads/dashboard.html ./templates/dashboard.html
+git add templates/dashboard.html
+git commit -m "Emergency: Add inline styles for guest mode"
+git push
+```
+
+⏱️ Wait 3 minutes
+🧹 Clear ALL browser cache (very important!)
+🔄 Hard refresh (Ctrl+Shift+R)
+
+═══════════════════════════════════════════════════════════════════
+
+TESTING STEPS
+
+1. **Open in INCOGNITO/PRIVATE mode** (bypass all cache)
+   
+2. **Navigate to guest link:**
+   ```
+   https://ai-team.skillsoul.store/custom/XnmkbneT4iO3nj4o
+   ```
+
+3. **Check what you see:**
+
+   ✅ WORKING: You see colored sections:
+   - 🔴 Red header at top
+   - 🔵 Blue chat area in middle
+   - 🟢 Green input at bottom
+
+   ❌ STILL BROKEN: Blank white screen
+
+4. **If still broken, check browser console:**
+   - Press F12
+   - Go to "Console" tab
+   - Look for JavaScript errors (red text)
+   - Screenshot and share
+
+5. **If still broken, inspect element:**
+   - Right-click on white area
+   - Select "Inspect" or "Inspect Element"
+   - Look for <div class="main-content">
+   - Check if it has the inline styles
+   - Screenshot and share
+
+═══════════════════════════════════════════════════════════════════
+
+DIAGNOSTIC CHECKLIST
+
+IF YOU SEE BLANK SCREEN AFTER THIS:
+
+□ Browser console shows JavaScript errors?
+□ main-content div exists in HTML?
+□ main-content div has inline styles?
+□ body tag has guest-mode class?
+□ is_guest variable is true? (check page source)
+
+═══════════════════════════════════════════════════════════════════
+
+ALTERNATIVE DIAGNOSIS
+
+If this still doesn't work, we need to check the BACKEND:
+
+1. **Check web_app_auth.py**
+   - Is is_guest being passed to template?
+   - Is custom_agent_name being passed?
+   
+2. **Check server logs**
+   - Any errors when guest visits link?
+   - Template rendering correctly?
+
+3. **Test with different share code**
+   - Maybe this specific code is broken?
+   - Try creating a new custom agent and test its link
+
+═══════════════════════════════════════════════════════════════════
+
+LOGGED-IN USERS
+
+✅ Still working perfectly (no changes affected them)
+
+The inline styles ONLY apply when {% if is_guest %} is true, so
+logged-in users are completely unaffected.
+
+═══════════════════════════════════════════════════════════════════
+
+NEXT STEPS IF THIS FAILS
+
+If inline styles don't show the colored sections, then:
+
+1. Share browser console output
+2. Share "Inspect Element" screenshot of main-content div
+3. Check if is_guest is being set in backend
+4. May need to debug backend/template rendering
+
+This would indicate the problem is NOT CSS, but something with:
+- Template rendering
+- Backend logic
+- JavaScript execution
+- Or a browser-specific bug
+
+═══════════════════════════════════════════════════════════════════
+
+SUMMARY
+
+✅ Added inline styles directly to HTML (highest specificity)
+✅ Logged-in users unchanged and working
+✅ Debug colors still enabled (red, blue, green)
+✅ Aggressive visibility forcing
+
+IF this doesn't work, it's 100% NOT a CSS issue.
+
+═══════════════════════════════════════════════════════════════════
+
+DEPLOY NOW AND TEST IN INCOGNITO MODE!
+
+This is the most aggressive fix possible. If it doesn't work, we need
+to look at the backend or JavaScript console.
+
+═══════════════════════════════════════════════════════════════════

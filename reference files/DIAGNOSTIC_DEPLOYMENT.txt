@@ -1,0 +1,165 @@
+🔍 DIAGNOSTIC VERSION - FIND THE ROOT CAUSE
+
+═══════════════════════════════════════════════════════════════════
+
+THIS IS NOT A FIX - THIS IS A DIAGNOSTIC
+
+Since even inline styles didn't work, this is 100% NOT a CSS issue.
+The problem must be:
+
+1. Template variables not being set
+2. is_guest is False when it should be True
+3. Backend routing issue
+4. custom_agent_name is empty/null
+
+This version adds a BIG RED DIAGNOSTIC BOX that will tell us exactly
+what's happening.
+
+═══════════════════════════════════════════════════════════════════
+
+WHAT WAS ADDED
+
+A diagnostic overlay that appears ONLY for guests:
+
+```html
+{% if is_guest %}
+<div style="BIG RED BOX with yellow border">
+    🔍 GUEST MODE DIAGNOSTIC
+    is_guest: {{ value }}
+    custom_agent_name: {{ value }}
+    custom_agent_id: {{ value }}
+    Body class: <shows actual value>
+    [Close Diagnostic button]
+</div>
+{% endif %}
+```
+
+Plus JavaScript console logging to show:
+- All template variable values
+- Whether main-content div exists
+- Computed CSS styles
+
+═══════════════════════════════════════════════════════════════════
+
+DEPLOYMENT
+
+```bash
+cp ~/Downloads/dashboard.html ./templates/dashboard.html
+git add templates/dashboard.html
+git commit -m "Diagnostic: Add debug overlay for guest mode"
+git push
+```
+
+⏱️ Wait 3 minutes
+🧹 Clear cache
+🔄 Hard refresh
+
+═══════════════════════════════════════════════════════════════════
+
+WHAT TO LOOK FOR
+
+**SCENARIO 1: You see the BIG RED DIAGNOSTIC BOX**
+✅ Template is rendering
+✅ is_guest is True
+→ Screenshot the box and share it with me
+→ Shows us what variables are set
+→ We can see if custom_agent_name is empty
+
+**SCENARIO 2: You DON'T see the red box**
+❌ is_guest is False (or not set)
+❌ Backend is not passing is_guest=True
+→ This means the /custom/<share_code> route is broken
+→ Need to check backend code
+
+**SCENARIO 3: You see "NOT GUEST MODE" box (top right blue)**
+❌ You're being treated as logged-in user
+❌ is_guest is definitely False
+→ Backend routing issue confirmed
+
+═══════════════════════════════════════════════════════════════════
+
+ALSO CHECK BROWSER CONSOLE
+
+1. Press F12
+2. Go to "Console" tab
+3. Look for lines starting with:
+   ```
+   === GUEST MODE DEBUG ===
+   is_guest: ...
+   custom_agent_name: ...
+   ```
+4. Screenshot the console output
+
+═══════════════════════════════════════════════════════════════════
+
+WHAT THIS TELLS US
+
+**If red box appears:**
+→ Template is working
+→ is_guest is True
+→ Problem is with CSS/JavaScript/rendering
+→ We'll see the actual variable values
+
+**If red box does NOT appear:**
+→ is_guest is not True
+→ Backend is not setting guest mode
+→ Need to fix the /custom/<share_code> route
+→ Or share_code is invalid
+
+═══════════════════════════════════════════════════════════════════
+
+NEXT STEPS BASED ON RESULTS
+
+**RED BOX SHOWS UP:**
+→ Share screenshot of the box
+→ Share console output
+→ We'll fix based on what values we see
+
+**RED BOX DOESN'T SHOW:**
+→ Backend issue confirmed
+→ Need to check web_app_auth.py
+→ Check the /custom/<share_code> route
+→ Verify custom agent exists in database
+
+═══════════════════════════════════════════════════════════════════
+
+BACKEND TO CHECK
+
+If is_guest is False, the issue is in:
+
+1. **web_app_auth.py** - /custom/<share_code> route
+   - Is it setting is_guest=True?
+   - Is it passing custom_agent_name?
+   - Is share_code valid?
+
+2. **Database** - custom_agents table
+   - Does the agent with this share_code exist?
+   - Is share_enabled = 1?
+   - Is share_code correct?
+
+3. **Flask Template Rendering**
+   - Is render_template getting the right variables?
+   - Is Jinja2 context correct?
+
+═══════════════════════════════════════════════════════════════════
+
+SUMMARY
+
+✅ Diagnostic overlay added
+✅ Console logging added
+✅ Will show exact variable values
+✅ Will confirm if is_guest is being set
+
+Deploy this version and share:
+1. Screenshot of the page (with or without red box)
+2. Screenshot of browser console (F12 → Console)
+
+This will tell us EXACTLY what the problem is!
+
+═══════════════════════════════════════════════════════════════════
+
+DEPLOY AND SHARE SCREENSHOTS!
+
+The diagnostic box will give us the information we need to fix this.
+
+═══════════════════════════════════════════════════════════════════

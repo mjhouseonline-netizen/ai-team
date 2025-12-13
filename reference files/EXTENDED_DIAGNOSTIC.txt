@@ -1,0 +1,116 @@
+🔍 EXTENDED DIAGNOSTIC - FIND THE CSS ISSUE
+
+═══════════════════════════════════════════════════════════════════
+
+GREAT NEWS!
+
+The first diagnostic proved:
+✅ Backend is working correctly
+✅ is_guest is True
+✅ All variables are set
+✅ Body has guest-mode class
+
+This means the main-content div IS being rendered, but something is
+making it invisible or positioned incorrectly.
+
+═══════════════════════════════════════════════════════════════════
+
+NEW DIAGNOSTIC SHOWS
+
+The extended diagnostic will now show:
+
+- Main-content exists: YES/NO
+- Main-content display: (grid, none, block, etc.)
+- Main-content position: (absolute, relative, fixed, etc.)
+- Main-content left: (280px, 0, auto, etc.)
+- Main-content top: (0, auto, etc.)
+- Main-content width: (actual pixel width)
+- Main-content height: (actual pixel height)
+- Main-content visibility: (visible, hidden)
+- Main-content opacity: (1, 0, etc.)
+- Main-content z-index: (1, auto, etc.)
+
+This will tell us EXACTLY what's wrong!
+
+═══════════════════════════════════════════════════════════════════
+
+DEPLOYMENT
+
+```bash
+cp ~/Downloads/dashboard.html ./templates/dashboard.html
+git add templates/dashboard.html
+git commit -m "Diagnostic: Show main-content computed styles"
+git push
+```
+
+⏱️ Wait 3 minutes
+🧹 Clear cache
+🔄 Hard refresh
+
+═══════════════════════════════════════════════════════════════════
+
+WHAT TO LOOK FOR
+
+The diagnostic box will show values like:
+
+**SCENARIO 1: Width or Height is 0px**
+→ Main-content exists but has no size
+→ Grid not working properly
+→ Fix: Force explicit width/height
+
+**SCENARIO 2: Position is static or relative (not absolute)**
+→ Position CSS not being applied
+→ Fix: More aggressive positioning
+
+**SCENARIO 3: Left is not 280px**
+→ Positioning offset wrong
+→ Might be positioned off-screen
+
+**SCENARIO 4: Display is none**
+→ Something is hiding the div
+→ Fix: Force display
+
+**SCENARIO 5: Visibility is hidden or Opacity is 0**
+→ Div exists and positioned correctly but invisible
+→ Fix: Force visibility/opacity
+
+**SCENARIO 6: Z-index issue**
+→ Sidebar might be overlapping
+→ Fix: Adjust z-index layering
+
+═══════════════════════════════════════════════════════════════════
+
+TAKE SCREENSHOT
+
+After deploying, take screenshot showing:
+- The full diagnostic box with all the values
+- Scroll down if needed to see all values
+
+This will tell me exactly what to fix!
+
+═══════════════════════════════════════════════════════════════════
+
+EXPECTED CORRECT VALUES
+
+For guest mode to work correctly, we should see:
+
+✓ Main-content exists: YES
+✓ display: grid
+✓ position: absolute
+✓ left: 280px (or close to it)
+✓ top: 0px (or close to it)
+✓ width: Something like 800px-1500px (depends on screen)
+✓ height: Something like 600px-1000px (viewport height)
+✓ visibility: visible
+✓ opacity: 1
+✓ z-index: 1 (or auto)
+
+If ANY of these are different, that's our culprit!
+
+═══════════════════════════════════════════════════════════════════
+
+DEPLOY AND SHARE SCREENSHOT!
+
+The values in the diagnostic will pinpoint the exact CSS problem.
+
+═══════════════════════════════════════════════════════════════════

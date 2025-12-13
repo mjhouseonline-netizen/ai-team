@@ -1,0 +1,156 @@
+🎯 FIX FOR GUEST MODE BLANK SCREEN + AGENT LABEL
+
+═══════════════════════════════════════════════════════════════════
+
+STATUS CHECK
+
+✅ LOGGED-IN USERS: Layout working perfectly!
+   - Header at top
+   - Chat in middle
+   - Input at bottom
+   - Agent selection works
+
+❌ GUEST USERS: Main content area completely blank
+   - Sidebar shows correctly
+   - Main area is white/empty
+   - No header, chat, or input visible
+
+═══════════════════════════════════════════════════════════════════
+
+WHAT I FIXED
+
+**Issue: Z-Index and Display Properties Missing**
+
+The main-content div and its children (header, chat-container, 
+input-container) weren't explicitly set to display for guest mode.
+They might have been hidden or positioned incorrectly.
+
+**Changes Made:**
+
+1. **main-content** (line ~257)
+   - Added `z-index: 1` to base rule
+   - Added `z-index: 1 !important` to guest-mode rule
+   - Added `background: var(--bg-main) !important` to ensure visibility
+
+2. **header, chat-container, input-container** (lines ~280-312)
+   - Added `display: flex !important` to header
+   - Added `display: block !important` to chat-container and input-container
+   - Added `position: relative !important` to all three
+   - Added `z-index: 2 !important` to all three (above main-content)
+
+This ensures these elements are:
+- Explicitly visible (display property)
+- Positioned correctly (position: relative)
+- Above any potential overlays (z-index)
+
+═══════════════════════════════════════════════════════════════════
+
+DEPLOYMENT
+
+```bash
+cp ~/Downloads/dashboard.html ./templates/dashboard.html
+git add templates/dashboard.html
+git commit -m "Fix: Guest mode z-index and display properties"
+git push
+```
+
+⏱️ Wait 3 minutes
+🧹 Clear ALL cache
+🔄 Hard refresh (Ctrl+Shift+R)
+
+Test guest mode:
+https://ai-team.skillsoul.store/custom/XnmkbneT4iO3nj4o
+
+═══════════════════════════════════════════════════════════════════
+
+EXPECTED RESULT FOR GUESTS
+
+You should now see:
+
+┌──────────┬─────────────────────────────────┐
+│ Sidebar  │ 🔴 RED HEADER (top with agent)  │
+│          ├─────────────────────────────────┤
+│ YOUR     │ 🔵 BLUE CHAT (middle with       │
+│ AGENT    │               "Hi! I'm...")     │
+│          │                                  │
+│ Skill &  ├─────────────────────────────────┤
+│ Soul     │ 🟢 GREEN INPUT (bottom)         │
+│ Agent    │ [Message textarea and buttons]  │
+│          │                                  │
+│ Guest    │                                  │
+│ Mode     │                                  │
+│ Banner   │                                  │
+└──────────┴─────────────────────────────────┘
+
+The debug colors will confirm everything is working:
+- 🔴 Red header visible at top
+- 🔵 Blue chat area visible in middle
+- 🟢 Green input visible at bottom
+
+═══════════════════════════════════════════════════════════════════
+
+ABOUT THE "CUSTOM AGENT" LABEL
+
+You mentioned "the label for the custom doesnt" - currently it shows:
+
+**Sidebar Display:**
+```
+Skill & Soul Agent
+Custom Agent         ← This is the role/label
+```
+
+If you want to change "Custom Agent" to something else, I can:
+1. Show the agent description instead
+2. Hide the role entirely for custom agents
+3. Show a different label
+
+Just let me know what you'd prefer!
+
+═══════════════════════════════════════════════════════════════════
+
+DEBUGGING IF STILL BLANK
+
+If the main content is STILL blank after deploying:
+
+1. **Check Browser Console** (F12)
+   - Look for JavaScript errors
+   - Check if guest-mode class is on <body>
+
+2. **Inspect Element**
+   - Right-click on blank area
+   - Check if .main-content div exists
+   - Check computed CSS values
+   - Look for any display: none or visibility: hidden
+
+3. **Test in Different Browser**
+   - Try Chrome, Firefox, Safari
+   - Try incognito/private mode
+
+4. **Check Backend**
+   - Verify is_guest is being passed to template
+   - Verify custom_agent_name is set
+   - Check server logs for errors
+
+═══════════════════════════════════════════════════════════════════
+
+SUMMARY OF ALL FIXES SO FAR
+
+✅ Absolute positioning for reliable layout
+✅ Z-index to ensure visibility
+✅ Explicit display properties for guest mode
+✅ Debug colors to diagnose issues
+✅ Agent selection working for logged-in users
+✅ Sidebar working correctly for guests
+
+Next:
+🔄 Test guest mode after this deployment
+🎨 Remove debug colors once confirmed working
+✨ Optionally fix "Custom Agent" label
+
+═══════════════════════════════════════════════════════════════════
+
+DEPLOY THIS VERSION NOW!
+
+The z-index and display fixes should make the content visible for guests.
+
+═══════════════════════════════════════════════════════════════════
