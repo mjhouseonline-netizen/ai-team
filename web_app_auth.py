@@ -1057,26 +1057,26 @@ def custom_agent_link(share_code):
         cursor.execute("PRAGMA table_info(custom_agents)")
         columns = [col[1] for col in cursor.fetchall()]
         
-        # Get all agents (simple approach for now)
-        cursor.execute("SELECT id, name, share_code FROM custom_agents")
+        # Get all agents with user_id to find the owner
+        cursor.execute("SELECT id, name, share_code, user_id FROM custom_agents")
         all_agents = cursor.fetchall()
         print(f"📊 ALL agents in DB: {all_agents}")
-        
+
         # Find the agent by comparing share codes
         agent_found = None
         for agent in all_agents:
-            db_id, db_name, db_share_code = agent
+            db_id, db_name, db_share_code, db_user_id = agent
             if db_share_code and share_code:
                 if str(db_share_code).strip().lower() == str(share_code).strip().lower():
-                    print(f"✅ MATCH! Found agent: {db_name} (ID: {db_id})")
-                    agent_found = (db_id, db_name)
+                    print(f"✅ MATCH! Found agent: {db_name} (ID: {db_id}, Owner: {db_user_id})")
+                    agent_found = (db_id, db_name, db_user_id)
                     break
         
         if not agent_found:
             print(f"❌ No agent found with share_code: {share_code}")
             return "Custom agent not found. Please check the link and try again.", 404
-        
-        agent_id, agent_name = agent_found
+
+        agent_id, agent_name, owner_id = agent_found
         
         # Show the dashboard with custom agent active
         # Works for both logged in and guest users!
@@ -1089,23 +1089,43 @@ def custom_agent_link(share_code):
                                  auto_select_custom_agent=True)  # Trigger auto-selection
         else:
             print(f"👻 Guest user accessing agent (no login required)")
+
+            # Get the agent owner's subscription info
+            cursor.execute("""
+                SELECT subscription_tier, stripe_subscription_id, api_key, google_ai_api_key
+                FROM users WHERE id = ?
+            """, (owner_id,))
+            owner_info = cursor.fetchone()
+
             # Create a guest user object for the template
             class GuestUser:
                 id = 0
                 email = "guest@ai-team.com"
                 is_authenticated = False
-                subscription_tier = "free"
                 stripe_customer_id = None
-                stripe_subscription_id = None
                 messages_today = 0
                 last_message_reset = None
-                api_key = None
-                google_ai_api_key = None
-                
+
                 def get_id(self):
                     return 0
-            
+
             guest = GuestUser()
+
+            # If owner has an active paid subscription, inherit their plan
+            if owner_info and owner_info[1]:  # Has stripe_subscription_id (active sub)
+                owner_tier, stripe_sub_id, owner_api_key, owner_google_key = owner_info
+                guest.subscription_tier = owner_tier
+                guest.stripe_subscription_id = stripe_sub_id
+                guest.api_key = owner_api_key
+                guest.google_ai_api_key = owner_google_key
+                print(f"✅ Guest inheriting plan: {owner_tier} (owner has active subscription)")
+            else:
+                # Owner has no active subscription - guest gets free tier
+                guest.subscription_tier = "free"
+                guest.stripe_subscription_id = None
+                guest.api_key = None
+                guest.google_ai_api_key = None
+                print(f"ℹ️ Guest on FREE tier (owner has no active subscription)")
             
             # Inject CSS and JS to hide core agents and show only custom agent
             guest_restrictions = f"""
