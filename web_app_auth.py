@@ -324,13 +324,31 @@ def init_database():
             cursor.execute("ALTER TABLE users ADD COLUMN last_message_reset TIMESTAMP")
             # Initialize existing users with current timestamp
             from datetime import datetime
-            cursor.execute("UPDATE users SET last_message_reset = ? WHERE last_message_reset IS NULL", 
+            cursor.execute("UPDATE users SET last_message_reset = ? WHERE last_message_reset IS NULL",
                          (datetime.utcnow().isoformat(),))
             print("✅ Added and initialized last_message_reset column")
         except sqlite3.OperationalError as e:
             print(f"Warning: {e}")
     else:
         print("✅ last_message_reset column already exists")
+
+    # Migration: Add api_key column for plan inheritance
+    if 'api_key' not in existing_columns:
+        try:
+            print("Adding api_key column...")
+            cursor.execute("ALTER TABLE users ADD COLUMN api_key TEXT")
+            print("✅ Added api_key column")
+        except sqlite3.OperationalError as e:
+            print(f"Warning: {e}")
+
+    # Migration: Add google_ai_api_key column for plan inheritance
+    if 'google_ai_api_key' not in existing_columns:
+        try:
+            print("Adding google_ai_api_key column...")
+            cursor.execute("ALTER TABLE users ADD COLUMN google_ai_api_key TEXT")
+            print("✅ Added google_ai_api_key column")
+        except sqlite3.OperationalError as e:
+            print(f"Warning: {e}")
     
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS chat_history (
