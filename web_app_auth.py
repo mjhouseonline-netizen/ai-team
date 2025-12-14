@@ -1194,6 +1194,21 @@ def custom_agent_link(share_code):
                             dropdown.classList.remove('show');
                         }}
                     }});
+
+                    // Add "Sign up to upload files" note near file input
+                    setTimeout(function() {{
+                        const fileBtn = document.querySelector('.attach-btn') || document.querySelector('button[title*="file"]');
+                        if (fileBtn) {{
+                            fileBtn.title = '📎 File uploads require sign up';
+                            fileBtn.style.opacity = '0.5';
+
+                            // Add click handler to show signup message
+                            fileBtn.addEventListener('click', function(e) {{
+                                e.preventDefault();
+                                alert('📎 File uploads require a free account.\\n\\nSign up now to upload files and unlock full access to all AI agents!');
+                            }});
+                        }}
+                    }}, 1000);
                 }});
 
                 // Block switching agents
@@ -2530,7 +2545,11 @@ Remember: Natural conversation only. No formatting."""
             # Guests cannot upload files
             if is_guest:
                 conn.close()
-                return jsonify({'error': 'File uploads require sign up. Please create an account to upload files.'}), 403
+                return jsonify({
+                    'error': '📎 File uploads require a free account. Sign up now to upload files and unlock full access to all AI agents!',
+                    'signup_required': True,
+                    'signup_url': '/register'
+                }), 403
 
             # Save the uploaded file
             filename = secure_filename(uploaded_file.filename)
