@@ -2414,7 +2414,7 @@
                 
                 <!-- User Profile Dropdown -->
                 <div class="user-menu">
-                    <button class="user-menu-btn" onclick="toggleUserMenu()">
+                    <button class="user-menu-btn" onclick="toggleUserMenu(event)">
                         <div class="user-avatar">
                             <span>{{ current_user.email[0]|upper }}</span>
                         </div>
@@ -2671,9 +2671,11 @@
         });
 
         // User Profile Dropdown Toggle
-        function toggleUserMenu() {
+        function toggleUserMenu(event) {
+            if (event) event.stopPropagation(); // Prevent event bubbling
             const dropdown = document.getElementById('userDropdown');
             dropdown.classList.toggle('show');
+            console.log('🔘 Dropdown toggled:', dropdown.classList.contains('show'));
         }
 
         // Close user dropdown on escape key
