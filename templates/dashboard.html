@@ -1967,19 +1967,21 @@
                 fixDOMStructure();
             }
 
-            // Add extra click handler for guest mode dropdowns
+            // Add extra click handler for guest mode dropdowns - USE CAPTURING PHASE
             document.addEventListener('click', function(event) {
-                const userMenu = document.querySelector('.user-menu');
                 const userDropdown = document.getElementById('userDropdown');
+                const userMenuBtn = document.querySelector('.user-menu-btn');
 
-                // Close user dropdown if clicking outside
+                // If dropdown is open and click is NOT on the button itself
                 if (userDropdown && userDropdown.classList.contains('show')) {
-                    if (!event.target.closest('.user-menu')) {
+                    // Check if the click was on the button (which has its own toggle handler)
+                    if (!userMenuBtn || !userMenuBtn.contains(event.target)) {
+                        // Click was outside button - close the dropdown
                         userDropdown.classList.remove('show');
-                        console.log('✅ Closed user dropdown');
+                        console.log('✅ Guest mode: Closed user dropdown (click outside)');
                     }
                 }
-            });
+            }, true); // TRUE = use capture phase to run before other handlers
         })();
 
         // FORCE ELEMENTS VISIBLE - Set properties individually for precision
