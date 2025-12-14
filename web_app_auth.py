@@ -2377,9 +2377,9 @@ def call_ai_with_image(model_key, system_prompt, history, message, image_path):
         return f"I can see you've sent an image, but I encountered an error processing it: {str(e)}"
 
 @app.route('/api/chat', methods=['POST'])
-@login_required
 def chat():
     """Send message to AI agent with conversation history, multi-model support, and file uploads"""
+    # Allow both logged-in users and guests (for custom agents)
     try:
         # Handle both JSON and FormData (for file uploads)
         if request.is_json:
@@ -2400,25 +2400,38 @@ def chat():
         
         if not message and not uploaded_file:
             return jsonify({'error': 'Message or file required'}), 400
-        
-        # Check message limit and reset if needed
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-        
-        cursor.execute("""
-            SELECT subscription_tier, messages_today, last_message_reset
-            FROM users
-            WHERE id = ?
-        """, (current_user.id,))
-        
-        result = cursor.fetchone()
-        if not result:
-            conn.close()
-            return jsonify({'error': 'User not found'}), 404
-        
-        tier, messages_today, last_reset = result
-        tier_info = SUBSCRIPTION_TIERS.get(tier, SUBSCRIPTION_TIERS['free'])
-        daily_limit = tier_info['messages_per_day']
+
+        # Check if user is authenticated or guest
+        is_guest = not current_user.is_authenticated
+
+        # For authenticated users: check message limits
+        if not is_guest:
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+
+            cursor.execute("""
+                SELECT subscription_tier, messages_today, last_message_reset
+                FROM users
+                WHERE id = ?
+            """, (current_user.id,))
+
+            result = cursor.fetchone()
+            if not result:
+                conn.close()
+                return jsonify({'error': 'User not found'}), 404
+
+            tier, messages_today, last_reset = result
+            tier_info = SUBSCRIPTION_TIERS.get(tier, SUBSCRIPTION_TIERS['free'])
+            daily_limit = tier_info['messages_per_day']
+        else:
+            # Guest user - use free tier settings
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            tier = 'free'
+            messages_today = 0
+            last_reset = None
+            tier_info = SUBSCRIPTION_TIERS.get('free', {'messages_per_day': 25})
+            daily_limit = tier_info['messages_per_day']
         
         # ============================================
         # BLOCK FREE USERS FROM CLAUDE API (COST SAVINGS)
@@ -2437,8 +2450,8 @@ def chat():
                 }), 403  # 403 Forbidden
         # ============================================
         
-        # Reset counter if it's a new day
-        if last_reset:
+        # Reset counter if it's a new day (only for authenticated users)
+        if not is_guest and last_reset:
             try:
                 last_reset_date = datetime.fromisoformat(last_reset).date()
                 today = datetime.utcnow().date()
@@ -2461,18 +2474,26 @@ def chat():
         
         # Get agent personality - check built-in agents first, then custom agents
         system_prompt = None
-        
+
         if agent in AGENT_PERSONALITIES:
             # Built-in agent
             agent_info = AGENT_PERSONALITIES[agent]
             system_prompt = agent_info['system_prompt']
         else:
             # Check for custom agent
-            cursor.execute("""
-                SELECT system_prompt FROM custom_agents
-                WHERE user_id = ? AND name = ?
-            """, (current_user.id, agent))
-            
+            if is_guest:
+                # Guests can access any public custom agent by name
+                cursor.execute("""
+                    SELECT system_prompt FROM custom_agents
+                    WHERE name = ? AND is_public = 1
+                """, (agent,))
+            else:
+                # Authenticated users query by user_id
+                cursor.execute("""
+                    SELECT system_prompt FROM custom_agents
+                    WHERE user_id = ? AND name = ?
+                """, (current_user.id, agent))
+
             custom_agent = cursor.fetchone()
             if custom_agent:
                 # Wrap custom agent prompt with formatting rules
@@ -2560,19 +2581,21 @@ Remember: Natural conversation only. No formatting."""
             # Old file system
             saved_message = f"📎 {attached_file['original_filename']}\n{message}"
         
-        cursor.execute("""
-            INSERT INTO chat_history (user_id, agent_name, message, response)
-            VALUES (?, ?, ?, ?)
-        """, (current_user.id, agent, saved_message, ai_response))
-        
-        # ✅ INCREMENT MESSAGE COUNTER (THE FIX!)
-        cursor.execute("""
-            UPDATE users
-            SET messages_today = messages_today + 1,
-                last_message_reset = ?
-            WHERE id = ?
-        """, (datetime.utcnow().isoformat(), current_user.id))
-        
+        # Save chat history and increment counter (only for authenticated users)
+        if not is_guest:
+            cursor.execute("""
+                INSERT INTO chat_history (user_id, agent_name, message, response)
+                VALUES (?, ?, ?, ?)
+            """, (current_user.id, agent, saved_message, ai_response))
+
+            # ✅ INCREMENT MESSAGE COUNTER (THE FIX!)
+            cursor.execute("""
+                UPDATE users
+                SET messages_today = messages_today + 1,
+                    last_message_reset = ?
+                WHERE id = ?
+            """, (datetime.utcnow().isoformat(), current_user.id))
+
         conn.commit()
         conn.close()
         
