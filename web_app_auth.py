@@ -1145,61 +1145,80 @@ def custom_agent_link(share_code):
                 guest.google_ai_api_key = None
                 print(f"ℹ️ Guest on FREE tier (owner has no active subscription)")
             
-            # Inject CSS and JS to hide core agents and show only custom agent
+            # Restrict guests to ONLY the shared custom agent
             guest_restrictions = f"""
             <style>
-            /* Hide core agents section for guests */
+            /* Hide ALL other agents - only show the shared custom agent */
             .sidebar-section:has(.agent-button[data-agent-type="core"]) {{
                 display: none !important;
             }}
-            /* Hide all core agent buttons */
-            .agent-button[data-agent-type="core"],
-            .core-agents-list,
-            #core-agents {{
-                display: none !important;
-            }}
-            /* Hide settings, automations, upgrade for guests */
+            /* Hide settings, automations, upgrade */
             .sidebar-section:has(a[href*="settings"]),
             .sidebar-section:has(a[href*="automations"]),
             .sidebar-section:has(a[href*="upgrade"]) {{
                 display: none !important;
             }}
+            /* Dropdown auto-close with CSS */
+            .user-dropdown.show {{
+                animation: fadeOut 0.3s forwards;
+                animation-delay: 3s;
+            }}
+            @keyframes fadeOut {{
+                to {{ opacity: 0; visibility: hidden; transform: translateY(-10px); }}
+            }}
             </style>
             <script>
             (function() {{
-                console.log('🔒 Guest mode: Restricting to custom agent only');
-                
-                // Hide core agents on DOM load
+                console.log('🔒 Guest: Restricted to {agent_name} only');
+
+                localStorage.setItem('guestMode', 'true');
+
                 document.addEventListener('DOMContentLoaded', function() {{
-                    // Hide core agents
-                    const coreAgentsSection = document.querySelector('.core-agents-section');
-                    if (coreAgentsSection) coreAgentsSection.style.display = 'none';
-                    
-                    // Force select custom agent
-                    console.log('🎯 Auto-selecting custom agent: {agent_name}');
-                    
-                    // Set in localStorage
-                    localStorage.setItem('guestMode', 'true');
-                    localStorage.setItem('guestAgentId', '{agent_id}');
-                    localStorage.setItem('guestAgentName', '{agent_name}');
-                    
-                    // Prevent switching agents
-                    window.isGuestMode = true;
-                    window.guestAgentId = {agent_id};
-                    window.guestAgentName = '{agent_name}';
-                }});
-                
-                // Block agent switching for guests
-                document.addEventListener('click', function(e) {{
-                    const agentButton = e.target.closest('.agent-button');
-                    if (agentButton && window.isGuestMode) {{
-                        const agentId = agentButton.dataset.agentId;
-                        if (agentId != window.guestAgentId) {{
-                            e.preventDefault();
-                            e.stopPropagation();
-                            alert('Guest mode: You can only use {agent_name}');
-                            return false;
+                    // Auto-select and show ONLY the shared agent
+                    setTimeout(function() {{
+                        const agentButtons = document.querySelectorAll('.agent-button');
+                        agentButtons.forEach(function(btn) {{
+                            if (btn.textContent.includes('{agent_name}')) {{
+                                btn.click();
+                                console.log('✅ Activated: {agent_name}');
+                            }} else {{
+                                btn.style.display = 'none'; // Hide other agents
+                            }}
+                        }});
+                    }}, 500);
+
+                    // Simple dropdown auto-close
+                    document.addEventListener('click', function(e) {{
+                        const dropdown = document.getElementById('userDropdown');
+                        if (dropdown && !e.target.closest('.user-menu')) {{
+                            dropdown.classList.remove('show');
                         }}
+                    }});
+
+                    // Add "Sign up to upload files" note near file input
+                    setTimeout(function() {{
+                        const fileBtn = document.querySelector('.attach-btn') || document.querySelector('button[title*="file"]');
+                        if (fileBtn) {{
+                            fileBtn.title = '📎 File uploads require sign up';
+                            fileBtn.style.opacity = '0.5';
+
+                            // Add click handler to show signup message
+                            fileBtn.addEventListener('click', function(e) {{
+                                e.preventDefault();
+                                alert('📎 File uploads require a free account.\\n\\nSign up now to upload files and unlock full access to all AI agents!');
+                            }});
+                        }}
+                    }}, 1000);
+                }});
+
+                // Block switching agents
+                document.addEventListener('click', function(e) {{
+                    const btn = e.target.closest('.agent-button');
+                    if (btn && !btn.textContent.includes('{agent_name}')) {{
+                        e.preventDefault();
+                        e.stopPropagation();
+                        alert('This link only provides access to {agent_name}');
+                        return false;
                     }}
                 }}, true);
             }})();
@@ -2526,7 +2545,11 @@ Remember: Natural conversation only. No formatting."""
             # Guests cannot upload files
             if is_guest:
                 conn.close()
-                return jsonify({'error': 'File uploads require sign up. Please create an account to upload files.'}), 403
+                return jsonify({
+                    'error': '📎 File uploads require a free account. Sign up now to upload files and unlock full access to all AI agents!',
+                    'signup_required': True,
+                    'signup_url': '/register'
+                }), 403
 
             # Save the uploaded file
             filename = secure_filename(uploaded_file.filename)
