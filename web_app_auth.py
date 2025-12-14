@@ -1158,13 +1158,14 @@ def custom_agent_link(share_code):
             .sidebar-section:has(a[href*="upgrade"]) {{
                 display: none !important;
             }}
-            /* Dropdown auto-close with CSS */
-            .user-dropdown.show {{
-                animation: fadeOut 0.3s forwards;
-                animation-delay: 3s;
+            /* FORCE dropdown closed - most aggressive approach */
+            .user-dropdown {{
+                display: none !important;
             }}
-            @keyframes fadeOut {{
-                to {{ opacity: 0; visibility: hidden; transform: translateY(-10px); }}
+            .user-menu:hover .user-dropdown {{
+                display: block !important;
+                opacity: 1 !important;
+                visibility: visible !important;
             }}
             </style>
             <script>
@@ -2517,7 +2518,9 @@ def chat():
             if custom_agent:
                 # Wrap custom agent prompt with formatting rules
                 base_prompt = custom_agent[0]
-                system_prompt = f"""{base_prompt}
+                system_prompt = f"""You are {agent}. Your role and personality:
+
+{base_prompt}
 
 CRITICAL FORMATTING RULES:
 - Write in natural, conversational paragraphs
@@ -2526,8 +2529,9 @@ CRITICAL FORMATTING RULES:
 - Ask only ONE question per response (if you need to ask questions)
 - Write like you're talking to someone, not writing a document
 - Keep responses clear and focused
+- When introducing yourself, say "I'm {agent}" (not Luna or any other name)
 
-Remember: Natural conversation only. No formatting."""
+Remember: You are {agent}. Natural conversation only. No formatting."""
             else:
                 conn.close()
                 return jsonify({'error': f'Agent "{agent}" not found'}), 400
