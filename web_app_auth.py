@@ -1145,20 +1145,10 @@ def custom_agent_link(share_code):
                 guest.google_ai_api_key = None
                 print(f"ℹ️ Guest on FREE tier (owner has no active subscription)")
             
-            # Inject CSS and JS to hide core agents and show only custom agent
+            # Minimal guest mode restrictions - allow access to all agents
             guest_restrictions = f"""
             <style>
-            /* Hide core agents section for guests */
-            .sidebar-section:has(.agent-button[data-agent-type="core"]) {{
-                display: none !important;
-            }}
-            /* Hide all core agent buttons */
-            .agent-button[data-agent-type="core"],
-            .core-agents-list,
-            #core-agents {{
-                display: none !important;
-            }}
-            /* Hide settings, automations, upgrade for guests */
+            /* Hide settings, automations, upgrade for guests (they can't use these) */
             .sidebar-section:has(a[href*="settings"]),
             .sidebar-section:has(a[href*="automations"]),
             .sidebar-section:has(a[href*="upgrade"]) {{
@@ -1167,41 +1157,56 @@ def custom_agent_link(share_code):
             </style>
             <script>
             (function() {{
-                console.log('🔒 Guest mode: Restricting to custom agent only');
-                
-                // Hide core agents on DOM load
+                console.log('👋 Guest mode: Full access to all agents');
+
+                // Set guest mode flag
+                localStorage.setItem('guestMode', 'true');
+
+                // Auto-select the shared custom agent on load
                 document.addEventListener('DOMContentLoaded', function() {{
-                    // Hide core agents
-                    const coreAgentsSection = document.querySelector('.core-agents-section');
-                    if (coreAgentsSection) coreAgentsSection.style.display = 'none';
-                    
-                    // Force select custom agent
-                    console.log('🎯 Auto-selecting custom agent: {agent_name}');
-                    
-                    // Set in localStorage
-                    localStorage.setItem('guestMode', 'true');
-                    localStorage.setItem('guestAgentId', '{agent_id}');
-                    localStorage.setItem('guestAgentName', '{agent_name}');
-                    
-                    // Prevent switching agents
-                    window.isGuestMode = true;
-                    window.guestAgentId = {agent_id};
-                    window.guestAgentName = '{agent_name}';
-                }});
-                
-                // Block agent switching for guests
-                document.addEventListener('click', function(e) {{
-                    const agentButton = e.target.closest('.agent-button');
-                    if (agentButton && window.isGuestMode) {{
-                        const agentId = agentButton.dataset.agentId;
-                        if (agentId != window.guestAgentId) {{
-                            e.preventDefault();
-                            e.stopPropagation();
-                            alert('Guest mode: You can only use {agent_name}');
-                            return false;
+                    console.log('🎯 Auto-selecting shared agent: {agent_name}');
+
+                    // Find and click the custom agent button
+                    setTimeout(function() {{
+                        const agentButtons = document.querySelectorAll('.agent-button');
+                        agentButtons.forEach(function(button) {{
+                            if (button.textContent.includes('{agent_name}')) {{
+                                button.click();
+                                console.log('✅ Activated shared agent: {agent_name}');
+                            }}
+                        }});
+                    }}, 500);
+
+                    // AGGRESSIVE DROPDOWN FIX: Force close any stuck dropdowns
+                    setInterval(function() {{
+                        const dropdown = document.getElementById('userDropdown');
+                        const button = document.querySelector('.user-menu-btn');
+
+                        // If dropdown is open but user isn't hovering over it or the button
+                        if (dropdown && dropdown.classList.contains('show')) {{
+                            const rect = dropdown.getBoundingClientRect();
+                            const buttonRect = button ? button.getBoundingClientRect() : null;
+
+                            // Check if mouse is outside both dropdown and button
+                            document.addEventListener('mousemove', function checkMouse(e) {{
+                                const mouseX = e.clientX;
+                                const mouseY = e.clientY;
+
+                                const outsideDropdown = mouseX < rect.left || mouseX > rect.right ||
+                                                       mouseY < rect.top || mouseY > rect.bottom;
+                                const outsideButton = !buttonRect ||
+                                                     mouseX < buttonRect.left || mouseX > buttonRect.right ||
+                                                     mouseY < buttonRect.top || mouseY > buttonRect.bottom;
+
+                                if (outsideDropdown && outsideButton) {{
+                                    dropdown.classList.remove('show');
+                                    console.log('🔒 Auto-closed stuck dropdown');
+                                    document.removeEventListener('mousemove', checkMouse);
+                                }}
+                            }});
                         }}
-                    }}
-                }}, true);
+                    }}, 1000);
+                }});
             }})();
             </script>
             """
