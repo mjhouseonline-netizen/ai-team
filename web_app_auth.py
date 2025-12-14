@@ -1145,10 +1145,10 @@ def custom_agent_link(share_code):
                 guest.google_ai_api_key = None
                 print(f"ℹ️ Guest on FREE tier (owner has no active subscription)")
             
-            # Restrict guests to ONLY the shared custom agent
+            # Clean, simplified interface for custom agents
             guest_restrictions = f"""
             <style>
-            /* Hide ALL other agents - only show the shared custom agent */
+            /* Hide ALL other agents */
             .sidebar-section:has(.agent-button[data-agent-type="core"]) {{
                 display: none !important;
             }}
@@ -1158,59 +1158,140 @@ def custom_agent_link(share_code):
             .sidebar-section:has(a[href*="upgrade"]) {{
                 display: none !important;
             }}
-            /* FORCE dropdown closed - most aggressive approach */
-            .user-dropdown {{
+            /* Hide user menu/dropdown completely */
+            .user-menu {{
                 display: none !important;
             }}
-            .user-menu:hover .user-dropdown {{
-                display: block !important;
-                opacity: 1 !important;
-                visibility: visible !important;
+            /* Hide prompt builder button */
+            .prompt-builder-btn,
+            button:has(.prompt-builder),
+            [onclick*="promptBuilder"] {{
+                display: none !important;
+            }}
+            /* Hide usage counter */
+            .usage-counter,
+            .messages-counter,
+            .daily-limit {{
+                display: none !important;
+            }}
+            /* Hide options button */
+            .options-btn,
+            button[title*="Option"],
+            .input-options {{
+                display: none !important;
+            }}
+            /* Hide model selector */
+            .model-selector,
+            select[name="model"],
+            .model-dropdown,
+            label:has(select[name="model"]) {{
+                display: none !important;
+            }}
+            /* Style for preset questions */
+            .preset-questions {{
+                display: flex;
+                flex-wrap: wrap;
+                gap: 12px;
+                padding: 20px;
+                background: #f8f9fa;
+                border-radius: 12px;
+                margin: 20px 0;
+            }}
+            .preset-question {{
+                padding: 12px 20px;
+                background: white;
+                border: 2px solid #e5e7eb;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: all 0.2s;
+                font-size: 14px;
+                color: #374151;
+            }}
+            .preset-question:hover {{
+                border-color: #10a37f;
+                background: #f0fdf4;
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(16, 163, 127, 0.1);
             }}
             </style>
             <script>
             (function() {{
-                console.log('🔒 Guest: Restricted to {agent_name} only');
+                console.log('🎯 Guest: Clean interface for {agent_name}');
 
                 localStorage.setItem('guestMode', 'true');
 
                 document.addEventListener('DOMContentLoaded', function() {{
-                    // Auto-select and show ONLY the shared agent
+                    // Auto-select the shared agent
                     setTimeout(function() {{
                         const agentButtons = document.querySelectorAll('.agent-button');
                         agentButtons.forEach(function(btn) {{
                             if (btn.textContent.includes('{agent_name}')) {{
                                 btn.click();
-                                console.log('✅ Activated: {agent_name}');
                             }} else {{
-                                btn.style.display = 'none'; // Hide other agents
+                                btn.style.display = 'none';
                             }}
                         }});
                     }}, 500);
 
-                    // Simple dropdown auto-close
-                    document.addEventListener('click', function(e) {{
-                        const dropdown = document.getElementById('userDropdown');
-                        if (dropdown && !e.target.closest('.user-menu')) {{
-                            dropdown.classList.remove('show');
-                        }}
-                    }});
-
-                    // Add "Sign up to upload files" note near file input
+                    // Add preset questions after welcome message
                     setTimeout(function() {{
-                        const fileBtn = document.querySelector('.attach-btn') || document.querySelector('button[title*="file"]');
-                        if (fileBtn) {{
-                            fileBtn.title = '📎 File uploads require sign up';
-                            fileBtn.style.opacity = '0.5';
+                        const welcomeMsg = document.querySelector('.welcome') ||
+                                         document.querySelector('.chat-container');
+                        if (welcomeMsg) {{
+                            const presets = document.createElement('div');
+                            presets.className = 'preset-questions';
+                            presets.innerHTML = `
+                                <div class="preset-question" onclick="sendPresetMessage('Tell me about yourself')">
+                                    💬 Tell me about yourself
+                                </div>
+                                <div class="preset-question" onclick="sendPresetMessage('What can you help me with?')">
+                                    ❓ What can you help me with?
+                                </div>
+                                <div class="preset-question" onclick="sendPresetMessage('Show me an example')">
+                                    ✨ Show me an example
+                                </div>
+                                <div class="preset-question" onclick="sendPresetMessage('Get started')">
+                                    🚀 Get started
+                                </div>
+                            `;
 
-                            // Add click handler to show signup message
+                            if (welcomeMsg.classList.contains('welcome')) {{
+                                welcomeMsg.appendChild(presets);
+                            }} else {{
+                                welcomeMsg.insertBefore(presets, welcomeMsg.firstChild);
+                            }}
+                        }}
+                    }}, 1500);
+
+                    // Disable file upload button
+                    setTimeout(function() {{
+                        const fileBtn = document.querySelector('.attach-btn') ||
+                                       document.querySelector('button[title*="file"]');
+                        if (fileBtn) {{
+                            fileBtn.style.opacity = '0.5';
                             fileBtn.addEventListener('click', function(e) {{
                                 e.preventDefault();
-                                alert('📎 File uploads require a free account.\\n\\nSign up now to upload files and unlock full access to all AI agents!');
+                                alert('📎 Sign up for free to upload files!');
                             }});
                         }}
                     }}, 1000);
                 }});
+
+                // Function to send preset messages
+                window.sendPresetMessage = function(message) {{
+                    const input = document.querySelector('#messageInput') ||
+                                 document.querySelector('textarea[placeholder*="message"]');
+                    const sendBtn = document.querySelector('button[type="submit"]') ||
+                                   document.querySelector('.send-btn');
+
+                    if (input) {{
+                        input.value = message;
+                        input.focus();
+                        if (sendBtn) {{
+                            sendBtn.click();
+                        }}
+                    }}
+                }};
 
                 // Block switching agents
                 document.addEventListener('click', function(e) {{
@@ -1218,7 +1299,7 @@ def custom_agent_link(share_code):
                     if (btn && !btn.textContent.includes('{agent_name}')) {{
                         e.preventDefault();
                         e.stopPropagation();
-                        alert('This link only provides access to {agent_name}');
+                        alert('Sign up for free to access all AI agents!');
                         return false;
                     }}
                 }}, true);
