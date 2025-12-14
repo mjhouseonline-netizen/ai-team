@@ -2097,6 +2097,27 @@
                     chat: chat?.getBoundingClientRect(),
                     input: input?.getBoundingClientRect()
                 });
+
+                // CRITICAL FIX: Add click handler to close dropdowns
+                if (mainContent) {
+                    mainContent.addEventListener('click', function(event) {
+                        // Close all dropdowns when clicking on main content
+                        const userDropdown = document.getElementById('userDropdown');
+                        const historyDropdown = document.getElementById('historyDropdownMenu');
+
+                        // Check if click is NOT on the dropdown button itself
+                        if (!event.target.closest('.user-menu-btn') && !event.target.closest('.history-btn')) {
+                            if (userDropdown) {
+                                userDropdown.classList.remove('show');
+                            }
+                            if (historyDropdown) {
+                                historyDropdown.style.display = 'none';
+                                historyDropdown.classList.remove('active');
+                            }
+                        }
+                    });
+                    console.log('✅ Added dropdown close handler to main-content');
+                }
             }
             
             // Run immediately
