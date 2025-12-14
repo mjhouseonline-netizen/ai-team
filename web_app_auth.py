@@ -2514,11 +2514,20 @@ Remember: Natural conversation only. No formatting."""
                 return jsonify({'error': f'Agent "{agent}" not found'}), 400
         
         # Get conversation history (last 20 messages for context)
-        history = get_conversation_history(current_user.id, agent, limit=20)
-        
+        # Guests don't have history (not logged in)
+        if is_guest:
+            history = []
+        else:
+            history = get_conversation_history(current_user.id, agent, limit=20)
+
         # Handle file uploads from FormData
         file_info = None
         if uploaded_file:
+            # Guests cannot upload files
+            if is_guest:
+                conn.close()
+                return jsonify({'error': 'File uploads require sign up. Please create an account to upload files.'}), 403
+
             # Save the uploaded file
             filename = secure_filename(uploaded_file.filename)
             user_folder = os.path.join(UPLOAD_FOLDER, str(current_user.id))
