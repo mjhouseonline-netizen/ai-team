@@ -2015,10 +2015,10 @@
                 }
                 
                 if (header) {
-                    console.log('📍 Header found, forcing visible with color...');
+                    console.log('📍 Header found, forcing visible...');
                     header.style.cssText = `
                         grid-row: 1 !important;
-                        background: #ffe0e0 !important;
+                        background: #ffffff !important;
                         display: flex !important;
                         position: relative !important;
                         z-index: 20 !important;
@@ -2059,10 +2059,10 @@
                 }
                 
                 if (input) {
-                    console.log('📍 Input container found, forcing visible with green bg...');
+                    console.log('📍 Input container found, forcing visible...');
                     input.style.cssText = `
                         grid-row: 3 !important;
-                        background: #e0ffe0 !important;
+                        background: #ffffff !important;
                         display: block !important;
                         position: relative !important;
                         z-index: 20 !important;
@@ -2365,7 +2365,7 @@
     <!-- Main Content -->
     <div class="main-content" {% if is_guest %}style="position: absolute !important; left: 280px !important; right: 0 !important; top: 0 !important; bottom: 0 !important; display: grid !important; grid-template-rows: auto 1fr auto !important; background: #ffffff !important; z-index: 10 !important; visibility: visible !important; opacity: 1 !important;"{% endif %}>
         <!-- Header -->
-        <div class="header" {% if is_guest %}style="grid-row: 1 !important; background: #ffe0e0 !important; display: flex !important; position: relative !important; z-index: 20 !important; visibility: visible !important; opacity: 1 !important; padding: 12px 24px !important; border-bottom: 1px solid #e5e7eb !important;"{% endif %}>
+        <div class="header" {% if is_guest %}style="grid-row: 1 !important; background: #ffffff !important; display: flex !important; position: relative !important; z-index: 20 !important; visibility: visible !important; opacity: 1 !important; padding: 12px 24px !important; border-bottom: 1px solid #e5e7eb !important;"{% endif %}>
             <div class="header-left">
                 <div class="current-agent-info">
                     <div class="current-agent-avatar" id="currentAgentAvatar" style="background: linear-gradient(135deg, {% if is_guest %}#10a37f, #0d8c6f{% else %}#667eea, #764ba2{% endif %});">
@@ -2511,7 +2511,7 @@
         </div>
 
         <!-- Input Container -->
-        <div class="input-container" {% if is_guest %}style="grid-row: 3 !important; background: #e0ffe0 !important; display: block !important; position: relative !important; z-index: 20 !important; visibility: visible !important; opacity: 1 !important; padding: 16px 24px !important; border-top: 1px solid #e5e7eb !important;"{% endif %}>
+        <div class="input-container" {% if is_guest %}style="grid-row: 3 !important; background: #ffffff !important; display: block !important; position: relative !important; z-index: 20 !important; visibility: visible !important; opacity: 1 !important; padding: 16px 24px !important; border-top: 1px solid #e5e7eb !important;"{% endif %}>
             <div class="input-wrapper">
                 <div class="input-area">
                     <input type="file" id="fileInput" style="display:none;" accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.txt,.md,.csv,.doc,.docx,.xls,.xlsx">
