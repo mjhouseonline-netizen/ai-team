@@ -397,21 +397,35 @@ def reset_daily_costs():
         return False
 
 def check_cost_threshold(user_id, tier):
-    """Check if user has exceeded cost thresholds and trigger alerts"""
+    """Check if user has exceeded cost thresholds and trigger alerts
+
+    Supports custom per-user thresholds that override tier defaults
+    """
     try:
         daily_cost = get_user_daily_cost(user_id)
-        thresholds = COST_THRESHOLDS.get(tier, COST_THRESHOLDS['free'])
 
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
 
-        # Check if already blocked
-        cursor.execute("SELECT expensive_models_blocked FROM users WHERE id = ?", (user_id,))
+        # Get custom thresholds if set, otherwise use tier defaults
+        cursor.execute("""
+            SELECT custom_warning_threshold, custom_critical_threshold, expensive_models_blocked
+            FROM users WHERE id = ?
+        """, (user_id,))
         result = cursor.fetchone()
-        already_blocked = result[0] if result else False
+
+        if result:
+            custom_warning, custom_critical, already_blocked = result
+        else:
+            custom_warning, custom_critical, already_blocked = None, None, False
+
+        # Use custom thresholds if available, otherwise tier defaults
+        default_thresholds = COST_THRESHOLDS.get(tier, COST_THRESHOLDS['free'])
+        warning_threshold = custom_warning if custom_warning is not None else default_thresholds['warning']
+        critical_threshold = custom_critical if custom_critical is not None else default_thresholds['critical']
 
         # Critical threshold - block expensive models
-        if daily_cost >= thresholds['critical'] and not already_blocked:
+        if daily_cost >= critical_threshold and not already_blocked:
             cursor.execute("""
                 UPDATE users SET expensive_models_blocked = 1 WHERE id = ?
             """, (user_id,))
@@ -420,16 +434,17 @@ def check_cost_threshold(user_id, tier):
             cursor.execute("""
                 INSERT INTO cost_alerts (user_id, alert_type, daily_cost, threshold, message)
                 VALUES (?, 'CRITICAL', ?, ?, ?)
-            """, (user_id, daily_cost, thresholds['critical'],
+            """, (user_id, daily_cost, critical_threshold,
                   f"Critical threshold reached! Blocking expensive models (Opus, GPT-4 Turbo)"))
 
             conn.commit()
             conn.close()
 
-            return 'CRITICAL', f"⚠️ Daily cost limit reached (${daily_cost:.2f}). Expensive models temporarily blocked. Use Gemini or Haiku instead."
+            threshold_info = f"(Custom: ${critical_threshold:.2f})" if custom_critical else f"(${critical_threshold:.2f})"
+            return 'CRITICAL', f"⚠️ Daily cost limit reached {threshold_info}. Expensive models temporarily blocked. Use Gemini or Haiku instead."
 
         # Warning threshold
-        elif daily_cost >= thresholds['warning']:
+        elif daily_cost >= warning_threshold:
             # Check if we already sent warning today
             cursor.execute("""
                 SELECT id FROM cost_alerts
@@ -442,13 +457,14 @@ def check_cost_threshold(user_id, tier):
                 cursor.execute("""
                     INSERT INTO cost_alerts (user_id, alert_type, daily_cost, threshold, message)
                     VALUES (?, 'WARNING', ?, ?, ?)
-                """, (user_id, daily_cost, thresholds['warning'],
+                """, (user_id, daily_cost, warning_threshold,
                       f"Warning: Approaching daily cost limit"))
 
                 conn.commit()
 
             conn.close()
-            return 'WARNING', f"⚡ Heads up: You've used ${daily_cost:.2f} today (limit: ${thresholds['critical']:.2f})"
+            threshold_info = f"(Custom limit: ${critical_threshold:.2f})" if custom_critical else f"(limit: ${critical_threshold:.2f})"
+            return 'WARNING', f"⚡ Heads up: You've used ${daily_cost:.2f} today {threshold_info}"
 
         conn.close()
         return None, None
@@ -688,6 +704,35 @@ def init_database():
         except sqlite3.OperationalError as e:
             print(f"⚠️  Could not add last_cost_reset column: {e}")
 
+    # Custom budget columns for per-user overrides
+    if 'custom_daily_budget' not in user_columns:
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN custom_daily_budget REAL DEFAULT NULL")
+            print("✅ Added custom_daily_budget column to users")
+        except sqlite3.OperationalError as e:
+            print(f"⚠️  Could not add custom_daily_budget column: {e}")
+
+    if 'custom_monthly_budget' not in user_columns:
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN custom_monthly_budget REAL DEFAULT NULL")
+            print("✅ Added custom_monthly_budget column to users")
+        except sqlite3.OperationalError as e:
+            print(f"⚠️  Could not add custom_monthly_budget column: {e}")
+
+    if 'custom_warning_threshold' not in user_columns:
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN custom_warning_threshold REAL DEFAULT NULL")
+            print("✅ Added custom_warning_threshold column to users")
+        except sqlite3.OperationalError as e:
+            print(f"⚠️  Could not add custom_warning_threshold column: {e}")
+
+    if 'custom_critical_threshold' not in user_columns:
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN custom_critical_threshold REAL DEFAULT NULL")
+            print("✅ Added custom_critical_threshold column to users")
+        except sqlite3.OperationalError as e:
+            print(f"⚠️  Could not add custom_critical_threshold column: {e}")
+
     print("✅ Cost monitoring tables initialized")
 
     conn.commit()
@@ -849,8 +894,9 @@ def admin_usage():
 
         # Top cost users (last 7 days)
         cursor.execute("""
-            SELECT u.email, u.subscription_tier, u.daily_cost, u.monthly_cost,
+            SELECT u.id, u.email, u.subscription_tier, u.daily_cost, u.monthly_cost,
                    u.expensive_models_blocked,
+                   u.custom_warning_threshold, u.custom_critical_threshold,
                    (SELECT COUNT(*) FROM usage_costs uc
                     WHERE uc.user_id = u.id
                     AND DATE(uc.timestamp) >= DATE('now', '-7 days')) as message_count
@@ -861,13 +907,16 @@ def admin_usage():
         """)
         top_users = []
         for row in cursor.fetchall():
+            has_custom = row[6] is not None or row[7] is not None
             top_users.append({
-                'email': row[0],
-                'tier': row[1],
-                'daily_cost': row[2] or 0,
-                'monthly_cost': row[3] or 0,
-                'blocked': row[4],
-                'message_count': row[5]
+                'id': row[0],
+                'email': row[1],
+                'tier': row[2],
+                'daily_cost': row[3] or 0,
+                'monthly_cost': row[4] or 0,
+                'blocked': row[5],
+                'message_count': row[8],
+                'has_custom_budget': has_custom
             })
 
         # Model usage breakdown
@@ -902,6 +951,150 @@ def admin_usage():
         print(f"❌ Error in admin usage dashboard: {e}")
         import traceback
         traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/admin/set-user-budget', methods=['POST'])
+@login_required
+def set_user_budget():
+    """Set custom budget/thresholds for a specific user"""
+    try:
+        data = request.json
+        user_id = data.get('user_id')
+        custom_warning = data.get('custom_warning_threshold')
+        custom_critical = data.get('custom_critical_threshold')
+        custom_daily = data.get('custom_daily_budget')
+        custom_monthly = data.get('custom_monthly_budget')
+
+        if not user_id:
+            return jsonify({'error': 'user_id required'}), 400
+
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Update custom thresholds
+        cursor.execute("""
+            UPDATE users
+            SET custom_warning_threshold = ?,
+                custom_critical_threshold = ?,
+                custom_daily_budget = ?,
+                custom_monthly_budget = ?
+            WHERE id = ?
+        """, (custom_warning, custom_critical, custom_daily, custom_monthly, user_id))
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': 'Custom budgets updated successfully'
+        })
+
+    except Exception as e:
+        print(f"❌ Error setting user budget: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/admin/reset-user-budget', methods=['POST'])
+@login_required
+def reset_user_budget():
+    """Reset user to tier defaults (remove custom budgets)"""
+    try:
+        data = request.json
+        user_id = data.get('user_id')
+
+        if not user_id:
+            return jsonify({'error': 'user_id required'}), 400
+
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Reset to NULL (use tier defaults)
+        cursor.execute("""
+            UPDATE users
+            SET custom_warning_threshold = NULL,
+                custom_critical_threshold = NULL,
+                custom_daily_budget = NULL,
+                custom_monthly_budget = NULL
+            WHERE id = ?
+        """, (user_id,))
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': 'User reset to tier defaults'
+        })
+
+    except Exception as e:
+        print(f"❌ Error resetting user budget: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/admin/cost-trends')
+@login_required
+def admin_cost_trends():
+    """Get historical cost trend data for charts"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Daily costs for last 30 days
+        cursor.execute("""
+            SELECT DATE(timestamp) as date, SUM(cost) as total_cost, COUNT(*) as message_count
+            FROM usage_costs
+            WHERE DATE(timestamp) >= DATE('now', '-30 days')
+            GROUP BY DATE(timestamp)
+            ORDER BY date DESC
+        """)
+        daily_trends = []
+        for row in cursor.fetchall():
+            daily_trends.append({
+                'date': row[0],
+                'cost': row[1],
+                'messages': row[2]
+            })
+
+        # Cost by tier
+        cursor.execute("""
+            SELECT u.subscription_tier, SUM(uc.cost) as total_cost, COUNT(uc.id) as message_count
+            FROM usage_costs uc
+            JOIN users u ON uc.user_id = u.id
+            WHERE DATE(uc.timestamp) >= DATE('now', '-30 days')
+            GROUP BY u.subscription_tier
+        """)
+        tier_breakdown = []
+        for row in cursor.fetchall():
+            tier_breakdown.append({
+                'tier': row[0],
+                'cost': row[1],
+                'messages': row[2]
+            })
+
+        # Cost by model
+        cursor.execute("""
+            SELECT model, SUM(cost) as total_cost, COUNT(*) as message_count
+            FROM usage_costs
+            WHERE DATE(timestamp) >= DATE('now', '-30 days')
+            GROUP BY model
+            ORDER BY total_cost DESC
+        """)
+        model_breakdown = []
+        for row in cursor.fetchall():
+            model_breakdown.append({
+                'model': row[0],
+                'cost': row[1],
+                'messages': row[2]
+            })
+
+        conn.close()
+
+        return jsonify({
+            'daily_trends': daily_trends,
+            'tier_breakdown': tier_breakdown,
+            'model_breakdown': model_breakdown
+        })
+
+    except Exception as e:
+        print(f"❌ Error getting cost trends: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/admin/check-agents')

@@ -17,7 +17,7 @@
         .positive { color: #38a169; }
         .negative { color: #e53e3e; }
         .warning { color: #d69e2e; }
-        table { width: 100%; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        table { width: 100%; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 30px; }
         th, td { padding: 16px; text-align: left; border-bottom: 1px solid #e2e8f0; }
         th { background: #edf2f7; font-weight: 600; color: #2d3748; }
         tr:hover { background: #f7fafc; }
@@ -26,6 +26,22 @@
         .alert-critical { background: #fed7d7; color: #e53e3e; }
         .back-btn { display: inline-block; padding: 10px 20px; background: #4299e1; color: white; text-decoration: none; border-radius: 8px; margin-bottom: 20px; }
         .back-btn:hover { background: #3182ce; }
+        .custom-badge { padding: 4px 8px; border-radius: 8px; font-size: 11px; font-weight: 600; background: #bee3f8; color: #2c5282; margin-left: 8px; }
+        .action-btn { padding: 6px 12px; background: #4299e1; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; margin-right: 5px; }
+        .action-btn:hover { background: #3182ce; }
+        .reset-btn { background: #ed8936; }
+        .reset-btn:hover { background: #dd6b20; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
+        .modal.active { display: flex; align-items: center; justify-content: center; }
+        .modal-content { background: white; padding: 30px; border-radius: 12px; max-width: 500px; width: 90%; }
+        .modal-header { font-size: 20px; font-weight: bold; color: #2d3748; margin-bottom: 20px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; color: #4a5568; margin-bottom: 5px; font-size: 14px; }
+        .form-group input { width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; }
+        .form-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .chart-container { background: white; padding: 24px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 30px; }
+        .chart-header { font-size: 18px; font-weight: 600; color: #2d3748; margin-bottom: 20px; }
+        canvas { max-height: 300px; }
     </style>
 </head>
 <body>
@@ -100,17 +116,29 @@
                     <th>Monthly Cost</th>
                     <th>Message Count</th>
                     <th>Blocked</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {% for user in top_users %}
                 <tr>
-                    <td>{{ user.email }}</td>
+                    <td>
+                        {{ user.email }}
+                        {% if user.has_custom_budget %}
+                        <span class="custom-badge">Custom</span>
+                        {% endif %}
+                    </td>
                     <td>{{ user.tier }}</td>
                     <td>${{ "%.2f"|format(user.daily_cost) }}</td>
                     <td>${{ "%.2f"|format(user.monthly_cost) }}</td>
                     <td>{{ user.message_count }}</td>
                     <td>{% if user.blocked %}🚫 Yes{% else %}✅ No{% endif %}</td>
+                    <td>
+                        <button class="action-btn" onclick="openBudgetModal('{{ user.email }}', {{ user.id }}, '{{ user.tier }}')">Set Budget</button>
+                        {% if user.has_custom_budget %}
+                        <button class="action-btn reset-btn" onclick="resetBudget({{ user.id }}, '{{ user.email }}')">Reset</button>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -137,6 +165,209 @@
                 {% endfor %}
             </tbody>
         </table>
+
+        <h2 style="margin: 30px 0 15px; color: #2d3748;">📈 Cost Trends (Last 30 Days)</h2>
+        <div class="chart-container">
+            <div class="chart-header">Daily Cost Trends</div>
+            <canvas id="dailyTrendsChart"></canvas>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div class="chart-container">
+                <div class="chart-header">Cost by Tier</div>
+                <canvas id="tierChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <div class="chart-header">Cost by Model</div>
+                <canvas id="modelChart"></canvas>
+            </div>
+        </div>
     </div>
+
+    <!-- Budget Management Modal -->
+    <div id="budgetModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Set Custom Budget</div>
+            <form id="budgetForm">
+                <input type="hidden" id="userId" name="user_id">
+                <div style="margin-bottom: 15px; color: #4a5568;">
+                    <strong>User:</strong> <span id="userEmail"></span><br>
+                    <strong>Tier:</strong> <span id="userTier"></span>
+                </div>
+                <div class="form-group">
+                    <label>Warning Threshold ($)</label>
+                    <input type="number" step="0.01" id="warningThreshold" name="warning_threshold" placeholder="e.g., 1.50">
+                </div>
+                <div class="form-group">
+                    <label>Critical Threshold ($)</label>
+                    <input type="number" step="0.01" id="criticalThreshold" name="critical_threshold" placeholder="e.g., 3.00">
+                </div>
+                <div class="form-group">
+                    <label>Daily Budget ($ - Optional)</label>
+                    <input type="number" step="0.01" id="dailyBudget" name="daily_budget" placeholder="e.g., 5.00">
+                </div>
+                <div class="form-group">
+                    <label>Monthly Budget ($ - Optional)</label>
+                    <input type="number" step="0.01" id="monthlyBudget" name="monthly_budget" placeholder="e.g., 100.00">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="action-btn">Save Budget</button>
+                    <button type="button" class="action-btn reset-btn" onclick="closeBudgetModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        // Budget Management
+        function openBudgetModal(email, userId, tier) {
+            document.getElementById('userEmail').textContent = email;
+            document.getElementById('userId').value = userId;
+            document.getElementById('userTier').textContent = tier;
+            document.getElementById('budgetModal').classList.add('active');
+        }
+
+        function closeBudgetModal() {
+            document.getElementById('budgetModal').classList.remove('active');
+            document.getElementById('budgetForm').reset();
+        }
+
+        document.getElementById('budgetForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = {
+                user_id: parseInt(formData.get('user_id')),
+                warning_threshold: parseFloat(formData.get('warning_threshold')) || null,
+                critical_threshold: parseFloat(formData.get('critical_threshold')) || null,
+                daily_budget: parseFloat(formData.get('daily_budget')) || null,
+                monthly_budget: parseFloat(formData.get('monthly_budget')) || null
+            };
+
+            try {
+                const response = await fetch('/admin/set-user-budget', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                alert(result.message || 'Budget updated successfully!');
+                closeBudgetModal();
+                location.reload();
+            } catch (error) {
+                alert('Error updating budget: ' + error.message);
+            }
+        });
+
+        async function resetBudget(userId, email) {
+            if (!confirm(`Reset ${email} to tier default budgets?`)) return;
+
+            try {
+                const response = await fetch('/admin/reset-user-budget', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId })
+                });
+                const result = await response.json();
+                alert(result.message || 'Budget reset successfully!');
+                location.reload();
+            } catch (error) {
+                alert('Error resetting budget: ' + error.message);
+            }
+        }
+
+        // Load and render cost trends
+        async function loadCostTrends() {
+            try {
+                const response = await fetch('/admin/cost-trends');
+                const data = await response.json();
+
+                // Daily Trends Chart
+                const dailyCtx = document.getElementById('dailyTrendsChart').getContext('2d');
+                new Chart(dailyCtx, {
+                    type: 'line',
+                    data: {
+                        labels: data.daily_trends.map(d => d.date),
+                        datasets: [{
+                            label: 'Daily Cost ($)',
+                            data: data.daily_trends.map(d => d.total_cost),
+                            borderColor: '#4299e1',
+                            backgroundColor: 'rgba(66, 153, 225, 0.1)',
+                            tension: 0.3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: value => '$' + value.toFixed(2)
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Tier Breakdown Chart
+                const tierCtx = document.getElementById('tierChart').getContext('2d');
+                new Chart(tierCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: data.tier_breakdown.map(t => t.tier || 'Free'),
+                        datasets: [{
+                            data: data.tier_breakdown.map(t => t.total_cost),
+                            backgroundColor: ['#f56565', '#ed8936', '#ecc94b', '#48bb78', '#4299e1']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { position: 'bottom' }
+                        }
+                    }
+                });
+
+                // Model Breakdown Chart
+                const modelCtx = document.getElementById('modelChart').getContext('2d');
+                new Chart(modelCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.model_breakdown.map(m => m.model.split('-').slice(0, 2).join('-')),
+                        datasets: [{
+                            label: 'Cost ($)',
+                            data: data.model_breakdown.map(m => m.total_cost),
+                            backgroundColor: '#4299e1'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: value => '$' + value.toFixed(2)
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading cost trends:', error);
+            }
+        }
+
+        // Load trends on page load
+        loadCostTrends();
+    </script>
 </body>
 </html>
