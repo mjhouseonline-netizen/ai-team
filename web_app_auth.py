@@ -2105,6 +2105,86 @@ MODELS = {
 }
 
 # ============================================
+# AGENT COORDINATION SYSTEM
+# ============================================
+
+# Agent capabilities for natural language routing
+AGENT_CAPABILITIES = {
+    'Luna': {
+        'keywords': ['research', 'analyze', 'data', 'find', 'investigate', 'study', 'compare', 'facts', 'information', 'insights'],
+        'strengths': ['Deep research', 'Data analysis', 'Fact-finding', 'Pattern recognition', 'Strategic insights'],
+        'when_to_use': 'Research, analysis, data interpretation, finding information'
+    },
+    'Mila': {
+        'keywords': ['plan', 'organize', 'schedule', 'task', 'workflow', 'project', 'manage', 'coordinate', 'prioritize', 'structure'],
+        'strengths': ['Project planning', 'Task organization', 'Workflow creation', 'Time management', 'Action plans'],
+        'when_to_use': 'Planning projects, organizing tasks, creating workflows, breaking down complex work'
+    },
+    'Sage': {
+        'keywords': ['write', 'edit', 'content', 'copy', 'draft', 'rewrite', 'polish', 'text', 'article', 'blog'],
+        'strengths': ['Writing compelling copy', 'Editing content', 'Tone adaptation', 'Clear communication', 'Content refinement'],
+        'when_to_use': 'Writing, editing, content creation, communication drafts'
+    },
+    'Ember': {
+        'keywords': ['create', 'design', 'ideas', 'creative', 'brainstorm', 'concept', 'innovative', 'brand', 'visual', 'unique'],
+        'strengths': ['Creative ideation', 'Design concepts', 'Brand identity', 'Visual thinking', 'Innovation'],
+        'when_to_use': 'Creative concepts, design direction, brainstorming, brand development'
+    },
+    'Sol': {
+        'keywords': ['strategy', 'business', 'growth', 'decision', 'long-term', 'goals', 'vision', 'opportunity', 'risk', 'positioning'],
+        'strengths': ['Strategic planning', 'Business growth', 'Decision frameworks', 'Risk assessment', 'Big picture thinking'],
+        'when_to_use': 'Strategy, business decisions, long-term planning, growth opportunities'
+    }
+}
+
+def analyze_intent_and_suggest_agent(message):
+    """
+    Analyzes user message and suggests the best agent for the task.
+    Returns (agent_name, confidence_score) or (None, 0) if no clear match.
+    """
+    message_lower = message.lower()
+    scores = {}
+
+    for agent, capabilities in AGENT_CAPABILITIES.items():
+        score = 0
+        # Check for keyword matches
+        for keyword in capabilities['keywords']:
+            if keyword in message_lower:
+                score += 2
+        scores[agent] = score
+
+    # Get agent with highest score
+    if scores:
+        best_agent = max(scores, key=scores.get)
+        best_score = scores[best_agent]
+
+        if best_score > 0:
+            return best_agent, best_score
+
+    return None, 0
+
+def get_agent_coordination_context():
+    """
+    Returns context about available agents for coordination.
+    This is added to agent prompts to enable delegation.
+    """
+    return """
+TEAM COORDINATION:
+You are part of an AI Team. When a request would be better handled by another agent, you can suggest they help:
+
+Available Agents:
+- Luna: Research & analysis, data insights, fact-finding
+- Mila: Project planning, organization, workflow creation
+- Sage: Writing & content, editing, communication
+- Ember: Creative concepts, design direction, brainstorming
+- Sol: Strategy, business decisions, long-term planning
+
+If a user request falls outside your expertise, naturally acknowledge it and suggest which agent would be better suited. For example: "This sounds like a strategic planning question - Sol would be perfect for this. Would you like me to bring Sol into this conversation?"
+
+The system will automatically route the conversation when you make this suggestion.
+"""
+
+# ============================================
 # AGENT PERSONALITIES
 # ============================================
 
@@ -2747,14 +2827,38 @@ def chat():
             if messages_today >= daily_limit:
                 conn.close()
                 return jsonify({'error': 'Daily message limit reached. Upgrade your plan to continue!'}), 429
-        
+
+        # ============================================
+        # INTELLIGENT AGENT ROUTING
+        # ============================================
+        # If user hasn't explicitly selected an agent, or if the message clearly
+        # indicates a different agent would be better, suggest/auto-route
+
+        # Check if this is the first message (no history) and agent is default
+        is_first_message = True if (is_guest or not get_conversation_history(current_user.id if not is_guest else 0, agent, limit=1)) else False
+
+        # Analyze intent for agent suggestion
+        suggested_agent, confidence = analyze_intent_and_suggest_agent(message)
+
+        # Track if we auto-routed
+        original_agent = agent
+        was_auto_routed = False
+
+        # Auto-route on first message if confidence is high and different from current agent
+        if suggested_agent and suggested_agent != agent and confidence >= 4 and is_first_message:
+            print(f"🎯 Auto-routing: {agent} → {suggested_agent} (confidence: {confidence})")
+            agent = suggested_agent  # Switch to the better agent
+            was_auto_routed = True
+
         # Get agent personality - check built-in agents first, then custom agents
         system_prompt = None
 
         if agent in AGENT_PERSONALITIES:
-            # Built-in agent
+            # Built-in agent with team coordination enabled
             agent_info = AGENT_PERSONALITIES[agent]
-            system_prompt = agent_info['system_prompt']
+            base_system_prompt = agent_info['system_prompt']
+            coordination_context = get_agent_coordination_context()
+            system_prompt = f"{base_system_prompt}\n\n{coordination_context}"
         else:
             # Check for custom agent
             if is_guest:
@@ -2890,13 +2994,38 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
 
         conn.commit()
         conn.close()
-        
-        return jsonify({
+
+        # ============================================
+        # DELEGATION DETECTION
+        # ============================================
+        # Check if the agent suggested switching to another agent
+        delegation_suggestion = None
+        for other_agent in AGENT_CAPABILITIES.keys():
+            if other_agent != agent:
+                # Look for phrases like "Sol would be perfect for this" or "bring Sol into"
+                if f"{other_agent} would be" in ai_response or f"bring {other_agent}" in ai_response:
+                    delegation_suggestion = other_agent
+                    break
+
+        response_data = {
             'success': True,
             'response': ai_response,
             'agent': agent,
             'model_used': model_key
-        }), 200
+        }
+
+        # Add routing/delegation info if applicable
+        if was_auto_routed:
+            response_data['auto_routed'] = True
+            response_data['original_agent'] = original_agent
+            response_data['routing_reason'] = f"Your request matches {agent}'s expertise better"
+
+        if delegation_suggestion:
+            response_data['delegation_suggested'] = True
+            response_data['suggested_agent'] = delegation_suggestion
+            response_data['suggestion_reason'] = f"{agent} suggests {delegation_suggestion} for this task"
+
+        return jsonify(response_data), 200
         
     except Exception as e:
         print(f"Chat error: {e}")
