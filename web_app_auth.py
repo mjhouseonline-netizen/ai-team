@@ -1020,6 +1020,12 @@ def agent_link(agent_name):
     # Clean, simplified interface for base agents
     guest_restrictions = f"""
     <style>
+    /* Hide settings, automations, upgrade sections */
+    .sidebar-section:has(a[href*="settings"]),
+    .sidebar-section:has(a[href*="automations"]),
+    .sidebar-section:has(a[href*="upgrade"]) {{
+        display: none !important;
+    }}
     /* Hide user menu/dropdown completely */
     .user-menu {{
         display: none !important;
@@ -1083,12 +1089,14 @@ def agent_link(agent_name):
         localStorage.setItem('guestMode', 'true');
 
         document.addEventListener('DOMContentLoaded', function() {{
-            // Auto-select the base agent
+            // Auto-select the base agent and hide others
             setTimeout(function() {{
                 const agentButtons = document.querySelectorAll('.agent-button');
                 agentButtons.forEach(function(btn) {{
                     if (btn.textContent.includes('{agent_name}')) {{
                         btn.click();
+                    }} else {{
+                        btn.style.display = 'none';
                     }}
                 }});
             }}, 500);
