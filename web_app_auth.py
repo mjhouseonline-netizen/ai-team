@@ -249,6 +249,61 @@ SUBSCRIPTION_TIERS = {
 }
 
 # ============================================
+# COST MONITORING SYSTEM
+# ============================================
+
+# Model costs per message (approximate based on avg tokens)
+MODEL_COSTS = {
+    # Claude Models
+    'claude-sonnet-4.5': 0.003,      # $3/1M tokens ≈ $0.003/msg
+    'claude-opus-4': 0.015,          # $15/1M tokens ≈ $0.015/msg
+    'claude-haiku-4.5': 0.0008,      # $0.80/1M tokens ≈ $0.0008/msg
+    'claude-haiku': 0.0008,
+
+    # OpenAI Models
+    'gpt-4o': 0.0025,                # $2.50/1M tokens ≈ $0.0025/msg
+    'gpt-4-turbo': 0.01,             # $10/1M tokens ≈ $0.01/msg
+    'gpt-4o-mini': 0.00015,          # $0.15/1M tokens ≈ $0.00015/msg
+
+    # Google Gemini Models (Free for now)
+    'gemini-2.0-flash': 0.0,
+    'gemini-1.5-pro': 0.0,
+    'gemini-1.5-flash': 0.0
+}
+
+# Cost thresholds per tier (daily limits in USD)
+COST_THRESHOLDS = {
+    'free': {
+        'warning': 0.50,      # Alert at $0.50/day
+        'critical': 1.00,     # Block expensive models at $1/day
+        'monthly_budget': 15  # $15/month max
+    },
+    'freeforlife': {
+        'warning': 1.00,
+        'critical': 2.00,
+        'monthly_budget': 30
+    },
+    'starter': {
+        'warning': 1.00,      # Alert at $1/day
+        'critical': 2.00,     # Block expensive models at $2/day
+        'monthly_budget': 30  # $30/month (revenue $19, cost budget $30)
+    },
+    'pro': {
+        'warning': 3.00,      # Alert at $3/day
+        'critical': 5.00,     # Block expensive models at $5/day
+        'monthly_budget': 100 # $100/month (revenue $49, cost budget $100)
+    },
+    'enterprise': {
+        'warning': 5.00,      # Alert at $5/day
+        'critical': 10.00,    # Block expensive models at $10/day
+        'monthly_budget': 200 # $200/month (revenue $99, cost budget $200)
+    }
+}
+
+# Expensive models to block when user hits critical threshold
+EXPENSIVE_MODELS = ['claude-opus-4', 'gpt-4-turbo']
+
+# ============================================
 # HELPER FUNCTIONS
 # ============================================
 
@@ -263,12 +318,162 @@ def is_paid_user(subscription_tier):
 
 def has_api_access(subscription_tier):
     """Check if user has API access
-    
-    API access is a premium feature only available to Pro ($49/mo) and 
+
+    API access is a premium feature only available to Pro ($49/mo) and
     Enterprise ($99/mo) subscribers. This prevents API abuse and creates
     a clear upgrade incentive from Starter to Pro.
     """
     return subscription_tier in ['pro', 'enterprise']
+
+# ============================================
+# COST TRACKING FUNCTIONS
+# ============================================
+
+def track_message_cost(user_id, model, cost, agent_name=None):
+    """Track the cost of a single message"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Insert cost record
+        cursor.execute("""
+            INSERT INTO usage_costs (user_id, model, cost, agent_name)
+            VALUES (?, ?, ?, ?)
+        """, (user_id, model, cost, agent_name))
+
+        # Update user's daily and monthly costs
+        cursor.execute("""
+            UPDATE users
+            SET daily_cost = daily_cost + ?, monthly_cost = monthly_cost + ?
+            WHERE id = ?
+        """, (cost, cost, user_id))
+
+        conn.commit()
+        conn.close()
+
+        return True
+    except Exception as e:
+        print(f"❌ Error tracking cost: {e}")
+        return False
+
+def get_user_daily_cost(user_id):
+    """Get user's cost for today"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT daily_cost FROM users WHERE id = ?", (user_id,))
+        result = cursor.fetchone()
+        conn.close()
+
+        return result[0] if result else 0.0
+    except Exception as e:
+        print(f"❌ Error getting daily cost: {e}")
+        return 0.0
+
+def reset_daily_costs():
+    """Reset all users' daily costs (run at midnight UTC)"""
+    try:
+        from datetime import datetime
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Reset daily costs and unblock expensive models
+        cursor.execute("""
+            UPDATE users
+            SET daily_cost = 0.0,
+                expensive_models_blocked = 0,
+                last_cost_reset = ?
+            WHERE DATE(last_cost_reset) < DATE('now')
+        """, (datetime.utcnow().isoformat(),))
+
+        conn.commit()
+        conn.close()
+
+        print("✅ Daily costs reset")
+        return True
+    except Exception as e:
+        print(f"❌ Error resetting daily costs: {e}")
+        return False
+
+def check_cost_threshold(user_id, tier):
+    """Check if user has exceeded cost thresholds and trigger alerts"""
+    try:
+        daily_cost = get_user_daily_cost(user_id)
+        thresholds = COST_THRESHOLDS.get(tier, COST_THRESHOLDS['free'])
+
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Check if already blocked
+        cursor.execute("SELECT expensive_models_blocked FROM users WHERE id = ?", (user_id,))
+        result = cursor.fetchone()
+        already_blocked = result[0] if result else False
+
+        # Critical threshold - block expensive models
+        if daily_cost >= thresholds['critical'] and not already_blocked:
+            cursor.execute("""
+                UPDATE users SET expensive_models_blocked = 1 WHERE id = ?
+            """, (user_id,))
+
+            # Log alert
+            cursor.execute("""
+                INSERT INTO cost_alerts (user_id, alert_type, daily_cost, threshold, message)
+                VALUES (?, 'CRITICAL', ?, ?, ?)
+            """, (user_id, daily_cost, thresholds['critical'],
+                  f"Critical threshold reached! Blocking expensive models (Opus, GPT-4 Turbo)"))
+
+            conn.commit()
+            conn.close()
+
+            return 'CRITICAL', f"⚠️ Daily cost limit reached (${daily_cost:.2f}). Expensive models temporarily blocked. Use Gemini or Haiku instead."
+
+        # Warning threshold
+        elif daily_cost >= thresholds['warning']:
+            # Check if we already sent warning today
+            cursor.execute("""
+                SELECT id FROM cost_alerts
+                WHERE user_id = ? AND alert_type = 'WARNING'
+                AND DATE(timestamp) = DATE('now')
+            """, (user_id,))
+
+            if not cursor.fetchone():
+                # Log warning alert
+                cursor.execute("""
+                    INSERT INTO cost_alerts (user_id, alert_type, daily_cost, threshold, message)
+                    VALUES (?, 'WARNING', ?, ?, ?)
+                """, (user_id, daily_cost, thresholds['warning'],
+                      f"Warning: Approaching daily cost limit"))
+
+                conn.commit()
+
+            conn.close()
+            return 'WARNING', f"⚡ Heads up: You've used ${daily_cost:.2f} today (limit: ${thresholds['critical']:.2f})"
+
+        conn.close()
+        return None, None
+
+    except Exception as e:
+        print(f"❌ Error checking cost threshold: {e}")
+        return None, None
+
+def is_model_blocked_for_user(user_id, model):
+    """Check if expensive models are blocked for this user"""
+    try:
+        if model not in EXPENSIVE_MODELS:
+            return False
+
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT expensive_models_blocked FROM users WHERE id = ?", (user_id,))
+        result = cursor.fetchone()
+        conn.close()
+
+        return result[0] if result else False
+    except Exception as e:
+        print(f"❌ Error checking model block: {e}")
+        return False
 
 # ============================================
 # DATABASE INITIALIZATION
@@ -419,7 +624,72 @@ def init_database():
             print("✅ Added is_public column to custom_agents")
         except sqlite3.OperationalError as e:
             print(f"⚠️  Could not add is_public column: {e}")
-    
+
+    # ============================================
+    # COST MONITORING TABLES
+    # ============================================
+
+    # Table to track cost of every message
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS usage_costs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            model TEXT NOT NULL,
+            cost REAL NOT NULL,
+            agent_name TEXT,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+    """)
+
+    # Table to log cost alerts
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS cost_alerts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            alert_type TEXT NOT NULL,
+            daily_cost REAL NOT NULL,
+            threshold REAL NOT NULL,
+            message TEXT,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+    """)
+
+    # Check and add cost tracking columns to users table
+    cursor.execute("PRAGMA table_info(users)")
+    user_columns = [col[1] for col in cursor.fetchall()]
+
+    if 'daily_cost' not in user_columns:
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN daily_cost REAL DEFAULT 0.0")
+            print("✅ Added daily_cost column to users")
+        except sqlite3.OperationalError as e:
+            print(f"⚠️  Could not add daily_cost column: {e}")
+
+    if 'monthly_cost' not in user_columns:
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN monthly_cost REAL DEFAULT 0.0")
+            print("✅ Added monthly_cost column to users")
+        except sqlite3.OperationalError as e:
+            print(f"⚠️  Could not add monthly_cost column: {e}")
+
+    if 'expensive_models_blocked' not in user_columns:
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN expensive_models_blocked BOOLEAN DEFAULT 0")
+            print("✅ Added expensive_models_blocked column to users")
+        except sqlite3.OperationalError as e:
+            print(f"⚠️  Could not add expensive_models_blocked column: {e}")
+
+    if 'last_cost_reset' not in user_columns:
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN last_cost_reset TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+            print("✅ Added last_cost_reset column to users")
+        except sqlite3.OperationalError as e:
+            print(f"⚠️  Could not add last_cost_reset column: {e}")
+
+    print("✅ Cost monitoring tables initialized")
+
     conn.commit()
     conn.close()
     print("✅ Database initialization complete")
@@ -514,6 +784,125 @@ except Exception as e:
 # ============================================
 # ADMIN ROUTES FOR DATABASE SETUP
 # ============================================
+
+@app.route('/admin/usage')
+@login_required
+def admin_usage():
+    """Admin dashboard for cost monitoring and analytics"""
+    # Check if user is admin (you can add admin check here)
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Today's costs
+        cursor.execute("""
+            SELECT COALESCE(SUM(cost), 0) FROM usage_costs
+            WHERE DATE(timestamp) = DATE('now')
+        """)
+        today_costs = cursor.fetchone()[0]
+
+        # Monthly costs
+        cursor.execute("""
+            SELECT COALESCE(SUM(cost), 0) FROM usage_costs
+            WHERE strftime('%Y-%m', timestamp) = strftime('%Y-%m', 'now')
+        """)
+        monthly_costs = cursor.fetchone()[0]
+
+        # Monthly revenue (sum of all active subscriptions)
+        cursor.execute("""
+            SELECT COALESCE(SUM(
+                CASE subscription_tier
+                    WHEN 'starter' THEN 19
+                    WHEN 'pro' THEN 49
+                    WHEN 'enterprise' THEN 99
+                    ELSE 0
+                END
+            ), 0)
+            FROM users
+            WHERE stripe_subscription_id IS NOT NULL
+        """)
+        monthly_revenue = cursor.fetchone()[0]
+
+        # Profit margin
+        profit_margin = ((monthly_revenue - monthly_costs) / monthly_revenue * 100) if monthly_revenue > 0 else 0
+
+        # Recent alerts (last 24 hours)
+        cursor.execute("""
+            SELECT u.email, ca.alert_type, ca.daily_cost, ca.threshold,
+                   ca.message, ca.timestamp
+            FROM cost_alerts ca
+            JOIN users u ON ca.user_id = u.id
+            WHERE DATE(ca.timestamp) = DATE('now')
+            ORDER BY ca.timestamp DESC
+            LIMIT 50
+        """)
+        alerts = []
+        for row in cursor.fetchall():
+            alerts.append({
+                'email': row[0],
+                'alert_type': row[1],
+                'daily_cost': row[2],
+                'threshold': row[3],
+                'message': row[4],
+                'timestamp': row[5]
+            })
+
+        # Top cost users (last 7 days)
+        cursor.execute("""
+            SELECT u.email, u.subscription_tier, u.daily_cost, u.monthly_cost,
+                   u.expensive_models_blocked,
+                   (SELECT COUNT(*) FROM usage_costs uc
+                    WHERE uc.user_id = u.id
+                    AND DATE(uc.timestamp) >= DATE('now', '-7 days')) as message_count
+            FROM users u
+            WHERE u.daily_cost > 0 OR u.monthly_cost > 0
+            ORDER BY u.monthly_cost DESC
+            LIMIT 20
+        """)
+        top_users = []
+        for row in cursor.fetchall():
+            top_users.append({
+                'email': row[0],
+                'tier': row[1],
+                'daily_cost': row[2] or 0,
+                'monthly_cost': row[3] or 0,
+                'blocked': row[4],
+                'message_count': row[5]
+            })
+
+        # Model usage breakdown
+        cursor.execute("""
+            SELECT model, COUNT(*) as count, SUM(cost) as total_cost, AVG(cost) as avg_cost
+            FROM usage_costs
+            WHERE DATE(timestamp) = DATE('now')
+            GROUP BY model
+            ORDER BY total_cost DESC
+        """)
+        model_usage = []
+        for row in cursor.fetchall():
+            model_usage.append({
+                'model': row[0],
+                'count': row[1],
+                'total_cost': row[2],
+                'avg_cost': row[3]
+            })
+
+        conn.close()
+
+        return render_template('admin_usage.html',
+                             today_costs=today_costs,
+                             monthly_costs=monthly_costs,
+                             monthly_revenue=monthly_revenue,
+                             profit_margin=profit_margin,
+                             alerts=alerts,
+                             top_users=top_users,
+                             model_usage=model_usage)
+
+    except Exception as e:
+        print(f"❌ Error in admin usage dashboard: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/admin/check-agents')
 def check_agents():
@@ -2825,7 +3214,23 @@ def chat():
                     'available_tiers': ['starter', 'pro']
                 }), 403  # 403 Forbidden
         # ============================================
-        
+
+        # ============================================
+        # COST MONITORING - BLOCK EXPENSIVE MODELS
+        # ============================================
+        # Check if user has hit their daily cost limit
+        if not is_guest and is_model_blocked_for_user(current_user.id, model_key):
+            conn.close()
+            thresholds = COST_THRESHOLDS.get(tier, COST_THRESHOLDS['free'])
+            return jsonify({
+                'error': f'⚠️ Daily cost limit reached (${thresholds["critical"]:.2f}). {model_key} is temporarily blocked. Please use Gemini, Haiku, or GPT-4o Mini instead. Resets at midnight UTC.',
+                'cost_limit_reached': True,
+                'blocked_model': model_key,
+                'allowed_models': ['gemini-2.0-flash', 'gemini-1.5-pro', 'claude-haiku-4.5', 'gpt-4o-mini'],
+                'resets_at': 'midnight UTC'
+            }), 429  # 429 Too Many Requests
+        # ============================================
+
         # Reset counter if it's a new day (only for authenticated users)
         if not is_guest and last_reset:
             try:
@@ -3016,6 +3421,25 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
         conn.close()
 
         # ============================================
+        # COST TRACKING & THRESHOLD MONITORING
+        # ============================================
+        cost_warning = None
+        if not is_guest:
+            # Get cost for this model
+            message_cost = MODEL_COSTS.get(model_key, 0.0)
+
+            if message_cost > 0:
+                # Track the cost
+                track_message_cost(current_user.id, model_key, message_cost, agent)
+
+                # Check if user exceeded thresholds
+                alert_type, alert_message = check_cost_threshold(current_user.id, tier)
+                if alert_message:
+                    cost_warning = alert_message
+                    print(f"💰 Cost alert for user {current_user.id}: {alert_type} - {alert_message}")
+        # ============================================
+
+        # ============================================
         # DELEGATION DETECTION
         # ============================================
         # Check if the agent suggested switching to another agent
@@ -3044,6 +3468,10 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
             response_data['delegation_suggested'] = True
             response_data['suggested_agent'] = delegation_suggestion
             response_data['suggestion_reason'] = f"{agent} suggests {delegation_suggestion} for this task"
+
+        # Add cost warning if present
+        if cost_warning:
+            response_data['cost_warning'] = cost_warning
 
         return jsonify(response_data), 200
         
