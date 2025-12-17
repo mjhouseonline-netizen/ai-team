@@ -985,19 +985,194 @@ def dashboard():
 
 @app.route('/agent/<agent_name>')
 def agent_link(agent_name):
-    """Shareable link for specific agent - works without login for embedding"""
+    """Shareable link for base agents - works without login with clean interface"""
     # Validate agent name
     valid_agents = ['Luna', 'Mila', 'Sage', 'Ember', 'Sol', 'Nova', 'Theo']
-    
+
     if agent_name not in valid_agents:
         return "Agent not found", 404
-    
+
     # If logged in, redirect to dashboard with agent selected
     if current_user.is_authenticated:
         return render_template('dashboard.html', user=current_user, selected_agent=agent_name)
-    
-    # If not logged in, show agent page with login prompt
-    return render_template('agent_public.html', agent_name=agent_name)
+
+    # Guest user - create clean interface like custom agents
+    print(f"👻 Guest accessing base agent: {agent_name}")
+
+    # Create a guest user object for the template
+    class GuestUser:
+        id = 0
+        email = "guest@ai-team.com"
+        is_authenticated = False
+        stripe_customer_id = None
+        subscription_tier = "free"
+        stripe_subscription_id = None
+        api_key = None
+        google_ai_api_key = None
+        messages_today = 0
+        last_message_reset = None
+
+        def get_id(self):
+            return 0
+
+    guest = GuestUser()
+
+    # Clean, simplified interface for base agents
+    guest_restrictions = f"""
+    <style>
+    /* Hide user menu/dropdown completely */
+    .user-menu {{
+        display: none !important;
+    }}
+    /* Hide prompt builder button */
+    .prompt-builder-btn,
+    button:has(.prompt-builder),
+    [onclick*="promptBuilder"] {{
+        display: none !important;
+    }}
+    /* Hide usage counter */
+    .usage-counter,
+    .messages-counter,
+    .daily-limit {{
+        display: none !important;
+    }}
+    /* Hide options button */
+    .options-btn,
+    button[title*="Option"],
+    .input-options {{
+        display: none !important;
+    }}
+    /* Hide model selector */
+    .model-selector,
+    select[name="model"],
+    .model-dropdown,
+    label:has(select[name="model"]) {{
+        display: none !important;
+    }}
+    /* Style for preset questions */
+    .preset-questions {{
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 12px;
+        margin: 20px 0;
+    }}
+    .preset-question {{
+        padding: 12px 20px;
+        background: white;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 14px;
+        color: #374151;
+    }}
+    .preset-question:hover {{
+        border-color: #10a37f;
+        background: #f0fdf4;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(16, 163, 127, 0.1);
+    }}
+    </style>
+    <script>
+    (function() {{
+        console.log('🎯 Guest: Clean interface for base agent {agent_name}');
+
+        localStorage.setItem('guestMode', 'true');
+
+        document.addEventListener('DOMContentLoaded', function() {{
+            // Auto-select the base agent
+            setTimeout(function() {{
+                const agentButtons = document.querySelectorAll('.agent-button');
+                agentButtons.forEach(function(btn) {{
+                    if (btn.textContent.includes('{agent_name}')) {{
+                        btn.click();
+                    }}
+                }});
+            }}, 500);
+
+            // Add preset questions after welcome message
+            setTimeout(function() {{
+                const welcomeMsg = document.querySelector('.welcome') ||
+                                 document.querySelector('.chat-container');
+                if (welcomeMsg) {{
+                    const presets = document.createElement('div');
+                    presets.className = 'preset-questions';
+                    presets.innerHTML = `
+                        <div class="preset-question" onclick="sendPresetMessage('Tell me about yourself')">
+                            💬 Tell me about yourself
+                        </div>
+                        <div class="preset-question" onclick="sendPresetMessage('What can you help me with?')">
+                            ❓ What can you help me with?
+                        </div>
+                        <div class="preset-question" onclick="sendPresetMessage('Show me an example')">
+                            ✨ Show me an example
+                        </div>
+                        <div class="preset-question" onclick="sendPresetMessage('Get started')">
+                            🚀 Get started
+                        </div>
+                    `;
+
+                    if (welcomeMsg.classList.contains('welcome')) {{
+                        welcomeMsg.appendChild(presets);
+                    }} else {{
+                        welcomeMsg.insertBefore(presets, welcomeMsg.firstChild);
+                    }}
+                }}
+            }}, 1500);
+
+            // Disable file upload button
+            setTimeout(function() {{
+                const fileBtn = document.querySelector('.attach-btn') ||
+                               document.querySelector('button[title*="file"]');
+                if (fileBtn) {{
+                    fileBtn.style.opacity = '0.5';
+                    fileBtn.addEventListener('click', function(e) {{
+                        e.preventDefault();
+                        alert('📎 Sign up for free to upload files and access all features!');
+                    }});
+                }}
+            }}, 1000);
+        }});
+
+        // Function to send preset messages
+        window.sendPresetMessage = function(message) {{
+            const input = document.querySelector('#messageInput') ||
+                         document.querySelector('textarea[placeholder*="message"]');
+            const sendBtn = document.querySelector('button[type="submit"]') ||
+                           document.querySelector('.send-btn');
+
+            if (input) {{
+                input.value = message;
+                input.focus();
+                if (sendBtn) {{
+                    sendBtn.click();
+                }}
+            }}
+        }};
+
+        // Encourage sign up when trying other agents
+        document.addEventListener('click', function(e) {{
+            const btn = e.target.closest('.agent-button');
+            if (btn && !btn.textContent.includes('{agent_name}')) {{
+                e.preventDefault();
+                e.stopPropagation();
+                alert('Sign up for free to access all AI agents!');
+                return false;
+            }}
+        }}, true);
+    }})();
+    </script>
+    """
+
+    return render_template('dashboard.html',
+                         user=guest,
+                         current_user=guest,
+                         selected_agent=agent_name,
+                         is_guest=True,
+                         guest_custom_js=guest_restrictions)
 
 @app.route('/admin/test-custom-link/<share_code>')
 def test_custom_link(share_code):
