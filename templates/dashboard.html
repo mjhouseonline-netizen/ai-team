@@ -2779,9 +2779,22 @@
                 });
                 
                 const data = await response.json();
-                
+
                 if (data.success) {
+                    // Check if agent was auto-routed
+                    if (data.auto_routed) {
+                        displaySystemMessage(`🎯 Routed to ${data.agent}: ${data.routing_reason}`);
+                        // Update UI to show the new agent is active
+                        switchToAgent(data.agent);
+                    }
+
+                    // Display the AI response
                     displayAssistantMessage(data.response);
+
+                    // Check if agent suggested delegation
+                    if (data.delegation_suggested) {
+                        displayDelegationSuggestion(data.suggested_agent, data.suggestion_reason);
+                    }
                 } else {
                     displayErrorMessage(data.error || 'Failed to send message');
                 }
@@ -2850,9 +2863,48 @@
             const messageDiv = document.createElement('div');
             messageDiv.className = 'message assistant-message';
             messageDiv.innerHTML = '<div class="message-content" style="color: #ef4444;">⚠️ ' + error + '</div>';
-            
+
             container.appendChild(messageDiv);
             container.scrollTop = container.scrollHeight;
+        }
+
+        function displaySystemMessage(message) {
+            const container = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message system-message';
+            messageDiv.innerHTML = '<div class="message-content" style="background: #f0fdf4; color: #166534; padding: 12px; border-left: 3px solid #10a37f; border-radius: 8px;">' + message + '</div>';
+
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function displayDelegationSuggestion(suggestedAgent, reason) {
+            const container = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message system-message';
+            messageDiv.innerHTML = `
+                <div class="message-content" style="background: #eff6ff; padding: 16px; border-radius: 12px; border: 2px solid #3b82f6;">
+                    <div style="margin-bottom: 12px; color: #1e40af; font-weight: 500;">💡 ${reason}</div>
+                    <button onclick="switchToAgent('${suggestedAgent}')"
+                            style="background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 500;">
+                        Switch to ${suggestedAgent}
+                    </button>
+                </div>
+            `;
+
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function switchToAgent(agentName) {
+            // Find and click the agent button in the sidebar
+            const agentButtons = document.querySelectorAll('.agent-button');
+            agentButtons.forEach(btn => {
+                if (btn.textContent.includes(agentName)) {
+                    btn.click();
+                    displaySystemMessage(`✅ Switched to ${agentName}`);
+                }
+            });
         }
 
         // Handle Enter key
