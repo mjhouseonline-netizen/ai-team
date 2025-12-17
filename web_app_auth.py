@@ -1061,25 +1061,26 @@ def agent_link(agent_name):
         flex-wrap: wrap;
         gap: 12px;
         padding: 20px;
-        background: #f8f9fa;
+        background: transparent;
         border-radius: 12px;
         margin: 20px 0;
     }}
     .preset-question {{
         padding: 12px 20px;
-        background: white;
-        border: 2px solid #e5e7eb;
+        background: #f3f4f6;
+        border: none;
         border-radius: 8px;
         cursor: pointer;
         transition: all 0.2s;
         font-size: 14px;
         color: #374151;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }}
     .preset-question:hover {{
-        border-color: #10a37f;
-        background: #f0fdf4;
+        background: #10a37f;
+        color: white;
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(16, 163, 127, 0.1);
+        box-shadow: 0 4px 12px rgba(16, 163, 127, 0.3);
     }}
     </style>
     <script>
@@ -1147,17 +1148,22 @@ def agent_link(agent_name):
 
         // Function to send preset messages
         window.sendPresetMessage = function(message) {{
-            const input = document.querySelector('#messageInput') ||
-                         document.querySelector('textarea[placeholder*="message"]');
-            const sendBtn = document.querySelector('button[type="submit"]') ||
-                           document.querySelector('.send-btn');
+            console.log('🔘 Preset clicked:', message);
+            const input = document.getElementById('messageInput');
 
             if (input) {{
                 input.value = message;
                 input.focus();
-                if (sendBtn) {{
-                    sendBtn.click();
+                console.log('✅ Input set:', input.value);
+
+                // Trigger the send function directly
+                if (typeof window.sendMessage === 'function') {{
+                    window.sendMessage();
+                }} else {{
+                    console.error('❌ sendMessage function not found');
                 }}
+            }} else {{
+                console.error('❌ messageInput not found');
             }}
         }};
 
@@ -1376,25 +1382,26 @@ def custom_agent_link(share_code):
                 flex-wrap: wrap;
                 gap: 12px;
                 padding: 20px;
-                background: #f8f9fa;
+                background: transparent;
                 border-radius: 12px;
                 margin: 20px 0;
             }}
             .preset-question {{
                 padding: 12px 20px;
-                background: white;
-                border: 2px solid #e5e7eb;
+                background: #f3f4f6;
+                border: none;
                 border-radius: 8px;
                 cursor: pointer;
                 transition: all 0.2s;
                 font-size: 14px;
                 color: #374151;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             }}
             .preset-question:hover {{
-                border-color: #10a37f;
-                background: #f0fdf4;
+                background: #10a37f;
+                color: white;
                 transform: translateY(-2px);
-                box-shadow: 0 4px 12px rgba(16, 163, 127, 0.1);
+                box-shadow: 0 4px 12px rgba(16, 163, 127, 0.3);
             }}
             </style>
             <script>
@@ -1462,17 +1469,22 @@ def custom_agent_link(share_code):
 
                 // Function to send preset messages
                 window.sendPresetMessage = function(message) {{
-                    const input = document.querySelector('#messageInput') ||
-                                 document.querySelector('textarea[placeholder*="message"]');
-                    const sendBtn = document.querySelector('button[type="submit"]') ||
-                                   document.querySelector('.send-btn');
+                    console.log('🔘 Preset clicked:', message);
+                    const input = document.getElementById('messageInput');
 
                     if (input) {{
                         input.value = message;
                         input.focus();
-                        if (sendBtn) {{
-                            sendBtn.click();
+                        console.log('✅ Input set:', input.value);
+
+                        // Trigger the send function directly
+                        if (typeof window.sendMessage === 'function') {{
+                            window.sendMessage();
+                        }} else {{
+                            console.error('❌ sendMessage function not found');
                         }}
+                    }} else {{
+                        console.error('❌ messageInput not found');
                     }}
                 }};
 
