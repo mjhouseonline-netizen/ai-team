@@ -81,7 +81,60 @@
             border-right: 1px solid #333;
             z-index: 100;
             overflow-y: auto;
-            transition: width 0.3s ease;
+            transition: width 0.3s ease, transform 0.3s ease;
+        }
+
+        .sidebar.collapsed {
+            width: var(--sidebar-collapsed-width);
+        }
+
+        .sidebar.collapsed .sidebar-header,
+        .sidebar.collapsed .section-title,
+        .sidebar.collapsed .agent-name,
+        .sidebar.collapsed .agent-role,
+        .sidebar.collapsed .sidebar-subtitle {
+            opacity: 0;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        .sidebar.collapsed .agent-item {
+            justify-content: center;
+            padding: var(--spacing-sm);
+        }
+
+        .sidebar.collapsed .agent-info {
+            display: none;
+        }
+
+        /* Sidebar toggle button - always visible */
+        .sidebar-toggle {
+            position: fixed;
+            top: var(--spacing-md);
+            left: var(--spacing-md);
+            z-index: 1001;
+            background: white;
+            border: 1px solid var(--border);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: left 0.3s ease;
+            font-size: var(--font-lg);
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+        }
+
+        .sidebar.collapsed ~ .sidebar-toggle {
+            left: calc(var(--sidebar-collapsed-width) + var(--spacing-md));
+        }
+
+        .sidebar-toggle:hover {
+            background: var(--bg-hover);
         }
 
         .sidebar-header {
@@ -283,6 +336,11 @@
             z-index: 1;
             width: calc(100vw - var(--sidebar-width));
             transition: left 0.3s ease, width 0.3s ease;
+        }
+
+        .sidebar.collapsed ~ .main-content {
+            left: var(--sidebar-collapsed-width);
+            width: calc(100vw - var(--sidebar-collapsed-width));
         }
 
         /* Force grid layout for guest mode with absolute positioning */
@@ -2299,7 +2357,7 @@
     {% endif %}
     
     <!-- Mobile Sidebar Toggle -->
-    <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" style="display: none;">☰</button>
+    <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" >☰</button>
 
     <!-- Left Sidebar -->
     <div class="sidebar" id="sidebar">
@@ -2817,6 +2875,59 @@
             menu.classList.remove('active');
             btn.classList.remove('active');
         }
+
+        // Sidebar toggle function
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const toggleBtn = document.getElementById('sidebarToggle');
+
+            // Check if we're on mobile
+            const isMobile = window.innerWidth <= 768;
+
+            if (isMobile) {
+                // On mobile: toggle 'active' class to slide in/out
+                sidebar.classList.toggle('active');
+            } else {
+                // On desktop: toggle 'collapsed' class to minimize/maximize
+                sidebar.classList.toggle('collapsed');
+
+                // Update toggle button icon
+                if (sidebar.classList.contains('collapsed')) {
+                    toggleBtn.innerHTML = '☰'; // Hamburger when collapsed
+                } else {
+                    toggleBtn.innerHTML = '✕'; // X when expanded
+                }
+            }
+        }
+
+        // Update toggle button icon on window resize
+        window.addEventListener('resize', function() {
+            const sidebar = document.getElementById('sidebar');
+            const toggleBtn = document.getElementById('sidebarToggle');
+            const isMobile = window.innerWidth <= 768;
+
+            if (!isMobile && sidebar.classList.contains('active')) {
+                // Remove mobile 'active' class when resizing to desktop
+                sidebar.classList.remove('active');
+            }
+
+            // Update button icon based on state
+            if (isMobile) {
+                toggleBtn.innerHTML = '☰';
+            } else {
+                toggleBtn.innerHTML = sidebar.classList.contains('collapsed') ? '☰' : '✕';
+            }
+        });
+
+        // Initialize toggle button icon on load
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggleBtn = document.getElementById('sidebarToggle');
+            const isMobile = window.innerWidth <= 768;
+
+            if (toggleBtn) {
+                toggleBtn.innerHTML = isMobile ? '☰' : '✕';
+            }
+        });
 
         // Close dropdown when clicking outside
         document.addEventListener('click', function(event) {
