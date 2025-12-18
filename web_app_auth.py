@@ -2168,13 +2168,105 @@ def pricing():
                          enterprise_price_id=STRIPE_ENTERPRISE_PRICE_ID)
 
 
+# ============================================
+# STRIPE PROMO CODE / DISCOUNT HELPERS
+# ============================================
+
+def create_stripe_coupon_for_promo(promo_code, discount_type, discount_value):
+    """Create a Stripe coupon based on promo code discount
+
+    Args:
+        promo_code: The promo code string
+        discount_type: 'amount' or 'percent'
+        discount_value: Dollar amount or percentage
+
+    Returns:
+        Stripe coupon ID or None if error
+    """
+    try:
+        # Check if coupon already exists for this promo code
+        coupon_id = f"PROMO_{promo_code}"
+
+        try:
+            # Try to retrieve existing coupon
+            existing_coupon = stripe.Coupon.retrieve(coupon_id)
+            return coupon_id
+        except stripe.error.InvalidRequestError:
+            # Coupon doesn't exist, create it
+            pass
+
+        # Create new coupon based on discount type
+        if discount_type == 'amount':
+            # Dollar amount off (in cents)
+            coupon = stripe.Coupon.create(
+                id=coupon_id,
+                amount_off=int(discount_value * 100),  # Convert to cents
+                currency='usd',
+                duration='once',  # Apply only to first payment
+                name=f"{promo_code} - ${discount_value:.2f} off"
+            )
+        elif discount_type == 'percent':
+            # Percentage off
+            coupon = stripe.Coupon.create(
+                id=coupon_id,
+                percent_off=discount_value,
+                duration='once',  # Apply only to first payment
+                name=f"{promo_code} - {discount_value:.0f}% off"
+            )
+        else:
+            print(f"Invalid discount type: {discount_type}")
+            return None
+
+        print(f"✅ Created Stripe coupon: {coupon.id}")
+        return coupon.id
+
+    except Exception as e:
+        print(f"❌ Error creating Stripe coupon: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+
+def get_user_promo_discount(user_id):
+    """Get user's active promo code discount
+
+    Returns:
+        dict with discount_type, discount_value, promo_code or None
+    """
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT promo_discount_type, promo_discount_value, promo_code_applied
+            FROM users
+            WHERE id = ?
+        """, (user_id,))
+
+        result = cursor.fetchone()
+        conn.close()
+
+        if result and result[0] and result[1]:
+            return {
+                'discount_type': result[0],
+                'discount_value': result[1],
+                'promo_code': result[2]
+            }
+
+        return None
+
+    except Exception as e:
+        print(f"❌ Error getting user promo discount: {e}")
+        return None
+
+
 @app.route('/create-checkout-session', methods=['POST'])
 @login_required
 def create_checkout_session():
     """Create Stripe checkout session for subscription"""
     try:
         price_id = request.form.get('price_id')
-        
+
         # Determine plan details based on price_id
         if price_id == STRIPE_STARTER_PRICE_ID:
             plan_name = 'starter'
@@ -2184,13 +2276,13 @@ def create_checkout_session():
             plan_name = 'enterprise'
         else:
             return jsonify({'error': 'Invalid price ID'}), 400
-        
+
         # Get or create Stripe customer
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         cursor.execute("SELECT stripe_customer_id FROM users WHERE id = ?", (current_user.id,))
         result = cursor.fetchone()
-        
+
         if result and result[0]:
             customer_id = result[0]
         else:
@@ -2200,38 +2292,91 @@ def create_checkout_session():
                 metadata={'user_id': current_user.id}
             )
             customer_id = customer.id
-            
+
             # Save customer ID
             cursor.execute(
                 "UPDATE users SET stripe_customer_id = ? WHERE id = ?",
                 (customer_id, current_user.id)
             )
             conn.commit()
-        
+
         conn.close()
-        
+
+        # Check if user has an active promo discount
+        promo_discount = get_user_promo_discount(current_user.id)
+        discounts = []
+
+        if promo_discount:
+            # Create Stripe coupon for this promo code
+            coupon_id = create_stripe_coupon_for_promo(
+                promo_discount['promo_code'],
+                promo_discount['discount_type'],
+                promo_discount['discount_value']
+            )
+
+            if coupon_id:
+                discounts = [{'coupon': coupon_id}]
+                print(f"✅ Applying discount to checkout: {promo_discount['promo_code']} - {promo_discount['discount_type']} {promo_discount['discount_value']}")
+            else:
+                print(f"⚠️  Failed to create Stripe coupon, proceeding without discount")
+
         # Create checkout session
-        checkout_session = stripe.checkout.Session.create(
-            customer=customer_id,
-            payment_method_types=['card'],
-            line_items=[{
+        session_params = {
+            'customer': customer_id,
+            'payment_method_types': ['card'],
+            'line_items': [{
                 'price': price_id,
                 'quantity': 1,
             }],
-            mode='subscription',
-            success_url=request.host_url + 'success?session_id={CHECKOUT_SESSION_ID}',
-            cancel_url=request.host_url + 'cancel',
-            metadata={
+            'mode': 'subscription',
+            'success_url': request.host_url + 'success?session_id={CHECKOUT_SESSION_ID}',
+            'cancel_url': request.host_url + 'cancel',
+            'metadata': {
                 'user_id': current_user.id,
                 'plan': plan_name
             }
-        )
-        
+        }
+
+        # Add discounts if available
+        if discounts:
+            session_params['discounts'] = discounts
+
+        checkout_session = stripe.checkout.Session.create(**session_params)
+
         return redirect(checkout_session.url)
         
     except Exception as e:
         print(f"Error creating checkout session: {str(e)}")
         return jsonify({'error': 'Error creating checkout session'}), 500
+
+
+@app.route('/api/get-active-discount')
+@login_required
+def get_active_discount():
+    """Get user's active promo code discount"""
+    try:
+        discount = get_user_promo_discount(current_user.id)
+
+        if discount:
+            if discount['discount_type'] == 'amount':
+                message = f"${discount['discount_value']:.2f} off"
+            elif discount['discount_type'] == 'percent':
+                message = f"{discount['discount_value']:.0f}% off"
+            else:
+                message = "Discount available"
+
+            return jsonify({
+                'has_discount': True,
+                'type': discount['discount_type'],
+                'value': discount['discount_value'],
+                'code': discount['promo_code'],
+                'message': message
+            })
+        else:
+            return jsonify({'has_discount': False})
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/success')
@@ -2323,23 +2468,27 @@ def handle_checkout_session_completed(session):
         plan = session['metadata']['plan']
         customer_id = session['customer']
         subscription_id = session['subscription']
-        
+
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
-        
+
+        # Clear promo discount after successful payment (one-time use)
         cursor.execute("""
             UPDATE users
             SET stripe_customer_id = ?,
                 stripe_subscription_id = ?,
-                subscription_tier = ?
+                subscription_tier = ?,
+                promo_discount_type = NULL,
+                promo_discount_value = NULL,
+                promo_code_applied = NULL
             WHERE id = ?
         """, (customer_id, subscription_id, plan, user_id))
-        
+
         conn.commit()
         conn.close()
-        
-        print(f"✅ User {user_id} upgraded to {plan}")
-        
+
+        print(f"✅ User {user_id} upgraded to {plan} (promo discount cleared)")
+
     except Exception as e:
         print(f"Error handling checkout session: {str(e)}")
 
