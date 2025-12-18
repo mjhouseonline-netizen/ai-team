@@ -733,6 +733,28 @@ def init_database():
         except sqlite3.OperationalError as e:
             print(f"⚠️  Could not add custom_critical_threshold column: {e}")
 
+    # Promo code discount columns
+    if 'promo_discount_type' not in user_columns:
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN promo_discount_type TEXT DEFAULT NULL")
+            print("✅ Added promo_discount_type column to users (values: 'amount', 'percent')")
+        except sqlite3.OperationalError as e:
+            print(f"⚠️  Could not add promo_discount_type column: {e}")
+
+    if 'promo_discount_value' not in user_columns:
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN promo_discount_value REAL DEFAULT NULL")
+            print("✅ Added promo_discount_value column to users")
+        except sqlite3.OperationalError as e:
+            print(f"⚠️  Could not add promo_discount_value column: {e}")
+
+    if 'promo_code_applied' not in user_columns:
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN promo_code_applied TEXT DEFAULT NULL")
+            print("✅ Added promo_code_applied column to users")
+        except sqlite3.OperationalError as e:
+            print(f"⚠️  Could not add promo_code_applied column: {e}")
+
     print("✅ Cost monitoring tables initialized")
 
     conn.commit()
@@ -786,7 +808,24 @@ def init_promo_codes_table():
             print("✅ Added single_use column")
         except sqlite3.OperationalError as e:
             print(f"Warning: Could not add single_use column: {e}")
-    
+
+    # Add discount support columns
+    if 'discount_type' not in existing_columns:
+        try:
+            print("Adding discount_type column to promo_codes table...")
+            cursor.execute("ALTER TABLE promo_codes ADD COLUMN discount_type TEXT DEFAULT 'tier'")
+            print("✅ Added discount_type column (values: 'tier', 'amount', 'percent')")
+        except sqlite3.OperationalError as e:
+            print(f"Warning: Could not add discount_type column: {e}")
+
+    if 'discount_value' not in existing_columns:
+        try:
+            print("Adding discount_value column to promo_codes table...")
+            cursor.execute("ALTER TABLE promo_codes ADD COLUMN discount_value REAL DEFAULT NULL")
+            print("✅ Added discount_value column")
+        except sqlite3.OperationalError as e:
+            print(f"Warning: Could not add discount_value column: {e}")
+
     # Create promo_code_usage table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS promo_code_usage (
@@ -2129,13 +2168,105 @@ def pricing():
                          enterprise_price_id=STRIPE_ENTERPRISE_PRICE_ID)
 
 
+# ============================================
+# STRIPE PROMO CODE / DISCOUNT HELPERS
+# ============================================
+
+def create_stripe_coupon_for_promo(promo_code, discount_type, discount_value):
+    """Create a Stripe coupon based on promo code discount
+
+    Args:
+        promo_code: The promo code string
+        discount_type: 'amount' or 'percent'
+        discount_value: Dollar amount or percentage
+
+    Returns:
+        Stripe coupon ID or None if error
+    """
+    try:
+        # Check if coupon already exists for this promo code
+        coupon_id = f"PROMO_{promo_code}"
+
+        try:
+            # Try to retrieve existing coupon
+            existing_coupon = stripe.Coupon.retrieve(coupon_id)
+            return coupon_id
+        except stripe.error.InvalidRequestError:
+            # Coupon doesn't exist, create it
+            pass
+
+        # Create new coupon based on discount type
+        if discount_type == 'amount':
+            # Dollar amount off (in cents)
+            coupon = stripe.Coupon.create(
+                id=coupon_id,
+                amount_off=int(discount_value * 100),  # Convert to cents
+                currency='usd',
+                duration='once',  # Apply only to first payment
+                name=f"{promo_code} - ${discount_value:.2f} off"
+            )
+        elif discount_type == 'percent':
+            # Percentage off
+            coupon = stripe.Coupon.create(
+                id=coupon_id,
+                percent_off=discount_value,
+                duration='once',  # Apply only to first payment
+                name=f"{promo_code} - {discount_value:.0f}% off"
+            )
+        else:
+            print(f"Invalid discount type: {discount_type}")
+            return None
+
+        print(f"✅ Created Stripe coupon: {coupon.id}")
+        return coupon.id
+
+    except Exception as e:
+        print(f"❌ Error creating Stripe coupon: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+
+def get_user_promo_discount(user_id):
+    """Get user's active promo code discount
+
+    Returns:
+        dict with discount_type, discount_value, promo_code or None
+    """
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT promo_discount_type, promo_discount_value, promo_code_applied
+            FROM users
+            WHERE id = ?
+        """, (user_id,))
+
+        result = cursor.fetchone()
+        conn.close()
+
+        if result and result[0] and result[1]:
+            return {
+                'discount_type': result[0],
+                'discount_value': result[1],
+                'promo_code': result[2]
+            }
+
+        return None
+
+    except Exception as e:
+        print(f"❌ Error getting user promo discount: {e}")
+        return None
+
+
 @app.route('/create-checkout-session', methods=['POST'])
 @login_required
 def create_checkout_session():
     """Create Stripe checkout session for subscription"""
     try:
         price_id = request.form.get('price_id')
-        
+
         # Determine plan details based on price_id
         if price_id == STRIPE_STARTER_PRICE_ID:
             plan_name = 'starter'
@@ -2145,13 +2276,13 @@ def create_checkout_session():
             plan_name = 'enterprise'
         else:
             return jsonify({'error': 'Invalid price ID'}), 400
-        
+
         # Get or create Stripe customer
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         cursor.execute("SELECT stripe_customer_id FROM users WHERE id = ?", (current_user.id,))
         result = cursor.fetchone()
-        
+
         if result and result[0]:
             customer_id = result[0]
         else:
@@ -2161,38 +2292,91 @@ def create_checkout_session():
                 metadata={'user_id': current_user.id}
             )
             customer_id = customer.id
-            
+
             # Save customer ID
             cursor.execute(
                 "UPDATE users SET stripe_customer_id = ? WHERE id = ?",
                 (customer_id, current_user.id)
             )
             conn.commit()
-        
+
         conn.close()
-        
+
+        # Check if user has an active promo discount
+        promo_discount = get_user_promo_discount(current_user.id)
+        discounts = []
+
+        if promo_discount:
+            # Create Stripe coupon for this promo code
+            coupon_id = create_stripe_coupon_for_promo(
+                promo_discount['promo_code'],
+                promo_discount['discount_type'],
+                promo_discount['discount_value']
+            )
+
+            if coupon_id:
+                discounts = [{'coupon': coupon_id}]
+                print(f"✅ Applying discount to checkout: {promo_discount['promo_code']} - {promo_discount['discount_type']} {promo_discount['discount_value']}")
+            else:
+                print(f"⚠️  Failed to create Stripe coupon, proceeding without discount")
+
         # Create checkout session
-        checkout_session = stripe.checkout.Session.create(
-            customer=customer_id,
-            payment_method_types=['card'],
-            line_items=[{
+        session_params = {
+            'customer': customer_id,
+            'payment_method_types': ['card'],
+            'line_items': [{
                 'price': price_id,
                 'quantity': 1,
             }],
-            mode='subscription',
-            success_url=request.host_url + 'success?session_id={CHECKOUT_SESSION_ID}',
-            cancel_url=request.host_url + 'cancel',
-            metadata={
+            'mode': 'subscription',
+            'success_url': request.host_url + 'success?session_id={CHECKOUT_SESSION_ID}',
+            'cancel_url': request.host_url + 'cancel',
+            'metadata': {
                 'user_id': current_user.id,
                 'plan': plan_name
             }
-        )
-        
+        }
+
+        # Add discounts if available
+        if discounts:
+            session_params['discounts'] = discounts
+
+        checkout_session = stripe.checkout.Session.create(**session_params)
+
         return redirect(checkout_session.url)
         
     except Exception as e:
         print(f"Error creating checkout session: {str(e)}")
         return jsonify({'error': 'Error creating checkout session'}), 500
+
+
+@app.route('/api/get-active-discount')
+@login_required
+def get_active_discount():
+    """Get user's active promo code discount"""
+    try:
+        discount = get_user_promo_discount(current_user.id)
+
+        if discount:
+            if discount['discount_type'] == 'amount':
+                message = f"${discount['discount_value']:.2f} off"
+            elif discount['discount_type'] == 'percent':
+                message = f"{discount['discount_value']:.0f}% off"
+            else:
+                message = "Discount available"
+
+            return jsonify({
+                'has_discount': True,
+                'type': discount['discount_type'],
+                'value': discount['discount_value'],
+                'code': discount['promo_code'],
+                'message': message
+            })
+        else:
+            return jsonify({'has_discount': False})
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/success')
@@ -2284,23 +2468,27 @@ def handle_checkout_session_completed(session):
         plan = session['metadata']['plan']
         customer_id = session['customer']
         subscription_id = session['subscription']
-        
+
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
-        
+
+        # Clear promo discount after successful payment (one-time use)
         cursor.execute("""
             UPDATE users
             SET stripe_customer_id = ?,
                 stripe_subscription_id = ?,
-                subscription_tier = ?
+                subscription_tier = ?,
+                promo_discount_type = NULL,
+                promo_discount_value = NULL,
+                promo_code_applied = NULL
             WHERE id = ?
         """, (customer_id, subscription_id, plan, user_id))
-        
+
         conn.commit()
         conn.close()
-        
-        print(f"✅ User {user_id} upgraded to {plan}")
-        
+
+        print(f"✅ User {user_id} upgraded to {plan} (promo discount cleared)")
+
     except Exception as e:
         print(f"Error handling checkout session: {str(e)}")
 
@@ -4671,32 +4859,40 @@ def generate_promo_code(length=12):
     return ''.join(secrets.choice(chars) for _ in range(length))
 
 
-def create_promo_codes(tier, count, prefix=""):
-    """Create multiple promo codes for a tier"""
+def create_promo_codes(tier, count, prefix="", discount_type="tier", discount_value=None):
+    """Create multiple promo codes for a tier or discount
+
+    Args:
+        tier: Subscription tier (for tier upgrades) or empty string for discounts
+        count: Number of codes to generate
+        prefix: Optional prefix for codes
+        discount_type: 'tier', 'amount', or 'percent'
+        discount_value: Dollar amount or percentage value (for amount/percent discounts)
+    """
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    
+
     codes = []
     for i in range(count):
         code = f"{prefix}{generate_promo_code(8)}" if prefix else generate_promo_code(12)
-        
+
         try:
             # Set max_uses = -1 for unlimited uses (default behavior)
             max_uses = -1  # -1 means unlimited uses
-            
+
             cursor.execute("""
-                INSERT INTO promo_codes (code, tier, max_uses, is_active, single_use)
-                VALUES (?, ?, ?, 1, 0)
-            """, (code, tier, max_uses))
+                INSERT INTO promo_codes (code, tier, max_uses, is_active, single_use, discount_type, discount_value)
+                VALUES (?, ?, ?, 1, 0, ?, ?)
+            """, (code, tier or 'free', max_uses, discount_type, discount_value))
             codes.append(code)
         except sqlite3.IntegrityError:
             # Code already exists, try again
             i -= 1
             continue
-    
+
     conn.commit()
     conn.close()
-    
+
     return codes
 
 # ============================================
@@ -4707,91 +4903,129 @@ def validate_promo_code(code):
     """Check if promo code is valid and available"""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    
+
     cursor.execute("""
-        SELECT id, tier, max_uses, times_used, expires_at, is_active, single_use
+        SELECT id, tier, max_uses, times_used, expires_at, is_active, single_use,
+               discount_type, discount_value
         FROM promo_codes
         WHERE code = ?
     """, (code.upper(),))
-    
+
     result = cursor.fetchone()
     conn.close()
-    
+
     if not result:
         return False, "Invalid promo code"
-    
-    promo_id, tier, max_uses, times_used, expires_at, is_active, single_use = result
-    
+
+    promo_id, tier, max_uses, times_used, expires_at, is_active, single_use, discount_type, discount_value = result
+
     if not is_active:
         return False, "This promo code is no longer active"
-    
+
     # For single-use codes, check if already used (times_used should be 0)
     if single_use and times_used >= 1:
         return False, "This promo code has already been used"
-    
+
     # For multi-use codes, check against max_uses
     # IMPORTANT: max_uses = -1 means UNLIMITED uses, so skip the check
     if not single_use and max_uses != -1 and times_used >= max_uses:
         return False, "This promo code has reached its maximum uses"
-    
+
     if expires_at:
         expiry = datetime.fromisoformat(expires_at)
         if datetime.utcnow() > expiry:
             return False, "This promo code has expired"
-    
-    return True, {'id': promo_id, 'tier': tier, 'single_use': single_use}
+
+    return True, {
+        'id': promo_id,
+        'tier': tier,
+        'single_use': single_use,
+        'discount_type': discount_type or 'tier',
+        'discount_value': discount_value
+    }
 
 
 def redeem_promo_code(code, user_id):
     """Redeem a promo code for a user"""
     # Validate code first
     is_valid, result = validate_promo_code(code)
-    
+
     if not is_valid:
         return False, result
-    
+
     promo_id = result['id']
-    tier = result['tier']
-    
+    tier = result.get('tier')
+    discount_type = result.get('discount_type', 'tier')
+    discount_value = result.get('discount_value')
+
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    
+
     try:
         # Check if user already used this code
         cursor.execute("""
             SELECT id FROM promo_code_usage
             WHERE promo_code_id = ? AND user_id = ?
         """, (promo_id, user_id))
-        
+
         if cursor.fetchone():
             conn.close()
             return False, "You have already used this promo code"
-        
+
         # Record usage
         cursor.execute("""
             INSERT INTO promo_code_usage (promo_code_id, user_id)
             VALUES (?, ?)
         """, (promo_id, user_id))
-        
+
         # Increment times_used
         cursor.execute("""
             UPDATE promo_codes
             SET times_used = times_used + 1
             WHERE id = ?
         """, (promo_id,))
-        
-        # Update user's tier
-        cursor.execute("""
-            UPDATE users
-            SET subscription_tier = ?
-            WHERE id = ?
-        """, (tier, user_id))
-        
+
+        # Apply the promo code based on discount type
+        if discount_type == 'tier':
+            # Traditional tier upgrade
+            cursor.execute("""
+                UPDATE users
+                SET subscription_tier = ?
+                WHERE id = ?
+            """, (tier, user_id))
+            success_message = tier
+
+        elif discount_type == 'amount':
+            # Dollar amount discount
+            cursor.execute("""
+                UPDATE users
+                SET promo_discount_type = 'amount',
+                    promo_discount_value = ?,
+                    promo_code_applied = ?
+                WHERE id = ?
+            """, (discount_value, code, user_id))
+            success_message = f"${discount_value:.2f} discount applied"
+
+        elif discount_type == 'percent':
+            # Percentage discount
+            cursor.execute("""
+                UPDATE users
+                SET promo_discount_type = 'percent',
+                    promo_discount_value = ?,
+                    promo_code_applied = ?
+                WHERE id = ?
+            """, (discount_value, code, user_id))
+            success_message = f"{discount_value:.0f}% discount applied"
+
+        else:
+            conn.close()
+            return False, "Invalid discount type"
+
         conn.commit()
         conn.close()
-        
-        return True, tier
-        
+
+        return True, {'type': discount_type, 'message': success_message, 'value': discount_value if discount_type != 'tier' else None}
+
     except Exception as e:
         conn.close()
         return False, str(e)
@@ -4807,21 +5041,44 @@ def api_redeem_promo_code():
     try:
         data = request.json
         code = data.get('code', '').strip().upper()
-        
+
         if not code:
             return jsonify({'error': 'Promo code required'}), 400
-        
+
         success, result = redeem_promo_code(code, current_user.id)
-        
+
         if success:
-            return jsonify({
-                'success': True,
-                'tier': result,
-                'message': f'Promo code redeemed! You now have {SUBSCRIPTION_TIERS[result]["name"]} access.'
-            }), 200
+            # Result is now a dictionary with type, message, and value
+            if isinstance(result, dict):
+                discount_type = result.get('type')
+                message = result.get('message')
+
+                if discount_type == 'tier':
+                    # Traditional tier upgrade
+                    return jsonify({
+                        'success': True,
+                        'type': 'tier',
+                        'tier': message,
+                        'message': f'Promo code redeemed! You now have {SUBSCRIPTION_TIERS[message]["name"]} access.'
+                    }), 200
+                else:
+                    # Discount promo code
+                    return jsonify({
+                        'success': True,
+                        'type': discount_type,
+                        'value': result.get('value'),
+                        'message': f'Promo code redeemed! {message} to your next subscription payment.'
+                    }), 200
+            else:
+                # Backward compatibility - old format (shouldn't happen anymore)
+                return jsonify({
+                    'success': True,
+                    'tier': result,
+                    'message': f'Promo code redeemed! You now have {SUBSCRIPTION_TIERS[result]["name"]} access.'
+                }), 200
         else:
             return jsonify({'error': result}), 400
-            
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -4944,29 +5201,45 @@ def admin_generate_promo_codes():
     if current_user.id != 1:
         print(f"Unauthorized promo code generation attempt by user {current_user.id}")
         return jsonify({'error': 'Unauthorized'}), 403
-    
+
     try:
         data = request.json
-        tier = data.get('tier', 'freeforlife')
+        tier = data.get('tier', 'free')
         count = data.get('count', 10)
         prefix = data.get('prefix', '')
-        
-        print(f"Generating {count} promo codes for tier: {tier}, prefix: {prefix}")
-        
-        if tier not in SUBSCRIPTION_TIERS:
+        discount_type = data.get('discount_type', 'tier')
+        discount_value = data.get('discount_value')
+
+        print(f"Generating {count} promo codes - Type: {discount_type}, Tier: {tier}, Prefix: {prefix}")
+
+        # Validate discount type
+        if discount_type not in ['tier', 'amount', 'percent']:
+            return jsonify({'error': 'Invalid discount type. Must be tier, amount, or percent'}), 400
+
+        # Validate tier for tier-based codes
+        if discount_type == 'tier' and tier not in SUBSCRIPTION_TIERS:
             print(f"Invalid tier requested: {tier}")
             return jsonify({'error': 'Invalid tier'}), 400
-        
-        codes = create_promo_codes(tier, count, prefix)
-        
+
+        # Validate discount value for amount/percent codes
+        if discount_type in ['amount', 'percent']:
+            if discount_value is None or discount_value <= 0:
+                return jsonify({'error': 'Discount value must be greater than 0'}), 400
+            if discount_type == 'percent' and discount_value > 100:
+                return jsonify({'error': 'Percentage discount cannot exceed 100%'}), 400
+
+        codes = create_promo_codes(tier, count, prefix, discount_type, discount_value)
+
         print(f"✅ Successfully generated {len(codes)} promo codes")
-        
+
         return jsonify({
             'success': True,
             'codes': codes,
-            'count': len(codes)
+            'count': len(codes),
+            'discount_type': discount_type,
+            'discount_value': discount_value
         }), 200
-        
+
     except Exception as e:
         print(f"❌ Error generating promo codes: {str(e)}")
         import traceback
