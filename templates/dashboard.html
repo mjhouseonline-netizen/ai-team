@@ -34,6 +34,20 @@
             --text-secondary: #6b7280;
             --border: #e5e7eb;
             --shadow: rgba(0, 0, 0, 0.1);
+
+            /* Fluid sizing variables */
+            --sidebar-width: clamp(200px, 20vw, 280px);
+            --sidebar-collapsed-width: 60px;
+            --header-height: clamp(50px, 8vh, 70px);
+            --spacing-xs: clamp(4px, 0.5vw, 8px);
+            --spacing-sm: clamp(8px, 1vw, 12px);
+            --spacing-md: clamp(12px, 1.5vw, 20px);
+            --spacing-lg: clamp(20px, 2.5vw, 30px);
+            --font-xs: clamp(10px, 1.5vw, 12px);
+            --font-sm: clamp(12px, 1.8vw, 14px);
+            --font-md: clamp(14px, 2vw, 16px);
+            --font-lg: clamp(16px, 2.5vw, 20px);
+            --font-xl: clamp(20px, 3vw, 28px);
         }
 
         body {
@@ -46,7 +60,8 @@
             overflow: hidden;
             height: 100vh;
             width: 100vw;
-            position: relative; /* For absolute children */
+            position: relative;
+            font-size: var(--font-md);
         }
 
         /* ================================================
@@ -58,7 +73,7 @@
             left: 0;
             top: 0;
             bottom: 0;
-            width: 280px;
+            width: var(--sidebar-width);
             background: var(--sidebar-bg);
             color: white;
             display: flex;
@@ -66,51 +81,52 @@
             border-right: 1px solid #333;
             z-index: 100;
             overflow-y: auto;
+            transition: width 0.3s ease;
         }
 
         .sidebar-header {
-            padding: 16px 20px;
+            padding: var(--spacing-md) var(--spacing-lg);
             border-bottom: 1px solid #333;
         }
 
         .sidebar-logo {
-            font-size: 20px;
+            font-size: var(--font-lg);
             font-weight: 700;
             color: white;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: var(--spacing-sm);
         }
 
         .sidebar-subtitle {
-            font-size: 12px;
+            font-size: var(--font-xs);
             color: #888;
-            margin-top: 4px;
+            margin-top: var(--spacing-xs);
         }
 
         .agents-section {
             flex: 1;
             overflow-y: auto;
-            padding: 12px 8px;
+            padding: var(--spacing-sm) var(--spacing-xs);
         }
 
         .section-title {
-            font-size: 11px;
+            font-size: var(--font-xs);
             font-weight: 600;
             color: #888;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            padding: 8px 12px;
-            margin-top: 8px;
+            padding: var(--spacing-xs) var(--spacing-sm);
+            margin-top: var(--spacing-xs);
         }
 
         .agent-item {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 10px 12px;
-            margin: 4px 0;
-            border-radius: 8px;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm);
+            margin: var(--spacing-xs) 0;
+            border-radius: clamp(6px, 1vw, 8px);
             cursor: pointer;
             transition: all 0.2s;
             position: relative;
@@ -125,13 +141,13 @@
         }
 
         .agent-avatar {
-            width: 36px;
-            height: 36px;
+            width: clamp(32px, 5vw, 40px);
+            height: clamp(32px, 5vw, 40px);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 18px;
+            font-size: clamp(16px, 2.5vw, 20px);
             flex-shrink: 0;
             background: linear-gradient(135deg, #667eea, #764ba2);
             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
@@ -156,14 +172,14 @@
         }
 
         .agent-name {
-            font-size: 14px;
+            font-size: var(--font-sm);
             font-weight: 500;
             color: white;
             margin-bottom: 2px;
         }
 
         .agent-role {
-            font-size: 11px;
+            font-size: var(--font-xs);
             color: #888;
             white-space: nowrap;
             overflow: hidden;
@@ -256,7 +272,7 @@
 
         .main-content {
             position: absolute;
-            left: 280px; /* Width of sidebar */
+            left: var(--sidebar-width);
             right: 0;
             top: 0;
             bottom: 0;
@@ -264,24 +280,26 @@
             grid-template-rows: auto 1fr auto;
             background: var(--bg-main);
             overflow: hidden;
-            z-index: 1; /* Ensure it's visible */
+            z-index: 1;
+            width: calc(100vw - var(--sidebar-width));
+            transition: left 0.3s ease, width 0.3s ease;
         }
-        
+
         /* Force grid layout for guest mode with absolute positioning */
         body.guest-mode .main-content {
-            position: fixed !important;  /* Changed from absolute to fixed */
-            left: 280px !important;
+            position: fixed !important;
+            left: var(--sidebar-width) !important;
             right: 0 !important;
             top: 0 !important;
             bottom: 0 !important;
             display: grid !important;
             grid-template-rows: auto 1fr auto !important;
-            z-index: 1000 !important;  /* Much higher z-index */
+            z-index: 1000 !important;
             background: #ffffff !important;
             visibility: visible !important;
             opacity: 1 !important;
-            width: calc(100vw - 280px) !important;
-            min-width: 500px !important;
+            width: calc(100vw - var(--sidebar-width)) !important;
+            min-width: clamp(300px, 50vw, 500px) !important;
             height: 100vh !important;
         }
         
@@ -1910,48 +1928,68 @@
         }
 
         @media (max-width: 768px) {
+            :root {
+                --sidebar-width: min(70vw, 280px);
+            }
+
+            .sidebar {
+                position: fixed;
+                left: calc(-1 * var(--sidebar-width));
+                transition: left 0.3s ease;
+            }
+
+            .sidebar.active {
+                left: 0;
+            }
+
             .history-dropdown {
-                right: 20px;
-                left: 20px;
+                right: var(--spacing-md);
+                left: var(--spacing-md);
                 min-width: auto;
             }
 
             /* Improve main content layout on mobile */
             .main-content {
-                margin-left: 0;
-                padding: 60px 15px 20px 15px;
+                left: 0 !important;
+                width: 100vw !important;
+                padding: var(--spacing-lg) var(--spacing-md) var(--spacing-md);
+            }
+
+            body.guest-mode .main-content {
+                left: 0 !important;
+                width: 100vw !important;
             }
 
             /* Better header layout */
             .header {
-                padding: 12px 15px;
+                padding: var(--spacing-sm) var(--spacing-md);
                 flex-wrap: wrap;
             }
 
             .agent-header {
                 flex-direction: column;
                 align-items: flex-start;
-                gap: 10px;
+                gap: var(--spacing-sm);
             }
 
             /* Stack header buttons */
             .header-controls {
                 width: 100%;
                 justify-content: flex-start;
-                gap: 8px;
+                gap: var(--spacing-xs);
                 flex-wrap: wrap;
             }
 
             /* Share links section responsive */
             .share-links-section {
-                padding: 12px;
+                padding: var(--spacing-sm);
             }
 
             .share-link-item {
                 flex-direction: column;
                 align-items: flex-start;
-                gap: 10px;
-                padding: 12px;
+                gap: var(--spacing-sm);
+                padding: var(--spacing-sm);
             }
 
             .share-link-info {
@@ -1959,27 +1997,16 @@
             }
 
             .share-link-url {
-                font-size: 10px;
+                font-size: var(--font-xs);
                 word-break: break-all;
             }
 
             .copy-link-btn {
                 width: 100%;
-                padding: 8px;
+                padding: var(--spacing-xs) var(--spacing-sm);
             }
 
-            /* Better agent items on mobile */
-            .agent-item {
-                padding: 12px 10px;
-            }
-
-            .agent-name {
-                font-size: 13px;
-            }
-
-            .agent-role {
-                font-size: 11px;
-            }
+            /* Agent items already use fluid sizing */
 
             /* Modal improvements for mobile */
             #shareAgentModal > div {
@@ -2010,70 +2037,44 @@
 
         /* Tablet-specific (768px - 1024px) */
         @media (min-width: 769px) and (max-width: 1024px) {
-            .main-content {
-                margin-left: 280px;
-                padding: 20px 30px;
+            :root {
+                --sidebar-width: clamp(220px, 25vw, 260px);
             }
 
             .share-links-section {
-                padding: 15px;
-            }
-
-            .share-link-item {
-                padding: 12px 15px;
+                padding: var(--spacing-md);
             }
 
             /* Adjust share modal for tablets */
             #shareAgentModal > div {
-                max-width: 600px;
-                padding: 35px !important;
+                max-width: min(600px, 90vw);
+                padding: var(--spacing-lg) !important;
             }
         }
 
         /* Small mobile devices (< 480px) */
         @media (max-width: 480px) {
+            :root {
+                --sidebar-width: 85vw;
+                --font-xs: 10px;
+                --font-sm: 12px;
+                --font-md: 13px;
+            }
+
             .sidebar {
-                width: 100%;
-                left: -100%;
+                left: -100vw;
             }
 
             .sidebar.active {
                 left: 0;
-            }
-
-            .main-content {
-                padding: 50px 10px 15px 10px;
-            }
-
-            .header {
-                padding: 10px;
-            }
-
-            /* Very compact agent items */
-            .agent-item {
-                padding: 10px 8px;
-            }
-
-            .agent-avatar {
-                width: 35px;
-                height: 35px;
-                font-size: 18px;
+                width: 85vw;
             }
 
             /* Share modal extra compact */
             #shareAgentModal > div {
-                padding: 20px !important;
-                margin: 5px;
-            }
-
-            /* Smaller buttons */
-            .copy-link-btn {
-                font-size: 13px;
-                padding: 10px;
-            }
-
-            .share-link-url {
-                font-size: 9px;
+                padding: var(--spacing-md) !important;
+                margin: var(--spacing-xs);
+                font-size: var(--font-sm);
             }
         }
     </style>
