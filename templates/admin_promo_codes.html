@@ -183,12 +183,29 @@
             <h2>Generate New Promo Codes</h2>
             
             <div class="form-group">
+                <label>Promo Code Type:</label>
+                <select id="discountType" onchange="toggleDiscountFields()">
+                    <option value="tier">Tier Upgrade</option>
+                    <option value="amount">Dollar Amount Discount</option>
+                    <option value="percent">Percentage Discount</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="tierGroup">
                 <label>Tier:</label>
                 <select id="tier">
                     <option value="freeforlife">Free For Life (Unlimited)</option>
                     <option value="starter">Starter (100 msgs/day)</option>
                     <option value="pro">Pro (500 msgs/day)</option>
                 </select>
+            </div>
+
+            <div class="form-group" id="discountValueGroup" style="display: none;">
+                <label id="discountValueLabel">Discount Amount ($):</label>
+                <input type="number" id="discountValue" placeholder="e.g., 10" min="0" step="0.01">
+                <small style="color: #7f8c8d; display: block; margin-top: 5px;">
+                    Amount: Enter dollars (e.g., 10 for $10 off) | Percent: Enter number (e.g., 20 for 20% off)
+                </small>
             </div>
 
             <div class="form-group">
@@ -226,10 +243,33 @@
     <script>
         let generatedCodesArray = [];
 
+        function toggleDiscountFields() {
+            const discountType = document.getElementById('discountType').value;
+            const tierGroup = document.getElementById('tierGroup');
+            const discountValueGroup = document.getElementById('discountValueGroup');
+            const discountValueLabel = document.getElementById('discountValueLabel');
+
+            if (discountType === 'tier') {
+                tierGroup.style.display = 'block';
+                discountValueGroup.style.display = 'none';
+            } else {
+                tierGroup.style.display = 'none';
+                discountValueGroup.style.display = 'block';
+
+                if (discountType === 'amount') {
+                    discountValueLabel.textContent = 'Discount Amount ($):';
+                } else if (discountType === 'percent') {
+                    discountValueLabel.textContent = 'Discount Percentage (%):';
+                }
+            }
+        }
+
         async function generateCodes() {
+            const discountType = document.getElementById('discountType').value;
             const tier = document.getElementById('tier').value;
             const count = parseInt(document.getElementById('count').value);
             const prefix = document.getElementById('prefix').value.trim();
+            const discountValue = parseFloat(document.getElementById('discountValue').value);
             const messageDiv = document.getElementById('generateMessage');
 
             if (count < 1 || count > 100) {
@@ -237,30 +277,60 @@
                 return;
             }
 
+            // Validate discount value for amount/percent types
+            if (discountType !== 'tier') {
+                if (!discountValue || discountValue <= 0) {
+                    messageDiv.innerHTML = '<p class="error">❌ Please enter a valid discount value</p>';
+                    return;
+                }
+                if (discountType === 'percent' && discountValue > 100) {
+                    messageDiv.innerHTML = '<p class="error">❌ Percentage discount cannot exceed 100%</p>';
+                    return;
+                }
+            }
+
             messageDiv.innerHTML = '<p style="color: #7f8c8d;">⏳ Generating codes...</p>';
 
             try {
+                const requestBody = {
+                    tier,
+                    count,
+                    prefix,
+                    discount_type: discountType,
+                    discount_value: discountType !== 'tier' ? discountValue : null
+                };
+
                 const response = await fetch('/api/admin/generate-promo-codes', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     credentials: 'include',
-                    body: JSON.stringify({ tier, count, prefix })
+                    body: JSON.stringify(requestBody)
                 });
 
                 const data = await response.json();
 
                 if (response.ok && data.success) {
                     generatedCodesArray = data.codes;
+
+                    let discountLabel = '';
+                    if (discountType === 'tier') {
+                        discountLabel = tier.toUpperCase();
+                    } else if (discountType === 'amount') {
+                        discountLabel = `$${discountValue} OFF`;
+                    } else if (discountType === 'percent') {
+                        discountLabel = `${discountValue}% OFF`;
+                    }
+
                     messageDiv.innerHTML = `<p class="success">✅ Generated ${data.count} codes!</p>`;
-                    
+
                     // Display codes
                     const codesDisplay = document.getElementById('generatedCodes');
                     const codesList = document.getElementById('codesList');
-                    
+
                     codesList.innerHTML = data.codes.map(code => `
                         <div class="code-item">
                             <span class="code-text">${code}</span>
-                            <span class="code-tier">${tier.toUpperCase()}</span>
+                            <span class="code-tier">${discountLabel}</span>
                         </div>
                     `).join('');
                     
