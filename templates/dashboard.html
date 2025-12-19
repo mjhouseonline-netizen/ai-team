@@ -3975,6 +3975,9 @@
             loadConversations();
             loadCustomAgents();  // Load custom agents on page load
             loadUsageStats();     // Load usage statistics
+
+            // Ensure all dropdowns are closed on page load
+            closeAllDropdowns();
         });
 
         // ============================================
