@@ -3291,8 +3291,8 @@ def upload_file():
 # CONVERSATION HISTORY & MULTI-MODEL ROUTING
 # ============================================
 
-def get_conversation_history(user_id, agent_name, limit=20):
-    """Get recent conversation history for context"""
+def get_conversation_history(user_id, agent_name, limit=10):
+    """Get recent conversation history for context (default 10 for speed)"""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
@@ -3704,12 +3704,12 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
                 conn.close()
                 return jsonify({'error': f'Agent "{agent}" not found'}), 400
         
-        # Get conversation history (last 20 messages for context)
+        # Get conversation history (last 10 messages for context - optimized for speed)
         # Guests don't have history (not logged in)
         if is_guest:
             history = []
         else:
-            history = get_conversation_history(current_user.id, agent, limit=20)
+            history = get_conversation_history(current_user.id, agent, limit=10)
 
         # Handle file uploads from FormData
         file_info = None
