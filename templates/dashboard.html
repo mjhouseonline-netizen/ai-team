@@ -2270,11 +2270,6 @@
                 if (mainContent) {
                     console.log('📍 Main content element found, forcing styles...');
                     mainContent.style.cssText = `
-                        position: absolute !important;
-                        left: 280px !important;
-                        right: 0 !important;
-                        top: 0 !important;
-                        bottom: 0 !important;
                         background: #ffffff !important;
                         display: grid !important;
                         grid-template-rows: auto 1fr auto !important;
@@ -2282,7 +2277,7 @@
                         opacity: 1 !important;
                         z-index: 10 !important;
                     `;
-                    console.log('✅ Main-content forced visible at left:280px with grid layout');
+                    console.log('✅ Main-content forced visible with grid layout (positioning handled by CSS)');
                     console.log('📐 Computed style:', window.getComputedStyle(mainContent).display);
                 }
                 
