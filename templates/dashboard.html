@@ -1907,22 +1907,27 @@
 
         /* Share Links Section */
         .share-links-section {
-            padding: 15px;
+            padding: var(--spacing-md);
             background: #f9fafb;
-            border-radius: 12px;
-            margin: 15px 0;
+            border-radius: clamp(8px, 2vw, 12px);
+            margin: var(--spacing-md) 0;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .share-link-item {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 10px;
+            padding: var(--spacing-sm);
             background: white;
-            border-radius: 8px;
-            margin-bottom: 8px;
+            border-radius: clamp(6px, 1.5vw, 8px);
+            margin-bottom: var(--spacing-xs);
             border: 1px solid #e5e7eb;
             transition: all 0.2s;
+            gap: var(--spacing-xs);
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .share-link-item:hover {
@@ -1932,52 +1937,59 @@
         .share-link-info {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: var(--spacing-sm);
             flex: 1;
             min-width: 0;
+            overflow: hidden;
         }
 
         .share-link-icon {
-            font-size: 20px;
+            font-size: clamp(16px, 3vw, 20px);
             flex-shrink: 0;
         }
 
         .share-link-details {
             flex: 1;
             min-width: 0;
+            overflow: hidden;
         }
 
         .share-link-name {
             font-weight: 600;
             color: #1f2937;
-            font-size: 13px;
+            font-size: var(--font-sm);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .share-link-url {
-            font-size: 10px;
+            font-size: var(--font-xs);
             color: #6b7280;
             font-family: monospace;
             background: #f3f4f6;
-            padding: 3px 6px;
-            border-radius: 4px;
-            margin-top: 3px;
+            padding: 2px 4px;
+            border-radius: 3px;
+            margin-top: 2px;
             display: block;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            max-width: 100%;
         }
 
         .copy-link-btn {
             background: #10a37f;
             color: white;
             border: none;
-            padding: 6px 12px;
-            border-radius: 6px;
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: clamp(4px, 1vw, 6px);
             cursor: pointer;
-            font-size: 11px;
+            font-size: var(--font-xs);
             font-weight: 600;
             transition: all 0.2s;
             flex-shrink: 0;
+            white-space: nowrap;
         }
 
         .copy-link-btn:hover {
@@ -2323,18 +2335,11 @@
                 if (mainContent) {
                     mainContent.addEventListener('click', function(event) {
                         // Close all dropdowns when clicking on main content
-                        const userDropdown = document.getElementById('userDropdown');
-                        const historyDropdown = document.getElementById('historyDropdownMenu');
-
-                        // Check if click is NOT on the dropdown button itself
-                        if (!event.target.closest('.user-menu-btn') && !event.target.closest('.history-btn')) {
-                            if (userDropdown) {
-                                userDropdown.classList.remove('show');
-                            }
-                            if (historyDropdown) {
-                                historyDropdown.style.display = 'none';
-                                historyDropdown.classList.remove('active');
-                            }
+                        // (The global click handler will take care of this, but this provides extra coverage)
+                        if (!event.target.closest('.user-menu-btn') &&
+                            !event.target.closest('.history-btn') &&
+                            !event.target.closest('.menu-btn')) {
+                            closeAllDropdowns();
                         }
                     });
                     console.log('✅ Added dropdown close handler to main-content');
@@ -2935,30 +2940,79 @@
             if (container && !container.contains(event.target)) {
                 closeInputOptions();
             }
-            
-            // Also handle user dropdown
+
+            // Check if click is outside all dropdown triggers and menus
             const userMenu = document.querySelector('.user-menu');
-            const userDropdown = document.getElementById('userDropdown');
-            if (userMenu && userDropdown && !userMenu.contains(event.target) && userDropdown.classList.contains('show')) {
-                userDropdown.classList.remove('show');
+            const menuBtn = document.querySelector('.menu-btn');
+            const historyBtn = document.getElementById('historyBtn');
+
+            const clickedOnDropdownTrigger = (
+                (userMenu && userMenu.contains(event.target)) ||
+                (menuBtn && menuBtn.contains(event.target)) ||
+                (historyBtn && historyBtn.contains(event.target))
+            );
+
+            const clickedInsideDropdown = (
+                event.target.closest('.user-dropdown') ||
+                event.target.closest('.dropdown-menu') ||
+                event.target.closest('.history-dropdown')
+            );
+
+            // If clicked outside all triggers and dropdowns, close all
+            if (!clickedOnDropdownTrigger && !clickedInsideDropdown) {
+                closeAllDropdowns();
             }
         });
 
         // User Profile Dropdown Toggle
         function toggleUserMenu(event) {
             if (event) event.stopPropagation(); // Prevent event bubbling
+
+            // Close all other dropdowns first
+            closeAllDropdowns('userDropdown');
+
             const dropdown = document.getElementById('userDropdown');
             dropdown.classList.toggle('show');
             console.log('🔘 Dropdown toggled:', dropdown.classList.contains('show'));
         }
 
-        // Close user dropdown on escape key
+        // Main Menu Dropdown Toggle (for the ⋮ button)
+        function toggleMenu() {
+            event.stopPropagation();
+
+            // Close all other dropdowns first
+            closeAllDropdowns('dropdownMenu');
+
+            const dropdown = document.getElementById('dropdownMenu');
+            dropdown.classList.toggle('active');
+        }
+
+        // Helper function to close all dropdowns except the specified one
+        function closeAllDropdowns(exceptId = null) {
+            // Close user dropdown
+            const userDropdown = document.getElementById('userDropdown');
+            if (userDropdown && userDropdown.id !== exceptId) {
+                userDropdown.classList.remove('show');
+            }
+
+            // Close main menu dropdown
+            const mainMenu = document.getElementById('dropdownMenu');
+            if (mainMenu && mainMenu.id !== exceptId) {
+                mainMenu.classList.remove('active');
+            }
+
+            // Close history dropdown
+            const historyDropdown = document.getElementById('historyDropdownMenu');
+            if (historyDropdown && historyDropdown.id !== exceptId) {
+                historyDropdown.style.display = 'none';
+                historyDropdown.classList.remove('active');
+            }
+        }
+
+        // Close all dropdowns on escape key
         document.addEventListener('keydown', function(event) {
             if (event.key === 'Escape') {
-                const dropdown = document.getElementById('userDropdown');
-                if (dropdown) {
-                    dropdown.classList.remove('show');
-                }
+                closeAllDropdowns();
             }
         });
 
@@ -3706,20 +3760,21 @@
         function toggleHistoryDropdown() {
             const dropdown = document.getElementById('historyDropdownMenu');
             if (!dropdown) return;
-            
+
             const isVisible = dropdown.style.display === 'block';
-            
-            // Hide all dropdowns first
-            document.querySelectorAll('.dropdown-menu, .user-dropdown').forEach(d => {
-                d.style.display = 'none';
-                d.classList.remove('active', 'show');
-            });
-            
+
+            // Close all other dropdowns first
+            closeAllDropdowns('historyDropdownMenu');
+
             if (!isVisible) {
                 dropdown.style.display = 'block';
                 dropdown.classList.add('active');
                 // Load latest conversations
                 loadConversations();
+            } else {
+                // If already visible, close it
+                dropdown.style.display = 'none';
+                dropdown.classList.remove('active');
             }
         }
 
@@ -3732,17 +3787,6 @@
                 showNotification('Failed to copy link', 'error');
             });
         }
-
-        // Close dropdown when clicking outside
-        document.addEventListener('click', function(event) {
-            const historyBtn = document.getElementById('historyBtn');
-            const dropdown = document.getElementById('historyDropdownMenu');
-            
-            if (historyBtn && dropdown && !historyBtn.contains(event.target) && !dropdown.contains(event.target)) {
-                dropdown.style.display = 'none';
-                dropdown.classList.remove('active');
-            }
-        });
 
         // Load conversations on page load
         document.addEventListener('DOMContentLoaded', function() {
