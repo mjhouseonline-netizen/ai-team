@@ -3651,7 +3651,9 @@ def chat():
         was_auto_routed = False
 
         # Auto-route on first message if confidence is high and different from current agent
-        if suggested_agent and suggested_agent != agent and confidence >= 4 and is_first_message:
+        # BUT: Don't auto-route if current agent is a custom agent (user explicitly chose it)
+        is_custom_agent = agent not in AGENT_PERSONALITIES
+        if suggested_agent and suggested_agent != agent and confidence >= 4 and is_first_message and not is_custom_agent:
             print(f"🎯 Auto-routing: {agent} → {suggested_agent} (confidence: {confidence})")
             agent = suggested_agent  # Switch to the better agent
             was_auto_routed = True
