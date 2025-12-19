@@ -5324,6 +5324,11 @@ def get_custom_agents():
             select_columns += ", share_code"
         select_columns += ", created_at"
         
+        # TODO: FUTURE FEATURE - Privacy control for custom agents
+        # Currently shows all user's agents regardless of is_public flag
+        # When implementing privacy: also check is_public flag or allow user to toggle visibility
+        # Could add: WHERE user_id = ? AND (is_public = 1 OR some_condition)
+
         cursor.execute(f"""
             SELECT {select_columns}
             FROM custom_agents
@@ -5377,6 +5382,16 @@ def get_custom_agents():
 @login_required
 def create_custom_agent():
     """Create a new custom agent"""
+
+    # TODO: FUTURE FEATURE - Restrict custom agent creation to paid users only
+    # Uncomment when ready to implement:
+    # if current_user.subscription_tier == 'free':
+    #     return jsonify({
+    #         'error': 'Custom agent creation requires a paid plan',
+    #         'message': 'Upgrade to Pro or Premium to create custom agents',
+    #         'upgrade_url': '/pricing'
+    #     }), 403
+
     try:
         data = request.json
         name = data.get('name')
@@ -5425,7 +5440,14 @@ def create_custom_agent():
         # Generate unique share code
         import secrets
         share_code = secrets.token_urlsafe(12)
-        
+
+        # TODO: FUTURE FEATURE - Make custom agents private by default
+        # Change is_public from 1 (public) to 0 (private)
+        # Only creator and users with shareable link should access
+        # Uncomment when ready:
+        # is_public = 0  # Private by default
+        # Then change the INSERT to use variable instead of hardcoded 1
+
         # Use description column (not role)
         cursor.execute("""
             INSERT INTO custom_agents (user_id, name, description, emoji, personality, system_prompt, share_code, is_public)
