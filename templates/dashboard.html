@@ -583,18 +583,22 @@
             background: white;
             border-radius: 10px;
             box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-            opacity: 0;
-            visibility: hidden;
+            opacity: 0 !important;
+            visibility: hidden !important;
             transform: translateY(-10px);
             transition: all 0.2s;
             z-index: 1000;
             border: 1px solid var(--border);
+            pointer-events: none;
+            display: none;
         }
 
         .user-dropdown.show {
-            opacity: 1;
-            visibility: visible;
+            opacity: 1 !important;
+            visibility: visible !important;
             transform: translateY(0);
+            pointer-events: auto;
+            display: block;
         }
 
         .dropdown-user-header {
@@ -2184,7 +2188,7 @@
         }
     </style>
 </head>
-<body {% if is_guest %}class="guest-mode" style="background: #f0f0f0 !important; overflow: auto !important;"{% endif %}>
+<body {% if is_guest %}class="guest-mode" style="background: #ffffff !important; overflow: auto !important;"{% endif %}>
     {% if is_guest %}
     <script>
         console.log('🎯 GUEST MODE ACTIVE - Starting visibility enforcement');
