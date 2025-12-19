@@ -3195,8 +3195,8 @@
             // Get currently selected agent from sidebar
             const activeAgent = document.querySelector('.agent-item.active');
             if (activeAgent) {
-                const agentName = activeAgent.querySelector('strong');
-                return agentName ? agentName.textContent : 'Luna';
+                const agentName = activeAgent.querySelector('.agent-name');
+                return agentName ? agentName.textContent.trim() : 'Luna';
             }
             return 'Luna'; // Default
         }
