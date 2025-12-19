@@ -359,6 +359,13 @@
             width: calc(100vw - var(--sidebar-width)) !important;
             min-width: clamp(300px, 50vw, 500px) !important;
             height: 100vh !important;
+            transition: left 0.3s ease, width 0.3s ease !important;
+        }
+
+        /* Guest mode with collapsed sidebar */
+        body.guest-mode .sidebar.collapsed ~ .main-content {
+            left: var(--sidebar-collapsed-width) !important;
+            width: calc(100vw - var(--sidebar-collapsed-width)) !important;
         }
         
         body.guest-mode .header {
@@ -1913,6 +1920,9 @@
             margin: var(--spacing-md) 0;
             width: 100%;
             box-sizing: border-box;
+            max-height: 400px;
+            overflow-y: auto;
+            overflow-x: hidden;
         }
 
         .share-link-item {
@@ -1976,6 +1986,15 @@
             text-overflow: ellipsis;
             white-space: nowrap;
             max-width: 100%;
+            max-height: 0;
+            opacity: 0;
+            transition: max-height 0.3s ease, opacity 0.3s ease, margin-top 0.3s ease;
+        }
+
+        .share-link-item:hover .share-link-url {
+            max-height: 50px;
+            opacity: 1;
+            margin-top: 4px;
         }
 
         .copy-link-btn {
@@ -2077,6 +2096,17 @@
             }
 
             /* Agent items already use fluid sizing */
+
+            /* Make custom agent buttons always visible on mobile (touch screens) */
+            .custom-agent-item .share-agent-btn,
+            .custom-agent-item .delete-agent-btn {
+                opacity: 0.7;
+            }
+
+            .custom-agent-item:active .share-agent-btn,
+            .custom-agent-item:active .delete-agent-btn {
+                opacity: 1;
+            }
 
             /* Modal improvements for mobile */
             #shareAgentModal > div {
@@ -2587,7 +2617,7 @@
     <!-- END SIDEBAR - Main content should start here -->
 
     <!-- Main Content -->
-    <div class="main-content" {% if is_guest %}style="position: absolute !important; left: 280px !important; right: 0 !important; top: 0 !important; bottom: 0 !important; display: grid !important; grid-template-rows: auto 1fr auto !important; background: #ffffff !important; z-index: 10 !important; visibility: visible !important; opacity: 1 !important;"{% endif %}>
+    <div class="main-content" id="mainContent" {% if is_guest %}style="position: absolute !important; right: 0 !important; top: 0 !important; bottom: 0 !important; display: grid !important; grid-template-rows: auto 1fr auto !important; background: #ffffff !important; z-index: 10 !important; visibility: visible !important; opacity: 1 !important;"{% endif %}>
         <!-- Header -->
         <div class="header" {% if is_guest %}style="grid-row: 1 !important; background: #ffffff !important; display: flex !important; position: relative !important; z-index: 20 !important; visibility: visible !important; opacity: 1 !important; padding: 12px 24px !important; border-bottom: 1px solid #e5e7eb !important;"{% endif %}>
             <div class="header-left">
