@@ -351,7 +351,6 @@
         /* Force grid layout for guest mode with absolute positioning */
         body.guest-mode .main-content {
             position: fixed !important;
-            left: var(--sidebar-width) !important;
             right: 0 !important;
             top: 0 !important;
             bottom: 0 !important;
@@ -361,16 +360,19 @@
             background: #ffffff !important;
             visibility: visible !important;
             opacity: 1 !important;
-            width: calc(100vw - var(--sidebar-width)) !important;
-            min-width: clamp(300px, 50vw, 500px) !important;
             height: 100vh !important;
             transition: left 0.3s ease, width 0.3s ease !important;
+            /* Default expanded state */
+            left: var(--sidebar-width) !important;
+            width: calc(100vw - var(--sidebar-width)) !important;
+            min-width: clamp(300px, 50vw, 500px) !important;
         }
 
-        /* Guest mode with collapsed sidebar */
+        /* Guest mode with collapsed sidebar - MUST come after default to override */
         body.guest-mode .sidebar.collapsed ~ .main-content {
             left: var(--sidebar-collapsed-width) !important;
             width: calc(100vw - var(--sidebar-collapsed-width)) !important;
+            min-width: 300px !important;
         }
         
         body.guest-mode .header {
