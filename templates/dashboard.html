@@ -4567,10 +4567,19 @@ Please provide your response following these guidelines.`;
         }
 
         function createCustomAgent() {
+            // TODO: FUTURE FEATURE - Check subscription tier before creating agent
+            // Add client-side check for better UX (backend check is primary security)
+            // Uncomment when ready:
+            // if (userSubscriptionTier === 'free') {
+            //     showNotification('Upgrade to Pro or Premium to create custom agents', 'error');
+            //     window.location.href = '/pricing';
+            //     return;
+            // }
+
             const name = document.getElementById('customAgentName').value.trim();
             const description = document.getElementById('customAgentDesc').value.trim();
             const personality = document.getElementById('customAgentPersonality').value.trim();
-            
+
             if (!name || !description || !personality) {
                 alert('Please fill in all fields!');
                 return;
