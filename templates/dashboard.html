@@ -107,6 +107,11 @@
             display: none;
         }
 
+        /* Hide shareable links section when sidebar is collapsed */
+        .sidebar.collapsed .share-links-section {
+            display: none;
+        }
+
         /* Sidebar toggle button - always visible */
         .sidebar-toggle {
             position: fixed;
@@ -2522,9 +2527,11 @@
 
             {% if not is_guest %}
             <!-- Shareable Agent Links - Hidden for guests -->
-            <div class="section-title" style="margin-top: 20px;">🔗 Shareable Links</div>
-            
-            <div class="share-links-section">
+            <div class="section-title" style="margin-top: 20px; cursor: pointer; user-select: none;" onclick="toggleShareableLinks()">
+                🔗 Shareable Links <span id="shareLinksToggle" style="float: right; font-size: 10px;">▼</span>
+            </div>
+
+            <div class="share-links-section" id="shareLinksSection" style="display: none;">
                 <p style="font-size: 12px; color: #e5e7eb; margin-bottom: 12px;">
                     Share direct links to agents:
                 </p>
@@ -2931,6 +2938,22 @@
                     toggleBtn.innerHTML = '☰'; // Hamburger when collapsed
                 } else {
                     toggleBtn.innerHTML = '✕'; // X when expanded
+                }
+            }
+        }
+
+        // Toggle shareable links section
+        function toggleShareableLinks() {
+            const section = document.getElementById('shareLinksSection');
+            const toggle = document.getElementById('shareLinksToggle');
+
+            if (section && toggle) {
+                if (section.style.display === 'none') {
+                    section.style.display = 'block';
+                    toggle.textContent = '▼';
+                } else {
+                    section.style.display = 'none';
+                    toggle.textContent = '▶';
                 }
             }
         }
