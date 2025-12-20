@@ -1,238 +1,190 @@
-# ⚡ QUICK REFERENCE CARD - Stripe Integration
+# 🚨 COST MONITORING QUICK REFERENCE
 
-## 🎯 THE 4-STEP PROCESS:
+## What You Get:
 
-### 1️⃣ SETUP STRIPE (30 min)
-- Sign up at stripe.com
-- Create products: Starter ($10) & Pro ($30)
-- Get API keys & Price IDs
-- Set up webhook
+✅ **Real-time cost tracking** - Every message tracked
+✅ **Automatic alerts** - Console, dashboard, and email
+✅ **Auto-blocks expensive models** - When users abuse Opus/GPT-4 Turbo
+✅ **Admin dashboard** - Beautiful UI to monitor everything
+✅ **Daily resets** - Blocks clear at midnight
+✅ **Profit protection** - Never lose money on power users
 
-### 2️⃣ ADD FILES (15 min)
+---
+
+## Alert Levels:
+
+### ⚠️ WARNING
+- Starter: $1/day
+- Pro: $3/day
+- Enterprise: $5/day
+**Action:** Alert sent, models still available
+
+### 🚨 CRITICAL
+- Starter: $2/day
+- Pro: $5/day
+- Enterprise: $10/day
+**Action:** Expensive models BLOCKED (Opus, GPT-4 Turbo)
+
+### 🔴 MONTHLY MAX
+- Costs exceed subscription price
+**Action:** Alert sent to review user
+
+---
+
+## Quick Deploy:
+
 ```bash
-templates/
-  ├── pricing.html  ← Copy here
-  ├── success.html  ← Copy here
-  └── cancel.html   ← Copy here
-```
+# 1. Add code to web_app_auth.py
+# 2. Run setup
+python3 -c "from cost_monitoring_system import setup_cost_tracking; setup_cost_tracking()"
 
-### 3️⃣ UPDATE CODE (30 min)
-Open **STRIPE_INTEGRATION_CODE.md** and copy:
-- Imports
-- Configuration
-- All 7 routes
-- Webhook handler
-
-### 4️⃣ DEPLOY (30 min)
-```bash
-# Add to requirements.txt
-stripe==7.4.0
-
-# Set in Render environment:
-STRIPE_SECRET_KEY=sk_test_xxxxx
-STRIPE_PUBLISHABLE_KEY=pk_test_xxxxx
-STRIPE_WEBHOOK_SECRET=whsec_xxxxx
-STRIPE_STARTER_PRICE_ID=price_xxxxx
-STRIPE_PRO_PRICE_ID=price_xxxxx
-
-# Deploy
+# 3. Deploy
 git add .
-git commit -m "Add Stripe payments"
-git push origin main
+git commit -m "Add cost monitoring"
+git push
 ```
 
 ---
 
-## 🔑 KEY STRIPE DASHBOARD LOCATIONS:
+## Access Dashboard:
 
-| What You Need | Where to Find It |
-|---------------|------------------|
-| API Keys | Developers → API keys |
-| Products | Products → Add product |
-| Price IDs | Products → Click product → Copy price ID |
-| Webhooks | Developers → Webhooks → Add endpoint |
-| Webhook Secret | Webhooks → Click endpoint → Signing secret |
-| Test Cards | Developers → Testing |
-| Payments | Payments → Overview |
-| Customers | Customers → Overview |
+**URL:** https://ai-team.skillsoul.store/admin/usage
 
----
-
-## 💳 TEST CARDS (Use Anytime!):
-
-| Scenario | Card Number |
-|----------|-------------|
-| ✅ Success | 4242 4242 4242 4242 |
-| ❌ Decline | 4000 0000 0000 0002 |
-| ⚠️ Insufficient Funds | 4000 0000 0000 9995 |
-
-**Expiry:** Any future date
-**CVC:** Any 3 digits
-**ZIP:** Any code
+**Shows:**
+- Today's cost vs revenue
+- This month's costs
+- Profit margins
+- Top cost users
+- Active alerts
+- Model usage breakdown
 
 ---
 
-## 🎨 NEW ROUTES YOU'RE ADDING:
+## Example Alert:
 
-```python
-/pricing                    # Beautiful pricing page
-/create-checkout-session    # Creates Stripe checkout
-/success                    # Payment success page
-/cancel                     # Payment cancelled page
-/webhook                    # Stripe webhook handler
+```
+🚨 CRITICAL ALERT
+User: john@example.com (Pro plan)
+Daily cost: $6.50 (Threshold: $5.00)
+Action: Expensive models BLOCKED
+Status: User can still use Gemini, GPT-4o Mini, Haiku
+Reset: Midnight UTC
 ```
 
 ---
 
-## 📊 PRICING TIERS:
+## Cost by Model:
 
-| Tier | Price | Messages | Code |
-|------|-------|----------|------|
-| Free | $0 | 25/day | Default |
-| Starter | $10/mo | 100/day | STRIPE_STARTER_PRICE_ID |
-| Pro | $30/mo | 500/day | STRIPE_PRO_PRICE_ID |
-
----
-
-## 🔧 COMMON ISSUES & FIXES:
-
-| Problem | Solution |
-|---------|----------|
-| Button doesn't work | Check Price IDs are set |
-| Webhook not firing | Verify webhook URL & secret |
-| User not upgraded | Check webhook logs in Render |
-| Payment fails | Try different test card |
-| Can't see pricing page | Check pricing.html in templates/ |
+| Model | Cost/Message | Enterprise (1,000/day) |
+|-------|--------------|------------------------|
+| Gemini FREE | $0 | $0/month ✅ |
+| GPT-4o Mini | $0.0002 | $6/month ✅ |
+| Haiku 4.5 | $0.0008 | $24/month ✅ |
+| GPT-4o | $0.0025 | $75/month 🟡 |
+| Sonnet 4.5 | $0.003 | $90/month 🟡 |
+| GPT-4 Turbo | $0.004 | $120/month 🔴 |
+| Opus 4 | $0.006 | $180/month 🔴🔴 |
 
 ---
 
-## ✅ TESTING CHECKLIST:
+## What Gets Blocked:
 
-```
-[ ] Visit /pricing page
-[ ] Click "Select Starter"  
-[ ] Enter test card: 4242 4242 4242 4242
-[ ] Complete checkout
-[ ] See success page
-[ ] Go to dashboard
-[ ] Check profile - should show "Starter"
-[ ] Check Stripe dashboard - see payment
-[ ] Check database - subscription_tier = 'starter'
-```
+**When user exceeds critical threshold, these are blocked:**
+- ❌ Claude Opus 4
+- ❌ GPT-4 Turbo
+
+**These still work:**
+- ✅ Gemini 2.0 FREE
+- ✅ Gemini 1.5 Pro
+- ✅ GPT-4o Mini
+- ✅ Claude Haiku 4.5
+- ✅ GPT-4o (mid-tier, allowed)
+- ✅ Sonnet 4.5 (mid-tier, allowed)
 
 ---
 
-## 🎯 YOUR 5 ENVIRONMENT VARIABLES:
+## Realistic Cost Examples:
+
+**Starter User ($19/month):**
+- Uses mix of Gemini (free) and Sonnet
+- Average cost: $3-5/month
+- **Your profit: $14-16/month** ✅
+
+**Pro User ($49/month):**
+- Uses Sonnet mostly, some Opus
+- Average cost: $20-30/month
+- **Your profit: $19-29/month** ✅
+
+**Enterprise User ($99/month):**
+- Mix of all models
+- Average cost: $40-60/month
+- **Your profit: $39-59/month** ✅
+
+---
+
+## Email Alerts Setup (Optional):
 
 ```bash
-STRIPE_SECRET_KEY=sk_test_xxxxxxx
-STRIPE_PUBLISHABLE_KEY=pk_test_xxxxxxx  
-STRIPE_WEBHOOK_SECRET=whsec_xxxxxxx
-STRIPE_STARTER_PRICE_ID=price_xxxxxxx
-STRIPE_PRO_PRICE_ID=price_xxxxxxx
+# In Render environment variables:
+ADMIN_EMAIL=your-email@example.com
+ALERT_EMAIL_ENABLED=true
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-gmail@gmail.com
+SMTP_PASSWORD=your-gmail-app-password
+SMTP_FROM_EMAIL=your-gmail@gmail.com
 ```
 
-**Where to set:** Render Dashboard → Your App → Environment
+Get Gmail app password: https://myaccount.google.com/apppasswords
 
 ---
 
-## 🚀 GO LIVE TRANSITION:
+## Files Included:
 
-### Test Mode (Now):
-- Use: `sk_test_...` keys
-- Test cards work
-- No real money
+1. **cost_monitoring_system.py** (11KB)
+   - Complete backend tracking system
+   - Alert mechanisms
+   - Database setup
 
-### Live Mode (Later):
-- Switch to: `sk_live_...` keys
-- Real cards only
-- Real money! 💰
+2. **admin_usage.html** (9KB)
+   - Beautiful admin dashboard
+   - Real-time stats
+   - Auto-refreshing
 
----
+3. **IMPLEMENTATION_GUIDE.md** (8KB)
+   - Step-by-step instructions
+   - Testing checklist
+   - Troubleshooting
 
-## 📱 MOBILE TESTING:
-
-✅ Pricing page responsive
-✅ Stripe Checkout mobile-friendly
-✅ Success page mobile-friendly
-✅ All buttons work on mobile
-
----
-
-## 💡 HELPFUL COMMANDS:
-
-```bash
-# Check Render logs
-# Render Dashboard → Logs tab
-
-# Test webhook locally (optional)
-stripe listen --forward-to localhost:5000/webhook
-
-# Check database
-# Use your database client
-
-# View Stripe events
-# Dashboard → Developers → Events
-```
+4. **QUICK_REFERENCE.md** (This file)
+   - Quick facts
+   - Deploy commands
+   - Cost tables
 
 ---
 
-## 🎊 SUCCESS INDICATORS:
+## Support:
 
-✅ Pricing page loads
-✅ Checkout redirects to Stripe
-✅ Payment completes
-✅ Success page shows
-✅ Database updates
-✅ User has more messages
-✅ Stripe dashboard shows payment
+**Questions?** Ask in chat!
+**Issues?** Check IMPLEMENTATION_GUIDE.md troubleshooting section
+**Need help?** Share your Render logs
 
 ---
 
-## 📞 RESOURCES:
+## Bottom Line:
 
-| Resource | Location |
-|----------|----------|
-| Full Setup | STRIPE_SETUP_GUIDE.md |
-| Code Snippets | STRIPE_INTEGRATION_CODE.md |
-| Checklist | DEPLOYMENT_CHECKLIST.md |
-| Visual Guide | VISUAL_GUIDE.md |
-| Stripe Docs | stripe.com/docs |
+**Before:** Users could cost you $180/month on Enterprise plan
+**After:** Max cost is $10/day before auto-block = ~$90/month max
+**Savings:** Up to $90/month per power user! 🎉
 
----
+**Plus you get:**
+- Real-time visibility into costs
+- Automatic protection from abuse
+- Beautiful dashboard to monitor everything
+- Peace of mind 😌
 
-## ⏱️ TIME ESTIMATE:
+**Deploy time:** 10 minutes
+**Maintenance:** 5 minutes/week to check dashboard
+**ROI:** Infinite (prevents losses!)
 
-- Setup: 30 minutes
-- Code: 30 minutes
-- Deploy: 15 minutes
-- Test: 15 minutes
-- **TOTAL: ~90 minutes**
-
----
-
-## 🎯 ORDER OF OPERATIONS:
-
-1. Read START_HERE.md
-2. Follow STRIPE_SETUP_GUIDE.md
-3. Copy code from STRIPE_INTEGRATION_CODE.md
-4. Use DEPLOYMENT_CHECKLIST.md to verify
-5. Reference VISUAL_GUIDE.md when confused
-6. Keep this card open while working!
-
----
-
-## 💪 YOU'VE GOT THIS!
-
-**One step at a time:**
-1. Create Stripe account ✓
-2. Add code ✓
-3. Deploy ✓
-4. Test ✓
-5. Launch! 🚀
-
-Amanda, this is the final piece. Your AI Team platform is about to become a real business! 💰🎉
-
-**Start with STRIPE_SETUP_GUIDE.md and follow along!** 
-
-Good luck! You've got this! 🌟
+🚀 **READY TO DEPLOY!**
