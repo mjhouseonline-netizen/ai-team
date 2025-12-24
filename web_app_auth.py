@@ -5977,6 +5977,7 @@ def get_custom_agents():
         cursor.execute("PRAGMA table_info(custom_agents)")
         columns = [col[1] for col in cursor.fetchall()]
         has_emoji = 'emoji' in columns
+        has_icon_image = 'icon_image' in columns
         has_description = 'description' in columns
         has_role = 'role' in columns
         has_share_code = 'share_code' in columns
@@ -5989,6 +5990,8 @@ def get_custom_agents():
         select_columns = f"id, name, {desc_column}"
         if has_emoji:
             select_columns += ", emoji"
+        if has_icon_image:
+            select_columns += ", icon_image"
         select_columns += ", personality, system_prompt"
         if has_share_code:
             select_columns += ", share_code"
@@ -6022,17 +6025,23 @@ def get_custom_agents():
                 'role': row[idx+2],
             }
             idx = 3
-            
+
             if has_emoji:
                 agent['emoji'] = row[idx] or '🤖'
                 idx += 1
             else:
                 agent['emoji'] = '🤖'
-            
+
+            if has_icon_image:
+                agent['icon_image'] = row[idx]
+                idx += 1
+            else:
+                agent['icon_image'] = None
+
             agent['personality'] = row[idx]
             agent['system_prompt'] = row[idx+1]
             idx += 2
-            
+
             if has_share_code and row[idx]:
                 agent['share_code'] = row[idx]
                 agent['share_url'] = f"{request.host_url}custom/{row[idx]}"
@@ -6088,40 +6097,52 @@ def create_custom_agent():
         # Continue anyway to not block if there's an error
 
     try:
-        data = request.json
+        # Handle both JSON and FormData
+        if request.is_json:
+            data = request.json
+            icon_file = None
+        else:
+            data = request.form
+            icon_file = request.files.get('icon_image')
+
         name = data.get('name')
         description = data.get('role') or data.get('description')  # Accept both for compatibility
-        emoji = data.get('emoji', '🤖')  # Handle emoji from frontend
+        emoji = data.get('emoji', '🤖')  # Handle emoji from frontend (fallback)
         folder = data.get('folder', None)  # Optional folder for organization
 
         # Handle both 'instructions' (from frontend) and 'system_prompt' (legacy)
         instructions = data.get('instructions') or data.get('system_prompt', '')
-        
+
         # Handle personality - can be JSON or string
         personality_data = data.get('personality', {})
         if isinstance(personality_data, dict):
             personality = json.dumps(personality_data)
         else:
             personality = personality_data
-        
+
         if not name or not description:
             return jsonify({'error': 'Name and description are required'}), 400
-        
+
         if not instructions:
             return jsonify({'error': 'Instructions are required'}), 400
-        
+
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
-        
-        # First check if emoji column exists, add if needed
+
+        # First check if columns exist, add if needed
         cursor.execute("PRAGMA table_info(custom_agents)")
         columns = [col[1] for col in cursor.fetchall()]
-        
+
         # Check and add missing columns
         if 'emoji' not in columns:
             cursor.execute("ALTER TABLE custom_agents ADD COLUMN emoji TEXT DEFAULT '🤖'")
             conn.commit()
             print("✅ Added emoji column to custom_agents table")
+
+        if 'icon_image' not in columns:
+            cursor.execute("ALTER TABLE custom_agents ADD COLUMN icon_image TEXT DEFAULT NULL")
+            conn.commit()
+            print("✅ Added icon_image column to custom_agents table")
 
         if 'share_code' not in columns:
             cursor.execute("ALTER TABLE custom_agents ADD COLUMN share_code TEXT UNIQUE")
@@ -6137,54 +6158,56 @@ def create_custom_agent():
             cursor.execute("ALTER TABLE custom_agents ADD COLUMN folder TEXT DEFAULT NULL")
             conn.commit()
             print("✅ Added folder column to custom_agents table")
-        
+
+        # Handle icon image upload
+        icon_image_path = None
+        if icon_file and icon_file.filename:
+            # Create uploads directory if it doesn't exist
+            upload_dir = os.path.join('static', 'uploads', 'agent_icons')
+            os.makedirs(upload_dir, exist_ok=True)
+
+            # Generate unique filename
+            import secrets
+            file_ext = os.path.splitext(icon_file.filename)[1]
+            filename = f"{secrets.token_urlsafe(16)}{file_ext}"
+            file_path = os.path.join(upload_dir, filename)
+
+            # Save file
+            icon_file.save(file_path)
+            icon_image_path = f"/static/uploads/agent_icons/{filename}"
+            print(f"✅ Saved agent icon to {icon_image_path}")
+
         # Generate unique share code
         import secrets
         share_code = secrets.token_urlsafe(12)
 
-        # TODO: FUTURE FEATURE - Make custom agents private by default
-        # Change is_public from 1 (public) to 0 (private)
-        # Only creator and users with shareable link should access
-        # Uncomment when ready:
-        # is_public = 0  # Private by default
-        # Then change the INSERT to use variable instead of hardcoded 1
-
         # Use description column (not role)
         cursor.execute("""
-            INSERT INTO custom_agents (user_id, name, description, emoji, personality, system_prompt, share_code, is_public, folder)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
-        """, (current_user.id, name, description, emoji, personality, instructions, share_code, folder))
-        
+            INSERT INTO custom_agents (user_id, name, description, emoji, icon_image, personality, system_prompt, share_code, is_public, folder)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+        """, (current_user.id, name, description, emoji, icon_image_path, personality, instructions, share_code, folder))
+
         agent_id = cursor.lastrowid
         conn.commit()
         conn.close()
-        
-        print(f"✅ Created custom agent '{name}' (emoji: {emoji}) for user {current_user.id}")
+
+        print(f"✅ Created custom agent '{name}' (emoji: {emoji}, icon: {icon_image_path}) for user {current_user.id}")
         print(f"   Share link: /custom/{share_code}")
-        
+
         # Generate full share URL
         share_url = f"{request.host_url}custom/{share_code}"
-        
+
         return jsonify({
             'success': True,
             'agent_id': agent_id,
             'name': name,
             'description': description,
             'emoji': emoji,
+            'icon_image': icon_image_path,
             'share_code': share_code,
             'share_url': share_url
         }), 201
-        
-        print(f"✅ Created custom agent '{name}' (emoji: {emoji}) for user {current_user.id}")
-        
-        return jsonify({
-            'success': True,
-            'agent_id': agent_id,
-            'name': name,
-            'description': description,
-            'emoji': emoji
-        }), 201
-        
+
     except Exception as e:
         print(f"❌ Error creating custom agent: {str(e)}")
         import traceback
@@ -6196,7 +6219,13 @@ def create_custom_agent():
 def update_custom_agent(agent_id):
     """Update an existing custom agent"""
     try:
-        data = request.json
+        # Handle both JSON and FormData
+        if request.is_json:
+            data = request.json
+            icon_file = None
+        else:
+            data = request.form
+            icon_file = request.files.get('icon_image')
 
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
@@ -6245,6 +6274,26 @@ def update_custom_agent(agent_id):
         if 'folder' in data:
             update_fields.append('folder = ?')
             update_values.append(data['folder'])
+
+        # Handle icon image upload
+        if icon_file and icon_file.filename:
+            # Create uploads directory if it doesn't exist
+            upload_dir = os.path.join('static', 'uploads', 'agent_icons')
+            os.makedirs(upload_dir, exist_ok=True)
+
+            # Generate unique filename
+            import secrets
+            file_ext = os.path.splitext(icon_file.filename)[1]
+            filename = f"{secrets.token_urlsafe(16)}{file_ext}"
+            file_path = os.path.join(upload_dir, filename)
+
+            # Save file
+            icon_file.save(file_path)
+            icon_image_path = f"/static/uploads/agent_icons/{filename}"
+
+            update_fields.append('icon_image = ?')
+            update_values.append(icon_image_path)
+            print(f"✅ Updated agent icon to {icon_image_path}")
 
         if not update_fields:
             conn.close()
