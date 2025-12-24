@@ -3506,6 +3506,600 @@ def execute_integration_handler(integration_key, action, credentials, params):
     }
 
 # ============================================
+# AI AGENT AUTO-INTEGRATION
+# ============================================
+
+def detect_integration_intent(message):
+    """Detect if user wants to use an integration based on their message"""
+    message_lower = message.lower()
+
+    # Integration keyword patterns
+    patterns = {
+        'slack': ['post to slack', 'send to slack', 'slack message', 'send slack'],
+        'discord': ['post to discord', 'send to discord', 'discord message'],
+        'github': ['create github issue', 'open github issue', 'github issue', 'create issue on github'],
+        'trello': ['create trello card', 'add to trello', 'trello card'],
+        'gmail': ['send email', 'email to', 'send gmail'],
+        'google_sheets': ['add to spreadsheet', 'update sheet', 'google sheets'],
+        'twitter': ['tweet this', 'post to twitter', 'share on twitter'],
+        'linkedin': ['post to linkedin', 'share on linkedin'],
+        'asana': ['create task in asana', 'add asana task'],
+        'jira': ['create jira ticket', 'jira issue'],
+        'telegram': ['send telegram message', 'message on telegram'],
+        'twilio': ['send sms', 'text message to']
+    }
+
+    for integration_key, keywords in patterns.items():
+        for keyword in keywords:
+            if keyword in message_lower:
+                return {
+                    'integration': integration_key,
+                    'detected': True,
+                    'keyword': keyword
+                }
+
+    return {'detected': False}
+
+def extract_integration_params(message, integration_key):
+    """Extract parameters from user message for integration action"""
+    params = {}
+
+    # Extract common parameters based on integration type
+    if integration_key in ['slack', 'discord', 'teams', 'telegram']:
+        # Extract message content (everything after the integration keyword)
+        for keyword in ['post to', 'send to', 'message']:
+            if keyword in message.lower():
+                parts = message.lower().split(keyword, 1)
+                if len(parts) > 1:
+                    content = parts[1].strip()
+                    # Remove integration name
+                    for name in ['slack', 'discord', 'teams', 'telegram']:
+                        content = content.replace(name, '').strip()
+                    params['message'] = content if content else message
+                    break
+
+        if 'message' not in params:
+            params['message'] = message
+
+    elif integration_key == 'github':
+        # Extract title and body for GitHub issues
+        params['title'] = message[:100]  # First 100 chars as title
+        params['body'] = message
+        params['repo'] = 'user/repo'  # Default, user should configure
+
+    elif integration_key == 'trello':
+        params['title'] = message[:100]
+        params['description'] = message
+
+    elif integration_key in ['gmail', 'sendgrid']:
+        params['subject'] = message[:50]
+        params['body'] = message
+
+    elif integration_key == 'twilio':
+        params['message'] = message
+        params['to'] = '+1234567890'  # User needs to configure
+
+    return params
+
+@app.route('/api/ai-integration/execute', methods=['POST'])
+@login_required
+def execute_ai_integration():
+    """Auto-execute integration based on AI detection"""
+    try:
+        data = request.json
+        message = data.get('message', '')
+
+        # Detect integration intent
+        intent = detect_integration_intent(message)
+
+        if not intent['detected']:
+            return jsonify({'integration_used': False}), 200
+
+        integration_key = intent['integration']
+
+        # Check if user has this integration connected
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT credentials, is_active FROM integrations
+            WHERE user_id = ? AND integration_key = ? AND is_active = 1
+        """, (current_user.id, integration_key))
+
+        result = cursor.fetchone()
+        conn.close()
+
+        if not result:
+            return jsonify({
+                'integration_used': False,
+                'suggestion': f'Connect {integration_key.replace("_", " ").title()} in Settings to use this feature'
+            }), 200
+
+        # Extract parameters and execute
+        params = extract_integration_params(message, integration_key)
+        credentials = json.loads(result[0])
+
+        # Get default action for this integration
+        config = INTEGRATIONS_CONFIG.get(integration_key, {})
+        action = config.get('features', ['send_message'])[0]
+
+        # Execute integration
+        exec_result = execute_integration_handler(integration_key, action, credentials, params)
+
+        return jsonify({
+            'integration_used': True,
+            'integration': integration_key,
+            'action': action,
+            'result': exec_result
+        }), 200
+
+    except Exception as e:
+        print(f"AI Integration error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# ============================================
+# WEBHOOK RECEIVERS
+# ============================================
+
+@app.route('/api/webhooks/incoming/<integration_key>', methods=['POST'])
+def receive_webhook(integration_key):
+    """Receive incoming webhooks from external services"""
+    try:
+        payload = request.json or request.form.to_dict()
+        headers = dict(request.headers)
+
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Create webhook_events table if not exists
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS webhook_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                integration_key TEXT NOT NULL,
+                event_type TEXT,
+                payload TEXT NOT NULL,
+                headers TEXT,
+                processed BOOLEAN DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        # Store webhook event
+        cursor.execute("""
+            INSERT INTO webhook_events (integration_key, event_type, payload, headers)
+            VALUES (?, ?, ?, ?)
+        """, (
+            integration_key,
+            payload.get('type') or payload.get('event'),
+            json.dumps(payload),
+            json.dumps(headers)
+        ))
+
+        event_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
+        # Process webhook based on integration
+        process_webhook_event(integration_key, payload, event_id)
+
+        return jsonify({'success': True, 'event_id': event_id}), 200
+
+    except Exception as e:
+        print(f"Webhook receive error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+def process_webhook_event(integration_key, payload, event_id):
+    """Process incoming webhook events"""
+    try:
+        # GitHub webhooks
+        if integration_key == 'github':
+            event_type = payload.get('action')
+            if event_type == 'opened' and 'pull_request' in payload:
+                # PR opened - could trigger AI code review
+                pr_title = payload['pull_request']['title']
+                print(f"GitHub PR opened: {pr_title}")
+
+        # Stripe webhooks
+        elif integration_key == 'stripe_webhooks':
+            event_type = payload.get('type')
+            if event_type == 'payment_intent.succeeded':
+                print(f"Stripe payment succeeded")
+
+        # Slack webhooks
+        elif integration_key == 'slack':
+            if payload.get('type') == 'event_callback':
+                event = payload.get('event', {})
+                if event.get('type') == 'app_mention':
+                    # Bot was mentioned - could trigger AI response
+                    text = event.get('text', '')
+                    print(f"Slack mention: {text}")
+
+        # Mark as processed
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("UPDATE webhook_events SET processed = 1 WHERE id = ?", (event_id,))
+        conn.commit()
+        conn.close()
+
+    except Exception as e:
+        print(f"Webhook processing error: {str(e)}")
+
+@app.route('/api/webhooks/events')
+@login_required
+def get_webhook_events():
+    """Get recent webhook events for user"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT id, integration_key, event_type, payload, processed, created_at
+            FROM webhook_events
+            ORDER BY created_at DESC
+            LIMIT 50
+        """)
+
+        events = []
+        for row in cursor.fetchall():
+            events.append({
+                'id': row[0],
+                'integration': row[1],
+                'event_type': row[2],
+                'payload': json.loads(row[3]) if row[3] else {},
+                'processed': bool(row[4]),
+                'created_at': row[5]
+            })
+
+        conn.close()
+        return jsonify({'events': events}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ============================================
+# INTEGRATION TEMPLATES & RECIPES
+# ============================================
+
+INTEGRATION_TEMPLATES = [
+    {
+        'id': 'github-to-slack',
+        'name': 'GitHub → Slack Notifications',
+        'description': 'Post GitHub PR/issue updates to Slack channel',
+        'icon': '🐙💬',
+        'integrations_required': ['github', 'slack'],
+        'trigger': 'github_webhook',
+        'actions': ['slack_send_message']
+    },
+    {
+        'id': 'email-to-trello',
+        'name': 'Email → Trello Card',
+        'description': 'Convert important emails into Trello cards',
+        'icon': '📧📋',
+        'integrations_required': ['gmail', 'trello'],
+        'trigger': 'gmail_new_email',
+        'actions': ['trello_create_card']
+    },
+    {
+        'id': 'ai-social-scheduler',
+        'name': 'AI Social Media Scheduler',
+        'description': 'AI generates and schedules social posts',
+        'icon': '🤖📱',
+        'integrations_required': ['twitter', 'linkedin'],
+        'trigger': 'manual',
+        'actions': ['ai_generate_post', 'twitter_post', 'linkedin_post']
+    },
+    {
+        'id': 'slack-ai-responder',
+        'name': 'Slack AI Auto-Responder',
+        'description': 'AI responds to Slack mentions automatically',
+        'icon': '💬🤖',
+        'integrations_required': ['slack'],
+        'trigger': 'slack_mention',
+        'actions': ['ai_respond', 'slack_reply']
+    },
+    {
+        'id': 'analytics-to-sheets',
+        'name': 'Analytics → Google Sheets',
+        'description': 'Daily analytics export to spreadsheet',
+        'icon': '📊📈',
+        'integrations_required': ['google_analytics', 'google_sheets'],
+        'trigger': 'daily_schedule',
+        'actions': ['fetch_analytics', 'append_to_sheet']
+    },
+    {
+        'id': 'support-ticket-ai',
+        'name': 'AI Support Ticket Handler',
+        'description': 'AI triages and responds to support tickets',
+        'icon': '🎫🤖',
+        'integrations_required': ['zendesk'],
+        'trigger': 'zendesk_new_ticket',
+        'actions': ['ai_analyze_ticket', 'ai_draft_response', 'zendesk_reply']
+    }
+]
+
+@app.route('/api/integrations/templates')
+@login_required
+def get_integration_templates():
+    """Get all available integration templates"""
+    try:
+        # Get user's connected integrations
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT integration_key FROM integrations
+            WHERE user_id = ? AND is_active = 1
+        """, (current_user.id,))
+
+        connected = [row[0] for row in cursor.fetchall()]
+        conn.close()
+
+        # Mark templates as available if user has required integrations
+        templates_with_status = []
+        for template in INTEGRATION_TEMPLATES:
+            has_all_integrations = all(
+                integration in connected
+                for integration in template['integrations_required']
+            )
+
+            templates_with_status.append({
+                **template,
+                'available': has_all_integrations,
+                'missing_integrations': [
+                    i for i in template['integrations_required']
+                    if i not in connected
+                ]
+            })
+
+        return jsonify({'templates': templates_with_status}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/integrations/templates/<template_id>/enable', methods=['POST'])
+@login_required
+def enable_integration_template(template_id):
+    """Enable an integration template"""
+    try:
+        template = next((t for t in INTEGRATION_TEMPLATES if t['id'] == template_id), None)
+        if not template:
+            return jsonify({'error': 'Template not found'}), 404
+
+        # Store enabled template
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS enabled_templates (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                template_id TEXT NOT NULL,
+                template_name TEXT,
+                is_active BOOLEAN DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id),
+                UNIQUE(user_id, template_id)
+            )
+        """)
+
+        cursor.execute("""
+            INSERT OR REPLACE INTO enabled_templates (user_id, template_id, template_name, is_active)
+            VALUES (?, ?, ?, 1)
+        """, (current_user.id, template_id, template['name']))
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': f'{template["name"]} enabled successfully'
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ============================================
+# USAGE ANALYTICS & MONITORING
+# ============================================
+
+@app.route('/api/integrations/analytics')
+@login_required
+def get_integration_analytics():
+    """Get usage analytics for integrations"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Create analytics table if not exists
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS integration_usage (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                integration_key TEXT NOT NULL,
+                action TEXT,
+                success BOOLEAN,
+                error_message TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )
+        """)
+
+        # Get usage stats for last 30 days
+        cursor.execute("""
+            SELECT
+                integration_key,
+                COUNT(*) as total_calls,
+                SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) as successful_calls,
+                SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END) as failed_calls,
+                MAX(created_at) as last_used
+            FROM integration_usage
+            WHERE user_id = ? AND created_at >= datetime('now', '-30 days')
+            GROUP BY integration_key
+            ORDER BY total_calls DESC
+        """, (current_user.id,))
+
+        stats = []
+        for row in cursor.fetchall():
+            integration_key = row[0]
+            config = INTEGRATIONS_CONFIG.get(integration_key, {})
+
+            stats.append({
+                'integration': integration_key,
+                'name': config.get('name', integration_key),
+                'icon': config.get('icon', '🔌'),
+                'total_calls': row[1],
+                'successful_calls': row[2],
+                'failed_calls': row[3],
+                'success_rate': round((row[2] / row[1] * 100) if row[1] > 0 else 0, 1),
+                'last_used': row[4]
+            })
+
+        # Get daily usage for charts
+        cursor.execute("""
+            SELECT
+                date(created_at) as day,
+                COUNT(*) as calls
+            FROM integration_usage
+            WHERE user_id = ? AND created_at >= datetime('now', '-30 days')
+            GROUP BY date(created_at)
+            ORDER BY day DESC
+        """, (current_user.id,))
+
+        daily_usage = [{'date': row[0], 'calls': row[1]} for row in cursor.fetchall()]
+
+        conn.close()
+
+        return jsonify({
+            'stats': stats,
+            'daily_usage': daily_usage
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+def log_integration_usage(user_id, integration_key, action, success, error_message=None):
+    """Log integration usage for analytics"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            INSERT INTO integration_usage (user_id, integration_key, action, success, error_message)
+            VALUES (?, ?, ?, ?, ?)
+        """, (user_id, integration_key, action, success, error_message))
+
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Analytics logging error: {str(e)}")
+
+# ============================================
+# OAUTH FLOW HELPERS
+# ============================================
+
+OAUTH_CONFIG = {
+    'github': {
+        'auth_url': 'https://github.com/login/oauth/authorize',
+        'token_url': 'https://github.com/login/oauth/access_token',
+        'scopes': ['repo', 'user']
+    },
+    'google_sheets': {
+        'auth_url': 'https://accounts.google.com/o/oauth2/v2/auth',
+        'token_url': 'https://oauth2.googleapis.com/token',
+        'scopes': ['https://www.googleapis.com/auth/spreadsheets']
+    },
+    'slack': {
+        'auth_url': 'https://slack.com/oauth/v2/authorize',
+        'token_url': 'https://slack.com/api/oauth.v2.access',
+        'scopes': ['chat:write', 'channels:read']
+    }
+}
+
+@app.route('/api/integrations/oauth/<integration_key>/start')
+@login_required
+def start_oauth_flow(integration_key):
+    """Start OAuth flow for an integration"""
+    try:
+        oauth_config = OAUTH_CONFIG.get(integration_key)
+        if not oauth_config:
+            return jsonify({'error': 'OAuth not supported for this integration'}), 400
+
+        # Generate state for CSRF protection
+        state = secrets.token_urlsafe(32)
+
+        # Store state in session
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS oauth_states (
+                state TEXT PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                integration_key TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        cursor.execute("""
+            INSERT INTO oauth_states (state, user_id, integration_key)
+            VALUES (?, ?, ?)
+        """, (state, current_user.id, integration_key))
+
+        conn.commit()
+        conn.close()
+
+        # Build OAuth URL
+        auth_url = f"{oauth_config['auth_url']}?client_id=YOUR_CLIENT_ID&redirect_uri={request.host_url}api/integrations/oauth/callback&state={state}&scope={','.join(oauth_config['scopes'])}"
+
+        return jsonify({
+            'auth_url': auth_url,
+            'state': state
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/integrations/oauth/callback')
+def oauth_callback():
+    """Handle OAuth callback"""
+    try:
+        code = request.args.get('code')
+        state = request.args.get('state')
+
+        if not code or not state:
+            return "OAuth failed: Missing code or state", 400
+
+        # Verify state and get integration
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT user_id, integration_key FROM oauth_states
+            WHERE state = ? AND created_at >= datetime('now', '-10 minutes')
+        """, (state,))
+
+        result = cursor.fetchone()
+        if not result:
+            conn.close()
+            return "OAuth failed: Invalid or expired state", 400
+
+        user_id, integration_key = result
+
+        # Clean up state
+        cursor.execute("DELETE FROM oauth_states WHERE state = ?", (state,))
+        conn.commit()
+        conn.close()
+
+        # Exchange code for token (simplified - needs actual OAuth implementation)
+        # oauth_config = OAUTH_CONFIG[integration_key]
+        # Make POST request to token_url with code
+
+        return redirect('/integrations?oauth_success=true')
+
+    except Exception as e:
+        return f"OAuth callback error: {str(e)}", 500
+
+# ============================================
 # STRIPE PAYMENT ROUTES
 # ============================================
 
