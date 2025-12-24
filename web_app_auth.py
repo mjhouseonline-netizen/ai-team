@@ -168,10 +168,12 @@ SUBSCRIPTION_TIERS = {
         'price': 0,
         'messages_per_day': 25,
         'agents_available': 7,
+        'custom_agents_limit': 1,
         'api_access': False,
         'features': [
             '25 messages per day',
             'Access to all 7 agents',
+            '1 custom agent',
             'Basic chat history',
             'File upload & analysis',
             'Notion integration'
@@ -182,10 +184,12 @@ SUBSCRIPTION_TIERS = {
         'price': 0,
         'messages_per_day': -1,  # Unlimited
         'agents_available': 7,
+        'custom_agents_limit': 3,
         'api_access': False,  # NO API access for promo users
         'features': [
             'Unlimited messages',
             'All 7 AI agents',
+            '3 custom agents',
             'Full chat history',
             'File upload & analysis',
             'Notion integration',
@@ -197,11 +201,13 @@ SUBSCRIPTION_TIERS = {
         'price': 19,  # Increased from $10
         'messages_per_day': 60,  # Reduced from 100
         'agents_available': 7,
+        'custom_agents_limit': 3,
         'api_access': False,  # NO API access
         'features': [
             '60 messages per day',
             'Claude AI access',
             'All 7 AI agents',
+            '3 custom agents',
             'Full chat history',
             'File upload & analysis',
             'Notion integration',
@@ -213,11 +219,13 @@ SUBSCRIPTION_TIERS = {
         'price': 49,  # Increased from $30
         'messages_per_day': 300,  # Reduced from 500
         'agents_available': 7,
+        'custom_agents_limit': 10,
         'api_access': True,  # API access included
         'features': [
             '300 messages per day',
             'Claude AI access',
             'All 7 AI agents',
+            '10 custom agents',
             'Unlimited chat history',
             'File upload & analysis',
             'All integrations',
@@ -231,11 +239,13 @@ SUBSCRIPTION_TIERS = {
         'price': 99,  # New tier
         'messages_per_day': 1000,
         'agents_available': 7,
+        'custom_agents_limit': -1,  # Unlimited
         'api_access': True,
         'features': [
             '1,000 messages per day',
             'Claude AI access',
             'All 7 AI agents',
+            'Unlimited custom agents',
             'Unlimited chat history',
             'File upload & analysis',
             'All integrations',
@@ -2138,6 +2148,278 @@ def custom_agent_link(share_code):
         return f"Error loading agent: {str(e)}", 500
 
 # ============================================
+# EMBED & WEBHOOK INTEGRATIONS
+# ============================================
+
+@app.route('/embed/<share_code>/widget.js')
+def embed_widget(share_code):
+    """Serve embed widget JavaScript for custom agent"""
+    widget_js = f'''
+(function() {{
+    const AGENT_SHARE_CODE = "{share_code}";
+    const API_BASE = "{request.host_url}";
+
+    // Create chat widget
+    function createChatWidget() {{
+        // Widget HTML
+        const widgetHTML = `
+            <div id="ai-chat-widget" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999;">
+                <button id="ai-chat-toggle" style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; font-size: 24px;">
+                    💬
+                </button>
+                <div id="ai-chat-window" style="position: absolute; bottom: 80px; right: 0; width: 350px; height: 500px; background: white; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.2); display: none; flex-direction: column; overflow: hidden;">
+                    <div style="padding: 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: 600;">
+                        AI Assistant
+                        <button id="ai-chat-close" style="float: right; background: none; border: none; color: white; font-size: 20px; cursor: pointer; padding: 0; width: 24px; height: 24px;">×</button>
+                    </div>
+                    <div id="ai-chat-messages" style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px;"></div>
+                    <div style="padding: 12px; border-top: 1px solid #e5e7eb;">
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="ai-chat-input" placeholder="Type a message..." style="flex: 1; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;" />
+                            <button id="ai-chat-send" style="padding: 10px 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;">Send</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', widgetHTML);
+
+        // Event listeners
+        document.getElementById('ai-chat-toggle').addEventListener('click', toggleChat);
+        document.getElementById('ai-chat-close').addEventListener('click', toggleChat);
+        document.getElementById('ai-chat-send').addEventListener('click', sendMessage);
+        document.getElementById('ai-chat-input').addEventListener('keypress', (e) => {{
+            if (e.key === 'Enter') sendMessage();
+        }});
+    }}
+
+    function toggleChat() {{
+        const window = document.getElementById('ai-chat-window');
+        window.style.display = window.style.display === 'none' ? 'flex' : 'none';
+    }}
+
+    function addMessage(message, isUser) {{
+        const messagesDiv = document.getElementById('ai-chat-messages');
+        const messageDiv = document.createElement('div');
+        messageDiv.style.cssText = `
+            padding: 10px 14px;
+            border-radius: 12px;
+            max-width: 80%;
+            word-wrap: break-word;
+            ${{isUser ? 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin-left: auto;' : 'background: #f3f4f6; color: #1f2937;'}}
+        `;
+        messageDiv.textContent = message;
+        messagesDiv.appendChild(messageDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }}
+
+    async function sendMessage() {{
+        const input = document.getElementById('ai-chat-input');
+        const message = input.value.trim();
+        if (!message) return;
+
+        addMessage(message, true);
+        input.value = '';
+
+        try {{
+            const response = await fetch(API_BASE + 'api/embed/chat', {{
+                method: 'POST',
+                headers: {{ 'Content-Type': 'application/json' }},
+                body: JSON.stringify({{
+                    share_code: AGENT_SHARE_CODE,
+                    message: message
+                }})
+            }});
+
+            const data = await response.json();
+            if (data.response) {{
+                addMessage(data.response, false);
+            }} else {{
+                addMessage('Sorry, I encountered an error.', false);
+            }}
+        }} catch (error) {{
+            addMessage('Sorry, I encountered an error.', false);
+        }}
+    }}
+
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {{
+        document.addEventListener('DOMContentLoaded', createChatWidget);
+    }} else {{
+        createChatWidget();
+    }}
+}})();
+    '''
+    return widget_js, 200, {'Content-Type': 'application/javascript'}
+
+@app.route('/api/embed/chat', methods=['POST'])
+def embed_chat():
+    """Handle chat messages from embedded widget"""
+    try:
+        data = request.json
+        share_code = data.get('share_code')
+        message = data.get('message')
+
+        if not share_code or not message:
+            return jsonify({'error': 'Missing required fields'}), 400
+
+        # Get custom agent by share_code
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT id, name, system_prompt, user_id FROM custom_agents
+            WHERE share_code = ? AND is_public = 1
+        """, (share_code,))
+
+        agent_data = cursor.fetchone()
+        if not agent_data:
+            conn.close()
+            return jsonify({'error': 'Agent not found'}), 404
+
+        agent_id, agent_name, system_prompt, owner_id = agent_data
+
+        # Build system prompt
+        full_system_prompt = f"""You are {{agent_name}}. Your role and personality:
+
+{{system_prompt}}
+
+CRITICAL FORMATTING RULES:
+- Write in natural, conversational paragraphs
+- Do NOT use asterisks (**), hashtags (##), dashes (---), or bullet points (•)
+- Do NOT use markdown formatting of any kind
+- Keep responses concise and friendly
+- Write like you're talking to someone, not writing a document"""
+
+        # Get AI response (using Gemini for free tier)
+        import google.generativeai as genai
+        genai.configure(api_key=app.config.get('GOOGLE_AI_API_KEY'))
+        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+
+        response = model.generate_content(f"{{full_system_prompt}}\\n\\nUser: {{message}}")
+        ai_response = response.text
+
+        conn.close()
+
+        return jsonify({{'response': ai_response}}), 200
+
+    except Exception as e:
+        print(f"❌ Embed chat error: {{str(e)}}")
+        return jsonify({{'error': 'Internal server error'}}), 500
+
+@app.route('/api/agent/<int:agent_id>/embed-code')
+@login_required
+def get_embed_code(agent_id):
+    """Get embed code for a custom agent"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Verify ownership
+        cursor.execute("""
+            SELECT share_code, name FROM custom_agents
+            WHERE id = ? AND user_id = ?
+        """, (agent_id, current_user.id))
+
+        result = cursor.fetchone()
+        conn.close()
+
+        if not result:
+            return jsonify({{'error': 'Agent not found or unauthorized'}}), 404
+
+        share_code, name = result
+
+        # Generate embed code
+        embed_code = f'''<!-- {{name}} - AI Chat Widget -->
+<script src="{{request.host_url}}embed/{{share_code}}/widget.js"></script>'''
+
+        return jsonify({{
+            'embed_code': embed_code,
+            'preview_url': f'{{request.host_url}}custom/{{share_code}}'
+        }}), 200
+
+    except Exception as e:
+        return jsonify({{'error': str(e)}}), 500
+
+@app.route('/api/webhooks', methods=['GET', 'POST'])
+@login_required
+def manage_webhooks():
+    """Manage n8n and webhook integrations"""
+    if request.method == 'POST':
+        try:
+            data = request.json
+            webhook_url = data.get('webhook_url')
+            webhook_events = data.get('events', ['message.completed'])
+
+            if not webhook_url:
+                return jsonify({{'error': 'Webhook URL required'}}), 400
+
+            # Save webhook configuration to database
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+
+            # Create webhooks table if not exists
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS webhooks (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    webhook_url TEXT NOT NULL,
+                    events TEXT NOT NULL,
+                    is_active BOOLEAN DEFAULT 1,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users (id)
+                )
+            """)
+
+            cursor.execute("""
+                INSERT INTO webhooks (user_id, webhook_url, events)
+                VALUES (?, ?, ?)
+            """, (current_user.id, webhook_url, json.dumps(webhook_events)))
+
+            conn.commit()
+            webhook_id = cursor.lastrowid
+            conn.close()
+
+            return jsonify({{
+                'success': True,
+                'webhook_id': webhook_id,
+                'message': 'Webhook added successfully'
+            }}), 201
+
+        except Exception as e:
+            return jsonify({{'error': str(e)}}), 500
+    else:
+        # GET - List webhooks
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+
+            cursor.execute("""
+                SELECT id, webhook_url, events, is_active, created_at
+                FROM webhooks
+                WHERE user_id = ?
+                ORDER BY created_at DESC
+            """, (current_user.id,))
+
+            webhooks = []
+            for row in cursor.fetchall():
+                webhooks.append({{
+                    'id': row[0],
+                    'webhook_url': row[1],
+                    'events': json.loads(row[2]),
+                    'is_active': bool(row[3]),
+                    'created_at': row[4]
+                }})
+
+            conn.close()
+
+            return jsonify({{'webhooks': webhooks}}), 200
+
+        except Exception as e:
+            return jsonify({{'error': str(e)}}), 500
+
+# ============================================
 # SETTINGS PAGE (FOR NOTION INTEGRATION)
 # ============================================
 
@@ -3787,10 +4069,37 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
         
         # Save chat history and increment counter (only for authenticated users)
         if not is_guest:
+            # Get or create conversation for this agent
             cursor.execute("""
-                INSERT INTO chat_history (user_id, agent_name, message, response)
-                VALUES (?, ?, ?, ?)
-            """, (current_user.id, agent, saved_message, ai_response))
+                SELECT id FROM conversations
+                WHERE user_id = ? AND agent_name = ? AND is_active = 1
+                ORDER BY updated_at DESC
+                LIMIT 1
+            """, (current_user.id, agent))
+
+            conv_result = cursor.fetchone()
+
+            if conv_result:
+                conversation_id = conv_result[0]
+                # Update conversation timestamp
+                cursor.execute("""
+                    UPDATE conversations
+                    SET updated_at = ?
+                    WHERE id = ?
+                """, (datetime.utcnow().isoformat(), conversation_id))
+            else:
+                # Create new conversation
+                cursor.execute("""
+                    INSERT INTO conversations (user_id, agent_name, title, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (current_user.id, agent, f'Chat with {agent}', datetime.utcnow().isoformat(), datetime.utcnow().isoformat()))
+                conversation_id = cursor.lastrowid
+
+            # Save message with conversation_id
+            cursor.execute("""
+                INSERT INTO chat_history (user_id, agent_name, message, response, conversation_id)
+                VALUES (?, ?, ?, ?, ?)
+            """, (current_user.id, agent, saved_message, ai_response, conversation_id))
 
             # ✅ INCREMENT MESSAGE COUNTER (THE FIX!)
             cursor.execute("""
@@ -5313,10 +5622,11 @@ def get_custom_agents():
         has_description = 'description' in columns
         has_role = 'role' in columns
         has_share_code = 'share_code' in columns
-        
+        has_folder = 'folder' in columns
+
         # Use description if available, fallback to role for old tables
         desc_column = 'description' if has_description else 'role'
-        
+
         # Build SELECT query with optional share_code
         select_columns = f"id, name, {desc_column}"
         if has_emoji:
@@ -5324,6 +5634,8 @@ def get_custom_agents():
         select_columns += ", personality, system_prompt"
         if has_share_code:
             select_columns += ", share_code"
+        if has_folder:
+            select_columns += ", folder"
         select_columns += ", created_at"
         
         # TODO: FUTURE FEATURE - Privacy control for custom agents
@@ -5367,7 +5679,13 @@ def get_custom_agents():
                 agent['share_code'] = row[idx]
                 agent['share_url'] = f"{request.host_url}custom/{row[idx]}"
                 idx += 1
-            
+
+            if has_folder:
+                agent['folder'] = row[idx]
+                idx += 1
+            else:
+                agent['folder'] = None
+
             agent['created_at'] = row[idx]
             agents.append(agent)
         
@@ -5385,21 +5703,39 @@ def get_custom_agents():
 def create_custom_agent():
     """Create a new custom agent"""
 
-    # TODO: FUTURE FEATURE - Restrict custom agent creation to paid users only
-    # Uncomment when ready to implement:
-    # if current_user.subscription_tier == 'free':
-    #     return jsonify({
-    #         'error': 'Custom agent creation requires a paid plan',
-    #         'message': 'Upgrade to Pro or Premium to create custom agents',
-    #         'upgrade_url': '/pricing'
-    #     }), 403
+    # Check custom agent limit based on subscription tier
+    try:
+        tier = current_user.subscription_tier or 'free'
+        tier_info = SUBSCRIPTION_TIERS.get(tier, SUBSCRIPTION_TIERS['free'])
+        custom_agents_limit = tier_info.get('custom_agents_limit', 1)
+
+        # Count user's existing custom agents
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM custom_agents WHERE user_id = ?", (current_user.id,))
+        current_count = cursor.fetchone()[0]
+        conn.close()
+
+        # Check if limit reached (-1 means unlimited)
+        if custom_agents_limit != -1 and current_count >= custom_agents_limit:
+            return jsonify({
+                'error': f'Custom agent limit reached',
+                'message': f'Your {tier_info["name"]} plan allows {custom_agents_limit} custom agent{"s" if custom_agents_limit > 1 else ""}. Upgrade to create more!',
+                'current_count': current_count,
+                'limit': custom_agents_limit,
+                'upgrade_url': '/pricing'
+            }), 403
+    except Exception as e:
+        print(f"Error checking custom agent limit: {e}")
+        # Continue anyway to not block if there's an error
 
     try:
         data = request.json
         name = data.get('name')
         description = data.get('role') or data.get('description')  # Accept both for compatibility
         emoji = data.get('emoji', '🤖')  # Handle emoji from frontend
-        
+        folder = data.get('folder', None)  # Optional folder for organization
+
         # Handle both 'instructions' (from frontend) and 'system_prompt' (legacy)
         instructions = data.get('instructions') or data.get('system_prompt', '')
         
@@ -5428,16 +5764,21 @@ def create_custom_agent():
             cursor.execute("ALTER TABLE custom_agents ADD COLUMN emoji TEXT DEFAULT '🤖'")
             conn.commit()
             print("✅ Added emoji column to custom_agents table")
-        
+
         if 'share_code' not in columns:
             cursor.execute("ALTER TABLE custom_agents ADD COLUMN share_code TEXT UNIQUE")
             conn.commit()
             print("✅ Added share_code column to custom_agents table")
-        
+
         if 'is_public' not in columns:
             cursor.execute("ALTER TABLE custom_agents ADD COLUMN is_public BOOLEAN DEFAULT 1")
             conn.commit()
             print("✅ Added is_public column to custom_agents table")
+
+        if 'folder' not in columns:
+            cursor.execute("ALTER TABLE custom_agents ADD COLUMN folder TEXT DEFAULT NULL")
+            conn.commit()
+            print("✅ Added folder column to custom_agents table")
         
         # Generate unique share code
         import secrets
@@ -5452,9 +5793,9 @@ def create_custom_agent():
 
         # Use description column (not role)
         cursor.execute("""
-            INSERT INTO custom_agents (user_id, name, description, emoji, personality, system_prompt, share_code, is_public)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 1)
-        """, (current_user.id, name, description, emoji, personality, instructions, share_code))
+            INSERT INTO custom_agents (user_id, name, description, emoji, personality, system_prompt, share_code, is_public, folder)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
+        """, (current_user.id, name, description, emoji, personality, instructions, share_code, folder))
         
         agent_id = cursor.lastrowid
         conn.commit()
@@ -5490,6 +5831,86 @@ def create_custom_agent():
         print(f"❌ Error creating custom agent: {str(e)}")
         import traceback
         traceback.print_exc()  # Print full error for debugging
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/custom-agents/<int:agent_id>', methods=['PUT', 'PATCH'])
+@login_required
+def update_custom_agent(agent_id):
+    """Update an existing custom agent"""
+    try:
+        data = request.json
+
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Verify ownership
+        cursor.execute("SELECT user_id FROM custom_agents WHERE id = ?", (agent_id,))
+        result = cursor.fetchone()
+
+        if not result:
+            conn.close()
+            return jsonify({'error': 'Agent not found'}), 404
+
+        if result[0] != current_user.id:
+            conn.close()
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        # Build update query dynamically based on provided fields
+        update_fields = []
+        update_values = []
+
+        if 'name' in data:
+            update_fields.append('name = ?')
+            update_values.append(data['name'])
+
+        if 'role' in data or 'description' in data:
+            update_fields.append('description = ?')
+            update_values.append(data.get('role') or data.get('description'))
+
+        if 'emoji' in data:
+            update_fields.append('emoji = ?')
+            update_values.append(data['emoji'])
+
+        if 'instructions' in data or 'system_prompt' in data:
+            update_fields.append('system_prompt = ?')
+            update_values.append(data.get('instructions') or data.get('system_prompt'))
+
+        if 'personality' in data:
+            personality_data = data['personality']
+            if isinstance(personality_data, dict):
+                update_fields.append('personality = ?')
+                update_values.append(json.dumps(personality_data))
+            else:
+                update_fields.append('personality = ?')
+                update_values.append(personality_data)
+
+        if 'folder' in data:
+            update_fields.append('folder = ?')
+            update_values.append(data['folder'])
+
+        if not update_fields:
+            conn.close()
+            return jsonify({'error': 'No fields to update'}), 400
+
+        # Add agent_id to values for WHERE clause
+        update_values.append(agent_id)
+
+        # Execute update
+        query = f"UPDATE custom_agents SET {', '.join(update_fields)} WHERE id = ?"
+        cursor.execute(query, update_values)
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': 'Agent updated successfully',
+            'agent_id': agent_id
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Error updating custom agent: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/custom-agents/<int:agent_id>', methods=['DELETE'])
