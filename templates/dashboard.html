@@ -301,6 +301,32 @@
             transform: translateY(-50%) scale(1.1);
         }
 
+        .edit-agent-btn {
+            position: absolute;
+            right: 72px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: 14px;
+            cursor: pointer;
+            opacity: 0;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        .custom-agent-item:hover .edit-agent-btn {
+            opacity: 1;
+        }
+
+        .edit-agent-btn:hover {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: rgba(59, 130, 246, 0.5);
+            transform: translateY(-50%) scale(1.1);
+        }
+
         .sidebar-footer {
             padding: 12px;
             border-top: 1px solid #333;
@@ -4017,8 +4043,10 @@
                 const agentDiv = document.createElement('div');
                 agentDiv.className = 'agent-item custom-agent-item';
                 agentDiv.onclick = (e) => {
-                    // Don't trigger if clicking share or delete buttons
-                    if (!e.target.closest('.share-agent-btn') && !e.target.closest('.delete-agent-btn')) {
+                    // Don't trigger if clicking share, edit, or delete buttons
+                    if (!e.target.closest('.share-agent-btn') &&
+                        !e.target.closest('.edit-agent-btn') &&
+                        !e.target.closest('.delete-agent-btn')) {
                         selectCustomAgent(e, agent.id, agent.name, agent.emoji || '🤖', agent.description || agent.role);
                     }
                 };
@@ -4039,6 +4067,9 @@
                         <div class="agent-role">${agent.description || agent.role || 'Custom Agent'}</div>
                     </div>
                     ${shareButtonHTML}
+                    <button class="edit-agent-btn" onclick="editCustomAgent(event, ${agent.id})" title="Edit agent">
+                        ✏️
+                    </button>
                     <button class="delete-agent-btn" onclick="deleteCustomAgent(event, ${agent.id})" title="Delete agent">
                         🗑️
                     </button>
@@ -4266,6 +4297,91 @@
             // Start new conversation if function exists
             if (typeof startNewChat === 'function') {
                 startNewChat();
+            }
+        }
+
+        async function editCustomAgent(event, agentId) {
+            event.stopPropagation(); // Prevent agent selection
+
+            try {
+                // Fetch agent data
+                const response = await fetch('/api/custom-agents');
+                const data = await response.json();
+                const agent = data.agents.find(a => a.id === agentId);
+
+                if (!agent) {
+                    alert('Agent not found');
+                    return;
+                }
+
+                // Create edit modal (reuse the create modal logic but pre-fill it)
+                const modal = document.getElementById('customAgentModal');
+                if (modal) {
+                    // Pre-fill the form
+                    document.getElementById('agentName').value = agent.name;
+                    document.getElementById('agentRole').value = agent.description || agent.role || '';
+                    document.getElementById('agentEmoji').value = agent.emoji || '🤖';
+                    document.getElementById('agentInstructions').value = agent.system_prompt || '';
+
+                    // Change modal title and button
+                    const modalTitle = modal.querySelector('.modal-title');
+                    if (modalTitle) modalTitle.textContent = 'Edit Custom Agent';
+
+                    const createButton = modal.querySelector('button[onclick*="createAgent"]');
+                    if (createButton) {
+                        createButton.textContent = 'Update Agent';
+                        createButton.onclick = () => updateAgent(agentId);
+                    }
+
+                    modal.style.display = 'block';
+                } else {
+                    // If modal doesn't exist, create it first then edit
+                    openCustomAgentModal();
+                    setTimeout(() => editCustomAgent(event, agentId), 100);
+                }
+            } catch (error) {
+                console.error('Error loading agent for edit:', error);
+                alert('Failed to load agent data');
+            }
+        }
+
+        async function updateAgent(agentId) {
+            const name = document.getElementById('agentName').value.trim();
+            const role = document.getElementById('agentRole').value.trim();
+            const emoji = document.getElementById('agentEmoji').value.trim();
+            const instructions = document.getElementById('agentInstructions').value.trim();
+
+            if (!name || !role || !instructions) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/custom-agents/${agentId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        role: role,
+                        emoji: emoji,
+                        instructions: instructions
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showNotification('✅ Agent updated successfully!');
+                    closeCustomAgentModal();
+                    loadCustomAgents(); // Reload the list
+                } else {
+                    alert(data.message || data.error || 'Failed to update agent');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to update agent. Please try again.');
             }
         }
 

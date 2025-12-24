@@ -168,10 +168,12 @@ SUBSCRIPTION_TIERS = {
         'price': 0,
         'messages_per_day': 25,
         'agents_available': 7,
+        'custom_agents_limit': 1,
         'api_access': False,
         'features': [
             '25 messages per day',
             'Access to all 7 agents',
+            '1 custom agent',
             'Basic chat history',
             'File upload & analysis',
             'Notion integration'
@@ -182,10 +184,12 @@ SUBSCRIPTION_TIERS = {
         'price': 0,
         'messages_per_day': -1,  # Unlimited
         'agents_available': 7,
+        'custom_agents_limit': 3,
         'api_access': False,  # NO API access for promo users
         'features': [
             'Unlimited messages',
             'All 7 AI agents',
+            '3 custom agents',
             'Full chat history',
             'File upload & analysis',
             'Notion integration',
@@ -197,11 +201,13 @@ SUBSCRIPTION_TIERS = {
         'price': 19,  # Increased from $10
         'messages_per_day': 60,  # Reduced from 100
         'agents_available': 7,
+        'custom_agents_limit': 3,
         'api_access': False,  # NO API access
         'features': [
             '60 messages per day',
             'Claude AI access',
             'All 7 AI agents',
+            '3 custom agents',
             'Full chat history',
             'File upload & analysis',
             'Notion integration',
@@ -213,11 +219,13 @@ SUBSCRIPTION_TIERS = {
         'price': 49,  # Increased from $30
         'messages_per_day': 300,  # Reduced from 500
         'agents_available': 7,
+        'custom_agents_limit': 10,
         'api_access': True,  # API access included
         'features': [
             '300 messages per day',
             'Claude AI access',
             'All 7 AI agents',
+            '10 custom agents',
             'Unlimited chat history',
             'File upload & analysis',
             'All integrations',
@@ -231,11 +239,13 @@ SUBSCRIPTION_TIERS = {
         'price': 99,  # New tier
         'messages_per_day': 1000,
         'agents_available': 7,
+        'custom_agents_limit': -1,  # Unlimited
         'api_access': True,
         'features': [
             '1,000 messages per day',
             'Claude AI access',
             'All 7 AI agents',
+            'Unlimited custom agents',
             'Unlimited chat history',
             'File upload & analysis',
             'All integrations',
@@ -3787,10 +3797,37 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
         
         # Save chat history and increment counter (only for authenticated users)
         if not is_guest:
+            # Get or create conversation for this agent
             cursor.execute("""
-                INSERT INTO chat_history (user_id, agent_name, message, response)
-                VALUES (?, ?, ?, ?)
-            """, (current_user.id, agent, saved_message, ai_response))
+                SELECT id FROM conversations
+                WHERE user_id = ? AND agent_name = ? AND is_active = 1
+                ORDER BY updated_at DESC
+                LIMIT 1
+            """, (current_user.id, agent))
+
+            conv_result = cursor.fetchone()
+
+            if conv_result:
+                conversation_id = conv_result[0]
+                # Update conversation timestamp
+                cursor.execute("""
+                    UPDATE conversations
+                    SET updated_at = ?
+                    WHERE id = ?
+                """, (datetime.utcnow().isoformat(), conversation_id))
+            else:
+                # Create new conversation
+                cursor.execute("""
+                    INSERT INTO conversations (user_id, agent_name, title, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (current_user.id, agent, f'Chat with {agent}', datetime.utcnow().isoformat(), datetime.utcnow().isoformat()))
+                conversation_id = cursor.lastrowid
+
+            # Save message with conversation_id
+            cursor.execute("""
+                INSERT INTO chat_history (user_id, agent_name, message, response, conversation_id)
+                VALUES (?, ?, ?, ?, ?)
+            """, (current_user.id, agent, saved_message, ai_response, conversation_id))
 
             # ✅ INCREMENT MESSAGE COUNTER (THE FIX!)
             cursor.execute("""
@@ -5313,10 +5350,11 @@ def get_custom_agents():
         has_description = 'description' in columns
         has_role = 'role' in columns
         has_share_code = 'share_code' in columns
-        
+        has_folder = 'folder' in columns
+
         # Use description if available, fallback to role for old tables
         desc_column = 'description' if has_description else 'role'
-        
+
         # Build SELECT query with optional share_code
         select_columns = f"id, name, {desc_column}"
         if has_emoji:
@@ -5324,6 +5362,8 @@ def get_custom_agents():
         select_columns += ", personality, system_prompt"
         if has_share_code:
             select_columns += ", share_code"
+        if has_folder:
+            select_columns += ", folder"
         select_columns += ", created_at"
         
         # TODO: FUTURE FEATURE - Privacy control for custom agents
@@ -5367,7 +5407,13 @@ def get_custom_agents():
                 agent['share_code'] = row[idx]
                 agent['share_url'] = f"{request.host_url}custom/{row[idx]}"
                 idx += 1
-            
+
+            if has_folder:
+                agent['folder'] = row[idx]
+                idx += 1
+            else:
+                agent['folder'] = None
+
             agent['created_at'] = row[idx]
             agents.append(agent)
         
@@ -5385,21 +5431,39 @@ def get_custom_agents():
 def create_custom_agent():
     """Create a new custom agent"""
 
-    # TODO: FUTURE FEATURE - Restrict custom agent creation to paid users only
-    # Uncomment when ready to implement:
-    # if current_user.subscription_tier == 'free':
-    #     return jsonify({
-    #         'error': 'Custom agent creation requires a paid plan',
-    #         'message': 'Upgrade to Pro or Premium to create custom agents',
-    #         'upgrade_url': '/pricing'
-    #     }), 403
+    # Check custom agent limit based on subscription tier
+    try:
+        tier = current_user.subscription_tier or 'free'
+        tier_info = SUBSCRIPTION_TIERS.get(tier, SUBSCRIPTION_TIERS['free'])
+        custom_agents_limit = tier_info.get('custom_agents_limit', 1)
+
+        # Count user's existing custom agents
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM custom_agents WHERE user_id = ?", (current_user.id,))
+        current_count = cursor.fetchone()[0]
+        conn.close()
+
+        # Check if limit reached (-1 means unlimited)
+        if custom_agents_limit != -1 and current_count >= custom_agents_limit:
+            return jsonify({
+                'error': f'Custom agent limit reached',
+                'message': f'Your {tier_info["name"]} plan allows {custom_agents_limit} custom agent{"s" if custom_agents_limit > 1 else ""}. Upgrade to create more!',
+                'current_count': current_count,
+                'limit': custom_agents_limit,
+                'upgrade_url': '/pricing'
+            }), 403
+    except Exception as e:
+        print(f"Error checking custom agent limit: {e}")
+        # Continue anyway to not block if there's an error
 
     try:
         data = request.json
         name = data.get('name')
         description = data.get('role') or data.get('description')  # Accept both for compatibility
         emoji = data.get('emoji', '🤖')  # Handle emoji from frontend
-        
+        folder = data.get('folder', None)  # Optional folder for organization
+
         # Handle both 'instructions' (from frontend) and 'system_prompt' (legacy)
         instructions = data.get('instructions') or data.get('system_prompt', '')
         
@@ -5428,16 +5492,21 @@ def create_custom_agent():
             cursor.execute("ALTER TABLE custom_agents ADD COLUMN emoji TEXT DEFAULT '🤖'")
             conn.commit()
             print("✅ Added emoji column to custom_agents table")
-        
+
         if 'share_code' not in columns:
             cursor.execute("ALTER TABLE custom_agents ADD COLUMN share_code TEXT UNIQUE")
             conn.commit()
             print("✅ Added share_code column to custom_agents table")
-        
+
         if 'is_public' not in columns:
             cursor.execute("ALTER TABLE custom_agents ADD COLUMN is_public BOOLEAN DEFAULT 1")
             conn.commit()
             print("✅ Added is_public column to custom_agents table")
+
+        if 'folder' not in columns:
+            cursor.execute("ALTER TABLE custom_agents ADD COLUMN folder TEXT DEFAULT NULL")
+            conn.commit()
+            print("✅ Added folder column to custom_agents table")
         
         # Generate unique share code
         import secrets
@@ -5452,9 +5521,9 @@ def create_custom_agent():
 
         # Use description column (not role)
         cursor.execute("""
-            INSERT INTO custom_agents (user_id, name, description, emoji, personality, system_prompt, share_code, is_public)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 1)
-        """, (current_user.id, name, description, emoji, personality, instructions, share_code))
+            INSERT INTO custom_agents (user_id, name, description, emoji, personality, system_prompt, share_code, is_public, folder)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
+        """, (current_user.id, name, description, emoji, personality, instructions, share_code, folder))
         
         agent_id = cursor.lastrowid
         conn.commit()
@@ -5490,6 +5559,86 @@ def create_custom_agent():
         print(f"❌ Error creating custom agent: {str(e)}")
         import traceback
         traceback.print_exc()  # Print full error for debugging
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/custom-agents/<int:agent_id>', methods=['PUT', 'PATCH'])
+@login_required
+def update_custom_agent(agent_id):
+    """Update an existing custom agent"""
+    try:
+        data = request.json
+
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Verify ownership
+        cursor.execute("SELECT user_id FROM custom_agents WHERE id = ?", (agent_id,))
+        result = cursor.fetchone()
+
+        if not result:
+            conn.close()
+            return jsonify({'error': 'Agent not found'}), 404
+
+        if result[0] != current_user.id:
+            conn.close()
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        # Build update query dynamically based on provided fields
+        update_fields = []
+        update_values = []
+
+        if 'name' in data:
+            update_fields.append('name = ?')
+            update_values.append(data['name'])
+
+        if 'role' in data or 'description' in data:
+            update_fields.append('description = ?')
+            update_values.append(data.get('role') or data.get('description'))
+
+        if 'emoji' in data:
+            update_fields.append('emoji = ?')
+            update_values.append(data['emoji'])
+
+        if 'instructions' in data or 'system_prompt' in data:
+            update_fields.append('system_prompt = ?')
+            update_values.append(data.get('instructions') or data.get('system_prompt'))
+
+        if 'personality' in data:
+            personality_data = data['personality']
+            if isinstance(personality_data, dict):
+                update_fields.append('personality = ?')
+                update_values.append(json.dumps(personality_data))
+            else:
+                update_fields.append('personality = ?')
+                update_values.append(personality_data)
+
+        if 'folder' in data:
+            update_fields.append('folder = ?')
+            update_values.append(data['folder'])
+
+        if not update_fields:
+            conn.close()
+            return jsonify({'error': 'No fields to update'}), 400
+
+        # Add agent_id to values for WHERE clause
+        update_values.append(agent_id)
+
+        # Execute update
+        query = f"UPDATE custom_agents SET {', '.join(update_fields)} WHERE id = ?"
+        cursor.execute(query, update_values)
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': 'Agent updated successfully',
+            'agent_id': agent_id
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Error updating custom agent: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/custom-agents/<int:agent_id>', methods=['DELETE'])
