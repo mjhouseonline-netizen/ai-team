@@ -3354,22 +3354,31 @@
             const currentAgent = getCurrentAgent();
             formData.append('agent', currentAgent);
             
+            // Variable to track thinking indicator interval
+            let thinkingInterval = null;
+
             try {
                 // Display user message immediately
                 displayUserMessage(message, uploadedFile);
-                
+
+                // Show thinking indicator
+                thinkingInterval = displayThinkingIndicator();
+
                 // Clear input and file
                 input.value = '';
                 removeFile();
                 autoResize(input);
-                
+
                 // Send to backend
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     body: formData
                 });
-                
+
                 const data = await response.json();
+
+                // Remove thinking indicator before showing response
+                removeThinkingIndicator(thinkingInterval);
 
                 if (data.success) {
                     // Check if agent was auto-routed
@@ -3390,6 +3399,8 @@
                     displayErrorMessage(data.error || 'Failed to send message');
                 }
             } catch (error) {
+                // Remove thinking indicator on error
+                removeThinkingIndicator(thinkingInterval);
                 console.error('Error sending message:', error);
                 displayErrorMessage('Network error. Please try again.');
             } finally {
@@ -3440,6 +3451,53 @@
             
             container.appendChild(messageDiv);
             container.scrollTop = container.scrollHeight;
+        }
+
+        function displayThinkingIndicator() {
+            const thinkingMessages = [
+                '*thinking...',
+                '*contemplating...',
+                '*computing...',
+                '*analyzing...',
+                '*processing...',
+                '*considering...',
+                '*formulating response...',
+                '*gathering thoughts...'
+            ];
+
+            const randomMessage = thinkingMessages[Math.floor(Math.random() * thinkingMessages.length)];
+
+            const container = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message assistant-message thinking-indicator';
+            messageDiv.id = 'thinking-indicator';
+            messageDiv.innerHTML = `<div class="message-content" style="opacity: 0.7; font-style: italic; color: #9ca3af;">${randomMessage}</div>`;
+
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+
+            // Animate the ellipsis
+            let dots = 3;
+            const interval = setInterval(() => {
+                const indicator = document.getElementById('thinking-indicator');
+                if (!indicator) {
+                    clearInterval(interval);
+                    return;
+                }
+                dots = (dots % 3) + 1;
+                const baseMessage = randomMessage.replace(/\.+$/, '');
+                indicator.querySelector('.message-content').textContent = baseMessage + '.'.repeat(dots);
+            }, 500);
+
+            return interval;
+        }
+
+        function removeThinkingIndicator(interval) {
+            if (interval) clearInterval(interval);
+            const indicator = document.getElementById('thinking-indicator');
+            if (indicator) {
+                indicator.remove();
+            }
         }
 
         function displayAssistantMessage(message) {
