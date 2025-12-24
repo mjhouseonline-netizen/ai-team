@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FAQ - AI Team Platform</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .header h1 {
+            font-size: 36px;
+            color: #1f2937;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #6b7280;
+            font-size: 18px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .nav-link {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: transform 0.2s;
+        }
+
+        .nav-link:hover {
+            transform: translateY(-2px);
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section h2 {
+            font-size: 28px;
+            color: #1f2937;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .faq-item {
+            margin-bottom: 25px;
+            border-left: 4px solid #667eea;
+            padding-left: 20px;
+        }
+
+        .faq-item h3 {
+            font-size: 20px;
+            color: #374151;
+            margin-bottom: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .faq-item h3:hover {
+            color: #667eea;
+        }
+
+        .faq-item .answer {
+            color: #6b7280;
+            line-height: 1.6;
+            margin-top: 10px;
+        }
+
+        .code-block {
+            background: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+        }
+
+        .highlight {
+            background: #fef3c7;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .step {
+            background: #f0f9ff;
+            border-left: 4px solid #3b82f6;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+
+        .step strong {
+            color: #1e40af;
+        }
+
+        .warning {
+            background: #fef2f2;
+            border-left: 4px solid #ef4444;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        .success {
+            background: #f0fdf4;
+            border-left: 4px solid #10b981;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        ul, ol {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+
+        li {
+            margin-bottom: 8px;
+            color: #4b5563;
+        }
+
+        .back-btn {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 12px 24px;
+            background: #6b7280;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        .back-btn:hover {
+            background: #4b5563;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📚 Frequently Asked Questions</h1>
+            <p>Everything you need to know about AI Team Platform</p>
+        </div>
+
+        <div class="nav-links">
+            <a href="/dashboard" class="nav-link">🏠 Dashboard</a>
+            <a href="/help" class="nav-link">📖 Help Center</a>
+            <a href="/settings" class="nav-link">⚙️ Settings</a>
+        </div>
+
+        <!-- Getting Started -->
+        <div class="section">
+            <h2>🚀 Getting Started</h2>
+
+            <div class="faq-item">
+                <h3>❓ What is AI Team Platform?</h3>
+                <div class="answer">
+                    <p>AI Team Platform is a powerful multi-agent AI system that lets you:</p>
+                    <ul>
+                        <li>Chat with 7 specialized AI agents (Luna, Mila, Sage, Ember, Sol, Nova, Theo)</li>
+                        <li>Create unlimited custom AI agents with your own instructions</li>
+                        <li>Embed chatbots on any website</li>
+                        <li>Connect to automation tools (n8n, Zapier, Make.com)</li>
+                        <li>Schedule and post to social media</li>
+                        <li>Build apps and integrations with our API</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <h3>❓ How do I get started?</h3>
+                <div class="answer">
+                    <div class="step">
+                        <strong>Step 1:</strong> Create an account or log in
+                    </div>
+                    <div class="step">
+                        <strong>Step 2:</strong> Choose an AI agent from the sidebar (or create your own)
+                    </div>
+                    <div class="step">
+                        <strong>Step 3:</strong> Start chatting! Type your message and press Enter
+                    </div>
+                    <div class="step">
+                        <strong>Step 4:</strong> Explore advanced features like webhooks, embeds, and social media
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Using Agents -->
+        <div class="section">
+            <h2>🤖 Using AI Agents</h2>
+
+            <div class="faq-item">
+                <h3>❓ How do I create a custom agent?</h3>
+                <div class="answer">
+                    <div class="step">
+                        <strong>Step 1:</strong> Click "✨ Create Custom Agent" in the sidebar
+                    </div>
+                    <div class="step">
+                        <strong>Step 2:</strong> Fill in the details:
+                        <ul>
+                            <li><strong>Name:</strong> What should the agent be called?</li>
+                            <li><strong>Role:</strong> Brief description (e.g., "Social Media Manager")</li>
+                            <li><strong>Emoji:</strong> Pick an icon for your agent</li>
+                            <li><strong>Instructions:</strong> Tell the agent how to behave and what it knows</li>
+                        </ul>
+                    </div>
+                    <div class="step">
+                        <strong>Step 3:</strong> Click "Create Agent"
+                    </div>
+                    <div class="success">
+                        ✅ Your agent is ready! Click on it to start chatting.
+                    </div>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <h3>❓ How many custom agents can I create?</h3>
+                <div class="answer">
+                    <p>It depends on your plan:</p>
+                    <ul>
+                        <li><span class="highlight">Free:</span> 1 custom agent</li>
+                        <li><span class="highlight">Starter:</span> 3 custom agents</li>
+                        <li><span class="highlight">Pro:</span> 10 custom agents</li>
+                        <li><span class="highlight">Enterprise:</span> Unlimited custom agents</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <h3>❓ Can I edit my custom agents?</h3>
+                <div class="answer">
+                    <p>Yes! Click the <strong>✏️ edit button</strong> next to any custom agent in your sidebar. You can update:</p>
+                    <ul>
+                        <li>Agent name</li>
+                        <li>Role/description</li>
+                        <li>Emoji icon</li>
+                        <li>Instructions and personality</li>
+                        <li>Folder organization</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <h3>❓ How do I share my custom agent?</h3>
+                <div class="answer">
+                    <p>Every custom agent gets a unique shareable link. Click the <strong>🔗 share button</strong> to get the link. Anyone with the link can chat with your agent without logging in!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Embedding Chatbots -->
+        <div class="section">
+            <h2>💬 Embedding Chatbots</h2>
+
+            <div class="faq-item">
+                <h3>❓ How do I embed a chatbot on my website?</h3>
+                <div class="answer">
+                    <div class="step">
+                        <strong>Step 1:</strong> Create a custom agent (or use an existing one)
+                    </div>
+                    <div class="step">
+                        <strong>Step 2:</strong> Get the embed code via API:
+                        <div class="code-block">
+GET /api/agent/{agent_id}/embed-code
+
+Response:
+{
+  "embed_code": "&lt;script src='...'&gt;&lt;/script&gt;",
+  "preview_url": "https://..."
+}
+                        </div>
+                    </div>
+                    <div class="step">
+                        <strong>Step 3:</strong> Copy the embed code and paste it into your website's HTML
+                    </div>
+                    <div class="success">
+                        ✅ A chat widget will appear in the bottom-right corner of your site!
+                    </div>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <h3>❓ Can I customize the chatbot appearance?</h3>
+                <div class="answer">
+                    <p>Currently, the chatbot uses a beautiful gradient purple theme. Custom styling is coming soon! You can customize:</p>
+                    <ul>
+                        <li>Agent personality and responses (via agent instructions)</li>
+                        <li>Agent name shown in the widget</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <h3>❓ Does the embedded chatbot require login?</h3>
+                <div class="answer">
+                    <p><strong>No!</strong> Embedded chatbots work for everyone, no login required. Visitors can chat with your agent anonymously.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Webhooks & Integrations -->
+        <div class="section">
+            <h2>🔗 Webhooks & Integrations</h2>
+
+            <div class="faq-item">
+                <h3>❓ What is a webhook?</h3>
+                <div class="answer">
+                    <p>A webhook is a way to send data to other services automatically when something happens. For example:</p>
+                    <ul>
+                        <li>When a user sends a message → notify your n8n workflow</li>
+                        <li>When an agent is created → update your database</li>
+                        <li>When a chat completes → log to your analytics</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <h3>❓ How do I connect to n8n?</h3>
+                <div class="answer">
+                    <div class="step">
+                        <strong>Step 1:</strong> In n8n, create a workflow with a "Webhook" trigger node
+                    </div>
+                    <div class="step">
+                        <strong>Step 2:</strong> Copy the webhook URL from n8n
+                    </div>
+                    <div class="step">
+                        <strong>Step 3:</strong> Add the webhook to AI Team Platform:
+                        <div class="code-block">
+POST /api/webhooks
+Content-Type: application/json
+
+{
+  "webhook_url": "https://your-n8n.com/webhook/abc123",
+  "events": ["message.completed"]
+}
+                        </div>
+                    </div>
+                    <div class="success">
+                        ✅ Now every completed message will trigger your n8n workflow!
+                    </div>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <h3>❓ Does it work with Zapier and Make.com?</h3>
+                <div class="answer">
+                    <p><strong>Yes!</strong> The webhook system works with any service that accepts webhooks:</p>
+                    <ul>
+                        <li>✅ n8n (self-hosted automation)</li>
+                        <li>✅ Zapier (cloud automation)</li>
+                        <li>✅ Make.com / Integromat (visual automation)</li>
+                        <li>✅ Custom webhooks (your own servers)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <h3>❓ What events can trigger webhooks?</h3>
+                <div class="answer">
+                    <p>Currently available events:</p>
+                    <ul>
+                        <li><code>message.completed</code> - When an AI response is generated</li>
+                        <li><code>agent.created</code> - When a custom agent is created</li>
+                    </ul>
+                    <p>More events coming soon!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Social Media -->
+        <div class="section">
+            <h2>📱 Social Media Posting</h2>
+
+            <div class="faq-item">
+                <h3>❓ Can AI agents post to social media?</h3>
+                <div class="answer">
+                    <p><strong>Yes!</strong> You can connect your social media accounts and have agents:</p>
+                    <ul>
+                        <li>Draft posts for you to approve</li>
+                        <li>Schedule posts for later</li>
+                        <li>Post immediately after your approval</li>
+                    </ul>
+                    <div class="warning">
+                        ⚠️ <strong>Important:</strong> Posts always require your approval before publishing!
+                    </div>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <h3>❓ Which social platforms are supported?</h3>
+                <div class="answer">
+                    <ul>
+                        <li>✅ Twitter / X</li>
+                        <li>✅ Facebook Pages</li>
+                        <li>✅ LinkedIn</li>
+                        <li>🔜 Instagram (coming soon)</li>
+                        <li>🔜 TikTok (coming soon)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <h3>❓ How do I connect social media accounts?</h3>
+                <div class="answer">
+                    <div class="step">
+                        <strong>Step 1:</strong> Go to Settings → Social Media
+                    </div>
+                    <div class="step">
+                        <strong>Step 2:</strong> Click "Connect" for the platform you want
+                    </div>
+                    <div class="step">
+                        <strong>Step 3:</strong> Authorize AI Team Platform to post on your behalf
+                    </div>
+                    <div class="success">
+                        ✅ Your account is connected! Agents can now draft posts for you.
+                    </div>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <h3>❓ How does post approval work?</h3>
+                <div class="answer">
+                    <ol>
+                        <li>Ask an agent to create a social media post</li>
+                        <li>Agent drafts the post and shows it to you</li>
+                        <li>You review and can:
+                            <ul>
+                                <li>✅ Approve & Post Now</li>
+                                <li>📅 Schedule for Later</li>
+                                <li>✏️ Edit & Approve</li>
+                                <li>❌ Reject</li>
+                            </ul>
+                        </li>
+                        <li>Only approved posts get published!</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <!-- API Access -->
+        <div class="section">
+            <h2>🔌 API Access</h2>
+
+            <div class="faq-item">
+                <h3>❓ Does AI Team Platform have an API?</h3>
+                <div class="answer">
+                    <p><strong>Yes!</strong> The API is available on Pro and Enterprise plans. You can:</p>
+                    <ul>
+                        <li>Chat with agents programmatically</li>
+                        <li>Create and manage custom agents</li>
+                        <li>Embed chatbots</li>
+                        <li>Manage webhooks</li>
+                        <li>Build custom applications</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <h3>❓ How do I get API access?</h3>
+                <div class="answer">
+                    <div class="step">
+                        <strong>Step 1:</strong> Upgrade to Pro or Enterprise plan
+                    </div>
+                    <div class="step">
+                        <strong>Step 2:</strong> Go to Settings → API
+                    </div>
+                    <div class="step">
+                        <strong>Step 3:</strong> Generate an API key
+                    </div>
+                    <div class="warning">
+                        ⚠️ Keep your API key secret! Treat it like a password.
+                    </div>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <h3>❓ API Endpoints Overview</h3>
+                <div class="answer">
+                    <div class="code-block">
+# Chat with agents
+POST /api/chat
+Body: { "message": "Hello", "agent": "Luna" }
+
+# Create custom agent
+POST /api/custom-agents
+Body: { "name": "...", "role": "...", "instructions": "..." }
+
+# Get embed code
+GET /api/agent/{id}/embed-code
+
+# Manage webhooks
+GET /api/webhooks
+POST /api/webhooks
+
+# Social media posting
+POST /api/social/post
+POST /api/social/schedule
+                    </div>
+                    <p>Full API documentation available in the Help Center.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pricing & Plans -->
+        <div class="section">
+            <h2>💰 Pricing & Plans</h2>
+
+            <div class="faq-item">
+                <h3>❓ What's included in each plan?</h3>
+                <div class="answer">
+                    <p><strong>Free Plan:</strong></p>
+                    <ul>
+                        <li>25 messages/day</li>
+                        <li>All 7 core agents</li>
+                        <li>1 custom agent</li>
+                        <li>Chat history</li>
+                    </ul>
+
+                    <p><strong>Starter ($19/mo):</strong></p>
+                    <ul>
+                        <li>60 messages/day</li>
+                        <li>All agents</li>
+                        <li>3 custom agents</li>
+                        <li>Embedable chatbots</li>
+                        <li>Webhooks</li>
+                    </ul>
+
+                    <p><strong>Pro ($49/mo):</strong></p>
+                    <ul>
+                        <li>300 messages/day</li>
+                        <li>10 custom agents</li>
+                        <li>API access</li>
+                        <li>Social media integration</li>
+                        <li>Priority support</li>
+                    </ul>
+
+                    <p><strong>Enterprise ($99/mo):</strong></p>
+                    <ul>
+                        <li>1,000 messages/day</li>
+                        <li>Unlimited custom agents</li>
+                        <li>Full API access</li>
+                        <li>Dedicated support</li>
+                        <li>Custom features</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Troubleshooting -->
+        <div class="section">
+            <h2>🔧 Troubleshooting</h2>
+
+            <div class="faq-item">
+                <h3>❓ Chat history not saving?</h3>
+                <div class="answer">
+                    <p>Make sure you're logged in! Guest mode doesn't save history. If you're logged in and still having issues:</p>
+                    <ul>
+                        <li>Refresh the page</li>
+                        <li>Clear browser cache</li>
+                        <li>Contact support if problem persists</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <h3>❓ Custom agent calling itself "Luna"?</h3>
+                <div class="answer">
+                    <p>This has been fixed in the latest update! Make sure:</p>
+                    <ul>
+                        <li>You've refreshed the page</li>
+                        <li>Your agent is selected in the sidebar</li>
+                        <li>The agent name shows correctly in the header</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <h3>❓ Embed widget not showing on my website?</h3>
+                <div class="answer">
+                    <p>Check these common issues:</p>
+                    <ul>
+                        <li>Make sure the script tag is in the &lt;body&gt; section</li>
+                        <li>Check browser console for errors</li>
+                        <li>Verify the share_code is correct</li>
+                        <li>Make sure your agent is set to "public"</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <a href="/dashboard" class="back-btn">← Back to Dashboard</a>
+    </div>
+</body>
+</html>

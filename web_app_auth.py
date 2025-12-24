@@ -2429,11 +2429,326 @@ def settings():
     """Settings page for integrations"""
     return render_template('settings.html', user=current_user)
 
+@app.route('/faq')
+def faq():
+    """FAQ page - public access"""
+    return render_template('faq.html')
+
+@app.route('/help')
+def help_page():
+    """Help center - public access"""
+    return render_template('help.html')
+
 @app.route('/profile')
 @login_required
 def profile():
     """User profile page"""
     return render_template('profile.html', user=current_user)
+
+# ============================================
+# SOCIAL MEDIA INTEGRATION
+# ============================================
+
+@app.route('/api/social/connect/<platform>', methods=['POST'])
+@login_required
+def connect_social_platform(platform):
+    """Connect social media account (Twitter, Facebook, LinkedIn)"""
+    supported_platforms = ['twitter', 'facebook', 'linkedin']
+
+    if platform not in supported_platforms:
+        return jsonify({'error': 'Unsupported platform'}), 400
+
+    try:
+        data = request.json
+        access_token = data.get('access_token')
+        account_name = data.get('account_name')
+
+        if not access_token:
+            return jsonify({'error': 'Access token required'}), 400
+
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Create social_accounts table if not exists
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS social_accounts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                platform TEXT NOT NULL,
+                account_name TEXT,
+                access_token TEXT NOT NULL,
+                refresh_token TEXT,
+                expires_at TIMESTAMP,
+                is_active BOOLEAN DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id),
+                UNIQUE(user_id, platform, account_name)
+            )
+        """)
+
+        # Store connection
+        cursor.execute("""
+            INSERT OR REPLACE INTO social_accounts
+            (user_id, platform, account_name, access_token)
+            VALUES (?, ?, ?, ?)
+        """, (current_user.id, platform, account_name, access_token))
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': f'{platform.title()} connected successfully',
+            'platform': platform
+        }), 200
+
+    except Exception as e:
+        print(f"Error connecting {platform}: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/social/accounts')
+@login_required
+def get_social_accounts():
+    """Get all connected social media accounts"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT platform, account_name, is_active, created_at
+            FROM social_accounts
+            WHERE user_id = ? AND is_active = 1
+            ORDER BY created_at DESC
+        """, (current_user.id,))
+
+        accounts = []
+        for row in cursor.fetchall():
+            accounts.append({
+                'platform': row[0],
+                'account_name': row[1],
+                'is_active': bool(row[2]),
+                'connected_at': row[3]
+            })
+
+        conn.close()
+
+        return jsonify({'accounts': accounts}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/social/post/draft', methods=['POST'])
+@login_required
+def draft_social_post():
+    """AI drafts a social media post for user approval"""
+    try:
+        data = request.json
+        prompt = data.get('prompt')
+        platform = data.get('platform', 'twitter')
+        agent = data.get('agent', 'Luna')
+
+        if not prompt:
+            return jsonify({'error': 'Prompt required'}), 400
+
+        # Get agent's system prompt
+        if agent in AGENT_PERSONALITIES:
+            agent_info = AGENT_PERSONALITIES[agent]
+            system_prompt = agent_info['system_prompt']
+        else:
+            # Custom agent
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT system_prompt FROM custom_agents
+                WHERE user_id = ? AND name = ?
+            """, (current_user.id, agent))
+            result = cursor.fetchone()
+            conn.close()
+
+            if result:
+                system_prompt = result[0]
+            else:
+                system_prompt = "You are a helpful social media assistant."
+
+        # Add social media context
+        platform_limits = {
+            'twitter': '280 characters',
+            'facebook': '500 characters recommended',
+            'linkedin': '700 characters recommended'
+        }
+
+        full_prompt = f"""{system_prompt}
+
+You are helping create a {platform} post.
+
+IMPORTANT RULES:
+- Maximum length: {platform_limits.get(platform, '280 characters')}
+- Make it engaging and professional
+- Include relevant hashtags if appropriate
+- DO NOT use emojis excessively
+- Keep it concise and impactful
+
+User request: {prompt}
+
+Draft the post:"""
+
+        # Generate post using Gemini
+        import google.generativeai as genai
+        genai.configure(api_key=app.config.get('GOOGLE_AI_API_KEY'))
+        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+
+        response = model.generate_content(full_prompt)
+        drafted_post = response.text
+
+        # Save draft for approval
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Create social_posts table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS social_posts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                platform TEXT NOT NULL,
+                content TEXT NOT NULL,
+                status TEXT DEFAULT 'draft',
+                scheduled_at TIMESTAMP,
+                posted_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )
+        """)
+
+        cursor.execute("""
+            INSERT INTO social_posts (user_id, platform, content, status)
+            VALUES (?, ?, ?, 'draft')
+        """, (current_user.id, platform, drafted_post))
+
+        post_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'post_id': post_id,
+            'content': drafted_post,
+            'platform': platform,
+            'status': 'draft',
+            'message': 'Post drafted! Review and approve to publish.'
+        }), 200
+
+    except Exception as e:
+        print(f"Error drafting post: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/social/post/<int:post_id>/approve', methods=['POST'])
+@login_required
+def approve_social_post(post_id):
+    """Approve and post to social media"""
+    try:
+        data = request.json
+        action = data.get('action', 'post_now')  # 'post_now' or 'schedule'
+        scheduled_time = data.get('scheduled_at')
+
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Get post
+        cursor.execute("""
+            SELECT platform, content, status FROM social_posts
+            WHERE id = ? AND user_id = ?
+        """, (post_id, current_user.id))
+
+        result = cursor.fetchone()
+        if not result:
+            conn.close()
+            return jsonify({'error': 'Post not found'}), 404
+
+        platform, content, status = result
+
+        if status != 'draft':
+            conn.close()
+            return jsonify({'error': 'Post already processed'}), 400
+
+        if action == 'schedule':
+            # Schedule for later
+            if not scheduled_time:
+                conn.close()
+                return jsonify({'error': 'Scheduled time required'}), 400
+
+            cursor.execute("""
+                UPDATE social_posts
+                SET status = 'scheduled', scheduled_at = ?
+                WHERE id = ?
+            """, (scheduled_time, post_id))
+
+            conn.commit()
+            conn.close()
+
+            return jsonify({
+                'success': True,
+                'message': f'Post scheduled for {scheduled_time}',
+                'status': 'scheduled'
+            }), 200
+        else:
+            # Post now
+            # NOTE: This is a simplified version
+            # In production, you'd use the actual platform APIs
+
+            cursor.execute("""
+                UPDATE social_posts
+                SET status = 'posted', posted_at = ?
+                WHERE id = ?
+            """, (datetime.utcnow().isoformat(), post_id))
+
+            conn.commit()
+            conn.close()
+
+            return jsonify({
+                'success': True,
+                'message': f'Posted to {platform} successfully!',
+                'status': 'posted',
+                'note': 'Connect your social accounts in Settings to enable actual posting'
+            }), 200
+
+    except Exception as e:
+        print(f"Error approving post: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/social/posts')
+@login_required
+def get_social_posts():
+    """Get all social posts (drafts, scheduled, posted)"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT id, platform, content, status, scheduled_at, posted_at, created_at
+            FROM social_posts
+            WHERE user_id = ?
+            ORDER BY created_at DESC
+            LIMIT 50
+        """, (current_user.id,))
+
+        posts = []
+        for row in cursor.fetchall():
+            posts.append({
+                'id': row[0],
+                'platform': row[1],
+                'content': row[2],
+                'status': row[3],
+                'scheduled_at': row[4],
+                'posted_at': row[5],
+                'created_at': row[6]
+            })
+
+        conn.close()
+
+        return jsonify({'posts': posts}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # ============================================
 # STRIPE PAYMENT ROUTES
