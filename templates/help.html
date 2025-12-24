@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Help Center - AI Team Platform</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 20px;
+            opacity: 0.9;
+        }
+
+        .help-content {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .tutorial-section {
+            margin-bottom: 50px;
+        }
+
+        .tutorial-section h2 {
+            color: #667eea;
+            font-size: 32px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .tutorial-step {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .tutorial-step h3 {
+            color: #333;
+            font-size: 20px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .step-number {
+            background: #667eea;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .tutorial-step p {
+            color: #555;
+            line-height: 1.8;
+            margin-bottom: 10px;
+        }
+
+        .tutorial-step ul {
+            margin-left: 20px;
+            color: #555;
+            line-height: 1.8;
+        }
+
+        .tutorial-step li {
+            margin-bottom: 8px;
+        }
+
+        .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+
+        .code-block code {
+            color: #9cdcfe;
+        }
+
+        .screenshot-placeholder {
+            background: #e9ecef;
+            border: 2px dashed #adb5bd;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            color: #6c757d;
+            margin: 15px 0;
+        }
+
+        .tip-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+
+        .tip-box strong {
+            color: #2196F3;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+
+        .warning-box strong {
+            color: #856404;
+        }
+
+        .nav-links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .nav-link {
+            background: white;
+            color: #667eea;
+            padding: 12px 30px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .quick-links {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+
+        .quick-links h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .quick-links ul {
+            list-style: none;
+        }
+
+        .quick-links li {
+            margin-bottom: 10px;
+        }
+
+        .quick-links a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .quick-links a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📖 Help Center</h1>
+            <p>Step-by-step guides and tutorials</p>
+        </div>
+
+        <div class="nav-links">
+            <a href="/dashboard" class="nav-link">← Back to Dashboard</a>
+            <a href="/faq" class="nav-link">View FAQ</a>
+        </div>
+
+        <div class="help-content">
+            <div class="quick-links">
+                <h3>Quick Navigation</h3>
+                <ul>
+                    <li><a href="#getting-started">Getting Started</a></li>
+                    <li><a href="#creating-agents">Creating Custom Agents</a></li>
+                    <li><a href="#embedding">Embedding Chatbots</a></li>
+                    <li><a href="#webhooks">Setting Up Webhooks</a></li>
+                    <li><a href="#social-media">Social Media Integration</a></li>
+                    <li><a href="#api">Using the API</a></li>
+                </ul>
+            </div>
+
+            <!-- Getting Started -->
+            <div class="tutorial-section" id="getting-started">
+                <h2>🚀 Getting Started</h2>
+
+                <div class="tutorial-step">
+                    <h3><span class="step-number">1</span>Create Your Account</h3>
+                    <p>Sign up for a free account to get started. The free plan includes:</p>
+                    <ul>
+                        <li>1 custom AI agent</li>
+                        <li>Access to 12+ built-in AI agents</li>
+                        <li>Basic chat functionality</li>
+                        <li>Chat history</li>
+                    </ul>
+                </div>
+
+                <div class="tutorial-step">
+                    <h3><span class="step-number">2</span>Choose Your AI Agent</h3>
+                    <p>Browse the agent sidebar on the left and click on any agent to start chatting:</p>
+                    <ul>
+                        <li><strong>Luna</strong> - General-purpose AI assistant</li>
+                        <li><strong>DevBot</strong> - Code generation and debugging</li>
+                        <li><strong>Professor</strong> - Educational content and explanations</li>
+                        <li><strong>Content Creator</strong> - Blog posts, articles, social media</li>
+                        <li>And many more specialized agents!</li>
+                    </ul>
+                </div>
+
+                <div class="tutorial-step">
+                    <h3><span class="step-number">3</span>Start Chatting</h3>
+                    <p>Type your message in the input box at the bottom and press Enter or click Send. The AI will respond based on its personality and expertise.</p>
+
+                    <div class="tip-box">
+                        <strong>💡 Tip:</strong> Each agent has unique expertise. Choose DevBot for coding questions, Professor for learning, and Content Creator for writing tasks!
+                    </div>
+                </div>
+            </div>
+
+            <!-- Creating Custom Agents -->
+            <div class="tutorial-section" id="creating-agents">
+                <h2>🤖 Creating Custom AI Agents</h2>
+
+                <div class="tutorial-step">
+                    <h3><span class="step-number">1</span>Open the Custom Agent Creator</h3>
+                    <p>Click the "➕ New Agent" button at the top of the agent sidebar.</p>
+                </div>
+
+                <div class="tutorial-step">
+                    <h3><span class="step-number">2</span>Configure Your Agent</h3>
+                    <p>Fill in the following details:</p>
+                    <ul>
+                        <li><strong>Name:</strong> Give your agent a unique name (e.g., "Marketing Expert")</li>
+                        <li><strong>Role/Description:</strong> Brief description of what the agent does</li>
+                        <li><strong>Emoji:</strong> Choose an emoji to represent your agent (e.g., 📈)</li>
+                        <li><strong>Instructions:</strong> Detailed instructions on how the agent should behave and respond</li>
+                    </ul>
+
+                    <div class="code-block">
+Example Instructions for a Marketing Agent:
+
+You are an expert digital marketing strategist with 10+ years of experience.
+Your specialties include:
+- SEO and content marketing
+- Social media strategy
+- Email marketing campaigns
+- Brand positioning
+
+Always provide actionable advice with specific examples.
+Use data and metrics when possible.
+                    </div>
+                </div>
+
+                <div class="tutorial-step">
+                    <h3><span class="step-number">3</span>Save and Test</h3>
+                    <p>Click "Create Agent" to save your custom agent. It will appear in your agent sidebar. Click on it to start chatting and test its responses!</p>
+                </div>
+
+                <div class="tutorial-step">
+                    <h3><span class="step-number">4</span>Edit Your Agent</h3>
+                    <p>Hover over your custom agent in the sidebar and click the ✏️ edit button to modify its settings anytime.</p>
+                </div>
+
+                <div class="tip-box">
+                    <strong>💡 Plan Limits:</strong>
+                    <ul style="margin-top: 10px;">
+                        <li>Free Plan: 1 custom agent</li>
+                        <li>Starter Plan: 3 custom agents</li>
+                        <li>Pro Plan: 10 custom agents</li>
+                        <li>Enterprise Plan: Unlimited custom agents</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Embedding Chatbots -->
+            <div class="tutorial-section" id="embedding">
+                <h2>💬 Embedding Chatbots on Your Website</h2>
+
+                <div class="tutorial-step">
+                    <h3><span class="step-number">1</span>Create and Configure Your Agent</h3>
+                    <p>First, create a custom agent that you want to embed on your website. Make sure its instructions are clear and aligned with your website's purpose.</p>
+                </div>
+
+                <div class="tutorial-step">
+                    <h3><span class="step-number">2</span>Get the Embed Code</h3>
+                    <p>Click the share button (🔗) next to your custom agent to get the embed code.</p>
+
+                    <div class="code-block">
+<!-- Example Embed Code -->
+&lt;!-- Your Custom Agent - AI Chat Widget --&gt;
+&lt;script src="https://your-domain.com/embed/ABC123/widget.js"&gt;&lt;/script&gt;
+                    </div>
+                </div>
+
+                <div class="tutorial-step">
+                    <h3><span class="step-number">3</span>Add to Your Website</h3>
+                    <p>Copy the embed code and paste it into your website's HTML, right before the closing <code>&lt;/body&gt;</code> tag:</p>
+
+                    <div class="code-block">
+&lt;html&gt;
+&lt;head&gt;
+    &lt;title&gt;My Website&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;!-- Your website content --&gt;
+
+    &lt;!-- AI Chat Widget - Place before closing body tag --&gt;
+    &lt;script src="https://your-domain.com/embed/ABC123/widget.js"&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+                    </div>
+                </div>
+
+                <div class="tutorial-step">
+                    <h3><span class="step-number">4</span>Test the Widget</h3>
+                    <p>Visit your website and you'll see a chat button in the bottom-right corner. Click it to open the chat widget and test it out!</p>
+                </div>
+
+                <div class="tip-box">
+                    <strong>💡 Customization Tips:</strong>
+                    <ul style="margin-top: 10px;">
+                        <li>Create a dedicated agent for customer support</li>
+                        <li>Use clear instructions that align with your brand voice</li>
+                        <li>Test thoroughly before deploying to production</li>
+                        <li>Monitor conversations to improve your agent's responses</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Webhooks -->
+            <div class="tutorial-section" id="webhooks">
+                <h2>🔗 Setting Up Webhooks</h2>
+
+                <div class="tutorial-step">
+                    <h3><span class="step-number">1</span>What Are Webhooks?</h3>
+                    <p>Webhooks allow your AI agents to send real-time notifications to external services like n8n, Zapier, or Make.com when certain events occur (like receiving a message or completing a task).</p>
+                </div>
+
+                <div class="tutorial-step">
+                    <h3><span class="step-number">2</span>Create a Webhook in n8n</h3>
+                    <p>Example: Setting up with n8n</p>
+                    <ul>
+                        <li>Open n8n and create a new workflow</li>
+                        <li>Add a "Webhook" trigger node</li>
+                        <li>Copy the webhook URL (e.g., https://your-n8n.com/webhook/abc123)</li>
+                    </ul>
+                </div>
+
+                <div class="tutorial-step">
+                    <h3><span class="step-number">3</span>Configure Webhook in Dashboard</h3>
+                    <p>Go to Settings → Integrations in your dashboard and add the webhook:</p>
+
+                    <div class="code-block">
+POST /api/webhooks
+
+{
+  "webhook_url": "https://your-n8n.com/webhook/abc123",
+  "events": ["message.completed", "agent.response"]
+}
+                    </div>
+                </div>
+
+                <div class="tutorial-step">
+                    <h3><span class="step-number">4</span>Test Your Webhook</h3>
+                    <p>Send a test message to your AI agent. The webhook should trigger and you'll see the data arrive in n8n.</p>
+
+                    <div class="tip-box">
+                        <strong>💡 Example Use Cases:</strong>
+                        <ul style="margin-top: 10px;">
+                            <li>Log all AI conversations to Google Sheets</li>
+                            <li>Send Slack notifications for important messages</li>
+                            <li>Save responses to Airtable or Notion</li>
+                            <li>Trigger email campaigns based on AI interactions</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="tutorial-step">
+                    <h3><span class="step-number">5</span>Supported Webhook Events</h3>
+                    <ul>
+                        <li><code>message.completed</code> - When AI finishes responding</li>
+                        <li><code>agent.response</code> - Every time an agent responds</li>
+                        <li><code>conversation.started</code> - When a new conversation begins</li>
+                        <li><code>conversation.ended</code> - When a conversation is closed</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Social Media -->
+            <div class="tutorial-section" id="social-media">
+                <h2>📱 Social Media Integration</h2>
+
+                <div class="tutorial-step">
+                    <h3><span class="step-number">1</span>Connect Your Social Accounts</h3>
+                    <p>Go to Settings → Social Media and connect your accounts:</p>
+                    <ul>
+                        <li>Twitter/X</li>
+                        <li>Facebook</li>
+                        <li>LinkedIn</li>
+                    </ul>
+
+                    <div class="code-block">
+POST /api/social/connect/twitter
+
+{
+  "access_token": "your_oauth_token",
+  "account_name": "@your_handle"
+}
+                    </div>
+                </div>
+
+                <div class="tutorial-step">
+                    <h3><span class="step-number">2</span>Generate Post Drafts with AI</h3>
+                    <p>Use your AI agents to create social media posts:</p>
+
+                    <div class="code-block">
+POST /api/social/post/draft
+
+{
+  "platform": "twitter",
+  "topic": "5 productivity tips for remote workers",
+  "agent_id": 123
+}
+                    </div>
+
+                    <p>Your AI agent will generate a platform-optimized post based on character limits and best practices.</p>
+                </div>
+
+                <div class="tutorial-step">
+                    <h3><span class="step-number">3</span>Review and Approve</h3>
+                    <p>All AI-generated posts are saved as drafts. You can:</p>
+                    <ul>
+                        <li>Review the content</li>
+                        <li>Edit if needed</li>
+                        <li>Approve to post immediately</li>
+                        <li>Schedule for a specific date/time</li>
+                        <li>Reject and regenerate</li>
+                    </ul>
+                </div>
+
+                <div class="tutorial-step">
+                    <h3><span class="step-number">4</span>Post or Schedule</h3>
+                    <p>Once you approve a draft, choose to post immediately or schedule:</p>
+
+                    <div class="code-block">
+POST /api/social/post/456/approve
+
+{
+  "action": "schedule",
+  "scheduled_at": "2024-12-25T10:00:00Z"
+}
+                    </div>
+                </div>
+
+                <div class="warning-box">
+                    <strong>⚠️ Important:</strong> All social media posts require manual approval. AI agents cannot post directly to prevent accidental or inappropriate content from being published.
+                </div>
+            </div>
+
+            <!-- API Usage -->
+            <div class="tutorial-section" id="api">
+                <h2>🔌 Using the API</h2>
+
+                <div class="tutorial-step">
+                    <h3><span class="step-number">1</span>Authentication</h3>
+                    <p>All API requests require authentication. Include your session cookie or API key in requests:</p>
+
+                    <div class="code-block">
+curl -X POST https://your-domain.com/api/chat \
+  -H "Content-Type: application/json" \
+  -H "Cookie: session=your_session_token" \
+  -d '{
+    "message": "Hello!",
+    "agent": "Luna"
+  }'
+                    </div>
+                </div>
+
+                <div class="tutorial-step">
+                    <h3><span class="step-number">2</span>Key API Endpoints</h3>
+
+                    <p><strong>Chat with an Agent:</strong></p>
+                    <div class="code-block">
+POST /api/chat
+{
+  "message": "Your message here",
+  "agent": "Luna",
+  "conversation_id": 123 (optional)
+}
+                    </div>
+
+                    <p><strong>Create Custom Agent:</strong></p>
+                    <div class="code-block">
+POST /api/custom-agents
+{
+  "name": "Sales Assistant",
+  "description": "Helps with sales inquiries",
+  "emoji": "💼",
+  "instructions": "You are a friendly sales assistant..."
+}
+                    </div>
+
+                    <p><strong>List Custom Agents:</strong></p>
+                    <div class="code-block">
+GET /api/custom-agents
+                    </div>
+
+                    <p><strong>Update Custom Agent:</strong></p>
+                    <div class="code-block">
+PUT /api/custom-agents/123
+{
+  "name": "Updated Name",
+  "instructions": "New instructions..."
+}
+                    </div>
+
+                    <p><strong>Get Embed Code:</strong></p>
+                    <div class="code-block">
+GET /api/agent/123/embed-code
+                    </div>
+                </div>
+
+                <div class="tutorial-step">
+                    <h3><span class="step-number">3</span>Webhooks API</h3>
+
+                    <p><strong>Add Webhook:</strong></p>
+                    <div class="code-block">
+POST /api/webhooks
+{
+  "webhook_url": "https://your-service.com/webhook",
+  "events": ["message.completed"]
+}
+                    </div>
+
+                    <p><strong>List Webhooks:</strong></p>
+                    <div class="code-block">
+GET /api/webhooks
+                    </div>
+                </div>
+
+                <div class="tutorial-step">
+                    <h3><span class="step-number">4</span>Social Media API</h3>
+
+                    <p><strong>Draft a Post:</strong></p>
+                    <div class="code-block">
+POST /api/social/post/draft
+{
+  "platform": "twitter",
+  "topic": "Product launch announcement",
+  "agent_id": 123
+}
+                    </div>
+
+                    <p><strong>Approve and Post:</strong></p>
+                    <div class="code-block">
+POST /api/social/post/456/approve
+{
+  "action": "post_now"
+}
+                    </div>
+
+                    <p><strong>Get Social Accounts:</strong></p>
+                    <div class="code-block">
+GET /api/social/accounts
+                    </div>
+                </div>
+
+                <div class="tip-box">
+                    <strong>💡 Rate Limits:</strong>
+                    <ul style="margin-top: 10px;">
+                        <li>Free: 100 requests/hour</li>
+                        <li>Starter: 500 requests/hour</li>
+                        <li>Pro: 2,000 requests/hour</li>
+                        <li>Enterprise: Custom limits</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Additional Resources -->
+            <div class="tutorial-section">
+                <h2>📚 Additional Resources</h2>
+
+                <div class="tutorial-step">
+                    <h3>Need More Help?</h3>
+                    <ul>
+                        <li><a href="/faq" style="color: #667eea;">Check our FAQ page</a> for common questions</li>
+                        <li><a href="/dashboard" style="color: #667eea;">Return to Dashboard</a> to start using AI agents</li>
+                        <li><a href="/pricing" style="color: #667eea;">View Pricing Plans</a> to unlock more features</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px; color: white;">
+            <p>&copy; 2024 AI Team Platform. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
