@@ -11,6 +11,24 @@ Your client data (users, custom agents, chat history) is stored in SQLite databa
 - **Platform DB**: `ai_team_platform.db` (legacy platform data)
 - **Persistent**: `/data/ai_team.db` (if using persistent disk)
 
+## Custom Agent Data Protection
+
+Your custom agents are protected in TWO locations:
+
+### 1. Custom Agent Definitions (Database)
+- **Location**: `ai_team.db` → `custom_agents` table
+- **Contains**: Agent names, instructions, personalities, emoji
+- **Protection**: Git-ignored, auto-backed up
+- **Migration**: Auto-adds new columns (like `icon_image`)
+
+### 2. Custom Agent Icons (Files)
+- **Location**: `static/uploads/agent_icons/`
+- **Contains**: Uploaded custom agent icon images
+- **Protection**: Git-ignored, backed up by `./backup_database.sh`
+- **Fallback**: Emoji used if image missing
+
+⚠️ **CRITICAL**: Both the database AND the icon images must be backed up to fully preserve custom agents!
+
 ## Safe Update Process
 
 ### Method 1: Simple Update (Recommended)
@@ -92,9 +110,23 @@ if 'emoji' not in columns:
 ```
 
 This creates timestamped backups in `./backups/`:
-- `ai_team_20241224_143000.db`
-- `users_20241224_143000.db`
+
+**Database Backups:**
+- `ai_team_20241224_143000.db` (all user data, custom agents)
+- `users_20241224_143000.db` (legacy user data)
 - etc.
+
+**Custom Agent Icon Backups:**
+- `agent_icons_20241224_143000/` (all uploaded agent icons)
+
+**All Uploaded Files:**
+- `uploads_20241224_143000/` (all user uploads)
+
+The script automatically backs up:
+✅ All databases
+✅ Custom agent icon images
+✅ All uploaded files
+✅ Keeps last 10 backups of each
 
 ### Automatic Backup (Recommended)
 
@@ -120,7 +152,29 @@ For production, use:
 
 ## Restore from Backup
 
-If something goes wrong:
+If something goes wrong, use the restore script:
+
+### Automatic Restore (Recommended)
+
+```bash
+# Stop application first
+sudo systemctl stop your-app-name
+
+# Run restore script (interactive)
+./restore_backup.sh
+
+# The script will:
+# 1. Show available backups
+# 2. Let you choose which backup to restore
+# 3. Create safety backups before restoring
+# 4. Restore database AND custom agent icons
+# 5. Restore all uploaded files
+
+# Start application
+sudo systemctl start your-app-name
+```
+
+### Manual Restore
 
 ```bash
 # Stop application
@@ -129,9 +183,123 @@ sudo systemctl stop your-app-name
 # Restore database
 cp backups/ai_team_YYYYMMDD_HHMMSS.db ai_team.db
 
+# Restore custom agent icons
+cp -r backups/agent_icons_YYYYMMDD_HHMMSS/* static/uploads/agent_icons/
+
+# Restore all uploads (optional)
+cp -r backups/uploads_YYYYMMDD_HHMMSS/* static/uploads/
+
 # Start application
 sudo systemctl start your-app-name
 ```
+
+⚠️ **IMPORTANT**: Always restore BOTH the database AND the agent_icons directory to preserve custom agents completely!
+
+## Custom Agent Safety Checklist
+
+Before ANY update, verify your custom agents are protected:
+
+### ✅ Pre-Update Checklist
+
+```bash
+# 1. Run backup script
+./backup_database.sh
+
+# 2. Verify database backup exists
+ls -lh backups/ai_team_*.db | tail -1
+
+# 3. Verify icon backups exist (if you have custom agents with images)
+ls -lh backups/agent_icons_* | tail -1
+
+# 4. Check current custom agents
+sqlite3 ai_team.db "SELECT name, icon_image FROM custom_agents;"
+
+# 5. Count custom agent icons
+ls -1 static/uploads/agent_icons/ 2>/dev/null | wc -l
+```
+
+### ✅ Post-Update Verification
+
+```bash
+# 1. Check database still exists
+ls -lh ai_team.db
+
+# 2. Check custom agents table
+sqlite3 ai_team.db "SELECT COUNT(*) FROM custom_agents;"
+
+# 3. Check icon_image column exists
+sqlite3 ai_team.db ".schema custom_agents" | grep icon_image
+
+# 4. Check agent icons directory
+ls -lh static/uploads/agent_icons/
+
+# 5. Test in browser - custom agents should display with their icons
+```
+
+### 🚨 What to Do If Custom Agents Are Missing
+
+If custom agents don't show up after an update:
+
+```bash
+# 1. Check if database was accidentally overwritten
+ls -lh ai_team.db
+
+# 2. Check if icon directory exists
+ls static/uploads/agent_icons/
+
+# 3. Restore from backup immediately
+./restore_backup.sh
+
+# 4. Select 'latest' or the timestamp before the update
+```
+
+### 💾 What Gets Backed Up Automatically
+
+When you run `./backup_database.sh`:
+
+1. **✅ Custom Agent Definitions** (database)
+   - Agent names
+   - Instructions/personalities
+   - Emoji fallbacks
+   - Share codes
+   - Folder organization
+
+2. **✅ Custom Agent Icons** (files)
+   - All uploaded PNG/JPG/GIF/WebP images
+   - Full directory structure preserved
+   - Stored in `backups/agent_icons_TIMESTAMP/`
+
+3. **✅ All User Uploads** (files)
+   - Chat attachments
+   - Any other uploaded files
+   - Stored in `backups/uploads_TIMESTAMP/`
+
+### 📊 Custom Agent Storage Locations
+
+```
+ai-team/
+├── ai_team.db                          # Contains custom_agents table
+├── static/
+│   └── uploads/
+│       └── agent_icons/                # Custom agent icon images
+│           ├── abc123xyz.png           # User 1's agent icon
+│           ├── def456uvw.jpg           # User 2's agent icon
+│           └── ...
+└── backups/
+    ├── ai_team_20241224_120000.db      # Database backup
+    ├── agent_icons_20241224_120000/    # Icons backup
+    │   ├── abc123xyz.png
+    │   └── def456uvw.jpg
+    └── uploads_20241224_120000/        # Full uploads backup
+```
+
+### 🔐 Protection Guarantees
+
+✅ **Git Protection**: `static/uploads/` is in `.gitignore` - never committed
+✅ **Backup Script**: Automatically backs up both database AND icons
+✅ **Restore Script**: Restores both database AND icons together
+✅ **Migration Safety**: Database schema auto-migrates, preserves all data
+✅ **Fallback System**: If icon missing, emoji is used automatically
 
 ## Using Persistent Disk (Recommended for Production)
 
@@ -260,9 +428,34 @@ df -h
 ## Summary
 
 ✅ **Your data is safe** - database files are git-ignored
+✅ **Custom agents protected** - both database AND icon images backed up
 ✅ **Automatic migrations** - new columns/tables added automatically
 ✅ **Easy backups** - `./backup_database.sh` before updates
+✅ **Easy restore** - `./restore_backup.sh` if anything goes wrong
 ✅ **Simple updates** - `git pull` and restart
 ✅ **Rollback ready** - backups let you revert if needed
+✅ **Dual protection** - database + file backups for custom agents
 
 **Best Practice**: Always run `./backup_database.sh` before pulling updates!
+
+## Quick Reference
+
+### Before Updating
+```bash
+./backup_database.sh  # Backs up database + custom agent icons + all uploads
+git pull origin main
+# Restart your app
+```
+
+### If Something Goes Wrong
+```bash
+./restore_backup.sh   # Interactive restore of database + icons + uploads
+# Choose backup timestamp or 'latest'
+# Restart your app
+```
+
+### Custom Agent Safety
+- **Database**: `ai_team.db` → `custom_agents` table (auto-backed up)
+- **Icons**: `static/uploads/agent_icons/` → image files (auto-backed up)
+- **Both** protected by `.gitignore` - never committed to git
+- **Both** restored together by `./restore_backup.sh`
