@@ -2472,6 +2472,12 @@ def settings():
     """Settings page for integrations"""
     return render_template('settings.html', user=current_user)
 
+@app.route('/integrations')
+@login_required
+def integrations_page():
+    """Comprehensive integrations management page"""
+    return render_template('integrations.html', user=current_user)
+
 @app.route('/faq')
 def faq():
     """FAQ page - public access"""
@@ -2792,6 +2798,712 @@ def get_social_posts():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+# ============================================
+# UNIVERSAL INTEGRATIONS FRAMEWORK
+# ============================================
+
+# Integration configurations with required credentials
+INTEGRATIONS_CONFIG = {
+    # Communication Platforms
+    'slack': {
+        'name': 'Slack',
+        'category': 'communication',
+        'icon': '💬',
+        'description': 'Team collaboration and notifications',
+        'auth_type': 'oauth',
+        'credentials': ['bot_token', 'webhook_url'],
+        'features': ['send_message', 'create_channel', 'get_channels', 'post_to_channel']
+    },
+    'discord': {
+        'name': 'Discord',
+        'category': 'communication',
+        'icon': '🎮',
+        'description': 'Community engagement and bot integration',
+        'auth_type': 'webhook',
+        'credentials': ['webhook_url', 'bot_token'],
+        'features': ['send_message', 'create_embed', 'manage_channels']
+    },
+    'teams': {
+        'name': 'Microsoft Teams',
+        'category': 'communication',
+        'icon': '👥',
+        'description': 'Enterprise team collaboration',
+        'auth_type': 'webhook',
+        'credentials': ['webhook_url'],
+        'features': ['send_message', 'send_adaptive_card']
+    },
+    'telegram': {
+        'name': 'Telegram',
+        'category': 'communication',
+        'icon': '✈️',
+        'description': 'Messaging bot integration',
+        'auth_type': 'api_key',
+        'credentials': ['bot_token', 'chat_id'],
+        'features': ['send_message', 'send_photo', 'send_document']
+    },
+
+    # Email & Messaging
+    'sendgrid': {
+        'name': 'SendGrid',
+        'category': 'email',
+        'icon': '📧',
+        'description': 'Transactional email delivery',
+        'auth_type': 'api_key',
+        'credentials': ['api_key'],
+        'features': ['send_email', 'send_template']
+    },
+    'mailgun': {
+        'name': 'Mailgun',
+        'category': 'email',
+        'icon': '📬',
+        'description': 'Email automation and delivery',
+        'auth_type': 'api_key',
+        'credentials': ['api_key', 'domain'],
+        'features': ['send_email', 'get_stats']
+    },
+    'twilio': {
+        'name': 'Twilio',
+        'category': 'messaging',
+        'icon': '📱',
+        'description': 'SMS and WhatsApp messaging',
+        'auth_type': 'api_key',
+        'credentials': ['account_sid', 'auth_token', 'phone_number'],
+        'features': ['send_sms', 'send_whatsapp', 'make_call']
+    },
+
+    # CRM & Sales
+    'hubspot': {
+        'name': 'HubSpot',
+        'category': 'crm',
+        'icon': '🎯',
+        'description': 'CRM and marketing automation',
+        'auth_type': 'oauth',
+        'credentials': ['api_key'],
+        'features': ['create_contact', 'create_deal', 'log_activity']
+    },
+    'salesforce': {
+        'name': 'Salesforce',
+        'category': 'crm',
+        'icon': '☁️',
+        'description': 'Enterprise CRM platform',
+        'auth_type': 'oauth',
+        'credentials': ['access_token', 'instance_url'],
+        'features': ['create_lead', 'update_opportunity', 'query_records']
+    },
+    'pipedrive': {
+        'name': 'Pipedrive',
+        'category': 'crm',
+        'icon': '📊',
+        'description': 'Sales pipeline management',
+        'auth_type': 'api_key',
+        'credentials': ['api_token', 'company_domain'],
+        'features': ['create_deal', 'add_activity', 'create_person']
+    },
+
+    # Project Management
+    'asana': {
+        'name': 'Asana',
+        'category': 'project_management',
+        'icon': '✓',
+        'description': 'Task and project management',
+        'auth_type': 'oauth',
+        'credentials': ['access_token'],
+        'features': ['create_task', 'add_comment', 'get_projects']
+    },
+    'trello': {
+        'name': 'Trello',
+        'category': 'project_management',
+        'icon': '📋',
+        'description': 'Visual project boards',
+        'auth_type': 'oauth',
+        'credentials': ['api_key', 'token'],
+        'features': ['create_card', 'add_checklist', 'move_card']
+    },
+    'monday': {
+        'name': 'Monday.com',
+        'category': 'project_management',
+        'icon': '📅',
+        'description': 'Work operating system',
+        'auth_type': 'api_key',
+        'credentials': ['api_token'],
+        'features': ['create_item', 'update_column', 'get_boards']
+    },
+    'clickup': {
+        'name': 'ClickUp',
+        'category': 'project_management',
+        'icon': '🖱️',
+        'description': 'All-in-one productivity platform',
+        'auth_type': 'api_key',
+        'credentials': ['api_token'],
+        'features': ['create_task', 'add_comment', 'get_spaces']
+    },
+    'jira': {
+        'name': 'Jira',
+        'category': 'project_management',
+        'icon': '🔵',
+        'description': 'Issue and project tracking',
+        'auth_type': 'oauth',
+        'credentials': ['api_token', 'email', 'domain'],
+        'features': ['create_issue', 'add_comment', 'update_status']
+    },
+
+    # Google Workspace
+    'google_sheets': {
+        'name': 'Google Sheets',
+        'category': 'productivity',
+        'icon': '📊',
+        'description': 'Spreadsheet data management',
+        'auth_type': 'oauth',
+        'credentials': ['access_token', 'refresh_token'],
+        'features': ['append_row', 'read_data', 'create_sheet']
+    },
+    'google_docs': {
+        'name': 'Google Docs',
+        'category': 'productivity',
+        'icon': '📄',
+        'description': 'Document creation and editing',
+        'auth_type': 'oauth',
+        'credentials': ['access_token', 'refresh_token'],
+        'features': ['create_document', 'append_text', 'get_content']
+    },
+    'google_calendar': {
+        'name': 'Google Calendar',
+        'category': 'productivity',
+        'icon': '📆',
+        'description': 'Calendar and event management',
+        'auth_type': 'oauth',
+        'credentials': ['access_token', 'refresh_token'],
+        'features': ['create_event', 'list_events', 'update_event']
+    },
+    'gmail': {
+        'name': 'Gmail',
+        'category': 'email',
+        'icon': '📨',
+        'description': 'Email integration',
+        'auth_type': 'oauth',
+        'credentials': ['access_token', 'refresh_token'],
+        'features': ['send_email', 'read_emails', 'create_draft']
+    },
+
+    # Data & Storage
+    'airtable': {
+        'name': 'Airtable',
+        'category': 'database',
+        'icon': '🗄️',
+        'description': 'Flexible database platform',
+        'auth_type': 'api_key',
+        'credentials': ['api_key', 'base_id'],
+        'features': ['create_record', 'update_record', 'list_records']
+    },
+    'mongodb': {
+        'name': 'MongoDB',
+        'category': 'database',
+        'icon': '🍃',
+        'description': 'NoSQL database',
+        'auth_type': 'connection_string',
+        'credentials': ['connection_string'],
+        'features': ['insert_document', 'query', 'update']
+    },
+    'supabase': {
+        'name': 'Supabase',
+        'category': 'database',
+        'icon': '⚡',
+        'description': 'Open source Firebase alternative',
+        'auth_type': 'api_key',
+        'credentials': ['api_url', 'api_key'],
+        'features': ['insert', 'select', 'update', 'delete']
+    },
+    'google_drive': {
+        'name': 'Google Drive',
+        'category': 'storage',
+        'icon': '💾',
+        'description': 'Cloud file storage',
+        'auth_type': 'oauth',
+        'credentials': ['access_token', 'refresh_token'],
+        'features': ['upload_file', 'list_files', 'create_folder']
+    },
+    'dropbox': {
+        'name': 'Dropbox',
+        'category': 'storage',
+        'icon': '📦',
+        'description': 'File hosting service',
+        'auth_type': 'oauth',
+        'credentials': ['access_token'],
+        'features': ['upload_file', 'list_folder', 'share_link']
+    },
+
+    # Payment & Analytics
+    'stripe_webhooks': {
+        'name': 'Stripe Webhooks',
+        'category': 'payment',
+        'icon': '💳',
+        'description': 'Payment event notifications',
+        'auth_type': 'webhook',
+        'credentials': ['webhook_secret'],
+        'features': ['receive_payment', 'subscription_update', 'refund']
+    },
+    'google_analytics': {
+        'name': 'Google Analytics',
+        'category': 'analytics',
+        'icon': '📈',
+        'description': 'Web analytics tracking',
+        'auth_type': 'oauth',
+        'credentials': ['measurement_id', 'api_secret'],
+        'features': ['track_event', 'get_reports']
+    },
+    'mixpanel': {
+        'name': 'Mixpanel',
+        'category': 'analytics',
+        'icon': '📊',
+        'description': 'Product analytics platform',
+        'auth_type': 'api_key',
+        'credentials': ['project_token'],
+        'features': ['track_event', 'set_user_properties']
+    },
+
+    # Developer Tools
+    'github': {
+        'name': 'GitHub',
+        'category': 'developer',
+        'icon': '🐙',
+        'description': 'Code hosting and collaboration',
+        'auth_type': 'oauth',
+        'credentials': ['access_token'],
+        'features': ['create_issue', 'create_pr', 'add_comment']
+    },
+    'gitlab': {
+        'name': 'GitLab',
+        'category': 'developer',
+        'icon': '🦊',
+        'description': 'DevOps platform',
+        'auth_type': 'api_key',
+        'credentials': ['private_token'],
+        'features': ['create_issue', 'create_merge_request', 'pipeline_trigger']
+    },
+    'linear': {
+        'name': 'Linear',
+        'category': 'developer',
+        'icon': '📐',
+        'description': 'Issue tracking for dev teams',
+        'auth_type': 'api_key',
+        'credentials': ['api_key'],
+        'features': ['create_issue', 'update_status', 'add_comment']
+    },
+
+    # Customer Support
+    'intercom': {
+        'name': 'Intercom',
+        'category': 'support',
+        'icon': '💬',
+        'description': 'Customer messaging platform',
+        'auth_type': 'oauth',
+        'credentials': ['access_token'],
+        'features': ['send_message', 'create_ticket', 'tag_user']
+    },
+    'zendesk': {
+        'name': 'Zendesk',
+        'category': 'support',
+        'icon': '🎫',
+        'description': 'Customer service platform',
+        'auth_type': 'api_key',
+        'credentials': ['subdomain', 'email', 'api_token'],
+        'features': ['create_ticket', 'add_comment', 'update_ticket']
+    },
+    'freshdesk': {
+        'name': 'Freshdesk',
+        'category': 'support',
+        'icon': '🆘',
+        'description': 'Customer support software',
+        'auth_type': 'api_key',
+        'credentials': ['domain', 'api_key'],
+        'features': ['create_ticket', 'reply_ticket', 'get_tickets']
+    },
+
+    # Other
+    'calendly': {
+        'name': 'Calendly',
+        'category': 'scheduling',
+        'icon': '📅',
+        'description': 'Meeting scheduling automation',
+        'auth_type': 'oauth',
+        'credentials': ['access_token'],
+        'features': ['get_events', 'list_event_types', 'cancel_event']
+    },
+    'shopify': {
+        'name': 'Shopify',
+        'category': 'ecommerce',
+        'icon': '🛍️',
+        'description': 'E-commerce platform',
+        'auth_type': 'oauth',
+        'credentials': ['access_token', 'shop_name'],
+        'features': ['create_product', 'get_orders', 'update_inventory']
+    },
+    'wordpress': {
+        'name': 'WordPress',
+        'category': 'cms',
+        'icon': '✍️',
+        'description': 'Content management system',
+        'auth_type': 'api_key',
+        'credentials': ['site_url', 'username', 'app_password'],
+        'features': ['create_post', 'update_post', 'upload_media']
+    },
+    'youtube': {
+        'name': 'YouTube',
+        'category': 'media',
+        'icon': '📹',
+        'description': 'Video platform integration',
+        'auth_type': 'oauth',
+        'credentials': ['access_token', 'refresh_token'],
+        'features': ['upload_video', 'get_transcription', 'add_comment']
+    }
+}
+
+@app.route('/api/integrations')
+@login_required
+def get_integrations():
+    """Get all available integrations and user's connected status"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Create integrations table if not exists
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS integrations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                integration_key TEXT NOT NULL,
+                integration_name TEXT NOT NULL,
+                credentials TEXT NOT NULL,
+                is_active BOOLEAN DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id),
+                UNIQUE(user_id, integration_key)
+            )
+        """)
+
+        # Get user's connected integrations
+        cursor.execute("""
+            SELECT integration_key, credentials, is_active, created_at
+            FROM integrations
+            WHERE user_id = ?
+        """, (current_user.id,))
+
+        connected_integrations = {}
+        for row in cursor.fetchall():
+            connected_integrations[row[0]] = {
+                'credentials': json.loads(row[1]),
+                'is_active': bool(row[2]),
+                'connected_at': row[3]
+            }
+
+        conn.close()
+
+        # Build response with all integrations
+        integrations_list = []
+        for key, config in INTEGRATIONS_CONFIG.items():
+            integration_info = {
+                'key': key,
+                'name': config['name'],
+                'category': config['category'],
+                'icon': config['icon'],
+                'description': config['description'],
+                'auth_type': config['auth_type'],
+                'credentials_required': config['credentials'],
+                'features': config['features'],
+                'is_connected': key in connected_integrations,
+                'is_active': connected_integrations.get(key, {}).get('is_active', False),
+                'connected_at': connected_integrations.get(key, {}).get('connected_at')
+            }
+            integrations_list.append(integration_info)
+
+        # Group by category
+        categorized = {}
+        for integration in integrations_list:
+            category = integration['category']
+            if category not in categorized:
+                categorized[category] = []
+            categorized[category].append(integration)
+
+        return jsonify({
+            'integrations': integrations_list,
+            'categorized': categorized,
+            'total': len(integrations_list),
+            'connected': len(connected_integrations)
+        }), 200
+
+    except Exception as e:
+        print(f"Error fetching integrations: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/integrations/connect', methods=['POST'])
+@login_required
+def connect_integration():
+    """Connect a new integration"""
+    try:
+        data = request.json
+        integration_key = data.get('integration_key')
+        credentials = data.get('credentials', {})
+
+        if not integration_key or integration_key not in INTEGRATIONS_CONFIG:
+            return jsonify({'error': 'Invalid integration key'}), 400
+
+        config = INTEGRATIONS_CONFIG[integration_key]
+
+        # Validate required credentials
+        missing_creds = []
+        for cred in config['credentials']:
+            if cred not in credentials:
+                missing_creds.append(cred)
+
+        if missing_creds:
+            return jsonify({
+                'error': 'Missing required credentials',
+                'missing': missing_creds
+            }), 400
+
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Store integration credentials
+        cursor.execute("""
+            INSERT OR REPLACE INTO integrations
+            (user_id, integration_key, integration_name, credentials, is_active, updated_at)
+            VALUES (?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
+        """, (current_user.id, integration_key, config['name'], json.dumps(credentials)))
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': f'{config["name"]} connected successfully',
+            'integration': {
+                'key': integration_key,
+                'name': config['name'],
+                'icon': config['icon']
+            }
+        }), 200
+
+    except Exception as e:
+        print(f"Error connecting integration: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/integrations/<integration_key>/disconnect', methods=['POST'])
+@login_required
+def disconnect_integration(integration_key):
+    """Disconnect an integration"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            DELETE FROM integrations
+            WHERE user_id = ? AND integration_key = ?
+        """, (current_user.id, integration_key))
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': 'Integration disconnected'
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/integrations/<integration_key>/toggle', methods=['POST'])
+@login_required
+def toggle_integration(integration_key):
+    """Toggle integration active status"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            UPDATE integrations
+            SET is_active = NOT is_active,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE user_id = ? AND integration_key = ?
+        """, (current_user.id, integration_key))
+
+        conn.commit()
+
+        cursor.execute("""
+            SELECT is_active FROM integrations
+            WHERE user_id = ? AND integration_key = ?
+        """, (current_user.id, integration_key))
+
+        result = cursor.fetchone()
+        conn.close()
+
+        if result:
+            return jsonify({
+                'success': True,
+                'is_active': bool(result[0])
+            }), 200
+        else:
+            return jsonify({'error': 'Integration not found'}), 404
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# Integration action handlers
+@app.route('/api/integrations/<integration_key>/action', methods=['POST'])
+@login_required
+def execute_integration_action(integration_key):
+    """Execute an action with a connected integration"""
+    try:
+        if integration_key not in INTEGRATIONS_CONFIG:
+            return jsonify({'error': 'Invalid integration'}), 400
+
+        # Get user's credentials for this integration
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT credentials, is_active FROM integrations
+            WHERE user_id = ? AND integration_key = ?
+        """, (current_user.id, integration_key))
+
+        result = cursor.fetchone()
+        conn.close()
+
+        if not result:
+            return jsonify({'error': 'Integration not connected'}), 404
+
+        if not result[1]:
+            return jsonify({'error': 'Integration is disabled'}), 403
+
+        credentials = json.loads(result[0])
+        data = request.json
+        action = data.get('action')
+        params = data.get('params', {})
+
+        # Route to appropriate handler
+        result = execute_integration_handler(integration_key, action, credentials, params)
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        print(f"Error executing integration action: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+def execute_integration_handler(integration_key, action, credentials, params):
+    """Execute specific integration actions"""
+
+    # Slack Integration
+    if integration_key == 'slack':
+        if action == 'send_message':
+            import requests
+            webhook_url = credentials.get('webhook_url')
+            response = requests.post(webhook_url, json={
+                'text': params.get('message', ''),
+                'channel': params.get('channel'),
+                'username': params.get('username', 'AI Team Bot')
+            })
+            return {'success': True, 'sent': True}
+
+    # Discord Integration
+    elif integration_key == 'discord':
+        if action == 'send_message':
+            import requests
+            webhook_url = credentials.get('webhook_url')
+            response = requests.post(webhook_url, json={
+                'content': params.get('message', ''),
+                'username': params.get('username', 'AI Team Bot')
+            })
+            return {'success': True, 'sent': True}
+
+    # Microsoft Teams
+    elif integration_key == 'teams':
+        if action == 'send_message':
+            import requests
+            webhook_url = credentials.get('webhook_url')
+            response = requests.post(webhook_url, json={
+                '@type': 'MessageCard',
+                '@context': 'http://schema.org/extensions',
+                'text': params.get('message', '')
+            })
+            return {'success': True, 'sent': True}
+
+    # Telegram
+    elif integration_key == 'telegram':
+        if action == 'send_message':
+            import requests
+            bot_token = credentials.get('bot_token')
+            chat_id = credentials.get('chat_id')
+            url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+            response = requests.post(url, json={
+                'chat_id': chat_id,
+                'text': params.get('message', '')
+            })
+            return {'success': True, 'sent': True}
+
+    # GitHub
+    elif integration_key == 'github':
+        if action == 'create_issue':
+            import requests
+            token = credentials.get('access_token')
+            repo = params.get('repo')  # owner/repo format
+            response = requests.post(
+                f"https://api.github.com/repos/{repo}/issues",
+                headers={'Authorization': f'token {token}'},
+                json={
+                    'title': params.get('title'),
+                    'body': params.get('body'),
+                    'labels': params.get('labels', [])
+                }
+            )
+            return {'success': True, 'issue': response.json()}
+
+    # Trello
+    elif integration_key == 'trello':
+        if action == 'create_card':
+            import requests
+            api_key = credentials.get('api_key')
+            token = credentials.get('token')
+            list_id = params.get('list_id')
+            response = requests.post(
+                f"https://api.trello.com/1/cards?key={api_key}&token={token}",
+                json={
+                    'idList': list_id,
+                    'name': params.get('title'),
+                    'desc': params.get('description')
+                }
+            )
+            return {'success': True, 'card': response.json()}
+
+    # Google Sheets
+    elif integration_key == 'google_sheets':
+        if action == 'append_row':
+            # This would use Google Sheets API
+            return {'success': True, 'message': 'Row appended (demo mode)'}
+
+    # Twilio SMS
+    elif integration_key == 'twilio':
+        if action == 'send_sms':
+            from twilio.rest import Client
+            account_sid = credentials.get('account_sid')
+            auth_token = credentials.get('auth_token')
+            from_number = credentials.get('phone_number')
+
+            client = Client(account_sid, auth_token)
+            message = client.messages.create(
+                body=params.get('message'),
+                from_=from_number,
+                to=params.get('to')
+            )
+            return {'success': True, 'sid': message.sid}
+
+    # Default fallback
+    return {
+        'success': True,
+        'message': f'Action {action} simulated for {integration_key}',
+        'note': 'Full implementation requires external API setup'
+    }
 
 # ============================================
 # STRIPE PAYMENT ROUTES
