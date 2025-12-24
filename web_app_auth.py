@@ -7732,52 +7732,221 @@ def get_custom_agent(agent_id):
 @app.route('/api/generate-prompt', methods=['POST'])
 @login_required
 def generate_prompt():
-    """Generate an improved prompt using AI"""
+    """Generate an improved prompt using AI with framework selection"""
     try:
         data = request.get_json()
         user_goal = data.get('goal', '').strip()
-        
+        framework = data.get('framework', 'rtcf')  # Default to RTCF
+
         if not user_goal:
             return jsonify({'error': 'Goal is required'}), 400
-        
-        print(f"🔮 Generating prompt for goal: {user_goal}")
-        
-        # System prompt for the prompt builder
-        system_prompt = """You are an expert prompt engineer. Your job is to take a user's simple request and transform it into a clear, effective, detailed prompt that will get the best results from an AI assistant.
 
-When creating prompts, you should:
-1. Be specific and detailed
-2. Include context that helps the AI understand the task
-3. Specify the desired format, tone, or style when relevant
-4. Break complex requests into clear steps
-5. Add relevant constraints or requirements
+        print(f"🔮 Generating prompt for goal: {user_goal} using framework: {framework}")
+
+        # Framework templates and descriptions
+        frameworks = {
+            'rtcf': {
+                'name': 'RTCF (Role-Task-Context-Format)',
+                'description': 'Best for almost everything',
+                'template': 'Act as a [ROLE]. Do [TASK]. Context: [WHO/WHY/DETAILS]. Output format: [FORMAT + LENGTH].',
+                'structure': 'Define the AI\'s role, specify the task, provide context, and detail the output format.'
+            },
+            'raci': {
+                'name': 'RACI (Rules-Audience-Context-Intent)',
+                'description': 'Best for brand voice and clear boundaries',
+                'template': 'Rules: [DO/DON\'T]. Audience: [WHO IT\'S FOR]. Context: [BACKGROUND]. Intent: [SUCCESS CRITERIA].',
+                'structure': 'Set rules and boundaries, define the audience, provide context, and explain what success looks like.'
+            },
+            'costar': {
+                'name': 'CO-STAR (Context-Objective-Style-Tone-Audience-Response)',
+                'description': 'Best for writing posts, scripts, sales pages',
+                'template': 'Context: [SITUATION]. Objective: [GOAL]. Style: [APPROACH]. Tone: [VOICE]. Audience: [TARGET]. Response format: [OUTPUT].',
+                'structure': 'Provide situation context, define objectives, specify writing style and tone, identify audience, and detail response format.'
+            },
+            'crispe': {
+                'name': 'CRISPE (Context-Role-Intent-Style-Parameters-Examples)',
+                'description': 'Best for high-quality outputs with consistent structure',
+                'template': 'Context: [BACKGROUND]. Role: [WHO AI IS]. Intent: [PURPOSE]. Style: [APPROACH]. Parameters: [CONSTRAINTS]. Examples: [SAMPLES].',
+                'structure': 'Set context, define role, explain intent, specify style, add parameters, and provide examples.'
+            },
+            'risen': {
+                'name': 'RISEN (Role-Input-Steps-Expectations-Narrowing)',
+                'description': 'Best for complex tasks requiring step-by-step thinking',
+                'template': 'Role: [WHO AI IS]. Input: [WHAT YOU HAVE]. Steps: [PROCESS]. Expectations: [WHAT YOU WANT]. Narrowing: [FOCUS AREAS].',
+                'structure': 'Define role, describe input, outline steps, set expectations, and narrow focus.'
+            },
+            'steps': {
+                'name': 'Steps + Constraints + Checklist',
+                'description': 'Best for practical instructions and repeatable outputs',
+                'template': 'Provide [N] steps, each [CONSTRAINT]. Include checklist. [SPECIFIC REQUIREMENTS]. No fluff.',
+                'structure': 'Request numbered steps with constraints, require checklist, eliminate unnecessary text.'
+            },
+            'rubric': {
+                'name': 'Rubric Prompting',
+                'description': 'Best for grading, reviewing, and improving',
+                'template': 'Score on [CRITERIA] using 1-10 scale. Evaluate: [DIMENSIONS]. Then provide improvement suggestions.',
+                'structure': 'Define scoring criteria, specify evaluation dimensions, request actionable improvements.'
+            },
+            'socratic': {
+                'name': 'Socratic Mode',
+                'description': 'Best for coaching, clarity, and decision-making',
+                'template': 'Ask one question at a time about [TOPIC]. Wait for response. Guide toward [GOAL]. No direct answers.',
+                'structure': 'Request questioning approach, ensure one question at a time, define guiding objective.'
+            },
+            'react': {
+                'name': 'ReAct (Reason + Act)',
+                'description': 'Best for research and multi-step tasks',
+                'template': 'Plan approach to [TASK]. Execute step-by-step. Verify against [CRITERIA]. Show reasoning.',
+                'structure': 'Request planning phase, execution with reasoning, and verification steps.'
+            },
+            'hpva': {
+                'name': 'HPVA (Hook-Problem-Value-Action)',
+                'description': 'Best for social posts that drive engagement',
+                'template': 'Hook: [ATTENTION GRABBER]. Problem: [PAIN POINT]. Value: [SOLUTION]. Action: [CALL-TO-ACTION].',
+                'structure': 'Create compelling hook, identify problem, present value proposition, include clear call-to-action.'
+            },
+            'eslc': {
+                'name': 'ESLC (Evidence-Summary-Limitations-Citations)',
+                'description': 'Best for research and academic outputs',
+                'template': 'Evidence: [DATA/FACTS]. Summary: [KEY POINTS]. Limitations: [CAVEATS]. Citations: [SOURCES].',
+                'structure': 'Require evidence-based content, concise summary, honest limitations, and proper citations.'
+            },
+            'sop': {
+                'name': 'SOP (Standard Operating Procedure)',
+                'description': 'Best for workflows, systems, and team training',
+                'template': 'Purpose: [WHY]. Tools: [WHAT\'S NEEDED]. Steps: [HOW-TO]. Edge cases: [EXCEPTIONS]. QA: [CHECKS].',
+                'structure': 'Define purpose, list required tools, detail steps, address edge cases, include quality assurance.'
+            }
+        }
+
+        selected_framework = frameworks.get(framework, frameworks['rtcf'])
+
+        # Enhanced system prompt with framework guidance
+        system_prompt = f"""You are an expert prompt engineer specializing in the {selected_framework['name']} framework.
+
+Framework: {selected_framework['name']}
+Purpose: {selected_framework['description']}
+Template: {selected_framework['template']}
+Structure: {selected_framework['structure']}
+
+Transform the user's goal into a comprehensive, well-structured prompt following the {selected_framework['name']} framework exactly.
+
+Guidelines:
+1. Follow the framework structure precisely
+2. Be specific and detailed in each component
+3. Include relevant context and constraints
+4. Specify desired output format clearly
+5. Make the prompt actionable and clear
 6. Keep it concise but comprehensive
 
-Transform the user's simple goal into a well-structured prompt. Return ONLY the improved prompt, no explanations or meta-commentary."""
+Return ONLY the improved prompt using the framework. Do not include explanations, meta-commentary, or framework labels in the output."""
 
         # Create the prompt generation request
         response = client.messages.create(
             model="claude-sonnet-4-20250514",
-            max_tokens=500,
+            max_tokens=800,
             system=system_prompt,
             messages=[{
                 "role": "user",
-                "content": f"Transform this simple request into an effective, detailed prompt:\n\n{user_goal}"
+                "content": f"Transform this goal into an effective prompt using the {selected_framework['name']} framework:\n\n{user_goal}"
             }]
         )
-        
+
         improved_prompt = response.content[0].text.strip()
-        
-        print(f"✅ Generated prompt: {improved_prompt[:100]}...")
-        
+
+        print(f"✅ Generated prompt using {framework}: {improved_prompt[:100]}...")
+
         return jsonify({
             'prompt': improved_prompt,
-            'original': user_goal
+            'original': user_goal,
+            'framework': framework,
+            'framework_name': selected_framework['name'],
+            'framework_description': selected_framework['description']
         }), 200
-        
+
     except Exception as e:
         print(f"❌ Error generating prompt: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/prompt-frameworks', methods=['GET'])
+def get_prompt_frameworks():
+    """Get all available prompt frameworks"""
+    frameworks = [
+        {
+            'id': 'rtcf',
+            'name': 'RTCF (Role-Task-Context-Format)',
+            'description': 'Best for almost everything',
+            'category': 'Core'
+        },
+        {
+            'id': 'raci',
+            'name': 'RACI (Rules-Audience-Context-Intent)',
+            'description': 'Best for brand voice and clear boundaries',
+            'category': 'Core'
+        },
+        {
+            'id': 'costar',
+            'name': 'CO-STAR (Context-Objective-Style-Tone-Audience-Response)',
+            'description': 'Best for writing posts, scripts, sales pages',
+            'category': 'Core'
+        },
+        {
+            'id': 'crispe',
+            'name': 'CRISPE (Context-Role-Intent-Style-Parameters-Examples)',
+            'description': 'Best for high-quality outputs with consistent structure',
+            'category': 'Core'
+        },
+        {
+            'id': 'risen',
+            'name': 'RISEN (Role-Input-Steps-Expectations-Narrowing)',
+            'description': 'Best for complex tasks requiring step-by-step thinking',
+            'category': 'Core'
+        },
+        {
+            'id': 'steps',
+            'name': 'Steps + Constraints + Checklist',
+            'description': 'Best for practical instructions and repeatable outputs',
+            'category': 'Output Control'
+        },
+        {
+            'id': 'rubric',
+            'name': 'Rubric Prompting',
+            'description': 'Best for grading, reviewing, and improving',
+            'category': 'Output Control'
+        },
+        {
+            'id': 'socratic',
+            'name': 'Socratic Mode',
+            'description': 'Best for coaching, clarity, and decision-making',
+            'category': 'Thinking'
+        },
+        {
+            'id': 'react',
+            'name': 'ReAct (Reason + Act)',
+            'description': 'Best for research and multi-step tasks',
+            'category': 'Thinking'
+        },
+        {
+            'id': 'hpva',
+            'name': 'HPVA (Hook-Problem-Value-Action)',
+            'description': 'Best for social posts that drive engagement',
+            'category': 'Specific Use-Cases'
+        },
+        {
+            'id': 'eslc',
+            'name': 'ESLC (Evidence-Summary-Limitations-Citations)',
+            'description': 'Best for research and academic outputs',
+            'category': 'Specific Use-Cases'
+        },
+        {
+            'id': 'sop',
+            'name': 'SOP (Standard Operating Procedure)',
+            'description': 'Best for workflows, systems, and team training',
+            'category': 'Specific Use-Cases'
+        }
+    ]
+
+    return jsonify({'frameworks': frameworks}), 200
 
 @app.route('/api/user-info')
 @login_required
