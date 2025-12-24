@@ -2199,7 +2199,7 @@ def embed_widget(share_code):
         window.style.display = window.style.display === 'none' ? 'flex' : 'none';
     }}
 
-    function addMessage(message, isUser) {{
+    function addMessage(message, isUser, isThinking = false) {{
         const messagesDiv = document.getElementById('ai-chat-messages');
         const messageDiv = document.createElement('div');
         messageDiv.style.cssText = `
@@ -2208,10 +2208,48 @@ def embed_widget(share_code):
             max-width: 80%;
             word-wrap: break-word;
             ${{isUser ? 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin-left: auto;' : 'background: #f3f4f6; color: #1f2937;'}}
+            ${{isThinking ? 'opacity: 0.7; font-style: italic; color: #9ca3af !important;' : ''}}
         `;
+        if (isThinking) {{
+            messageDiv.id = 'thinking-indicator';
+        }}
         messageDiv.textContent = message;
         messagesDiv.appendChild(messageDiv);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }}
+
+    function showThinkingIndicator() {{
+        const thinkingMessages = [
+            '*thinking...',
+            '*contemplating...',
+            '*computing...',
+            '*analyzing...',
+            '*processing...',
+            '*considering...'
+        ];
+        const randomMessage = thinkingMessages[Math.floor(Math.random() * thinkingMessages.length)];
+        addMessage(randomMessage, false, true);
+
+        // Animate dots
+        let dots = 3;
+        const interval = setInterval(() => {{
+            const indicator = document.getElementById('thinking-indicator');
+            if (!indicator) {{
+                clearInterval(interval);
+                return;
+            }}
+            dots = (dots % 3) + 1;
+            const baseMessage = randomMessage.replace(/\.+$/, '');
+            indicator.textContent = baseMessage + '.'.repeat(dots);
+        }}, 500);
+
+        return interval;
+    }}
+
+    function removeThinkingIndicator(interval) {{
+        if (interval) clearInterval(interval);
+        const indicator = document.getElementById('thinking-indicator');
+        if (indicator) indicator.remove();
     }}
 
     async function sendMessage() {{
@@ -2221,6 +2259,8 @@ def embed_widget(share_code):
 
         addMessage(message, true);
         input.value = '';
+
+        const thinkingInterval = showThinkingIndicator();
 
         try {{
             const response = await fetch(API_BASE + 'api/embed/chat', {{
@@ -2233,12 +2273,15 @@ def embed_widget(share_code):
             }});
 
             const data = await response.json();
+            removeThinkingIndicator(thinkingInterval);
+
             if (data.response) {{
                 addMessage(data.response, false);
             }} else {{
                 addMessage('Sorry, I encountered an error.', false);
             }}
         }} catch (error) {{
+            removeThinkingIndicator(thinkingInterval);
             addMessage('Sorry, I encountered an error.', false);
         }}
     }}
