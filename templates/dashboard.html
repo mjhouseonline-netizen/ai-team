@@ -249,82 +249,94 @@
             position: relative;
         }
 
-        .delete-agent-btn {
+        /* Agent actions dropdown */
+        .agent-actions {
             position: absolute;
             right: 8px;
             top: 50%;
             transform: translateY(-50%);
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.3);
+            z-index: 100;
+        }
+
+        .agent-menu-btn {
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid rgba(102, 126, 234, 0.2);
             border-radius: 6px;
-            padding: 4px 8px;
-            font-size: 14px;
+            padding: 4px 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
             cursor: pointer;
             opacity: 0;
             transition: all 0.2s;
-            z-index: 10;
+            line-height: 1;
         }
 
-        .custom-agent-item:hover .delete-agent-btn {
+        .custom-agent-item:hover .agent-menu-btn {
             opacity: 1;
         }
 
-        .delete-agent-btn:hover {
-            background: rgba(239, 68, 68, 0.2);
-            border-color: rgba(239, 68, 68, 0.5);
-            transform: translateY(-50%) scale(1.1);
+        .agent-menu-btn:hover {
+            background: rgba(102, 126, 234, 0.2);
+            border-color: rgba(102, 126, 234, 0.4);
+            transform: scale(1.1);
         }
 
-        .share-agent-btn {
+        .agent-actions-dropdown {
             position: absolute;
-            right: 40px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: rgba(16, 163, 127, 0.1);
-            border: 1px solid rgba(16, 163, 127, 0.3);
-            border-radius: 6px;
-            padding: 4px 8px;
-            font-size: 14px;
-            cursor: pointer;
+            top: calc(100% + 4px);
+            right: 0;
+            min-width: 160px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
             opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
             transition: all 0.2s;
-            z-index: 10;
+            overflow: hidden;
+            z-index: 1000;
         }
 
-        .custom-agent-item:hover .share-agent-btn {
+        .custom-agent-item:hover .agent-actions-dropdown {
             opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
         }
 
-        .share-agent-btn:hover {
-            background: rgba(16, 163, 127, 0.2);
-            border-color: rgba(16, 163, 127, 0.5);
-            transform: translateY(-50%) scale(1.1);
-        }
-
-        .edit-agent-btn {
-            position: absolute;
-            right: 72px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: rgba(59, 130, 246, 0.1);
-            border: 1px solid rgba(59, 130, 246, 0.3);
-            border-radius: 6px;
-            padding: 4px 8px;
-            font-size: 14px;
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
             cursor: pointer;
-            opacity: 0;
-            transition: all 0.2s;
-            z-index: 10;
+            transition: background 0.2s;
+            font-size: 14px;
+            color: #333;
         }
 
-        .custom-agent-item:hover .edit-agent-btn {
-            opacity: 1;
+        .dropdown-item:hover {
+            background: #f3f4f6;
         }
 
-        .edit-agent-btn:hover {
-            background: rgba(59, 130, 246, 0.2);
-            border-color: rgba(59, 130, 246, 0.5);
-            transform: translateY(-50%) scale(1.1);
+        .dropdown-item-danger {
+            color: #ef4444;
+        }
+
+        .dropdown-item-danger:hover {
+            background: #fef2f2;
+        }
+
+        .dropdown-icon {
+            font-size: 16px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .dropdown-divider {
+            height: 1px;
+            background: #e5e7eb;
+            margin: 4px 0;
         }
 
         .sidebar-footer {
@@ -2239,15 +2251,20 @@
 
             /* Agent items already use fluid sizing */
 
-            /* Make custom agent buttons always visible on mobile (touch screens) */
-            .custom-agent-item .share-agent-btn,
-            .custom-agent-item .delete-agent-btn {
+            /* Make custom agent menu button always visible on mobile (touch screens) */
+            .custom-agent-item .agent-menu-btn {
                 opacity: 0.7;
             }
 
-            .custom-agent-item:active .share-agent-btn,
-            .custom-agent-item:active .delete-agent-btn {
+            .custom-agent-item:active .agent-menu-btn {
                 opacity: 1;
+            }
+
+            /* Show dropdown on tap for mobile */
+            .custom-agent-item:active .agent-actions-dropdown {
+                opacity: 1;
+                visibility: visible;
+                transform: translateY(0);
             }
 
             /* Modal improvements for mobile */
@@ -4295,25 +4312,25 @@
                 const agentDiv = document.createElement('div');
                 agentDiv.className = 'agent-item custom-agent-item';
                 agentDiv.onclick = (e) => {
-                    // Don't trigger if clicking share, edit, or delete buttons
-                    if (!e.target.closest('.share-agent-btn') &&
-                        !e.target.closest('.edit-agent-btn') &&
-                        !e.target.closest('.delete-agent-btn')) {
+                    // Don't trigger if clicking dropdown or its contents
+                    if (!e.target.closest('.agent-actions-dropdown') &&
+                        !e.target.closest('.agent-menu-btn')) {
                         selectCustomAgent(e, agent.id, agent.name, agent.emoji || '🤖', agent.description || agent.role, agent.icon_image);
                     }
                 };
-                
-                // Build share button HTML if share_url exists
-                const shareButtonHTML = agent.share_url ? `
-                    <button class="share-agent-btn" onclick="showCustomAgentShare(event, '${agent.name}', '${agent.share_url}')" title="Share agent">
-                        🔗
-                    </button>
-                ` : '';
-                
+
                 // Determine avatar content - use image if available, otherwise emoji
                 const avatarContent = agent.icon_image
                     ? `<img src="${agent.icon_image}" alt="${agent.name}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`
                     : agent.emoji || '🤖';
+
+                // Build dropdown menu
+                const shareOption = agent.share_url ? `
+                    <div class="dropdown-item" onclick="showCustomAgentShare(event, '${agent.name}', '${agent.share_url}')">
+                        <span class="dropdown-icon">🔗</span>
+                        <span>Share Agent</span>
+                    </div>
+                ` : '';
 
                 agentDiv.innerHTML = `
                     <div class="agent-avatar" style="background: linear-gradient(135deg, #667eea, #764ba2);">
@@ -4323,15 +4340,25 @@
                         <div class="agent-name">${agent.name}</div>
                         <div class="agent-role">${agent.description || agent.role || 'Custom Agent'}</div>
                     </div>
-                    ${shareButtonHTML}
-                    <button class="edit-agent-btn" onclick="editCustomAgent(event, ${agent.id})" title="Edit agent">
-                        ✏️
-                    </button>
-                    <button class="delete-agent-btn" onclick="deleteCustomAgent(event, ${agent.id})" title="Delete agent">
-                        🗑️
-                    </button>
+                    <div class="agent-actions">
+                        <button class="agent-menu-btn" onclick="event.stopPropagation()" title="Actions">
+                            ⋮
+                        </button>
+                        <div class="agent-actions-dropdown">
+                            <div class="dropdown-item" onclick="editCustomAgent(event, ${agent.id})">
+                                <span class="dropdown-icon">✏️</span>
+                                <span>Edit</span>
+                            </div>
+                            ${shareOption}
+                            <div class="dropdown-divider"></div>
+                            <div class="dropdown-item dropdown-item-danger" onclick="deleteCustomAgent(event, ${agent.id})">
+                                <span class="dropdown-icon">🗑️</span>
+                                <span>Delete</span>
+                            </div>
+                        </div>
+                    </div>
                 `;
-                
+
                 container.appendChild(agentDiv);
             });
         }
