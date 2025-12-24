@@ -3094,21 +3094,40 @@
                 <textarea id="promptInput" class="form-textarea" placeholder="e.g., I need to write a professional email to my team about the new project timeline..."></textarea>
             </div>
             <div class="form-group">
-                <label class="form-label">Select Prompt Style:</label>
-                <select class="form-input" id="promptStyle">
-                    <option value="detailed">Detailed & Comprehensive</option>
-                    <option value="concise">Concise & Direct</option>
-                    <option value="creative">Creative & Engaging</option>
-                    <option value="professional">Professional & Formal</option>
-                    <option value="casual">Casual & Friendly</option>
+                <label class="form-label">Select Prompt Framework:</label>
+                <select class="form-input" id="promptFrameworkBuilder">
+                    <option value="">Select Framework (Optional)</option>
+                    <optgroup label="🎯 Core Frameworks">
+                        <option value="rtcf">RTCF - Best for everything</option>
+                        <option value="raci">RACI - Brand voice & boundaries</option>
+                        <option value="costar">CO-STAR - Writing & posts</option>
+                        <option value="crispe">CRISPE - High quality outputs</option>
+                        <option value="risen">RISEN - Complex tasks</option>
+                    </optgroup>
+                    <optgroup label="📊 Output Control">
+                        <option value="steps">Steps - Practical instructions</option>
+                        <option value="rubric">Rubric - Grading & reviews</option>
+                    </optgroup>
+                    <optgroup label="🧠 Thinking/Reasoning">
+                        <option value="socratic">Socratic - Coaching & decisions</option>
+                        <option value="react">ReAct - Research & multi-step</option>
+                    </optgroup>
+                    <optgroup label="🎨 Specific Use-Cases">
+                        <option value="hpva">HPVA - Social posts</option>
+                        <option value="eslc">ESLC - Academic/research</option>
+                        <option value="sop">SOP - Workflows & training</option>
+                    </optgroup>
                 </select>
+                <p style="font-size: 12px; color: var(--text-secondary); margin-top: 6px;">
+                    💡 Tip: Select a framework for professional, structured prompts. Leave blank for general enhancement.
+                </p>
             </div>
             <div class="form-group">
                 <label class="form-label">Enhanced Prompt:</label>
                 <textarea id="promptOutput" class="form-textarea" readonly style="background: var(--bg-secondary); min-height: 160px;"></textarea>
             </div>
             <div class="form-actions">
-                <button class="btn btn-primary" onclick="buildPrompt()">Generate Prompt</button>
+                <button class="btn btn-primary" onclick="buildPrompt()">✨ Generate Prompt</button>
                 <button class="btn btn-secondary" onclick="copyPrompt()">📋 Copy Prompt</button>
                 <button class="btn btn-secondary" onclick="usePrompt()">Use This Prompt</button>
             </div>
@@ -4852,19 +4871,59 @@
             document.getElementById('promptBuilderModal').style.display = 'none';
         }
 
-        function buildPrompt() {
+        async function buildPrompt() {
             const input = document.getElementById('promptInput').value.trim();
-            const style = document.getElementById('promptStyle').value;
-            
+            const framework = document.getElementById('promptFrameworkBuilder').value;
+            const outputArea = document.getElementById('promptOutput');
+            const generateBtn = event.target;
+
             if (!input) {
                 alert('Please describe what you want help with!');
                 return;
             }
-            
-            // Extract key information from user input
-            const prompt = generateGPTPrompt(input, style);
-            
-            document.getElementById('promptOutput').value = prompt;
+
+            // Show loading state
+            const originalText = generateBtn.textContent;
+            generateBtn.textContent = '⏳ Generating...';
+            generateBtn.disabled = true;
+            outputArea.value = 'Generating your professional prompt...';
+
+            try {
+                const response = await fetch('/api/generate-prompt', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        goal: input,
+                        framework: framework || 'rtcf'  // Default to RTCF if none selected
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.prompt) {
+                    outputArea.value = data.prompt;
+
+                    // Show success notification
+                    if (framework) {
+                        showNotification(`✅ Generated using ${data.framework_name}!`);
+                    } else {
+                        showNotification('✅ Prompt generated successfully!');
+                    }
+                } else {
+                    outputArea.value = '';
+                    alert('Error generating prompt: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                outputArea.value = '';
+                alert('Failed to generate prompt. Please try again.');
+            } finally {
+                // Reset button
+                generateBtn.textContent = originalText;
+                generateBtn.disabled = false;
+            }
         }
 
         function generateGPTPrompt(userInput, style) {
