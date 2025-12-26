@@ -267,7 +267,7 @@
             font-weight: bold;
             color: #667eea;
             cursor: pointer;
-            opacity: 0;
+            opacity: 0.6;
             transition: all 0.2s;
             line-height: 1;
         }
@@ -296,12 +296,14 @@
             transition: all 0.2s;
             overflow: hidden;
             z-index: 1000;
+            pointer-events: none;
         }
 
-        .custom-agent-item:hover .agent-actions-dropdown {
+        .agent-actions-dropdown.show {
             opacity: 1;
             visibility: visible;
             transform: translateY(0);
+            pointer-events: auto;
         }
 
         .dropdown-item {
@@ -2253,18 +2255,11 @@
 
             /* Make custom agent menu button always visible on mobile (touch screens) */
             .custom-agent-item .agent-menu-btn {
-                opacity: 0.7;
+                opacity: 0.8;
             }
 
             .custom-agent-item:active .agent-menu-btn {
                 opacity: 1;
-            }
-
-            /* Show dropdown on tap for mobile */
-            .custom-agent-item:active .agent-actions-dropdown {
-                opacity: 1;
-                visibility: visible;
-                transform: translateY(0);
             }
 
             /* Modal improvements for mobile */
@@ -4368,7 +4363,7 @@
                         <div class="agent-role">${agent.description || agent.role || 'Custom Agent'}</div>
                     </div>
                     <div class="agent-actions">
-                        <button class="agent-menu-btn" onclick="event.stopPropagation()" title="Actions">
+                        <button class="agent-menu-btn" onclick="toggleAgentDropdown(event, this)" title="Actions">
                             ⋮
                         </button>
                         <div class="agent-actions-dropdown">
@@ -4629,6 +4624,33 @@
                 startNewChat();
             }
         }
+
+        // Toggle agent dropdown menu
+        function toggleAgentDropdown(event, button) {
+            event.stopPropagation();
+
+            const dropdown = button.nextElementSibling;
+            const isOpen = dropdown.classList.contains('show');
+
+            // Close all other dropdowns first
+            document.querySelectorAll('.agent-actions-dropdown.show').forEach(d => {
+                d.classList.remove('show');
+            });
+
+            // Toggle this dropdown
+            if (!isOpen) {
+                dropdown.classList.add('show');
+            }
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.agent-actions')) {
+                document.querySelectorAll('.agent-actions-dropdown.show').forEach(dropdown => {
+                    dropdown.classList.remove('show');
+                });
+            }
+        });
 
         async function editCustomAgent(event, agentId) {
             event.stopPropagation(); // Prevent agent selection
