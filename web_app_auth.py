@@ -4599,6 +4599,14 @@ def promo_codes_page():
         return redirect(url_for('dashboard'))
     return render_template('promo-codes.html', user=current_user)
 
+@app.route('/admin/support-messages')
+@login_required
+def admin_support_messages():
+    """Admin support messages dashboard (admin only)"""
+    if current_user.id != 1:
+        return redirect(url_for('dashboard'))
+    return render_template('admin_support.html', user=current_user)
+
 @app.route('/admin/analytics')
 @login_required
 def admin_analytics():
@@ -8167,6 +8175,39 @@ def trigger_webhook(user_id, event_type, data):
         print(f"Webhook system error: {e}")
 
 # ============================================
+# ============================================
+# SUPPORT MESSAGES TABLE
+# ============================================
+
+def init_support_messages_table():
+    """Create support messages table for user help requests"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS support_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            user_email TEXT,
+            user_name TEXT,
+            subject TEXT NOT NULL,
+            message TEXT NOT NULL,
+            status TEXT DEFAULT 'new',
+            ai_attempted BOOLEAN DEFAULT 0,
+            ai_response TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            resolved_at TIMESTAMP,
+            admin_notes TEXT,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+    """)
+
+    conn.commit()
+    conn.close()
+
+init_support_messages_table()
+
+
 # API ENDPOINTS
 # ============================================
 
@@ -8744,6 +8785,185 @@ def toggle_webhook(webhook_id):
 # ============================================
 
 @app.route('/admin/list-routes')
+# ============================================
+# SUPPORT CHATBOX HELPER ENDPOINTS
+# ============================================
+
+@app.route('/api/support/ask', methods=['POST'])
+def support_ask_helper():
+    """AI helper to answer common questions"""
+    try:
+        data = request.get_json()
+        question = data.get('question', '').strip()
+
+        if not question:
+            return jsonify({'success': False, 'error': 'Question required'}), 400
+
+        # Common Q&A knowledge base
+        qa_responses = {
+            'navigate': 'To navigate the platform:\n• Use the sidebar to access different AI agents\n• Click "Integrations" to connect external services\n• Settings menu (⚙️) for account management\n• Prompt Builder for creating custom prompts',
+            'agents': 'We have 7 specialized AI agents:\n• Luna - Research & Analysis\n• Mila - Organization & Planning\n• Sage - Writing & Content\n• Ember - Creative Direction\n• Sol - Strategic Thinking\n• Nova - Technical Solutions\n• Theo - Implementation\n\nYou can also create custom agents!',
+            'custom': 'To create a custom agent:\n1. Click "Create Custom Agent" in sidebar\n2. Name your agent\n3. Write personality/instructions\n4. Upload an icon (optional)\n5. Save!\n\nCustom agents remember your instructions.',
+            'integrations': 'We support 30+ integrations including:\n• Slack, Discord, Teams\n• GitHub, GitLab\n• Google Sheets, Docs, Calendar\n• Stripe, Shopify\n• And many more!\n\nGo to Integrations page to connect.',
+            'pricing': 'Our pricing:\n• Free: $0/month - 25 messages/day\n• Starter: $19/month - 60 messages/day\n• Pro: $49/month - 300 messages/day + API\n• Enterprise: $99/month - 1000 messages/day\n\nVisit /pricing for details.',
+            'api': 'API access is available on Pro ($49/mo) and Enterprise ($99/mo) plans. You can:\n• Automate workflows\n• Integrate with custom apps\n• Use webhooks\n• Access all AI agents programmatically',
+            'help': 'Need help? You can:\n• Use this chatbox for quick questions\n• Send us a message (we\'ll reply ASAP)\n• Check /faq for common questions\n• Visit /help for documentation'
+        }
+
+        # Simple keyword matching
+        question_lower = question.lower()
+        response = None
+
+        for keyword, answer in qa_responses.items():
+            if keyword in question_lower:
+                response = answer
+                break
+
+        if response:
+            return jsonify({
+                'success': True,
+                'answer': response,
+                'can_help': True
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'can_help': False,
+                'message': 'I\'m not sure about that. Would you like to send a message to our admin team?'
+            })
+
+    except Exception as e:
+        print(f"Support helper error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/support/message', methods=['POST'])
+def support_send_message():
+    """Send support message to admin"""
+    try:
+        data = request.get_json()
+        subject = data.get('subject', '').strip()
+        message = data.get('message', '').strip()
+
+        if not subject or not message:
+            return jsonify({'success': False, 'error': 'Subject and message required'}), 400
+
+        # Get user info if logged in
+        user_id = None
+        user_email = None
+        user_name = None
+
+        if current_user.is_authenticated:
+            user_id = current_user.id
+            user_email = current_user.email
+            user_name = current_user.username
+        else:
+            user_email = data.get('email', 'anonymous')
+            user_name = data.get('name', 'Guest')
+
+        # Save to database
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            INSERT INTO support_messages (user_id, user_email, user_name, subject, message)
+            VALUES (?, ?, ?, ?, ?)
+        """, (user_id, user_email, user_name, subject, message))
+
+        message_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message_id': message_id,
+            'message': 'Your message has been sent! We\'ll get back to you soon.'
+        })
+
+    except Exception as e:
+        print(f"Support message error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/support/messages', methods=['GET'])
+@login_required
+def get_support_messages():
+    """Get all support messages (admin only)"""
+    try:
+        # Check if user is admin (you can customize this check)
+        if not current_user.is_authenticated or current_user.email != 'admin@example.com':
+            # For now, just check if user is looking at their own messages
+            user_id = current_user.id
+            admin_mode = False
+        else:
+            user_id = None
+            admin_mode = True
+
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        if admin_mode:
+            cursor.execute("""
+                SELECT * FROM support_messages
+                ORDER BY created_at DESC
+            """)
+        else:
+            cursor.execute("""
+                SELECT * FROM support_messages
+                WHERE user_id = ?
+                ORDER BY created_at DESC
+            """, (user_id,))
+
+        messages = []
+        for row in cursor.fetchall():
+            messages.append(dict(row))
+
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'messages': messages,
+            'admin_mode': admin_mode
+        })
+
+    except Exception as e:
+        print(f"Get support messages error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/support/message/<int:message_id>/resolve', methods=['POST'])
+@login_required
+def resolve_support_message(message_id):
+    """Mark support message as resolved (admin only)"""
+    try:
+        data = request.get_json()
+        admin_notes = data.get('notes', '')
+
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            UPDATE support_messages
+            SET status = 'resolved',
+                resolved_at = CURRENT_TIMESTAMP,
+                admin_notes = ?
+            WHERE id = ?
+        """, (admin_notes, message_id))
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': 'Message marked as resolved'
+        })
+
+    except Exception as e:
+        print(f"Resolve message error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 def list_routes():
     """List all registered Flask routes"""
     routes = []
@@ -8753,10 +8973,10 @@ def list_routes():
             'methods': list(rule.methods),
             'path': str(rule)
         })
-    
+
     # Check specifically for custom route
     custom_routes = [r for r in routes if 'custom' in r['path'].lower()]
-    
+
     return jsonify({
         'success': True,
         'total_routes': len(routes),

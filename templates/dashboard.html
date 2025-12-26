@@ -5466,5 +5466,279 @@ Please provide your response following these guidelines.`;
     </script>
 
     <script src="/static/dashboard_ultimate.js"></script>
+
+    <!-- Support Chatbox Helper -->
+    <div id="supportChatbox" style="display: none;">
+        <div id="supportChatHeader">
+            <span>💬 Help & Support</span>
+            <button onclick="closeSupportChat()" style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;">×</button>
+        </div>
+        <div id="supportChatMessages"></div>
+        <div id="supportChatInput">
+            <input type="text" id="supportQuestionInput" placeholder="Ask a question..." onkeypress="if(event.key==='Enter') askSupportQuestion()">
+            <button onclick="askSupportQuestion()">Ask</button>
+        </div>
+    </div>
+
+    <button id="supportChatButton" onclick="openSupportChat()">
+        <span style="font-size: 24px;">💬</span>
+    </button>
+
+    <style>
+        #supportChatButton {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+            cursor: pointer;
+            z-index: 999;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #supportChatButton:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 30px rgba(102, 126, 234, 0.6);
+        }
+
+        #supportChatbox {
+            position: fixed;
+            bottom: 100px;
+            right: 30px;
+            width: 380px;
+            height: 500px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #supportChatHeader {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            font-weight: 600;
+            font-size: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #supportChatMessages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .support-message {
+            margin-bottom: 15px;
+            padding: 12px 15px;
+            border-radius: 10px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .support-message.user {
+            background: #667eea;
+            color: white;
+            margin-left: 40px;
+            text-align: right;
+        }
+
+        .support-message.assistant {
+            background: white;
+            color: #333;
+            margin-right: 40px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .support-message.system {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        #supportChatInput {
+            display: flex;
+            padding: 15px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        #supportQuestionInput {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            outline: none;
+            font-size: 14px;
+        }
+
+        #supportChatInput button {
+            margin-left: 10px;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        #supportChatInput button:hover {
+            transform: scale(1.05);
+        }
+
+        .contact-admin-btn {
+            background: #10a37f !important;
+            color: white !important;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 10px;
+            width: 100%;
+            transition: all 0.3s;
+        }
+
+        .contact-admin-btn:hover {
+            background: #0d8c6f !important;
+        }
+
+        @media (max-width: 768px) {
+            #supportChatbox {
+                width: 90%;
+                right: 5%;
+                bottom: 80px;
+            }
+
+            #supportChatButton {
+                bottom: 20px;
+                right: 20px;
+            }
+        }
+    </style>
+
+    <script>
+        let supportChatMode = 'ask'; // 'ask' or 'contact'
+
+        function openSupportChat() {
+            document.getElementById('supportChatbox').style.display = 'flex';
+            document.getElementById('supportChatButton').style.display = 'none';
+
+            // Add welcome message if no messages yet
+            const messagesDiv = document.getElementById('supportChatMessages');
+            if (messagesDiv.children.length === 0) {
+                addSupportMessage('assistant', 'Hi! I\'m here to help. Ask me about:\n• How to navigate the platform\n• Our AI agents\n• Creating custom agents\n• Integrations\n• Pricing & API access\n\nOr anything else!');
+            }
+        }
+
+        function closeSupportChat() {
+            document.getElementById('supportChatbox').style.display = 'none';
+            document.getElementById('supportChatButton').style.display = 'flex';
+        }
+
+        function addSupportMessage(type, text) {
+            const messagesDiv = document.getElementById('supportChatMessages');
+            const messageEl = document.createElement('div');
+            messageEl.className = `support-message ${type}`;
+            messageEl.textContent = text;
+            messagesDiv.appendChild(messageEl);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        async function askSupportQuestion() {
+            const input = document.getElementById('supportQuestionInput');
+            const question = input.value.trim();
+
+            if (!question) return;
+
+            // Add user message
+            addSupportMessage('user', question);
+            input.value = '';
+
+            try {
+                // Ask AI helper
+                const response = await fetch('/api/support/ask', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({question})
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.can_help) {
+                    addSupportMessage('assistant', data.answer);
+                } else {
+                    addSupportMessage('assistant', data.message || 'I\'m not sure about that.');
+                    showContactAdmin(question);
+                }
+            } catch (error) {
+                console.error('Support error:', error);
+                addSupportMessage('system', 'Sorry, there was an error. Please try again.');
+            }
+        }
+
+        function showContactAdmin(originalQuestion) {
+            const messagesDiv = document.getElementById('supportChatMessages');
+
+            const contactDiv = document.createElement('div');
+            contactDiv.className = 'support-message assistant';
+            contactDiv.innerHTML = `
+                <p><strong>Would you like to send a message to our admin team?</strong></p>
+                <input type="text" id="contactSubject" placeholder="Subject" style="width: 100%; padding: 8px; margin: 10px 0; border-radius: 5px; border: 1px solid #ddd;" value="${originalQuestion.substring(0, 50)}...">
+                <textarea id="contactMessage" placeholder="Your message..." style="width: 100%; padding: 8px; margin: 10px 0; border-radius: 5px; border: 1px solid #ddd; min-height: 80px;" rows="3">${originalQuestion}</textarea>
+                <button class="contact-admin-btn" onclick="sendContactMessage()">Send Message to Admin</button>
+            `;
+            messagesDiv.appendChild(contactDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        async function sendContactMessage() {
+            const subject = document.getElementById('contactSubject').value.trim();
+            const message = document.getElementById('contactMessage').value.trim();
+
+            if (!subject || !message) {
+                addSupportMessage('system', 'Please fill in both subject and message.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/support/message', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({subject, message})
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    addSupportMessage('system', '✅ ' + data.message);
+                    document.getElementById('contactSubject').value = '';
+                    document.getElementById('contactMessage').value = '';
+                } else {
+                    addSupportMessage('system', '❌ Failed to send message. Please try again.');
+                }
+            } catch (error) {
+                console.error('Send message error:', error);
+                addSupportMessage('system', '❌ Error sending message. Please try again.');
+            }
+        }
+    </script>
 </body>
 </html>
