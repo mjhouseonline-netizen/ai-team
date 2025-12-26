@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Support Messages - Admin</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            color: #333;
+        }
+
+        .back-btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .back-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            color: #667eea;
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+
+        .stat-card p {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 10px 20px;
+            background: #f0f0f0;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .messages-list {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .message-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            border-left: 5px solid #667eea;
+            transition: all 0.3s;
+        }
+
+        .message-card:hover {
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transform: translateX(5px);
+        }
+
+        .message-card.new {
+            border-left-color: #ff6b6b;
+            background: #fff5f5;
+        }
+
+        .message-card.resolved {
+            border-left-color: #51cf66;
+            opacity: 0.7;
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 15px;
+        }
+
+        .message-info h3 {
+            color: #333;
+            font-size: 1.3em;
+            margin-bottom: 5px;
+        }
+
+        .message-info p {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .message-status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .message-status.new {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .message-status.resolved {
+            background: #51cf66;
+            color: white;
+        }
+
+        .message-body {
+            color: #444;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            white-space: pre-wrap;
+        }
+
+        .message-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .resolve-btn {
+            background: #51cf66;
+            color: white;
+        }
+
+        .resolve-btn:hover {
+            background: #40c057;
+        }
+
+        .reply-btn {
+            background: #667eea;
+            color: white;
+        }
+
+        .reply-btn:hover {
+            background: #5568d3;
+        }
+
+        .no-messages {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .no-messages i {
+            font-size: 4em;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💬 Support Messages</h1>
+            <a href="/admin" class="back-btn">← Back to Admin</a>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <h3 id="totalMessages">0</h3>
+                <p>Total Messages</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="newMessages">0</h3>
+                <p>New Messages</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="resolvedMessages">0</h3>
+                <p>Resolved</p>
+            </div>
+        </div>
+
+        <div class="filters">
+            <button class="filter-btn active" onclick="filterMessages('all')">All</button>
+            <button class="filter-btn" onclick="filterMessages('new')">New</button>
+            <button class="filter-btn" onclick="filterMessages('resolved')">Resolved</button>
+        </div>
+
+        <div class="messages-list" id="messagesList">
+            <div class="no-messages">
+                <i>📭</i>
+                <h3>Loading messages...</h3>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allMessages = [];
+        let currentFilter = 'all';
+
+        async function loadMessages() {
+            try {
+                const response = await fetch('/api/support/messages');
+                const data = await response.json();
+
+                if (data.success) {
+                    allMessages = data.messages;
+                    updateStats();
+                    displayMessages();
+                }
+            } catch (error) {
+                console.error('Error loading messages:', error);
+                document.getElementById('messagesList').innerHTML = `
+                    <div class="no-messages">
+                        <i>❌</i>
+                        <h3>Error loading messages</h3>
+                        <p>Please try again later</p>
+                    </div>
+                `;
+            }
+        }
+
+        function updateStats() {
+            const total = allMessages.length;
+            const newCount = allMessages.filter(m => m.status === 'new').length;
+            const resolved = allMessages.filter(m => m.status === 'resolved').length;
+
+            document.getElementById('totalMessages').textContent = total;
+            document.getElementById('newMessages').textContent = newCount;
+            document.getElementById('resolvedMessages').textContent = resolved;
+        }
+
+        function filterMessages(status) {
+            currentFilter = status;
+
+            // Update active button
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            displayMessages();
+        }
+
+        function displayMessages() {
+            const filtered = currentFilter === 'all'
+                ? allMessages
+                : allMessages.filter(m => m.status === currentFilter);
+
+            const container = document.getElementById('messagesList');
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="no-messages">
+                        <i>📭</i>
+                        <h3>No ${currentFilter === 'all' ? '' : currentFilter} messages</h3>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filtered.map(msg => `
+                <div class="message-card ${msg.status}">
+                    <div class="message-header">
+                        <div class="message-info">
+                            <h3>${escapeHtml(msg.subject)}</h3>
+                            <p>From: ${escapeHtml(msg.user_name || 'Guest')} (${escapeHtml(msg.user_email)}) • ${formatDate(msg.created_at)}</p>
+                        </div>
+                        <span class="message-status ${msg.status}">${msg.status}</span>
+                    </div>
+                    <div class="message-body">${escapeHtml(msg.message)}</div>
+                    ${msg.admin_notes ? `<div style="background: #fff3cd; padding: 10px; border-radius: 8px; margin-top: 10px;"><strong>Admin Notes:</strong> ${escapeHtml(msg.admin_notes)}</div>` : ''}
+                    <div class="message-actions">
+                        ${msg.status === 'new' ? `
+                            <button class="action-btn resolve-btn" onclick="resolveMessage(${msg.id})">✓ Mark Resolved</button>
+                        ` : ''}
+                        <button class="action-btn reply-btn" onclick="replyToMessage('${escapeHtml(msg.user_email)}', '${escapeHtml(msg.subject)}')">📧 Reply via Email</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function resolveMessage(messageId) {
+            const notes = prompt('Add admin notes (optional):');
+
+            try {
+                const response = await fetch(`/api/support/message/${messageId}/resolve`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({notes: notes || ''})
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✅ Message marked as resolved!');
+                    loadMessages();
+                } else {
+                    alert('❌ Failed to resolve message');
+                }
+            } catch (error) {
+                console.error('Error resolving message:', error);
+                alert('❌ Error resolving message');
+            }
+        }
+
+        function replyToMessage(email, subject) {
+            window.location.href = `mailto:${email}?subject=Re: ${subject}`;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diff = now - date;
+            const minutes = Math.floor(diff / 60000);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+
+            if (minutes < 1) return 'Just now';
+            if (minutes < 60) return `${minutes}m ago`;
+            if (hours < 24) return `${hours}h ago`;
+            if (days < 7) return `${days}d ago`;
+            return date.toLocaleDateString();
+        }
+
+        // Load messages on page load
+        loadMessages();
+
+        // Refresh every 30 seconds
+        setInterval(loadMessages, 30000);
+    </script>
+</body>
+</html>
