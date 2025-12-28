@@ -145,6 +145,7 @@
         .sidebar-header {
             padding: var(--spacing-md) var(--spacing-lg);
             border-bottom: 1px solid #333;
+            position: relative;
         }
 
         .sidebar-logo {
@@ -160,6 +161,29 @@
             font-size: var(--font-xs);
             color: #888;
             margin-top: var(--spacing-xs);
+        }
+
+        .sidebar-close-btn {
+            display: none;
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sidebar-close-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
         }
 
         .agents-section {
@@ -1545,6 +1569,10 @@
                 left: 0;
             }
 
+            .sidebar-close-btn {
+                display: flex;
+            }
+
             .sidebar-toggle {
                 position: fixed;
                 top: 12px;
@@ -2550,6 +2578,7 @@
                 🌿 AI Team
             </div>
             <div class="sidebar-subtitle">Your AI Assistant Team</div>
+            <button class="sidebar-close-btn" onclick="toggleSidebar()" aria-label="Close sidebar">✕</button>
         </div>
 
         <div class="agents-section">
@@ -4868,7 +4897,7 @@
             
             // Wrap consecutive list items in <ul>
             formatted = formatted.replace(/(<li>.*?<\/li>)+/g, '<ul>$&</ul>');
-            
+
             // Handle numbered lists
             formatted = formatted.replace(/<p>(\d+)\.\s*(.+?)<\/p>/g, '<li>$2</li>');
             formatted = formatted.replace(/(<li>.*?<\/li>)+/g, function(match) {
@@ -4877,8 +4906,42 @@
                 }
                 return match;
             });
-            
+
+            // Make agent names clickable for easy switching
+            const agentLinks = {
+                'Luna': {emoji: '🌙', role: 'Research & Analysis'},
+                'Mila': {emoji: '📋', role: 'Organization & Planning'},
+                'Sage': {emoji: '🧙', role: 'Writing & Content'},
+                'Ember': {emoji: '🔥', role: 'Creative Direction'},
+                'Sol': {emoji: '☀️', role: 'Strategic Thinking'},
+                'Nova': {emoji: '⭐', role: 'Technical Solutions'},
+                'Theo': {emoji: '💼', role: 'Implementation'}
+            };
+
+            // Replace agent names with clickable links
+            Object.keys(agentLinks).forEach(agentName => {
+                const agent = agentLinks[agentName];
+                const regex = new RegExp(`\\b${agentName}\\b(?![^<]*>)`, 'g');
+                formatted = formatted.replace(regex, function(match, offset, string) {
+                    // Don't replace if already inside a tag
+                    const beforeMatch = string.substring(0, offset);
+                    const lastOpenTag = beforeMatch.lastIndexOf('<');
+                    const lastCloseTag = beforeMatch.lastIndexOf('>');
+                    if (lastOpenTag > lastCloseTag) {
+                        return match;
+                    }
+                    return `<a href="#" onclick="event.preventDefault(); selectAgent('${agentName}', '${agent.emoji}', '${agent.role}'); closeSidebar();" style="color: #667eea; font-weight: 600; text-decoration: underline; cursor: pointer;">${match}</a>`;
+                });
+            });
+
             return formatted;
+        }
+
+        function closeSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            if (window.innerWidth <= 768 && sidebar.classList.contains('active')) {
+                sidebar.classList.remove('active');
+            }
         }
 
         // ============================================
