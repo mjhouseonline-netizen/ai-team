@@ -6102,18 +6102,19 @@ def get_conversations():
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
-        
+
+        # Include inactive conversations to show all history
         cursor.execute("""
-            SELECT id, agent_name, title, created_at, updated_at
+            SELECT id, agent_name, title, created_at, updated_at, is_active
             FROM conversations
-            WHERE user_id = ? AND is_active = 1
+            WHERE user_id = ?
             ORDER BY updated_at DESC
-            LIMIT 50
+            LIMIT 100
         """, (current_user.id,))
-        
+
         results = cursor.fetchall()
         conn.close()
-        
+
         conversations = []
         for row in results:
             conversations.append({
@@ -6121,11 +6122,14 @@ def get_conversations():
                 'agent': row[1],
                 'title': row[2] or 'New conversation',
                 'created_at': row[3],
-                'updated_at': row[4]
+                'updated_at': row[4],
+                'is_active': bool(row[5])
             })
-        
+
+        print(f"Found {len(conversations)} conversations for user {current_user.id}")
+
         return jsonify({'conversations': conversations}), 200
-        
+
     except Exception as e:
         print(f"Error getting conversations: {str(e)}")
         return jsonify({'error': str(e)}), 500
@@ -6137,20 +6141,36 @@ def get_conversation(conv_id):
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
-        
-        # Verify conversation belongs to user
+
+        # First check if conversation exists at all (including inactive ones)
         cursor.execute("""
-            SELECT agent_name, title FROM conversations
-            WHERE id = ? AND user_id = ?
-        """, (conv_id, current_user.id))
-        
+            SELECT agent_name, title, user_id, is_active FROM conversations
+            WHERE id = ?
+        """, (conv_id,))
+
         conv_result = cursor.fetchone()
         if not conv_result:
             conn.close()
+            print(f"Conversation {conv_id} not found in database")
             return jsonify({'error': 'Conversation not found'}), 404
-        
-        agent_name, title = conv_result
-        
+
+        agent_name, title, conv_user_id, is_active = conv_result
+
+        # Check if conversation belongs to current user
+        if conv_user_id != current_user.id:
+            conn.close()
+            print(f"Conversation {conv_id} belongs to user {conv_user_id}, not current user {current_user.id}")
+            return jsonify({'error': 'Conversation not found'}), 404
+
+        # If conversation is inactive, reactivate it
+        if not is_active:
+            print(f"Reactivating inactive conversation {conv_id}")
+            cursor.execute("""
+                UPDATE conversations SET is_active = 1, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            """, (conv_id,))
+            conn.commit()
+
         # Get all messages in this conversation
         cursor.execute("""
             SELECT message, response, timestamp
@@ -6158,7 +6178,7 @@ def get_conversation(conv_id):
             WHERE conversation_id = ? AND user_id = ?
             ORDER BY timestamp ASC
         """, (conv_id, current_user.id))
-        
+
         messages = []
         for row in cursor.fetchall():
             messages.append({
@@ -6166,18 +6186,22 @@ def get_conversation(conv_id):
                 'response': row[1],
                 'timestamp': row[2]
             })
-        
+
         conn.close()
-        
+
+        print(f"Successfully loaded conversation {conv_id} with {len(messages)} messages for agent {agent_name}")
+
         return jsonify({
             'id': conv_id,
             'agent': agent_name,
             'title': title,
             'messages': messages
         }), 200
-        
+
     except Exception as e:
         print(f"Error getting conversation: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/conversation/new', methods=['POST'])
