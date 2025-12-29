@@ -4094,12 +4094,15 @@
                 html += `<div class="history-group-label">${groupName}</div>`;
                 
                 convs.forEach(conv => {
-                    const isActive = currentConversationId === conv.id;
+                    const isCurrentConv = currentConversationId === conv.id;
+                    const isInactive = conv.is_active === false;
+                    const opacity = isInactive ? 'opacity: 0.6;' : '';
+                    const inactiveLabel = isInactive ? '<span style="font-size: 10px; color: #ef4444; margin-left: 5px;">(archived)</span>' : '';
                     html += `
-                        <div class="history-item ${isActive ? 'active' : ''}" onclick="loadConversation(${conv.id})">
+                        <div class="history-item ${isCurrentConv ? 'active' : ''}" onclick="loadConversation(${conv.id})" style="${opacity}">
                             <div class="history-icon">${getAgentIcon(conv.agent)}</div>
                             <div class="history-content">
-                                <div class="history-title">${conv.title}</div>
+                                <div class="history-title">${conv.title}${inactiveLabel}</div>
                                 <div class="history-time">${formatTime(conv.updated_at)}</div>
                             </div>
                             <button class="history-delete" onclick="deleteConversation(${conv.id}, event)">
@@ -4187,41 +4190,52 @@
             try {
                 // Close dropdown
                 toggleHistoryDropdown();
-                
+
+                showNotification('Loading conversation...', 'info');
+
                 const response = await fetch(`/api/conversation/${convId}`, {
                     credentials: 'include'
                 });
-                
-                if (!response.ok) throw new Error('Failed to load conversation');
-                
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to load conversation');
+                }
+
                 const data = await response.json();
-                
+
                 // Clear current chat
                 const chatContainer = document.getElementById('chatContainer');
                 chatContainer.innerHTML = '';
-                
+
                 // Set current conversation
                 currentConversationId = data.id;
-                
+
                 // Switch to the conversation's agent
                 if (data.agent) {
                     switchAgent(data.agent);
                 }
-                
+
                 // Load messages
-                data.messages.forEach(msg => {
-                    displayUserMessage(msg.message, null);
-                    displayAssistantMessage(msg.response);
-                });
-                
+                if (data.messages && data.messages.length > 0) {
+                    data.messages.forEach(msg => {
+                        displayUserMessage(msg.message, null);
+                        displayAssistantMessage(msg.response);
+                    });
+                    showNotification(`✅ Loaded: ${data.title} (${data.messages.length} messages)`);
+                } else {
+                    showNotification(`Loaded: ${data.title} (no messages)`);
+                }
+
                 // Update dropdown to show active conversation
                 updateHistoryDropdown();
-                
-                showNotification(`Loaded: ${data.title}`);
-                
+
+                // Reload conversations to update any status changes
+                loadConversations();
+
             } catch (error) {
                 console.error('Error loading conversation:', error);
-                showNotification('Failed to load conversation', 'error');
+                showNotification(`❌ ${error.message}`, 'error');
             }
         }
 
