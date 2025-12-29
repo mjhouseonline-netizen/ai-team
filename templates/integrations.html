@@ -650,9 +650,12 @@
 
                 <div class="api-key-container">
                     <strong>API Key:</strong>
-                    <div class="api-key" id="apiKey">Loading...</div>
-                    <button class="btn btn-copy" onclick="copyApiKey()">📋 Copy Key</button>
-                    <button class="btn btn-danger" onclick="regenerateApiKey()">🔄 Regenerate Key</button>
+                    <div class="api-key" id="apiKey" data-hidden="true">••••••••••••••••••••••••••••••••</div>
+                    <div style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="btn btn-secondary" onclick="toggleApiKeyVisibility()" id="toggleApiKeyBtn">👁️ Show Key</button>
+                        <button class="btn btn-copy" onclick="copyApiKey()">📋 Copy Key</button>
+                        <button class="btn btn-danger" onclick="regenerateApiKey()">🔄 Regenerate Key</button>
+                    </div>
                 </div>
 
                 <div class="alert alert-warning">
@@ -1157,13 +1160,18 @@ sendMessage();</code></pre>
         }
 
         // API Key functions
+        let actualApiKey = '';
+
         async function loadApiKey() {
             try {
                 const response = await fetch('/api/get-api-key');
                 const data = await response.json();
 
                 if (data.api_key) {
-                    document.getElementById('apiKey').textContent = data.api_key;
+                    actualApiKey = data.api_key;
+                    // Keep it hidden by default
+                    document.getElementById('apiKey').setAttribute('data-hidden', 'true');
+                    document.getElementById('apiKey').textContent = '••••••••••••••••••••••••••••••••';
                 } else {
                     await regenerateApiKey();
                 }
@@ -1173,9 +1181,27 @@ sendMessage();</code></pre>
             }
         }
 
+        function toggleApiKeyVisibility() {
+            const apiKeyElement = document.getElementById('apiKey');
+            const toggleBtn = document.getElementById('toggleApiKeyBtn');
+            const isHidden = apiKeyElement.getAttribute('data-hidden') === 'true';
+
+            if (isHidden) {
+                // Show the key
+                apiKeyElement.textContent = actualApiKey;
+                apiKeyElement.setAttribute('data-hidden', 'false');
+                toggleBtn.textContent = '🙈 Hide Key';
+            } else {
+                // Hide the key
+                apiKeyElement.textContent = '••••••••••••••••••••••••••••••••';
+                apiKeyElement.setAttribute('data-hidden', 'true');
+                toggleBtn.textContent = '👁️ Show Key';
+            }
+        }
+
         function copyApiKey() {
-            const apiKey = document.getElementById('apiKey').textContent;
-            navigator.clipboard.writeText(apiKey).then(() => {
+            // Always copy the actual key, even if it's hidden
+            navigator.clipboard.writeText(actualApiKey).then(() => {
                 alert('API key copied to clipboard!');
             }).catch(err => {
                 console.error('Failed to copy:', err);
@@ -1194,7 +1220,11 @@ sendMessage();</code></pre>
                 const data = await response.json();
 
                 if (data.api_key) {
-                    document.getElementById('apiKey').textContent = data.api_key;
+                    actualApiKey = data.api_key;
+                    // Show the new key after regeneration
+                    document.getElementById('apiKey').textContent = actualApiKey;
+                    document.getElementById('apiKey').setAttribute('data-hidden', 'false');
+                    document.getElementById('toggleApiKeyBtn').textContent = '🙈 Hide Key';
                     alert('API key regenerated successfully!');
                 } else {
                     alert('Error regenerating API key');
