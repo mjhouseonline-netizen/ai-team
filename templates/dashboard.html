@@ -4,12 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>AI Team - Ultimate Dashboard</title>
-    
+
+    <!-- Premium Design System -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='premium-design.css') }}">
+
     {% if is_guest and guest_restrictions %}
     <!-- Guest Mode Restrictions -->
     {{ guest_restrictions | safe }}
     {% endif %}
-    
+
     <style>
         /* ================================================
            ULTIMATE AI TEAM DASHBOARD
