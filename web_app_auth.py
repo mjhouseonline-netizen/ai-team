@@ -656,7 +656,44 @@ def init_database():
             cursor.execute("ALTER TABLE custom_agents ADD COLUMN template_variables TEXT DEFAULT NULL")
             print("✅ Added template_variables column to custom_agents")
         except sqlite3.OperationalError as e:
-            print(f"⚠️  Could not add is_public column: {e}")
+            print(f"⚠️  Could not add template_variables column: {e}")
+
+    # ============================================
+    # GLOBAL AGENTS (ADMIN-MANAGED TEMPLATES)
+    # ============================================
+
+    # Global agents - admin creates these and assigns to users
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS global_agents (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT,
+            emoji TEXT DEFAULT '🤖',
+            category TEXT DEFAULT 'general',
+            system_prompt TEXT NOT NULL,
+            template_variables TEXT DEFAULT NULL,
+            is_active BOOLEAN DEFAULT 1,
+            created_by INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (created_by) REFERENCES users (id)
+        )
+    """)
+
+    # Track which users have access to which global agents
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS user_global_agents (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            global_agent_id INTEGER NOT NULL,
+            assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            assigned_by INTEGER,
+            FOREIGN KEY (user_id) REFERENCES users (id),
+            FOREIGN KEY (global_agent_id) REFERENCES global_agents (id),
+            FOREIGN KEY (assigned_by) REFERENCES users (id),
+            UNIQUE(user_id, global_agent_id)
+        )
+    """)
 
     # ============================================
     # COST MONITORING TABLES
@@ -4536,6 +4573,14 @@ def promo_codes_page():
         return redirect(url_for('dashboard'))
     return render_template('promo-codes.html', user=current_user)
 
+@app.route('/admin/global-agents-manager')
+@login_required
+def admin_global_agents_manager():
+    """Admin global agents management page (admin only)"""
+    if current_user.id != 1:
+        return redirect(url_for('dashboard'))
+    return render_template('admin_global_agents.html', user=current_user)
+
 @app.route('/admin/support-messages')
 @login_required
 def admin_support_messages():
@@ -7897,6 +7942,311 @@ def clone_shared_agent(share_code):
         print(f"❌ Error cloning agent: {str(e)}")
         import traceback
         traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+# ============================================
+# GLOBAL AGENTS (ADMIN-MANAGED) API
+# ============================================
+
+@app.route('/api/global-agents', methods=['GET'])
+@login_required
+def get_global_agents():
+    """Get all global agents available to current user"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Get all active global agents assigned to this user
+        cursor.execute("""
+            SELECT
+                ga.id, ga.name, ga.description, ga.emoji, ga.category,
+                ga.system_prompt, ga.template_variables, ga.created_at
+            FROM global_agents ga
+            INNER JOIN user_global_agents uga ON ga.id = uga.global_agent_id
+            WHERE uga.user_id = ? AND ga.is_active = 1
+            ORDER BY ga.name
+        """, (current_user.id,))
+
+        agents = []
+        for row in cursor.fetchall():
+            agents.append({
+                'id': row[0],
+                'name': row[1],
+                'description': row[2],
+                'emoji': row[3],
+                'category': row[4],
+                'system_prompt': row[5],
+                'template_variables': json.loads(row[6]) if row[6] else None,
+                'created_at': row[7],
+                'type': 'global'  # Mark as global agent
+            })
+
+        conn.close()
+        return jsonify({'agents': agents}), 200
+
+    except Exception as e:
+        print(f"❌ Error getting global agents: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/global-agents', methods=['GET'])
+@login_required
+def admin_get_all_global_agents():
+    """Admin: Get all global agents (not just assigned ones)"""
+    if current_user.id != 1:  # Admin only
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT id, name, description, emoji, category, system_prompt,
+                   template_variables, is_active, created_at
+            FROM global_agents
+            ORDER BY created_at DESC
+        """)
+
+        agents = []
+        for row in cursor.fetchall():
+            # Count how many users have this agent
+            cursor.execute("""
+                SELECT COUNT(*) FROM user_global_agents WHERE global_agent_id = ?
+            """, (row[0],))
+            user_count = cursor.fetchone()[0]
+
+            agents.append({
+                'id': row[0],
+                'name': row[1],
+                'description': row[2],
+                'emoji': row[3],
+                'category': row[4],
+                'system_prompt': row[5],
+                'template_variables': json.loads(row[6]) if row[6] else None,
+                'is_active': bool(row[7]),
+                'created_at': row[8],
+                'user_count': user_count
+            })
+
+        conn.close()
+        return jsonify({'agents': agents}), 200
+
+    except Exception as e:
+        print(f"❌ Error getting global agents: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/global-agents', methods=['POST'])
+@login_required
+def admin_create_global_agent():
+    """Admin: Create a new global agent template"""
+    if current_user.id != 1:  # Admin only
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    try:
+        data = request.get_json()
+        name = data.get('name')
+        description = data.get('description')
+        emoji = data.get('emoji', '🤖')
+        category = data.get('category', 'general')
+        system_prompt = data.get('system_prompt')
+        template_variables = data.get('template_variables')
+
+        if not name or not system_prompt:
+            return jsonify({'error': 'Name and system prompt required'}), 400
+
+        # Convert template_variables to JSON if it's a dict
+        if isinstance(template_variables, dict):
+            template_variables = json.dumps(template_variables)
+
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            INSERT INTO global_agents (
+                name, description, emoji, category, system_prompt,
+                template_variables, created_by
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (name, description, emoji, category, system_prompt, template_variables, current_user.id))
+
+        agent_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'agent_id': agent_id,
+            'message': f'Global agent "{name}" created successfully'
+        }), 201
+
+    except Exception as e:
+        print(f"❌ Error creating global agent: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/global-agents/<int:agent_id>', methods=['PUT'])
+@login_required
+def admin_update_global_agent(agent_id):
+    """Admin: Update a global agent"""
+    if current_user.id != 1:  # Admin only
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    try:
+        data = request.get_json()
+
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Build update query dynamically
+        updates = []
+        params = []
+
+        if 'name' in data:
+            updates.append('name = ?')
+            params.append(data['name'])
+        if 'description' in data:
+            updates.append('description = ?')
+            params.append(data['description'])
+        if 'emoji' in data:
+            updates.append('emoji = ?')
+            params.append(data['emoji'])
+        if 'category' in data:
+            updates.append('category = ?')
+            params.append(data['category'])
+        if 'system_prompt' in data:
+            updates.append('system_prompt = ?')
+            params.append(data['system_prompt'])
+        if 'template_variables' in data:
+            updates.append('template_variables = ?')
+            tv = data['template_variables']
+            params.append(json.dumps(tv) if isinstance(tv, dict) else tv)
+        if 'is_active' in data:
+            updates.append('is_active = ?')
+            params.append(1 if data['is_active'] else 0)
+
+        updates.append('updated_at = CURRENT_TIMESTAMP')
+        params.append(agent_id)
+
+        cursor.execute(f"""
+            UPDATE global_agents SET {', '.join(updates)}
+            WHERE id = ?
+        """, params)
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': 'Global agent updated successfully'
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Error updating global agent: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/global-agents/<int:agent_id>', methods=['DELETE'])
+@login_required
+def admin_delete_global_agent(agent_id):
+    """Admin: Delete a global agent"""
+    if current_user.id != 1:  # Admin only
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Delete user assignments first
+        cursor.execute("DELETE FROM user_global_agents WHERE global_agent_id = ?", (agent_id,))
+
+        # Delete the agent
+        cursor.execute("DELETE FROM global_agents WHERE id = ?", (agent_id,))
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': 'Global agent deleted successfully'
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Error deleting global agent: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/global-agents/<int:agent_id>/assign', methods=['POST'])
+@login_required
+def admin_assign_global_agent(agent_id):
+    """Admin: Assign a global agent to users"""
+    if current_user.id != 1:  # Admin only
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    try:
+        data = request.get_json()
+        user_ids = data.get('user_ids', [])
+
+        if not user_ids:
+            return jsonify({'error': 'user_ids required'}), 400
+
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        assigned_count = 0
+        for user_id in user_ids:
+            try:
+                cursor.execute("""
+                    INSERT INTO user_global_agents (user_id, global_agent_id, assigned_by)
+                    VALUES (?, ?, ?)
+                """, (user_id, agent_id, current_user.id))
+                assigned_count += 1
+            except sqlite3.IntegrityError:
+                # Already assigned, skip
+                pass
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'assigned_count': assigned_count,
+            'message': f'Assigned to {assigned_count} user(s)'
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Error assigning global agent: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/global-agents/<int:agent_id>/unassign', methods=['POST'])
+@login_required
+def admin_unassign_global_agent(agent_id):
+    """Admin: Unassign a global agent from users"""
+    if current_user.id != 1:  # Admin only
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    try:
+        data = request.get_json()
+        user_ids = data.get('user_ids', [])
+
+        if not user_ids:
+            return jsonify({'error': 'user_ids required'}), 400
+
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        for user_id in user_ids:
+            cursor.execute("""
+                DELETE FROM user_global_agents
+                WHERE user_id = ? AND global_agent_id = ?
+            """, (user_id, agent_id))
+
+        unassigned_count = cursor.rowcount
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'unassigned_count': unassigned_count,
+            'message': f'Unassigned from {unassigned_count} user(s)'
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Error unassigning global agent: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 # ============================================
