@@ -2385,82 +2385,9 @@ def get_embed_code(agent_id):
     except Exception as e:
         return jsonify({{'error': str(e)}}), 500
 
-@app.route('/api/webhooks', methods=['GET', 'POST'])
-@login_required
-def manage_webhooks():
-    """Manage n8n and webhook integrations"""
-    if request.method == 'POST':
-        try:
-            data = request.json
-            webhook_url = data.get('webhook_url')
-            webhook_events = data.get('events', ['message.completed'])
-
-            if not webhook_url:
-                return jsonify({{'error': 'Webhook URL required'}}), 400
-
-            # Save webhook configuration to database
-            conn = sqlite3.connect(DB_PATH)
-            cursor = conn.cursor()
-
-            # Create webhooks table if not exists
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS webhooks (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    webhook_url TEXT NOT NULL,
-                    events TEXT NOT NULL,
-                    is_active BOOLEAN DEFAULT 1,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (user_id) REFERENCES users (id)
-                )
-            """)
-
-            cursor.execute("""
-                INSERT INTO webhooks (user_id, webhook_url, events)
-                VALUES (?, ?, ?)
-            """, (current_user.id, webhook_url, json.dumps(webhook_events)))
-
-            conn.commit()
-            webhook_id = cursor.lastrowid
-            conn.close()
-
-            return jsonify({{
-                'success': True,
-                'webhook_id': webhook_id,
-                'message': 'Webhook added successfully'
-            }}), 201
-
-        except Exception as e:
-            return jsonify({{'error': str(e)}}), 500
-    else:
-        # GET - List webhooks
-        try:
-            conn = sqlite3.connect(DB_PATH)
-            cursor = conn.cursor()
-
-            cursor.execute("""
-                SELECT id, webhook_url, events, is_active, created_at
-                FROM webhooks
-                WHERE user_id = ?
-                ORDER BY created_at DESC
-            """, (current_user.id,))
-
-            webhooks = []
-            for row in cursor.fetchall():
-                webhooks.append({{
-                    'id': row[0],
-                    'webhook_url': row[1],
-                    'events': json.loads(row[2]),
-                    'is_active': bool(row[3]),
-                    'created_at': row[4]
-                }})
-
-            conn.close()
-
-            return jsonify({{'webhooks': webhooks}}), 200
-
-        except Exception as e:
-            return jsonify({{'error': str(e)}}), 500
+# REMOVED: Old duplicate webhook endpoint - replaced with newer implementation at line ~8670
+# The newer implementation uses the correct schema (event_type, last_triggered)
+# and has separate GET/POST routes with better error handling
 
 # ============================================
 # SETTINGS PAGE (FOR NOTION INTEGRATION)
