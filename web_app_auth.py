@@ -651,6 +651,13 @@ def init_database():
         except sqlite3.OperationalError as e:
             print(f"⚠️  Could not add is_public column: {e}")
 
+    if 'template_variables' not in columns:
+        try:
+            cursor.execute("ALTER TABLE custom_agents ADD COLUMN template_variables TEXT DEFAULT NULL")
+            print("✅ Added template_variables column to custom_agents")
+        except sqlite3.OperationalError as e:
+            print(f"⚠️  Could not add is_public column: {e}")
+
     # ============================================
     # COST MONITORING TABLES
     # ============================================
@@ -1551,7 +1558,10 @@ def api_signup():
             # Create user object and login
             user = User(id=user_id, username=username, email=email)
             login_user(user)
-            
+
+            # Create starter agents for new user
+            create_starter_agents_for_user(user_id)
+
             conn.close()
             return jsonify({'success': True}), 200
             
@@ -7660,19 +7670,19 @@ def get_custom_agent(agent_id):
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
-        
+
         cursor.execute("""
             SELECT id, name, role, personality, system_prompt, created_at
             FROM custom_agents
             WHERE id = ?
         """, (agent_id,))
-        
+
         result = cursor.fetchone()
         conn.close()
-        
+
         if not result:
             return jsonify({'error': 'Agent not found'}), 404
-        
+
         agent = {
             'id': result[0],
             'name': result[1],
@@ -7681,12 +7691,424 @@ def get_custom_agent(agent_id):
             'system_prompt': result[4],
             'created_at': result[5]
         }
-        
+
         return jsonify({'agent': agent}), 200
-        
+
     except Exception as e:
         print(f"❌ Error getting custom agent: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+# ============================================
+# AGENT SHARING ENDPOINTS
+# ============================================
+
+@app.route('/api/custom-agents/<int:agent_id>/share', methods=['POST'])
+@login_required
+def share_custom_agent(agent_id):
+    """Generate or regenerate a share code for an agent"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Verify ownership
+        cursor.execute("SELECT user_id, name FROM custom_agents WHERE id = ?", (agent_id,))
+        result = cursor.fetchone()
+
+        if not result:
+            conn.close()
+            return jsonify({'error': 'Agent not found'}), 404
+
+        if result[0] != current_user.id:
+            conn.close()
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        # Generate unique share code
+        import secrets
+        share_code = secrets.token_urlsafe(16)
+
+        # Update agent with share code and make it public
+        cursor.execute("""
+            UPDATE custom_agents
+            SET share_code = ?, is_public = 1
+            WHERE id = ?
+        """, (share_code, agent_id))
+
+        conn.commit()
+        conn.close()
+
+        # Generate shareable URL
+        share_url = f"{request.host_url}agents/shared/{share_code}"
+
+        return jsonify({
+            'success': True,
+            'share_code': share_code,
+            'share_url': share_url,
+            'message': f'Share link created for "{result[1]}"'
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Error sharing agent: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/custom-agents/<int:agent_id>/unshare', methods=['POST'])
+@login_required
+def unshare_custom_agent(agent_id):
+    """Remove share code and make agent private"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Verify ownership
+        cursor.execute("SELECT user_id FROM custom_agents WHERE id = ?", (agent_id,))
+        result = cursor.fetchone()
+
+        if not result:
+            conn.close()
+            return jsonify({'error': 'Agent not found'}), 404
+
+        if result[0] != current_user.id:
+            conn.close()
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        # Remove share code and make private
+        cursor.execute("""
+            UPDATE custom_agents
+            SET share_code = NULL, is_public = 0
+            WHERE id = ?
+        """, (agent_id,))
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': 'Agent is now private'
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Error unsharing agent: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/custom-agents/shared/<share_code>')
+def get_shared_agent(share_code):
+    """Get public agent details by share code (no login required)"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT id, name, description, emoji, system_prompt, user_id, created_at, is_public
+            FROM custom_agents
+            WHERE share_code = ?
+        """, (share_code,))
+
+        result = cursor.fetchone()
+
+        if not result:
+            conn.close()
+            return jsonify({'error': 'Shared agent not found'}), 404
+
+        # Check if agent is public
+        if not result[7]:  # is_public
+            conn.close()
+            return jsonify({'error': 'This agent is no longer shared'}), 403
+
+        # Get creator info
+        cursor.execute("SELECT email FROM users WHERE id = ?", (result[5],))
+        creator = cursor.fetchone()
+        conn.close()
+
+        agent = {
+            'id': result[0],
+            'name': result[1],
+            'description': result[2],
+            'emoji': result[3],
+            'system_prompt': result[4],
+            'created_by': creator[0] if creator else 'Unknown',
+            'created_at': result[6]
+        }
+
+        return jsonify({'agent': agent}), 200
+
+    except Exception as e:
+        print(f"❌ Error getting shared agent: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/custom-agents/clone/<share_code>', methods=['POST'])
+@login_required
+def clone_shared_agent(share_code):
+    """Clone a shared agent to current user's account"""
+    try:
+        # Check custom agent limit
+        tier = current_user.subscription_tier or 'free'
+        tier_info = SUBSCRIPTION_TIERS.get(tier, SUBSCRIPTION_TIERS['free'])
+        custom_agents_limit = tier_info.get('custom_agents_limit', 1)
+
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Count user's existing custom agents
+        cursor.execute("SELECT COUNT(*) FROM custom_agents WHERE user_id = ?", (current_user.id,))
+        current_count = cursor.fetchone()[0]
+
+        # Check if limit reached
+        if custom_agents_limit != -1 and current_count >= custom_agents_limit:
+            conn.close()
+            return jsonify({
+                'error': 'Custom agent limit reached',
+                'message': f'Your {tier_info["name"]} plan allows {custom_agents_limit} custom agent{"s" if custom_agents_limit > 1 else ""}. Upgrade to create more!',
+                'upgrade_url': '/pricing'
+            }), 403
+
+        # Get shared agent
+        cursor.execute("""
+            SELECT name, description, emoji, system_prompt, is_public
+            FROM custom_agents
+            WHERE share_code = ?
+        """, (share_code,))
+
+        result = cursor.fetchone()
+
+        if not result:
+            conn.close()
+            return jsonify({'error': 'Shared agent not found'}), 404
+
+        if not result[4]:  # is_public
+            conn.close()
+            return jsonify({'error': 'This agent is no longer shared'}), 403
+
+        # Clone the agent
+        cursor.execute("""
+            INSERT INTO custom_agents (user_id, name, description, emoji, system_prompt, created_at)
+            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        """, (current_user.id, result[0], result[1], result[2], result[3]))
+
+        new_agent_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'agent_id': new_agent_id,
+            'message': f'Successfully cloned "{result[0]}" to your agents'
+        }), 201
+
+    except Exception as e:
+        print(f"❌ Error cloning agent: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+# ============================================
+# STARTER AGENTS FOR NEW USERS
+# ============================================
+
+STARTER_AGENTS = [
+    {
+        'name': 'Content Helper',
+        'description': 'Social media content creation and optimization',
+        'emoji': '✍️',
+        'system_prompt': '''You are a Content Helper specialized in social media content creation.
+
+Your capabilities:
+1. Transform messy ideas into polished posts
+2. Shorten content while maintaining tone and voice
+3. Generate content ideas through strategic questions
+
+When users share messy ideas, clean them up into engaging posts.
+When asked to shorten content, preserve the original tone.
+When users don't know what to post, ask 3-5 targeted questions about:
+- Their target audience
+- Recent business updates
+- Pain points they solve
+- Success stories or testimonials
+
+Always match the user's brand voice and keep responses actionable.''',
+        'template_variables': json.dumps({
+            'business_name': {'type': 'text', 'description': 'Your business or brand name', 'default': ''},
+            'tone': {'type': 'select', 'options': ['Professional', 'Casual', 'Friendly', 'Authoritative'], 'default': 'Professional'},
+            'audience': {'type': 'text', 'description': 'Your target audience', 'default': ''}
+        })
+    },
+    {
+        'name': 'Email Assistant',
+        'description': 'Draft professional emails and responses',
+        'emoji': '📧',
+        'system_prompt': '''You are an Email Assistant that helps write clear, professional emails.
+
+Your role:
+- Draft emails based on brief descriptions
+- Improve tone and clarity of existing drafts
+- Suggest subject lines
+- Keep emails concise and actionable
+
+Always ask for context if needed: recipient, purpose, desired tone.''',
+        'template_variables': json.dumps({
+            'signature': {'type': 'text', 'description': 'Your email signature', 'default': ''},
+            'tone': {'type': 'select', 'options': ['Formal', 'Professional', 'Friendly', 'Casual'], 'default': 'Professional'}
+        })
+    },
+    {
+        'name': 'Meeting Summarizer',
+        'description': 'Create meeting notes and action items',
+        'emoji': '📝',
+        'system_prompt': '''You are a Meeting Summarizer that creates clear, actionable meeting notes.
+
+Your tasks:
+- Extract key discussion points
+- Identify action items with owners
+- Highlight decisions made
+- Note follow-up questions
+
+Format output with clear sections: Summary, Action Items, Decisions, Next Steps.'''
+    }
+]
+
+def create_starter_agents_for_user(user_id):
+    """Create default starter agents for a new user"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        for agent in STARTER_AGENTS:
+            cursor.execute("""
+                INSERT INTO custom_agents (
+                    user_id, name, description, emoji, system_prompt, template_variables, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            """, (
+                user_id,
+                agent['name'],
+                agent['description'],
+                agent['emoji'],
+                agent['system_prompt'],
+                agent.get('template_variables')
+            ))
+
+        conn.commit()
+        conn.close()
+
+        print(f"✅ Created {len(STARTER_AGENTS)} starter agents for user {user_id}")
+        return True
+
+    except Exception as e:
+        print(f"❌ Error creating starter agents: {str(e)}")
+        return False
+
+# ============================================
+# AGENT TEMPLATE RENDERING
+# ============================================
+
+def render_agent_template(system_prompt, variables):
+    """
+    Render an agent template with provided variables
+    Pattern 2: Template + Variables
+
+    Variables can be in format {variable_name} or {{variable_name}}
+    Example: "You are a {role} for {business_name}. Your audience is {audience}."
+    """
+    if not variables:
+        return system_prompt
+
+    rendered = system_prompt
+
+    # Support both {var} and {{var}} syntax
+    for key, value in variables.items():
+        # Replace {key} format
+        rendered = rendered.replace(f"{{{key}}}", str(value))
+        # Replace {{key}} format
+        rendered = rendered.replace(f"{{{{{key}}}}}", str(value))
+
+    return rendered
+
+@app.route('/api/custom-agents/<int:agent_id>/render', methods=['POST'])
+@login_required
+def render_agent_template_api(agent_id):
+    """Render an agent template with provided variables"""
+    try:
+        data = request.get_json()
+        variables = data.get('variables', {})
+
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Get agent (check ownership)
+        cursor.execute("""
+            SELECT system_prompt, template_variables, user_id
+            FROM custom_agents
+            WHERE id = ?
+        """, (agent_id,))
+
+        result = cursor.fetchone()
+        conn.close()
+
+        if not result:
+            return jsonify({'error': 'Agent not found'}), 404
+
+        if result[2] != current_user.id:
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        system_prompt = result[0]
+        template_vars = json.loads(result[1]) if result[1] else None
+
+        # Render the template
+        rendered_prompt = render_agent_template(system_prompt, variables)
+
+        return jsonify({
+            'success': True,
+            'rendered_prompt': rendered_prompt,
+            'template_variables': template_vars,
+            'variables_used': variables
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Error rendering template: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/agents/shared/<share_code>')
+def view_shared_agent_page(share_code):
+    """Web page to view and clone a shared agent"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT name, description, emoji, system_prompt, user_id, created_at, is_public
+            FROM custom_agents
+            WHERE share_code = ?
+        """, (share_code,))
+
+        result = cursor.fetchone()
+
+        if not result or not result[6]:  # is_public
+            conn.close()
+            return render_template('error.html',
+                error_title="Agent Not Found",
+                error_message="This shared agent doesn't exist or is no longer public."
+            ), 404
+
+        # Get creator info
+        cursor.execute("SELECT email FROM users WHERE id = ?", (result[4],))
+        creator = cursor.fetchone()
+        conn.close()
+
+        agent_data = {
+            'name': result[0],
+            'description': result[1],
+            'emoji': result[2],
+            'system_prompt': result[3],
+            'created_by': creator[0] if creator else 'Unknown',
+            'created_at': result[5],
+            'share_code': share_code
+        }
+
+        return render_template('shared_agent.html', agent=agent_data)
+
+    except Exception as e:
+        print(f"❌ Error viewing shared agent: {str(e)}")
+        return render_template('error.html',
+            error_title="Error",
+            error_message="An error occurred while loading this agent."
+        ), 500
 
 @app.route('/api/generate-prompt', methods=['POST'])
 @login_required

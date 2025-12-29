@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ agent.name }} - Shared AI Agent</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .agent-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 30px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .agent-emoji {
+            font-size: 5em;
+            margin-bottom: 20px;
+        }
+
+        .agent-name {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: #1a202c;
+            margin-bottom: 10px;
+        }
+
+        .agent-description {
+            font-size: 1.2em;
+            color: #4a5568;
+            margin-bottom: 20px;
+        }
+
+        .agent-meta {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            color: #718096;
+            font-size: 0.9em;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .section {
+            margin: 30px 0;
+        }
+
+        .section-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #1a202c;
+            margin-bottom: 15px;
+        }
+
+        .system-prompt {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+            line-height: 1.6;
+            color: #2d3748;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+
+        .btn-secondary:hover {
+            background: #cbd5e0;
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid;
+        }
+
+        .alert-info {
+            background: #dbeafe;
+            border-color: #3b82f6;
+            color: #1e40af;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            border-color: #10b981;
+            color: #065f46;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            .agent-name {
+                font-size: 2em;
+            }
+
+            .actions {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="agent-header">
+            <div class="agent-emoji">{{ agent.emoji }}</div>
+            <h1 class="agent-name">{{ agent.name }}</h1>
+            <p class="agent-description">{{ agent.description }}</p>
+            <div class="agent-meta">
+                <div class="meta-item">
+                    <span>👤</span>
+                    <span>Created by {{ agent.created_by }}</span>
+                </div>
+                <div class="meta-item">
+                    <span>📅</span>
+                    <span>{{ agent.created_at }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">📝 System Instructions</h2>
+            <div class="system-prompt">{{ agent.system_prompt }}</div>
+        </div>
+
+        <div class="alert alert-info">
+            <strong>ℹ️ What is this?</strong><br>
+            This is a custom AI agent that someone created and shared with you. You can clone it to your AI Team account and start using it immediately.
+        </div>
+
+        <div class="actions" id="actions">
+            <button class="btn btn-primary" onclick="cloneAgent()">
+                <span>✨</span>
+                <span>Clone to My Agents</span>
+            </button>
+            <a href="/signup" class="btn btn-secondary">
+                <span>🆕</span>
+                <span>Create Free Account</span>
+            </a>
+        </div>
+    </div>
+
+    <script>
+        async function cloneAgent() {
+            try {
+                const shareCode = '{{ agent.share_code }}';
+                const response = await fetch(`/api/custom-agents/clone/${shareCode}`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Show success message
+                    document.getElementById('actions').innerHTML = `
+                        <div class="alert alert-success" style="width: 100%; text-align: center;">
+                            <strong>✅ Success!</strong><br>
+                            "${data.message}"<br><br>
+                            <a href="/dashboard" class="btn btn-primary">Go to Dashboard</a>
+                        </div>
+                    `;
+                } else {
+                    if (response.status === 401) {
+                        alert('Please log in to clone this agent');
+                        window.location.href = '/login';
+                    } else if (response.status === 403) {
+                        alert(data.message || 'You have reached your custom agent limit. Please upgrade your plan.');
+                        window.location.href = '/pricing';
+                    } else {
+                        alert(data.error || 'Failed to clone agent');
+                    }
+                }
+            } catch (error) {
+                console.error('Error cloning agent:', error);
+                alert('An error occurred. Please try again.');
+            }
+        }
+    </script>
+</body>
+</html>
