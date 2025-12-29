@@ -2663,20 +2663,12 @@
             {% if not is_guest %}
             <!-- Settings & Tools - Hidden for guests -->
             <div class="section-title" style="margin-top: 20px;">Settings & Tools</div>
-            
-            <a href="/automations" class="agent-item" style="text-decoration: none; color: white;">
-                <div class="agent-avatar" style="background: linear-gradient(135deg, #667eea, #764ba2);">🔧</div>
-                <div class="agent-info">
-                    <div class="agent-name">Automations</div>
-                    <div class="agent-role">Zapier & Make.com</div>
-                </div>
-            </a>
 
             <a href="/integrations" class="agent-item" style="text-decoration: none; color: white;">
                 <div class="agent-avatar" style="background: linear-gradient(135deg, #11998e, #38ef7d);">🔌</div>
                 <div class="agent-info">
-                    <div class="agent-name">Integrations</div>
-                    <div class="agent-role">30+ Tools & Services</div>
+                    <div class="agent-name">Integrations & API</div>
+                    <div class="agent-role">30+ Tools, Webhooks & Automations</div>
                 </div>
             </a>
 
@@ -2983,7 +2975,6 @@
             <a href="#" onclick="openAgentLibrary(); return false;">📚 Agent Library</a>
             <a href="#" onclick="viewHistory(); return false;">📜 Chat History</a>
             <a href="#" onclick="clearAllChat(); return false;">🗑️ Clear Chats</a>
-            <a href="/automations">🔌 Automations</a>
             {% if current_user.id == 1 %}
             <a href="/admin" id="adminLink">⚙️ Admin</a>
             <a href="/promo-codes">🎟️ Promo Codes</a>
