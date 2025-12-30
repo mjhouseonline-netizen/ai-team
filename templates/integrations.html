@@ -610,7 +610,10 @@
 
         <!-- Tab Navigation -->
         <div class="tab-navigation">
-            <button class="tab-btn active" onclick="switchMainTab('services')">
+            <button class="tab-btn active" onclick="switchMainTab('agents')">
+                🤖 Agent Integrations
+            </button>
+            <button class="tab-btn" onclick="switchMainTab('services')">
                 🔌 Service Integrations
             </button>
             <button class="tab-btn" onclick="switchMainTab('api')">
@@ -621,8 +624,27 @@
             </button>
         </div>
 
+        <!-- AGENT INTEGRATIONS TAB -->
+        <div id="agents-tab" class="tab-content active">
+            <div style="background: white; border-radius: 12px; padding: 25px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);">
+                <h2 style="margin: 0 0 10px 0; color: #1a202c; font-size: 1.5em;">🔐 OAuth Account Connections</h2>
+                <p style="color: #718096; margin: 0 0 20px 0;">Connect your accounts to enable your AI agents to access external services like email, social media, and calendars.</p>
+
+                <div id="neededIntegrationsAlert" style="display: none; background: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                    <strong style="color: #92400e;">⚠️ Your agents need these connections:</strong>
+                    <div id="neededCategories" style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;"></div>
+                </div>
+            </div>
+
+            <div class="integrations-grid" id="agentIntegrationsGrid">
+                <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #718096;">
+                    <p>⏳ Loading integrations...</p>
+                </div>
+            </div>
+        </div>
+
         <!-- SERVICE INTEGRATIONS TAB -->
-        <div id="services-tab" class="tab-content active">
+        <div id="services-tab" class="tab-content">
             <div class="category-filter">
                 <div class="filter-buttons">
                     <button class="filter-btn active" onclick="filterCategory('all')">All</button>
@@ -1408,8 +1430,144 @@ sendMessage();</code></pre>
             }
         }
 
+        // Agent Integrations (OAuth) Management
+        async function loadAgentIntegrations() {
+            try {
+                const response = await fetch('/api/user-integrations');
+                const data = await response.json();
+
+                const grid = document.getElementById('agentIntegrationsGrid');
+                const neededAlert = document.getElementById('neededIntegrationsAlert');
+                const neededCategoriesDiv = document.getElementById('neededCategories');
+
+                if (data.needed_categories && data.needed_categories.length > 0) {
+                    neededAlert.style.display = 'block';
+                    neededCategoriesDiv.innerHTML = data.needed_categories.map(cat => {
+                        const categoryNames = {
+                            'email': '📧 Email',
+                            'social_media': '📱 Social Media',
+                            'meetings': '🎥 Meetings',
+                            'productivity': '📊 Productivity'
+                        };
+                        return `<span style="background: white; padding: 8px 15px; border-radius: 6px; font-weight: 600; color: #667eea;">${categoryNames[cat] || cat}</span>`;
+                    }).join('');
+                } else {
+                    neededAlert.style.display = 'none';
+                }
+
+                if (data.available && data.available.length > 0) {
+                    grid.innerHTML = data.available.map(integration => {
+                        const badge = integration.is_connected
+                            ? '<div class="connected-badge">✓ Connected</div>'
+                            : (integration.is_needed ? '<div class="featured-badge">⚠️ Required</div>' : '');
+
+                        const actionButtons = integration.is_connected ? `
+                            <button class="btn btn-success" style="flex: 0.5;" disabled>✓ Connected</button>
+                            <button class="btn btn-danger" onclick="disconnectOAuth('${integration.service}')">Disconnect</button>
+                        ` : `
+                            <button class="btn btn-primary" onclick="connectOAuth('${integration.service}')">Connect ${integration.name}</button>
+                        `;
+
+                        const connectionInfo = integration.is_connected && integration.connection_info
+                            ? `<div style="font-size: 0.85em; color: #718096; margin-top: 10px;">
+                                   ${integration.connection_info.email ? `<div>📧 ${integration.connection_info.email}</div>` : ''}
+                                   <div>Connected: ${new Date(integration.connection_info.connected_at).toLocaleDateString()}</div>
+                               </div>`
+                            : '';
+
+                        return `
+                            <div class="integration-card ${integration.is_connected ? 'connected' : ''} ${integration.is_needed && !integration.is_connected ? 'featured' : ''}">
+                                ${badge}
+                                <div class="integration-header">
+                                    <div class="integration-icon">${integration.icon}</div>
+                                    <div class="integration-info">
+                                        <h3 class="integration-name">${integration.name}</h3>
+                                        <div class="integration-category">${integration.category.replace(/_/g, ' ')}</div>
+                                    </div>
+                                </div>
+                                <p class="integration-description">
+                                    ${integration.is_needed ? '<strong style="color: #f59e0b;">Required by your agents</strong><br>' : ''}
+                                    OAuth-based authentication for secure access
+                                </p>
+                                ${connectionInfo}
+                                <div class="integration-actions" style="margin-top: 15px;">
+                                    ${actionButtons}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #718096;"><p>No OAuth integrations available</p></div>';
+                }
+
+            } catch (error) {
+                console.error('Error loading agent integrations:', error);
+                document.getElementById('agentIntegrationsGrid').innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #f56565;"><p>Error loading integrations</p></div>';
+            }
+        }
+
+        async function connectOAuth(service) {
+            try {
+                const response = await fetch(`/api/user-integrations/connect/${service}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                });
+
+                const data = await response.json();
+
+                if (data.auth_url) {
+                    // Open OAuth authorization page in popup
+                    const width = 600;
+                    const height = 700;
+                    const left = (screen.width - width) / 2;
+                    const top = (screen.height - height) / 2;
+
+                    window.open(
+                        data.auth_url,
+                        'oauth',
+                        `width=${width},height=${height},left=${left},top=${top},toolbar=no,location=no,status=no,menubar=no`
+                    );
+
+                    // Poll for completion (in real app, use postMessage)
+                    setTimeout(() => {
+                        loadAgentIntegrations();
+                    }, 5000);
+                } else {
+                    alert('Error starting OAuth flow: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error connecting OAuth:', error);
+                alert('Error connecting integration');
+            }
+        }
+
+        async function disconnectOAuth(service) {
+            if (!confirm(`Are you sure you want to disconnect ${service}?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/user-integrations/${service}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert(data.message);
+                    await loadAgentIntegrations();
+                } else {
+                    alert('Error: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error disconnecting:', error);
+                alert('Error disconnecting integration');
+            }
+        }
+
         // Load data on page load
         window.addEventListener('load', async () => {
+            await loadAgentIntegrations();
             await loadIntegrations();
             await loadApiKey();
             await loadUsageStats();

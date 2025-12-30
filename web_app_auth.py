@@ -858,6 +858,38 @@ def init_database():
         except sqlite3.OperationalError as e:
             print(f"⚠️  Could not add is_public column: {e}")
 
+    if 'integrations' not in global_agent_columns:
+        try:
+            cursor.execute("ALTER TABLE global_agents ADD COLUMN integrations TEXT DEFAULT NULL")
+            print("✅ Added integrations column to global_agents (JSON array of enabled integrations)")
+        except sqlite3.OperationalError as e:
+            print(f"⚠️  Could not add integrations column: {e}")
+
+    # ============================================
+    # USER INTEGRATIONS TABLE (OAuth Tokens)
+    # ============================================
+
+    # Create table for storing user OAuth tokens for external services
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS user_integrations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            service TEXT NOT NULL,
+            access_token TEXT,
+            refresh_token TEXT,
+            token_expiry TIMESTAMP,
+            service_user_id TEXT,
+            service_email TEXT,
+            scopes TEXT,
+            is_active BOOLEAN DEFAULT 1,
+            connected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_used_at TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id),
+            UNIQUE(user_id, service)
+        )
+    """)
+    print("✅ User integrations table initialized")
+
     print("✅ Cost monitoring tables initialized")
 
     conn.commit()
@@ -4115,8 +4147,521 @@ OAUTH_CONFIG = {
         'auth_url': 'https://slack.com/oauth/v2/authorize',
         'token_url': 'https://slack.com/api/oauth.v2.access',
         'scopes': ['chat:write', 'channels:read']
+    },
+    # Email Integrations
+    'gmail': {
+        'auth_url': 'https://accounts.google.com/o/oauth2/v2/auth',
+        'token_url': 'https://oauth2.googleapis.com/token',
+        'scopes': [
+            'https://www.googleapis.com/auth/gmail.send',
+            'https://www.googleapis.com/auth/gmail.readonly',
+            'https://www.googleapis.com/auth/gmail.compose'
+        ],
+        'name': 'Gmail',
+        'icon': '📧'
+    },
+    'outlook': {
+        'auth_url': 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
+        'token_url': 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+        'scopes': ['Mail.Send', 'Mail.Read', 'Mail.ReadWrite'],
+        'name': 'Outlook',
+        'icon': '📨'
+    },
+    # Social Media Integrations
+    'twitter': {
+        'auth_url': 'https://twitter.com/i/oauth2/authorize',
+        'token_url': 'https://api.twitter.com/2/oauth2/token',
+        'scopes': ['tweet.read', 'tweet.write', 'users.read'],
+        'name': 'Twitter/X',
+        'icon': '🐦'
+    },
+    'linkedin': {
+        'auth_url': 'https://www.linkedin.com/oauth/v2/authorization',
+        'token_url': 'https://www.linkedin.com/oauth/v2/accessToken',
+        'scopes': ['w_member_social', 'r_liteprofile', 'r_emailaddress'],
+        'name': 'LinkedIn',
+        'icon': '💼'
+    },
+    # Meeting Integrations
+    'zoom': {
+        'auth_url': 'https://zoom.us/oauth/authorize',
+        'token_url': 'https://zoom.us/oauth/token',
+        'scopes': ['meeting:read', 'recording:read', 'cloud_recording:read'],
+        'name': 'Zoom',
+        'icon': '🎥'
+    },
+    'google_calendar': {
+        'auth_url': 'https://accounts.google.com/o/oauth2/v2/auth',
+        'token_url': 'https://oauth2.googleapis.com/token',
+        'scopes': ['https://www.googleapis.com/auth/calendar.readonly'],
+        'name': 'Google Calendar',
+        'icon': '📅'
     }
 }
+
+# Available integrations for agents
+AVAILABLE_INTEGRATIONS = {
+    'email': {
+        'name': 'Email',
+        'description': 'Send and read emails',
+        'services': ['gmail', 'outlook'],
+        'icon': '📧'
+    },
+    'social_media': {
+        'name': 'Social Media',
+        'description': 'Post to social platforms',
+        'services': ['twitter', 'linkedin'],
+        'icon': '📱'
+    },
+    'meetings': {
+        'name': 'Meetings',
+        'description': 'Access meeting recordings and transcripts',
+        'services': ['zoom', 'google_calendar'],
+        'icon': '🎥'
+    },
+    'productivity': {
+        'name': 'Productivity',
+        'description': 'Connect to productivity tools',
+        'services': ['google_sheets', 'slack'],
+        'icon': '📊'
+    }
+}
+
+# ============================================
+# USER OAUTH INTEGRATIONS API
+# ============================================
+
+@app.route('/api/user-integrations', methods=['GET'])
+@login_required
+def get_user_integrations():
+    """Get user's OAuth integration connections"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Get all user's connected integrations
+        cursor.execute("""
+            SELECT service, service_email, service_user_id,
+                   token_expiry, connected_at, last_used_at, is_active
+            FROM user_integrations
+            WHERE user_id = ?
+        """, (current_user.id,))
+
+        connected = {}
+        for row in cursor.fetchall():
+            service, email, user_id, expiry, connected, last_used, is_active = row
+            connected[service] = {
+                'service': service,
+                'email': email,
+                'user_id': user_id,
+                'expiry': expiry,
+                'connected_at': connected,
+                'last_used_at': last_used,
+                'is_active': bool(is_active)
+            }
+
+        # Get integrations needed by user's global agents
+        cursor.execute("""
+            SELECT DISTINCT ga.integrations
+            FROM global_agents ga
+            INNER JOIN user_global_agents uga ON ga.id = uga.global_agent_id
+            WHERE uga.user_id = ? AND ga.is_active = 1 AND ga.integrations IS NOT NULL
+        """, (current_user.id,))
+
+        needed_categories = set()
+        for row in cursor.fetchall():
+            if row[0]:
+                integrations = json.loads(row[0])
+                needed_categories.update(integrations)
+
+        # Build available integrations list with connection status
+        available = []
+        for category, info in AVAILABLE_INTEGRATIONS.items():
+            for service in info['services']:
+                if service in OAUTH_CONFIG:
+                    oauth_info = OAUTH_CONFIG[service]
+                    available.append({
+                        'service': service,
+                        'name': oauth_info['name'],
+                        'icon': oauth_info['icon'],
+                        'category': category,
+                        'is_connected': service in connected,
+                        'is_needed': category in needed_categories,
+                        'connection_info': connected.get(service)
+                    })
+
+        conn.close()
+
+        return jsonify({
+            'available': available,
+            'needed_categories': list(needed_categories)
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Error getting user integrations: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/user-integrations/connect/<service>', methods=['POST'])
+@login_required
+def connect_oauth_integration(service):
+    """Start OAuth flow for a service"""
+    try:
+        if service not in OAUTH_CONFIG:
+            return jsonify({'error': 'Service not supported'}), 400
+
+        oauth_config = OAUTH_CONFIG[service]
+
+        # Generate state for CSRF protection
+        state = secrets.token_urlsafe(32)
+
+        # Store state in session
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS oauth_states (
+                state TEXT PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                service TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        cursor.execute("""
+            INSERT INTO oauth_states (state, user_id, service)
+            VALUES (?, ?, ?)
+        """, (state, current_user.id, service))
+
+        conn.commit()
+        conn.close()
+
+        # Build OAuth authorization URL
+        callback_url = f"{request.host_url.rstrip('/')}/api/oauth/callback/{service}"
+        scopes = ' '.join(oauth_config['scopes']) if isinstance(oauth_config['scopes'], list) else oauth_config['scopes']
+
+        # Note: client_id should be loaded from environment variables for each service
+        # This is a placeholder - you'll need to configure actual OAuth apps
+        auth_url = f"{oauth_config['auth_url']}?client_id=YOUR_{service.upper()}_CLIENT_ID&redirect_uri={callback_url}&state={state}&scope={scopes}&response_type=code&access_type=offline"
+
+        return jsonify({
+            'auth_url': auth_url,
+            'state': state
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Error starting OAuth flow: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/oauth/callback/<service>')
+def oauth_callback(service):
+    """Handle OAuth callback and exchange code for tokens"""
+    try:
+        code = request.args.get('code')
+        state = request.args.get('state')
+        error = request.args.get('error')
+
+        if error:
+            return f"<html><body><h2>Authorization failed</h2><p>{error}</p><a href='/integrations'>Back to Integrations</a></body></html>", 400
+
+        if not code or not state:
+            return "<html><body><h2>Invalid callback</h2><p>Missing code or state</p></body></html>", 400
+
+        # Verify state and get user_id
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT user_id, service FROM oauth_states WHERE state = ?
+        """, (state,))
+
+        oauth_state = cursor.fetchone()
+
+        if not oauth_state:
+            conn.close()
+            return "<html><body><h2>Invalid state</h2><p>State not found or expired</p></body></html>", 400
+
+        user_id, stored_service = oauth_state
+
+        if stored_service != service:
+            conn.close()
+            return "<html><body><h2>Service mismatch</h2></body></html>", 400
+
+        # Delete used state
+        cursor.execute("DELETE FROM oauth_states WHERE state = ?", (state,))
+        conn.commit()
+
+        # Exchange authorization code for access token
+        # NOTE: This is a placeholder - actual OAuth token exchange requires:
+        # 1. Making POST request to oauth_config['token_url']
+        # 2. Including client_id, client_secret, code, redirect_uri
+        # 3. Parsing response to get access_token, refresh_token, expiry
+
+        # For now, store a placeholder (you'll need to implement actual OAuth exchange)
+        cursor.execute("""
+            INSERT OR REPLACE INTO user_integrations
+            (user_id, service, access_token, refresh_token, token_expiry, is_active)
+            VALUES (?, ?, ?, ?, datetime('now', '+3600 seconds'), 1)
+        """, (user_id, service, f'PLACEHOLDER_TOKEN_{service}', f'PLACEHOLDER_REFRESH_{service}'))
+
+        conn.commit()
+        conn.close()
+
+        # Redirect to integrations page with success message
+        return f"""
+        <html>
+        <head><title>Connected Successfully</title></head>
+        <body style="font-family: system-ui; text-align: center; padding: 50px;">
+            <h1 style="color: #48bb78;">✓ Successfully Connected</h1>
+            <p>You've connected {OAUTH_CONFIG[service]['name']} to your AI Team account.</p>
+            <p><a href="/integrations" style="background: #667eea; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; display: inline-block; margin-top: 20px;">Back to Integrations</a></p>
+            <script>
+                setTimeout(function() {{ window.location.href = '/integrations'; }}, 3000);
+            </script>
+        </body>
+        </html>
+        """, 200
+
+    except Exception as e:
+        print(f"❌ OAuth callback error: {str(e)}")
+        return f"<html><body><h2>Error</h2><p>{str(e)}</p></body></html>", 500
+
+@app.route('/api/user-integrations/<service>', methods=['DELETE'])
+@login_required
+def disconnect_oauth_integration(service):
+    """Disconnect an OAuth integration"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            DELETE FROM user_integrations
+            WHERE user_id = ? AND service = ?
+        """, (current_user.id, service))
+
+        if cursor.rowcount == 0:
+            conn.close()
+            return jsonify({'error': 'Integration not found'}), 404
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': f'{service} disconnected successfully'
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Error disconnecting integration: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# ============================================
+# INTEGRATION HELPER FUNCTIONS (FOR AGENTS)
+# ============================================
+
+def get_user_oauth_token(user_id, service):
+    """Get OAuth access token for a service"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT access_token, refresh_token, token_expiry
+            FROM user_integrations
+            WHERE user_id = ? AND service = ? AND is_active = 1
+        """, (user_id, service))
+
+        result = cursor.fetchone()
+        conn.close()
+
+        if result:
+            return {
+                'access_token': result[0],
+                'refresh_token': result[1],
+                'token_expiry': result[2]
+            }
+        return None
+
+    except Exception as e:
+        print(f"Error getting OAuth token: {e}")
+        return None
+
+def send_email_via_integration(user_id, to_email, subject, body):
+    """
+    Send email via Gmail integration
+
+    NOTE: This is a placeholder. In production, this would:
+    1. Get user's Gmail OAuth token
+    2. Use Gmail API to send email
+    3. Handle token refresh if expired
+    4. Return success/failure status
+    """
+    token_info = get_user_oauth_token(user_id, 'gmail')
+
+    if not token_info:
+        return {
+            'success': False,
+            'error': 'Gmail not connected. Please connect Gmail via Integrations page.'
+        }
+
+    # PLACEHOLDER: Actual Gmail API call would go here
+    # Example:
+    # from googleapiclient.discovery import build
+    # from google.oauth2.credentials import Credentials
+    #
+    # creds = Credentials(token=token_info['access_token'])
+    # service = build('gmail', 'v1', credentials=creds)
+    # message = create_message('me', to_email, subject, body)
+    # result = service.users().messages().send(userId='me', body=message).execute()
+
+    print(f"[PLACEHOLDER] Would send email to {to_email} via Gmail")
+
+    return {
+        'success': True,
+        'message': 'Email functionality requires OAuth app configuration',
+        'placeholder': True
+    }
+
+def post_to_twitter(user_id, text):
+    """
+    Post to Twitter/X via integration
+
+    NOTE: This is a placeholder. In production, this would:
+    1. Get user's Twitter OAuth token
+    2. Use Twitter API v2 to create tweet
+    3. Handle token refresh if needed
+    4. Return tweet ID and URL
+    """
+    token_info = get_user_oauth_token(user_id, 'twitter')
+
+    if not token_info:
+        return {
+            'success': False,
+            'error': 'Twitter not connected. Please connect Twitter via Integrations page.'
+        }
+
+    print(f"[PLACEHOLDER] Would post to Twitter: {text}")
+
+    return {
+        'success': True,
+        'message': 'Twitter posting requires OAuth app configuration',
+        'placeholder': True
+    }
+
+def post_to_linkedin(user_id, text):
+    """
+    Post to LinkedIn via integration
+
+    NOTE: This is a placeholder for LinkedIn posting
+    """
+    token_info = get_user_oauth_token(user_id, 'linkedin')
+
+    if not token_info:
+        return {
+            'success': False,
+            'error': 'LinkedIn not connected'
+        }
+
+    print(f"[PLACEHOLDER] Would post to LinkedIn: {text}")
+
+    return {
+        'success': True,
+        'message': 'LinkedIn posting requires OAuth app configuration',
+        'placeholder': True
+    }
+
+def create_calendar_event(user_id, title, start_time, end_time, description=None):
+    """
+    Create Google Calendar event via integration
+
+    NOTE: This is a placeholder. In production, this would:
+    1. Get user's Google Calendar OAuth token
+    2. Use Google Calendar API to create event
+    3. Return event ID and link
+    """
+    token_info = get_user_oauth_token(user_id, 'google_calendar')
+
+    if not token_info:
+        return {
+            'success': False,
+            'error': 'Google Calendar not connected'
+        }
+
+    print(f"[PLACEHOLDER] Would create calendar event: {title}")
+
+    return {
+        'success': True,
+        'message': 'Calendar integration requires OAuth app configuration',
+        'placeholder': True
+    }
+
+def get_available_integration_actions(user_id):
+    """
+    Get list of available integration actions based on user's connections
+
+    Returns a dictionary of available actions organized by category
+    """
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT service FROM user_integrations
+            WHERE user_id = ? AND is_active = 1
+        """, (user_id,))
+
+        connected_services = [row[0] for row in cursor.fetchall()]
+        conn.close()
+
+        actions = {
+            'email': [],
+            'social': [],
+            'calendar': [],
+            'productivity': []
+        }
+
+        if 'gmail' in connected_services:
+            actions['email'].extend([
+                {'name': 'send_email', 'description': 'Send email via Gmail'},
+                {'name': 'read_emails', 'description': 'Read recent emails'},
+                {'name': 'search_emails', 'description': 'Search emails'}
+            ])
+
+        if 'outlook' in connected_services:
+            actions['email'].extend([
+                {'name': 'send_outlook_email', 'description': 'Send email via Outlook'},
+                {'name': 'read_outlook_emails', 'description': 'Read Outlook emails'}
+            ])
+
+        if 'twitter' in connected_services:
+            actions['social'].extend([
+                {'name': 'post_tweet', 'description': 'Post to Twitter'},
+                {'name': 'get_mentions', 'description': 'Get Twitter mentions'}
+            ])
+
+        if 'linkedin' in connected_services:
+            actions['social'].extend([
+                {'name': 'post_linkedin', 'description': 'Post to LinkedIn'},
+                {'name': 'get_connections', 'description': 'Get LinkedIn connections'}
+            ])
+
+        if 'google_calendar' in connected_services:
+            actions['calendar'].extend([
+                {'name': 'create_event', 'description': 'Create calendar event'},
+                {'name': 'list_events', 'description': 'List upcoming events'},
+                {'name': 'update_event', 'description': 'Update existing event'}
+            ])
+
+        if 'zoom' in connected_services:
+            actions['calendar'].extend([
+                {'name': 'create_zoom_meeting', 'description': 'Create Zoom meeting'},
+                {'name': 'list_meetings', 'description': 'List scheduled Zoom meetings'}
+            ])
+
+        return actions
+
+    except Exception as e:
+        print(f"Error getting available actions: {e}")
+        return {}
 
 @app.route('/api/integrations/oauth/<integration_key>/start')
 @login_required
@@ -6065,7 +6610,7 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
                 # Check for global agent
                 if not is_guest:
                     cursor.execute("""
-                        SELECT ga.system_prompt
+                        SELECT ga.system_prompt, ga.integrations
                         FROM global_agents ga
                         INNER JOIN user_global_agents uga ON ga.id = uga.global_agent_id
                         WHERE uga.user_id = ? AND ga.name = ? AND ga.is_active = 1
@@ -6073,11 +6618,85 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
 
                     global_agent = cursor.fetchone()
                     if global_agent:
-                        # Wrap global agent prompt with formatting rules
                         base_prompt = global_agent[0]
+                        integrations_json = global_agent[1]
+
+                        # Check if agent has integrations enabled
+                        integration_context = ""
+                        if integrations_json:
+                            try:
+                                needed_categories = json.loads(integrations_json)
+
+                                # Get user's connected OAuth services
+                                cursor.execute("""
+                                    SELECT service, service_email, is_active
+                                    FROM user_integrations
+                                    WHERE user_id = ? AND is_active = 1
+                                """, (current_user.id,))
+
+                                connected_services = {}
+                                for row in cursor.fetchall():
+                                    service, email, is_active = row
+                                    connected_services[service] = email
+
+                                # Map categories to services and check connections
+                                available_integrations = []
+                                missing_integrations = []
+
+                                for category in needed_categories:
+                                    if category in AVAILABLE_INTEGRATIONS:
+                                        cat_info = AVAILABLE_INTEGRATIONS[category]
+                                        for service in cat_info['services']:
+                                            if service in connected_services:
+                                                available_integrations.append({
+                                                    'service': service,
+                                                    'name': OAUTH_CONFIG[service]['name'],
+                                                    'email': connected_services[service],
+                                                    'icon': OAUTH_CONFIG[service]['icon']
+                                                })
+                                            else:
+                                                missing_integrations.append({
+                                                    'service': service,
+                                                    'name': OAUTH_CONFIG[service]['name']
+                                                })
+
+                                # Add integration context to system prompt
+                                if available_integrations:
+                                    integration_list = "\n".join([
+                                        f"- {integ['icon']} {integ['name']} ({integ['email']})"
+                                        for integ in available_integrations
+                                    ])
+                                    integration_context = f"""
+
+CONNECTED INTEGRATIONS:
+You have access to the following connected services:
+{integration_list}
+
+You can reference these integrations in your responses. For example:
+- If email is connected, you can mention "I can help you draft emails"
+- If social media is connected, you can say "I can help with your social posts"
+- If calendar is connected, you can reference scheduling capabilities
+
+Note: While you can reference these services, actual API calls are not yet implemented.
+The user has authorized these connections."""
+
+                                if missing_integrations:
+                                    missing_list = ", ".join([m['name'] for m in missing_integrations])
+                                    integration_context += f"""
+
+DISCONNECTED INTEGRATIONS:
+The following integrations are configured but not connected: {missing_list}
+If the user asks about these, suggest they connect them via the Integrations page."""
+
+                            except Exception as e:
+                                print(f"Error loading integrations for agent: {e}")
+                                integration_context = ""
+
+                        # Wrap global agent prompt with formatting rules and integrations
                         system_prompt = f"""You are {agent}. Your role and personality:
 
 {base_prompt}
+{integration_context}
 
 CRITICAL FORMATTING RULES:
 - Write in natural, conversational paragraphs
@@ -8494,7 +9113,7 @@ def admin_get_all_global_agents():
 
         cursor.execute("""
             SELECT id, name, description, emoji, category, system_prompt,
-                   template_variables, is_active, created_at
+                   template_variables, is_active, created_at, integrations
             FROM global_agents
             ORDER BY created_at DESC
         """)
@@ -8517,6 +9136,7 @@ def admin_get_all_global_agents():
                 'template_variables': json.loads(row[6]) if row[6] else None,
                 'is_active': bool(row[7]),
                 'created_at': row[8],
+                'integrations': json.loads(row[9]) if row[9] else [],
                 'user_count': user_count
             })
 
@@ -8542,6 +9162,7 @@ def admin_create_global_agent():
         category = data.get('category', 'general')
         system_prompt = data.get('system_prompt')
         template_variables = data.get('template_variables')
+        integrations = data.get('integrations', [])
 
         if not name or not system_prompt:
             return jsonify({'error': 'Name and system prompt required'}), 400
@@ -8550,15 +9171,19 @@ def admin_create_global_agent():
         if isinstance(template_variables, dict):
             template_variables = json.dumps(template_variables)
 
+        # Convert integrations to JSON if it's a list
+        if isinstance(integrations, list):
+            integrations = json.dumps(integrations)
+
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
 
         cursor.execute("""
             INSERT INTO global_agents (
                 name, description, emoji, category, system_prompt,
-                template_variables, created_by
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (name, description, emoji, category, system_prompt, template_variables, current_user.id))
+                template_variables, integrations, created_by
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (name, description, emoji, category, system_prompt, template_variables, integrations, current_user.id))
 
         agent_id = cursor.lastrowid
         conn.commit()
@@ -8610,6 +9235,10 @@ def admin_update_global_agent(agent_id):
             updates.append('template_variables = ?')
             tv = data['template_variables']
             params.append(json.dumps(tv) if isinstance(tv, dict) else tv)
+        if 'integrations' in data:
+            updates.append('integrations = ?')
+            integ = data['integrations']
+            params.append(json.dumps(integ) if isinstance(integ, list) else integ)
         if 'is_active' in data:
             updates.append('is_active = ?')
             params.append(1 if data['is_active'] else 0)

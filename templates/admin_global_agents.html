@@ -419,6 +419,29 @@ Do NOT:
                 </div>
 
                 <div class="form-group">
+                    <label class="form-label">Integrations (Optional)</label>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 15px; background: #f7fafc; border-radius: 8px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" class="integration-checkbox" value="email">
+                            <span>📧 Email (Gmail, Outlook)</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" class="integration-checkbox" value="social_media">
+                            <span>📱 Social Media (Twitter, LinkedIn)</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" class="integration-checkbox" value="meetings">
+                            <span>🎥 Meetings (Zoom, Google Calendar)</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" class="integration-checkbox" value="productivity">
+                            <span>📊 Productivity (Google Sheets, Slack)</span>
+                        </label>
+                    </div>
+                    <div class="form-hint">Select which external services this agent can connect to. Users will need to authorize connections when they start using the agent.</div>
+                </div>
+
+                <div class="form-group">
                     <label>
                         <input type="checkbox" id="agentActive" checked>
                         Active (users can see and use this agent)
@@ -491,33 +514,50 @@ Do NOT:
                 return;
             }
 
-            grid.innerHTML = agents.map(agent => `
-                <div class="agent-card ${!agent.is_active ? 'inactive' : ''}">
-                    <div class="agent-header">
-                        <div class="agent-emoji">${agent.emoji}</div>
-                        <div class="agent-info">
-                            <div class="agent-name">${agent.name}</div>
-                            <div class="agent-category">${agent.category}</div>
+            const integrationIcons = {
+                'email': '📧',
+                'social_media': '📱',
+                'meetings': '🎥',
+                'productivity': '📊'
+            };
+
+            grid.innerHTML = agents.map(agent => {
+                const integrationsHtml = agent.integrations && agent.integrations.length > 0
+                    ? `<div class="stat-item" title="Integrations: ${agent.integrations.join(', ')}">
+                           <span>🔌</span>
+                           <span>${agent.integrations.map(i => integrationIcons[i] || '🔗').join(' ')}</span>
+                       </div>`
+                    : '';
+
+                return `
+                    <div class="agent-card ${!agent.is_active ? 'inactive' : ''}">
+                        <div class="agent-header">
+                            <div class="agent-emoji">${agent.emoji}</div>
+                            <div class="agent-info">
+                                <div class="agent-name">${agent.name}</div>
+                                <div class="agent-category">${agent.category}</div>
+                            </div>
+                        </div>
+                        <div class="agent-description">${agent.description}</div>
+                        <div class="agent-stats">
+                            <div class="stat-item">
+                                <span>👥</span>
+                                <span>${agent.user_count} users</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>${agent.is_active ? '✅' : '⏸️'}</span>
+                                <span>${agent.is_active ? 'Active' : 'Inactive'}</span>
+                            </div>
+                            ${integrationsHtml}
+                        </div>
+                        <div class="agent-actions">
+                            <button class="btn btn-primary" onclick="openEditModal(${agent.id})">Edit</button>
+                            <button class="btn btn-secondary" onclick="openAssignModal(${agent.id})">Assign</button>
+                            <button class="btn btn-danger" onclick="deleteAgent(${agent.id})">Delete</button>
                         </div>
                     </div>
-                    <div class="agent-description">${agent.description}</div>
-                    <div class="agent-stats">
-                        <div class="stat-item">
-                            <span>👥</span>
-                            <span>${agent.user_count} users</span>
-                        </div>
-                        <div class="stat-item">
-                            <span>${agent.is_active ? '✅' : '⏸️'}</span>
-                            <span>${agent.is_active ? 'Active' : 'Inactive'}</span>
-                        </div>
-                    </div>
-                    <div class="agent-actions">
-                        <button class="btn btn-primary" onclick="openEditModal(${agent.id})">Edit</button>
-                        <button class="btn btn-secondary" onclick="openAssignModal(${agent.id})">Assign</button>
-                        <button class="btn btn-danger" onclick="deleteAgent(${agent.id})">Delete</button>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         function filterAgents() {
@@ -535,6 +575,12 @@ Do NOT:
             document.getElementById('agentForm').reset();
             document.getElementById('agentId').value = '';
             document.getElementById('agentActive').checked = true;
+
+            // Uncheck all integration checkboxes
+            document.querySelectorAll('.integration-checkbox').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+
             document.getElementById('agentModal').classList.add('active');
         }
 
@@ -551,6 +597,12 @@ Do NOT:
             document.getElementById('agentPrompt').value = agent.system_prompt;
             document.getElementById('agentVariables').value = agent.template_variables ? JSON.stringify(agent.template_variables, null, 2) : '';
             document.getElementById('agentActive').checked = agent.is_active;
+
+            // Set integration checkboxes
+            document.querySelectorAll('.integration-checkbox').forEach(checkbox => {
+                checkbox.checked = agent.integrations && agent.integrations.includes(checkbox.value);
+            });
+
             document.getElementById('agentModal').classList.add('active');
         }
 
@@ -570,6 +622,10 @@ Do NOT:
             const variablesText = document.getElementById('agentVariables').value.trim();
             const is_active = document.getElementById('agentActive').checked;
 
+            // Collect selected integrations
+            const integrations = Array.from(document.querySelectorAll('.integration-checkbox:checked'))
+                .map(checkbox => checkbox.value);
+
             let template_variables = null;
             if (variablesText) {
                 try {
@@ -587,6 +643,7 @@ Do NOT:
                 description,
                 system_prompt,
                 template_variables,
+                integrations,
                 is_active
             };
 
