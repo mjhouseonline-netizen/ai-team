@@ -278,7 +278,27 @@ MODEL_COSTS = {
     # Google Gemini Models (Free for now)
     'gemini-2.0-flash': 0.0,
     'gemini-1.5-pro': 0.0,
-    'gemini-1.5-flash': 0.0
+    'gemini-1.5-flash': 0.0,
+
+    # DeepSeek Models (Ultra cheap)
+    'deepseek-v3': 0.00027,          # $0.27/1M tokens ≈ $0.00027/msg
+    'deepseek-r1': 0.00055,          # $0.55/1M tokens ≈ $0.00055/msg
+
+    # Perplexity Models
+    'perplexity-sonar': 0.001,       # $1/1M tokens ≈ $0.001/msg
+    'perplexity-sonar-pro': 0.003,   # $3/1M tokens ≈ $0.003/msg
+
+    # Grok Models
+    'grok-2': 0.002,                 # $2/1M tokens ≈ $0.002/msg
+    'grok-2-vision': 0.002,          # $2/1M tokens ≈ $0.002/msg
+
+    # Meta Llama Models
+    'llama-3.3-70b': 0.00018,        # $0.18/1M tokens ≈ $0.00018/msg
+    'llama-3.1-405b': 0.0027,        # $2.70/1M tokens ≈ $0.0027/msg
+
+    # Mistral Models
+    'mistral-large': 0.002,          # $2/1M tokens ≈ $0.002/msg
+    'mistral-small': 0.0002          # $0.20/1M tokens ≈ $0.0002/msg
 }
 
 # Cost thresholds per tier (daily limits in USD)
@@ -4842,6 +4862,96 @@ MODELS = {
         'description': 'Advanced - 2M token context',
         'max_tokens': 2000,
         'cost': '$1.25/1M tokens'
+    },
+
+    # DeepSeek Models (Chinese AI - Very cost-effective)
+    'deepseek-v3': {
+        'provider': 'deepseek',
+        'model_id': 'deepseek-chat',
+        'name': 'DeepSeek V3',
+        'description': 'Ultra cheap - Great reasoning',
+        'max_tokens': 2000,
+        'cost': '$0.27/1M tokens'
+    },
+    'deepseek-r1': {
+        'provider': 'deepseek',
+        'model_id': 'deepseek-reasoner',
+        'name': 'DeepSeek R1',
+        'description': 'Chain-of-thought - Deep reasoning',
+        'max_tokens': 2000,
+        'cost': '$0.55/1M tokens'
+    },
+
+    # Perplexity Models (Real-time search-augmented)
+    'perplexity-sonar': {
+        'provider': 'perplexity',
+        'model_id': 'sonar',
+        'name': 'Perplexity Sonar',
+        'description': 'Real-time search - Up-to-date info',
+        'max_tokens': 2000,
+        'cost': '$1/1M tokens'
+    },
+    'perplexity-sonar-pro': {
+        'provider': 'perplexity',
+        'model_id': 'sonar-pro',
+        'name': 'Perplexity Sonar Pro',
+        'description': 'Advanced search - Best for research',
+        'max_tokens': 2000,
+        'cost': '$3/1M tokens'
+    },
+
+    # Grok Models (xAI - Elon Musk)
+    'grok-2': {
+        'provider': 'grok',
+        'model_id': 'grok-2-latest',
+        'name': 'Grok 2',
+        'description': 'Latest Grok - Real-time X/Twitter data',
+        'max_tokens': 2000,
+        'cost': '$2/1M tokens'
+    },
+    'grok-2-vision': {
+        'provider': 'grok',
+        'model_id': 'grok-2-vision-latest',
+        'name': 'Grok 2 Vision',
+        'description': 'Multimodal - Image understanding',
+        'max_tokens': 2000,
+        'cost': '$2/1M tokens'
+    },
+
+    # Meta Llama Models (Open source)
+    'llama-3.3-70b': {
+        'provider': 'openrouter',
+        'model_id': 'meta-llama/llama-3.3-70b-instruct',
+        'name': 'Llama 3.3 70B',
+        'description': 'Meta\'s latest - Open source power',
+        'max_tokens': 2000,
+        'cost': '$0.18/1M tokens'
+    },
+    'llama-3.1-405b': {
+        'provider': 'openrouter',
+        'model_id': 'meta-llama/llama-3.1-405b-instruct',
+        'name': 'Llama 3.1 405B',
+        'description': 'Largest open model - Top performance',
+        'max_tokens': 2000,
+        'cost': '$2.70/1M tokens'
+    },
+
+    # Mistral Models (European AI)
+    'mistral-large': {
+        'provider': 'mistral',
+        'model_id': 'mistral-large-latest',
+        'name': 'Mistral Large',
+        'description': 'European flagship - Multilingual',
+        'max_tokens': 2000,
+        'cost': '$2/1M tokens'
+    },
+    'mistral-small': {
+        'provider': 'mistral',
+        'model_id': 'mistral-small-latest',
+        'name': 'Mistral Small',
+        'description': 'Fast & efficient - Cost-effective',
+        'max_tokens': 2000,
+        'cost': '$0.20/1M tokens'
     }
 }
 
@@ -5328,6 +5438,136 @@ def call_gemini_with_history(model_id, system_prompt, history, new_message, max_
     
     return response.text
 
+def call_deepseek_with_history(model_id, system_prompt, history, new_message, max_tokens=2000):
+    """Call DeepSeek with conversation history (OpenAI-compatible API)"""
+    import openai
+
+    deepseek_api_key = os.environ.get('DEEPSEEK_API_KEY')
+    if not deepseek_api_key:
+        raise Exception("DeepSeek API key not configured")
+
+    deepseek_client = openai.OpenAI(
+        api_key=deepseek_api_key,
+        base_url="https://api.deepseek.com"
+    )
+
+    # Format for OpenAI-compatible API
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.extend(history)
+    messages.append({"role": "user", "content": new_message})
+
+    response = deepseek_client.chat.completions.create(
+        model=model_id,
+        messages=messages,
+        max_tokens=max_tokens
+    )
+
+    return response.choices[0].message.content
+
+def call_perplexity_with_history(model_id, system_prompt, history, new_message, max_tokens=2000):
+    """Call Perplexity with conversation history (OpenAI-compatible API)"""
+    import openai
+
+    perplexity_api_key = os.environ.get('PERPLEXITY_API_KEY')
+    if not perplexity_api_key:
+        raise Exception("Perplexity API key not configured")
+
+    perplexity_client = openai.OpenAI(
+        api_key=perplexity_api_key,
+        base_url="https://api.perplexity.ai"
+    )
+
+    # Format for OpenAI-compatible API
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.extend(history)
+    messages.append({"role": "user", "content": new_message})
+
+    response = perplexity_client.chat.completions.create(
+        model=model_id,
+        messages=messages,
+        max_tokens=max_tokens
+    )
+
+    return response.choices[0].message.content
+
+def call_grok_with_history(model_id, system_prompt, history, new_message, max_tokens=2000):
+    """Call Grok (xAI) with conversation history (OpenAI-compatible API)"""
+    import openai
+
+    grok_api_key = os.environ.get('GROK_API_KEY')
+    if not grok_api_key:
+        raise Exception("Grok API key not configured")
+
+    grok_client = openai.OpenAI(
+        api_key=grok_api_key,
+        base_url="https://api.x.ai/v1"
+    )
+
+    # Format for OpenAI-compatible API
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.extend(history)
+    messages.append({"role": "user", "content": new_message})
+
+    response = grok_client.chat.completions.create(
+        model=model_id,
+        messages=messages,
+        max_tokens=max_tokens
+    )
+
+    return response.choices[0].message.content
+
+def call_openrouter_with_history(model_id, system_prompt, history, new_message, max_tokens=2000):
+    """Call OpenRouter (for Llama and other open models) with conversation history"""
+    import openai
+
+    openrouter_api_key = os.environ.get('OPENROUTER_API_KEY')
+    if not openrouter_api_key:
+        raise Exception("OpenRouter API key not configured")
+
+    openrouter_client = openai.OpenAI(
+        api_key=openrouter_api_key,
+        base_url="https://openrouter.ai/api/v1"
+    )
+
+    # Format for OpenAI-compatible API
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.extend(history)
+    messages.append({"role": "user", "content": new_message})
+
+    response = openrouter_client.chat.completions.create(
+        model=model_id,
+        messages=messages,
+        max_tokens=max_tokens
+    )
+
+    return response.choices[0].message.content
+
+def call_mistral_with_history(model_id, system_prompt, history, new_message, max_tokens=2000):
+    """Call Mistral with conversation history (OpenAI-compatible API)"""
+    import openai
+
+    mistral_api_key = os.environ.get('MISTRAL_API_KEY')
+    if not mistral_api_key:
+        raise Exception("Mistral API key not configured")
+
+    mistral_client = openai.OpenAI(
+        api_key=mistral_api_key,
+        base_url="https://api.mistral.ai/v1"
+    )
+
+    # Format for OpenAI-compatible API
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.extend(history)
+    messages.append({"role": "user", "content": new_message})
+
+    response = mistral_client.chat.completions.create(
+        model=model_id,
+        messages=messages,
+        max_tokens=max_tokens
+    )
+
+    return response.choices[0].message.content
+
 def route_to_model(model_key, system_prompt, history, new_message):
     """Route to appropriate AI model with conversation history"""
     if model_key not in MODELS:
@@ -5345,14 +5585,24 @@ def route_to_model(model_key, system_prompt, history, new_message):
             return call_gpt_with_history(model_id, system_prompt, history, new_message, max_tokens)
         elif provider == 'google':
             return call_gemini_with_history(model_id, system_prompt, history, new_message, max_tokens)
+        elif provider == 'deepseek':
+            return call_deepseek_with_history(model_id, system_prompt, history, new_message, max_tokens)
+        elif provider == 'perplexity':
+            return call_perplexity_with_history(model_id, system_prompt, history, new_message, max_tokens)
+        elif provider == 'grok':
+            return call_grok_with_history(model_id, system_prompt, history, new_message, max_tokens)
+        elif provider == 'openrouter':
+            return call_openrouter_with_history(model_id, system_prompt, history, new_message, max_tokens)
+        elif provider == 'mistral':
+            return call_mistral_with_history(model_id, system_prompt, history, new_message, max_tokens)
         else:
             raise Exception(f"Unknown provider: {provider}")
     except Exception as e:
         print(f"Error with {provider} ({model_key}): {e}")
-        # Fallback to Claude if other model fails
-        if provider != 'anthropic':
-            print(f"Falling back to Claude Sonnet...")
-            return call_claude_with_history('claude-sonnet-4-20250514', system_prompt, history, new_message, 2000)
+        # Fallback to Gemini (free) if other model fails
+        if provider not in ['google', 'gemini']:
+            print(f"Falling back to Gemini 2.0 Flash...")
+            return call_gemini_with_history('gemini-2.0-flash-exp', system_prompt, history, new_message, 2000)
         raise
 
 def call_ai_with_image(model_key, system_prompt, history, message, image_path):
