@@ -836,6 +836,28 @@ def init_database():
         except sqlite3.OperationalError as e:
             print(f"⚠️  Could not add trial_end_date column: {e}")
 
+    # ============================================
+    # GLOBAL AGENTS TABLE MIGRATIONS
+    # ============================================
+
+    # Check for global_agents columns
+    cursor.execute("PRAGMA table_info(global_agents)")
+    global_agent_columns = [col[1] for col in cursor.fetchall()]
+
+    if 'share_code' not in global_agent_columns:
+        try:
+            cursor.execute("ALTER TABLE global_agents ADD COLUMN share_code TEXT UNIQUE")
+            print("✅ Added share_code column to global_agents (for public sharing)")
+        except sqlite3.OperationalError as e:
+            print(f"⚠️  Could not add share_code column: {e}")
+
+    if 'is_public' not in global_agent_columns:
+        try:
+            cursor.execute("ALTER TABLE global_agents ADD COLUMN is_public BOOLEAN DEFAULT 0")
+            print("✅ Added is_public column to global_agents (for public access)")
+        except sqlite3.OperationalError as e:
+            print(f"⚠️  Could not add is_public column: {e}")
+
     print("✅ Cost monitoring tables initialized")
 
     conn.commit()
@@ -8719,6 +8741,178 @@ def admin_unassign_global_agent(agent_id):
     except Exception as e:
         print(f"❌ Error unassigning global agent: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/global-agents/<int:agent_id>/share', methods=['POST'])
+@login_required
+def share_global_agent(agent_id):
+    """Admin: Generate share code for public access to global agent"""
+    if current_user.id != 1:  # Admin only
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Get agent details
+        cursor.execute("SELECT name, share_code FROM global_agents WHERE id = ?", (agent_id,))
+        result = cursor.fetchone()
+
+        if not result:
+            conn.close()
+            return jsonify({'error': 'Global agent not found'}), 404
+
+        agent_name, existing_share_code = result
+
+        # Generate new share code if doesn't exist
+        if not existing_share_code:
+            import secrets
+            share_code = secrets.token_urlsafe(16)
+
+            cursor.execute("""
+                UPDATE global_agents
+                SET share_code = ?, is_public = 1
+                WHERE id = ?
+            """, (share_code, agent_id))
+
+            conn.commit()
+        else:
+            share_code = existing_share_code
+            # Just make sure it's public
+            cursor.execute("""
+                UPDATE global_agents
+                SET is_public = 1
+                WHERE id = ?
+            """, (agent_id,))
+            conn.commit()
+
+        conn.close()
+
+        # Generate shareable URL
+        share_url = f"{request.host_url}global/{share_code}"
+
+        return jsonify({
+            'success': True,
+            'share_code': share_code,
+            'share_url': share_url,
+            'message': f'Public link created for "{agent_name}"'
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Error sharing global agent: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/global-agents/<int:agent_id>/unshare', methods=['POST'])
+@login_required
+def unshare_global_agent(agent_id):
+    """Admin: Remove public access to global agent"""
+    if current_user.id != 1:  # Admin only
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            UPDATE global_agents
+            SET is_public = 0
+            WHERE id = ?
+        """, (agent_id,))
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': 'Global agent is now private (only assigned users can access)'
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Error unsharing global agent: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# Public endpoint to access shared global agents
+@app.route('/global/<share_code>')
+def view_shared_global_agent(share_code):
+    """Public page to chat with a shared global agent (no login required)"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT name, description, emoji, system_prompt, is_public
+            FROM global_agents
+            WHERE share_code = ?
+        """, (share_code,))
+
+        agent = cursor.fetchone()
+        conn.close()
+
+        if not agent:
+            return "Global agent not found", 404
+
+        agent_name, description, emoji, system_prompt, is_public = agent
+
+        if not is_public:
+            return "This global agent is not publicly accessible", 403
+
+        # Render public chat page for this global agent
+        return render_template('global_agent_public.html',
+                             agent_name=agent_name,
+                             description=description,
+                             emoji=emoji,
+                             share_code=share_code)
+
+    except Exception as e:
+        print(f"❌ Error loading shared global agent: {str(e)}")
+        return "Error loading global agent", 500
+
+# API endpoint for guests to chat with shared global agents
+@app.route('/api/global/chat', methods=['POST'])
+def global_agent_chat():
+    """Chat with a shared global agent (no login required)"""
+    try:
+        data = request.json
+        share_code = data.get('share_code')
+        message = data.get('message')
+
+        if not share_code or not message:
+            return jsonify({'error': 'Missing required fields'}), 400
+
+        # Get global agent by share_code
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT name, system_prompt, is_public
+            FROM global_agents
+            WHERE share_code = ?
+        """, (share_code,))
+
+        agent_data = cursor.fetchone()
+        conn.close()
+
+        if not agent_data:
+            return jsonify({'error': 'Global agent not found'}), 404
+
+        agent_name, system_prompt, is_public = agent_data
+
+        if not is_public:
+            return jsonify({'error': 'This global agent is not publicly accessible'}), 403
+
+        # Use Gemini for free tier (no API cost for public agents)
+        import google.generativeai as genai
+        genai.configure(api_key=app.config.get('GOOGLE_AI_API_KEY'))
+        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+
+        full_prompt = f"{system_prompt}\n\nUser: {message}"
+        response = model.generate_content(full_prompt)
+        ai_response = response.text
+
+        return jsonify({'response': ai_response}), 200
+
+    except Exception as e:
+        print(f"❌ Global agent chat error: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
 
 # ============================================
 # DEFAULT GLOBAL AGENTS (ASSIGNED TO ALL NEW USERS)
