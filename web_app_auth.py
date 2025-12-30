@@ -6040,8 +6040,39 @@ CRITICAL FORMATTING RULES:
 
 Remember: You are {agent}. Natural conversation only. No formatting."""
             else:
-                conn.close()
-                return jsonify({'error': f'Agent "{agent}" not found'}), 400
+                # Check for global agent
+                if not is_guest:
+                    cursor.execute("""
+                        SELECT ga.system_prompt
+                        FROM global_agents ga
+                        INNER JOIN user_global_agents uga ON ga.id = uga.global_agent_id
+                        WHERE uga.user_id = ? AND ga.name = ? AND ga.is_active = 1
+                    """, (current_user.id, agent))
+
+                    global_agent = cursor.fetchone()
+                    if global_agent:
+                        # Wrap global agent prompt with formatting rules
+                        base_prompt = global_agent[0]
+                        system_prompt = f"""You are {agent}. Your role and personality:
+
+{base_prompt}
+
+CRITICAL FORMATTING RULES:
+- Write in natural, conversational paragraphs
+- Do NOT use asterisks (**), hashtags (##), dashes (---), or bullet points (•)
+- Do NOT use markdown formatting of any kind
+- Ask only ONE question per response (if you need to ask questions)
+- Write like you're talking to someone, not writing a document
+- Keep responses clear and focused
+- When introducing yourself, say "I'm {agent}" (not Luna or any other name)
+
+Remember: You are {agent}. Natural conversation only. No formatting."""
+                    else:
+                        conn.close()
+                        return jsonify({'error': f'Agent "{agent}" not found'}), 400
+                else:
+                    conn.close()
+                    return jsonify({'error': f'Agent "{agent}" not found'}), 400
         
         # Get conversation history (last 10 messages for context - optimized for speed)
         # Guests don't have history (not logged in)
