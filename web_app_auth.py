@@ -948,6 +948,7 @@ def init_promo_codes_table():
 try:
     init_database()
     init_promo_codes_table()
+    initialize_default_global_agents()
     print("✅ Database initialization completed successfully")
 except Exception as e:
     print(f"⚠️  Database initialization error: {str(e)}")
@@ -1395,7 +1396,8 @@ def emergency_database_init():
         # Force database initialization
         init_database()
         init_promo_codes_table()
-        
+        initialize_default_global_agents()
+
         # Check if custom_agents table exists and has correct columns
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
@@ -1631,8 +1633,8 @@ def api_signup():
             user = User(id=user_id, username=username, email=email)
             login_user(user)
 
-            # Create starter agents for new user
-            create_starter_agents_for_user(user_id)
+            # Assign default global agents to new user
+            assign_default_global_agents_to_user(user_id)
 
             conn.close()
             return jsonify({'success': True}), 200
@@ -8571,14 +8573,15 @@ def admin_unassign_global_agent(agent_id):
         return jsonify({'error': str(e)}), 500
 
 # ============================================
-# STARTER AGENTS FOR NEW USERS
+# DEFAULT GLOBAL AGENTS (ASSIGNED TO ALL NEW USERS)
 # ============================================
 
-STARTER_AGENTS = [
+DEFAULT_GLOBAL_AGENTS = [
     {
         'name': 'Content Helper',
         'description': 'Social media content creation and optimization',
         'emoji': '✍️',
+        'category': 'productivity',
         'system_prompt': '''You are a Content Helper specialized in social media content creation.
 
 Your capabilities:
@@ -8605,6 +8608,7 @@ Always match the user's brand voice and keep responses actionable.''',
         'name': 'Email Assistant',
         'description': 'Draft professional emails and responses',
         'emoji': '📧',
+        'category': 'productivity',
         'system_prompt': '''You are an Email Assistant that helps write clear, professional emails.
 
 Your role:
@@ -8623,6 +8627,7 @@ Always ask for context if needed: recipient, purpose, desired tone.''',
         'name': 'Meeting Summarizer',
         'description': 'Create meeting notes and action items',
         'emoji': '📝',
+        'category': 'productivity',
         'system_prompt': '''You are a Meeting Summarizer that creates clear, actionable meeting notes.
 
 Your tasks:
@@ -8631,38 +8636,82 @@ Your tasks:
 - Highlight decisions made
 - Note follow-up questions
 
-Format output with clear sections: Summary, Action Items, Decisions, Next Steps.'''
+Format output with clear sections: Summary, Action Items, Decisions, Next Steps.''',
+        'template_variables': None
     }
 ]
 
-def create_starter_agents_for_user(user_id):
-    """Create default starter agents for a new user"""
+def initialize_default_global_agents():
+    """Create default global agents in the database if they don't exist"""
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
 
-        for agent in STARTER_AGENTS:
+        for agent in DEFAULT_GLOBAL_AGENTS:
+            # Check if this agent already exists
             cursor.execute("""
-                INSERT INTO custom_agents (
-                    user_id, name, description, emoji, system_prompt, template_variables, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-            """, (
-                user_id,
-                agent['name'],
-                agent['description'],
-                agent['emoji'],
-                agent['system_prompt'],
-                agent.get('template_variables')
-            ))
+                SELECT id FROM global_agents WHERE name = ?
+            """, (agent['name'],))
+
+            if not cursor.fetchone():
+                # Create the global agent
+                cursor.execute("""
+                    INSERT INTO global_agents (
+                        name, description, emoji, category, system_prompt,
+                        template_variables, created_by, is_active, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, 1, 1, CURRENT_TIMESTAMP)
+                """, (
+                    agent['name'],
+                    agent['description'],
+                    agent['emoji'],
+                    agent['category'],
+                    agent['system_prompt'],
+                    agent.get('template_variables')
+                ))
+                print(f"✅ Created global agent: {agent['name']}")
+
+        conn.commit()
+        conn.close()
+        return True
+
+    except Exception as e:
+        print(f"❌ Error initializing default global agents: {str(e)}")
+        return False
+
+def assign_default_global_agents_to_user(user_id):
+    """Assign all default global agents to a new user"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Get IDs of default global agents
+        for agent in DEFAULT_GLOBAL_AGENTS:
+            cursor.execute("""
+                SELECT id FROM global_agents WHERE name = ?
+            """, (agent['name'],))
+
+            result = cursor.fetchone()
+            if result:
+                global_agent_id = result[0]
+
+                # Assign to user (skip if already assigned)
+                try:
+                    cursor.execute("""
+                        INSERT INTO user_global_agents (user_id, global_agent_id, assigned_by, assigned_at)
+                        VALUES (?, ?, 1, CURRENT_TIMESTAMP)
+                    """, (user_id, global_agent_id))
+                except sqlite3.IntegrityError:
+                    # Already assigned, skip
+                    pass
 
         conn.commit()
         conn.close()
 
-        print(f"✅ Created {len(STARTER_AGENTS)} starter agents for user {user_id}")
+        print(f"✅ Assigned {len(DEFAULT_GLOBAL_AGENTS)} global agents to user {user_id}")
         return True
 
     except Exception as e:
-        print(f"❌ Error creating starter agents: {str(e)}")
+        print(f"❌ Error assigning global agents to user: {str(e)}")
         return False
 
 # ============================================
