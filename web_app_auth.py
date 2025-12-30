@@ -4454,6 +4454,215 @@ def disconnect_oauth_integration(service):
         print(f"❌ Error disconnecting integration: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+# ============================================
+# INTEGRATION HELPER FUNCTIONS (FOR AGENTS)
+# ============================================
+
+def get_user_oauth_token(user_id, service):
+    """Get OAuth access token for a service"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT access_token, refresh_token, token_expiry
+            FROM user_integrations
+            WHERE user_id = ? AND service = ? AND is_active = 1
+        """, (user_id, service))
+
+        result = cursor.fetchone()
+        conn.close()
+
+        if result:
+            return {
+                'access_token': result[0],
+                'refresh_token': result[1],
+                'token_expiry': result[2]
+            }
+        return None
+
+    except Exception as e:
+        print(f"Error getting OAuth token: {e}")
+        return None
+
+def send_email_via_integration(user_id, to_email, subject, body):
+    """
+    Send email via Gmail integration
+
+    NOTE: This is a placeholder. In production, this would:
+    1. Get user's Gmail OAuth token
+    2. Use Gmail API to send email
+    3. Handle token refresh if expired
+    4. Return success/failure status
+    """
+    token_info = get_user_oauth_token(user_id, 'gmail')
+
+    if not token_info:
+        return {
+            'success': False,
+            'error': 'Gmail not connected. Please connect Gmail via Integrations page.'
+        }
+
+    # PLACEHOLDER: Actual Gmail API call would go here
+    # Example:
+    # from googleapiclient.discovery import build
+    # from google.oauth2.credentials import Credentials
+    #
+    # creds = Credentials(token=token_info['access_token'])
+    # service = build('gmail', 'v1', credentials=creds)
+    # message = create_message('me', to_email, subject, body)
+    # result = service.users().messages().send(userId='me', body=message).execute()
+
+    print(f"[PLACEHOLDER] Would send email to {to_email} via Gmail")
+
+    return {
+        'success': True,
+        'message': 'Email functionality requires OAuth app configuration',
+        'placeholder': True
+    }
+
+def post_to_twitter(user_id, text):
+    """
+    Post to Twitter/X via integration
+
+    NOTE: This is a placeholder. In production, this would:
+    1. Get user's Twitter OAuth token
+    2. Use Twitter API v2 to create tweet
+    3. Handle token refresh if needed
+    4. Return tweet ID and URL
+    """
+    token_info = get_user_oauth_token(user_id, 'twitter')
+
+    if not token_info:
+        return {
+            'success': False,
+            'error': 'Twitter not connected. Please connect Twitter via Integrations page.'
+        }
+
+    print(f"[PLACEHOLDER] Would post to Twitter: {text}")
+
+    return {
+        'success': True,
+        'message': 'Twitter posting requires OAuth app configuration',
+        'placeholder': True
+    }
+
+def post_to_linkedin(user_id, text):
+    """
+    Post to LinkedIn via integration
+
+    NOTE: This is a placeholder for LinkedIn posting
+    """
+    token_info = get_user_oauth_token(user_id, 'linkedin')
+
+    if not token_info:
+        return {
+            'success': False,
+            'error': 'LinkedIn not connected'
+        }
+
+    print(f"[PLACEHOLDER] Would post to LinkedIn: {text}")
+
+    return {
+        'success': True,
+        'message': 'LinkedIn posting requires OAuth app configuration',
+        'placeholder': True
+    }
+
+def create_calendar_event(user_id, title, start_time, end_time, description=None):
+    """
+    Create Google Calendar event via integration
+
+    NOTE: This is a placeholder. In production, this would:
+    1. Get user's Google Calendar OAuth token
+    2. Use Google Calendar API to create event
+    3. Return event ID and link
+    """
+    token_info = get_user_oauth_token(user_id, 'google_calendar')
+
+    if not token_info:
+        return {
+            'success': False,
+            'error': 'Google Calendar not connected'
+        }
+
+    print(f"[PLACEHOLDER] Would create calendar event: {title}")
+
+    return {
+        'success': True,
+        'message': 'Calendar integration requires OAuth app configuration',
+        'placeholder': True
+    }
+
+def get_available_integration_actions(user_id):
+    """
+    Get list of available integration actions based on user's connections
+
+    Returns a dictionary of available actions organized by category
+    """
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT service FROM user_integrations
+            WHERE user_id = ? AND is_active = 1
+        """, (user_id,))
+
+        connected_services = [row[0] for row in cursor.fetchall()]
+        conn.close()
+
+        actions = {
+            'email': [],
+            'social': [],
+            'calendar': [],
+            'productivity': []
+        }
+
+        if 'gmail' in connected_services:
+            actions['email'].extend([
+                {'name': 'send_email', 'description': 'Send email via Gmail'},
+                {'name': 'read_emails', 'description': 'Read recent emails'},
+                {'name': 'search_emails', 'description': 'Search emails'}
+            ])
+
+        if 'outlook' in connected_services:
+            actions['email'].extend([
+                {'name': 'send_outlook_email', 'description': 'Send email via Outlook'},
+                {'name': 'read_outlook_emails', 'description': 'Read Outlook emails'}
+            ])
+
+        if 'twitter' in connected_services:
+            actions['social'].extend([
+                {'name': 'post_tweet', 'description': 'Post to Twitter'},
+                {'name': 'get_mentions', 'description': 'Get Twitter mentions'}
+            ])
+
+        if 'linkedin' in connected_services:
+            actions['social'].extend([
+                {'name': 'post_linkedin', 'description': 'Post to LinkedIn'},
+                {'name': 'get_connections', 'description': 'Get LinkedIn connections'}
+            ])
+
+        if 'google_calendar' in connected_services:
+            actions['calendar'].extend([
+                {'name': 'create_event', 'description': 'Create calendar event'},
+                {'name': 'list_events', 'description': 'List upcoming events'},
+                {'name': 'update_event', 'description': 'Update existing event'}
+            ])
+
+        if 'zoom' in connected_services:
+            actions['calendar'].extend([
+                {'name': 'create_zoom_meeting', 'description': 'Create Zoom meeting'},
+                {'name': 'list_meetings', 'description': 'List scheduled Zoom meetings'}
+            ])
+
+        return actions
+
+    except Exception as e:
+        print(f"Error getting available actions: {e}")
+        return {}
+
 @app.route('/api/integrations/oauth/<integration_key>/start')
 @login_required
 def start_oauth_flow(integration_key):
