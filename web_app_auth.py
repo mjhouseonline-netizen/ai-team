@@ -8603,7 +8603,7 @@ def admin_get_all_global_agents():
 
         cursor.execute("""
             SELECT id, name, description, emoji, category, system_prompt,
-                   template_variables, is_active, created_at
+                   template_variables, is_active, created_at, integrations
             FROM global_agents
             ORDER BY created_at DESC
         """)
@@ -8626,6 +8626,7 @@ def admin_get_all_global_agents():
                 'template_variables': json.loads(row[6]) if row[6] else None,
                 'is_active': bool(row[7]),
                 'created_at': row[8],
+                'integrations': json.loads(row[9]) if row[9] else [],
                 'user_count': user_count
             })
 
@@ -8651,6 +8652,7 @@ def admin_create_global_agent():
         category = data.get('category', 'general')
         system_prompt = data.get('system_prompt')
         template_variables = data.get('template_variables')
+        integrations = data.get('integrations', [])
 
         if not name or not system_prompt:
             return jsonify({'error': 'Name and system prompt required'}), 400
@@ -8659,15 +8661,19 @@ def admin_create_global_agent():
         if isinstance(template_variables, dict):
             template_variables = json.dumps(template_variables)
 
+        # Convert integrations to JSON if it's a list
+        if isinstance(integrations, list):
+            integrations = json.dumps(integrations)
+
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
 
         cursor.execute("""
             INSERT INTO global_agents (
                 name, description, emoji, category, system_prompt,
-                template_variables, created_by
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (name, description, emoji, category, system_prompt, template_variables, current_user.id))
+                template_variables, integrations, created_by
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (name, description, emoji, category, system_prompt, template_variables, integrations, current_user.id))
 
         agent_id = cursor.lastrowid
         conn.commit()
@@ -8719,6 +8725,10 @@ def admin_update_global_agent(agent_id):
             updates.append('template_variables = ?')
             tv = data['template_variables']
             params.append(json.dumps(tv) if isinstance(tv, dict) else tv)
+        if 'integrations' in data:
+            updates.append('integrations = ?')
+            integ = data['integrations']
+            params.append(json.dumps(integ) if isinstance(integ, list) else integ)
         if 'is_active' in data:
             updates.append('is_active = ?')
             params.append(1 if data['is_active'] else 0)
