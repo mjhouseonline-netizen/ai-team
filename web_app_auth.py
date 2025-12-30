@@ -998,6 +998,148 @@ def init_promo_codes_table():
     conn.close()
     print("✅ Promo codes tables initialized")
 
+# ============================================
+# DEFAULT GLOBAL AGENTS (ASSIGNED TO ALL NEW USERS)
+# ============================================
+
+DEFAULT_GLOBAL_AGENTS = [
+    {
+        'name': 'Content Helper',
+        'description': 'Social media content creation and optimization',
+        'emoji': '✍️',
+        'category': 'productivity',
+        'system_prompt': '''You are a Content Helper specialized in social media content creation.
+
+Your capabilities:
+1. Transform messy ideas into polished posts
+2. Shorten content while maintaining tone and voice
+3. Generate content ideas through strategic questions
+
+When users share messy ideas, clean them up into engaging posts.
+When asked to shorten content, preserve the original tone.
+When users don't know what to post, ask 3-5 targeted questions about:
+- Their target audience
+- Recent business updates
+- Pain points they solve
+- Success stories or testimonials
+
+Always match the user's brand voice and keep responses actionable.''',
+        'template_variables': json.dumps({
+            'business_name': {'type': 'text', 'description': 'Your business or brand name', 'default': ''},
+            'tone': {'type': 'select', 'options': ['Professional', 'Casual', 'Friendly', 'Authoritative'], 'default': 'Professional'},
+            'audience': {'type': 'text', 'description': 'Your target audience', 'default': ''}
+        })
+    },
+    {
+        'name': 'Email Assistant',
+        'description': 'Draft professional emails and responses',
+        'emoji': '📧',
+        'category': 'productivity',
+        'system_prompt': '''You are an Email Assistant that helps write clear, professional emails.
+
+Your role:
+- Draft emails based on brief descriptions
+- Improve tone and clarity of existing drafts
+- Suggest subject lines
+- Keep emails concise and actionable
+
+Always ask for context if needed: recipient, purpose, desired tone.''',
+        'template_variables': json.dumps({
+            'signature': {'type': 'text', 'description': 'Your email signature', 'default': ''},
+            'tone': {'type': 'select', 'options': ['Formal', 'Professional', 'Friendly', 'Casual'], 'default': 'Professional'}
+        })
+    },
+    {
+        'name': 'Meeting Summarizer',
+        'description': 'Create meeting notes and action items',
+        'emoji': '📝',
+        'category': 'productivity',
+        'system_prompt': '''You are a Meeting Summarizer that creates clear, actionable meeting notes.
+
+Your tasks:
+- Extract key discussion points
+- Identify action items with owners
+- Highlight decisions made
+- Note follow-up questions
+
+Format output with clear sections: Summary, Action Items, Decisions, Next Steps.''',
+        'template_variables': None
+    }
+]
+
+def initialize_default_global_agents():
+    """Create default global agents in the database if they don't exist"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        for agent in DEFAULT_GLOBAL_AGENTS:
+            # Check if this agent already exists
+            cursor.execute("""
+                SELECT id FROM global_agents WHERE name = ?
+            """, (agent['name'],))
+
+            if not cursor.fetchone():
+                # Create the global agent
+                cursor.execute("""
+                    INSERT INTO global_agents (
+                        name, description, emoji, category, system_prompt,
+                        template_variables, created_by, is_active, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, 1, 1, CURRENT_TIMESTAMP)
+                """, (
+                    agent['name'],
+                    agent['description'],
+                    agent['emoji'],
+                    agent['category'],
+                    agent['system_prompt'],
+                    agent.get('template_variables')
+                ))
+                print(f"✅ Created global agent: {agent['name']}")
+
+        conn.commit()
+        conn.close()
+        return True
+
+    except Exception as e:
+        print(f"❌ Error initializing default global agents: {str(e)}")
+        return False
+
+def assign_default_global_agents_to_user(user_id):
+    """Assign all default global agents to a new user"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Get IDs of default global agents
+        for agent in DEFAULT_GLOBAL_AGENTS:
+            cursor.execute("""
+                SELECT id FROM global_agents WHERE name = ?
+            """, (agent['name'],))
+
+            result = cursor.fetchone()
+            if result:
+                global_agent_id = result[0]
+
+                # Assign to user (skip if already assigned)
+                try:
+                    cursor.execute("""
+                        INSERT INTO user_global_agents (user_id, global_agent_id, assigned_by, assigned_at)
+                        VALUES (?, ?, 1, CURRENT_TIMESTAMP)
+                    """, (user_id, global_agent_id))
+                except sqlite3.IntegrityError:
+                    # Already assigned, skip
+                    pass
+
+        conn.commit()
+        conn.close()
+
+        print(f"✅ Assigned {len(DEFAULT_GLOBAL_AGENTS)} global agents to user {user_id}")
+        return True
+
+    except Exception as e:
+        print(f"❌ Error assigning global agents to user: {str(e)}")
+        return False
+
 # Initialize database on startup
 try:
     init_database()
@@ -9542,148 +9684,6 @@ def global_agent_chat():
     except Exception as e:
         print(f"❌ Global agent chat error: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
-
-# ============================================
-# DEFAULT GLOBAL AGENTS (ASSIGNED TO ALL NEW USERS)
-# ============================================
-
-DEFAULT_GLOBAL_AGENTS = [
-    {
-        'name': 'Content Helper',
-        'description': 'Social media content creation and optimization',
-        'emoji': '✍️',
-        'category': 'productivity',
-        'system_prompt': '''You are a Content Helper specialized in social media content creation.
-
-Your capabilities:
-1. Transform messy ideas into polished posts
-2. Shorten content while maintaining tone and voice
-3. Generate content ideas through strategic questions
-
-When users share messy ideas, clean them up into engaging posts.
-When asked to shorten content, preserve the original tone.
-When users don't know what to post, ask 3-5 targeted questions about:
-- Their target audience
-- Recent business updates
-- Pain points they solve
-- Success stories or testimonials
-
-Always match the user's brand voice and keep responses actionable.''',
-        'template_variables': json.dumps({
-            'business_name': {'type': 'text', 'description': 'Your business or brand name', 'default': ''},
-            'tone': {'type': 'select', 'options': ['Professional', 'Casual', 'Friendly', 'Authoritative'], 'default': 'Professional'},
-            'audience': {'type': 'text', 'description': 'Your target audience', 'default': ''}
-        })
-    },
-    {
-        'name': 'Email Assistant',
-        'description': 'Draft professional emails and responses',
-        'emoji': '📧',
-        'category': 'productivity',
-        'system_prompt': '''You are an Email Assistant that helps write clear, professional emails.
-
-Your role:
-- Draft emails based on brief descriptions
-- Improve tone and clarity of existing drafts
-- Suggest subject lines
-- Keep emails concise and actionable
-
-Always ask for context if needed: recipient, purpose, desired tone.''',
-        'template_variables': json.dumps({
-            'signature': {'type': 'text', 'description': 'Your email signature', 'default': ''},
-            'tone': {'type': 'select', 'options': ['Formal', 'Professional', 'Friendly', 'Casual'], 'default': 'Professional'}
-        })
-    },
-    {
-        'name': 'Meeting Summarizer',
-        'description': 'Create meeting notes and action items',
-        'emoji': '📝',
-        'category': 'productivity',
-        'system_prompt': '''You are a Meeting Summarizer that creates clear, actionable meeting notes.
-
-Your tasks:
-- Extract key discussion points
-- Identify action items with owners
-- Highlight decisions made
-- Note follow-up questions
-
-Format output with clear sections: Summary, Action Items, Decisions, Next Steps.''',
-        'template_variables': None
-    }
-]
-
-def initialize_default_global_agents():
-    """Create default global agents in the database if they don't exist"""
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-
-        for agent in DEFAULT_GLOBAL_AGENTS:
-            # Check if this agent already exists
-            cursor.execute("""
-                SELECT id FROM global_agents WHERE name = ?
-            """, (agent['name'],))
-
-            if not cursor.fetchone():
-                # Create the global agent
-                cursor.execute("""
-                    INSERT INTO global_agents (
-                        name, description, emoji, category, system_prompt,
-                        template_variables, created_by, is_active, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, 1, 1, CURRENT_TIMESTAMP)
-                """, (
-                    agent['name'],
-                    agent['description'],
-                    agent['emoji'],
-                    agent['category'],
-                    agent['system_prompt'],
-                    agent.get('template_variables')
-                ))
-                print(f"✅ Created global agent: {agent['name']}")
-
-        conn.commit()
-        conn.close()
-        return True
-
-    except Exception as e:
-        print(f"❌ Error initializing default global agents: {str(e)}")
-        return False
-
-def assign_default_global_agents_to_user(user_id):
-    """Assign all default global agents to a new user"""
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-
-        # Get IDs of default global agents
-        for agent in DEFAULT_GLOBAL_AGENTS:
-            cursor.execute("""
-                SELECT id FROM global_agents WHERE name = ?
-            """, (agent['name'],))
-
-            result = cursor.fetchone()
-            if result:
-                global_agent_id = result[0]
-
-                # Assign to user (skip if already assigned)
-                try:
-                    cursor.execute("""
-                        INSERT INTO user_global_agents (user_id, global_agent_id, assigned_by, assigned_at)
-                        VALUES (?, ?, 1, CURRENT_TIMESTAMP)
-                    """, (user_id, global_agent_id))
-                except sqlite3.IntegrityError:
-                    # Already assigned, skip
-                    pass
-
-        conn.commit()
-        conn.close()
-
-        print(f"✅ Assigned {len(DEFAULT_GLOBAL_AGENTS)} global agents to user {user_id}")
-        return True
-
-    except Exception as e:
-        print(f"❌ Error assigning global agents to user: {str(e)}")
-        return False
 
 # ============================================
 # AGENT TEMPLATE RENDERING
