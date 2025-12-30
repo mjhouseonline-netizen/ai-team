@@ -2658,7 +2658,10 @@
                 </div>
             </div>
             {% else %}
-            <!-- Regular Mode: Show custom agents list -->
+            <!-- Regular Mode: Show global agents and custom agents -->
+            <div class="section-title" id="globalAgentsTitle" style="display: none;">My Agents</div>
+            <div id="globalAgentsList"></div>
+
             <div class="section-title" id="customAgentsTitle" style="display: none;">Custom Agents</div>
             <div id="customAgentsList"></div>
             {% endif %}
@@ -4365,6 +4368,7 @@
         // Load conversations on page load
         document.addEventListener('DOMContentLoaded', function() {
             loadConversations();
+            loadGlobalAgents();  // Load global agents on page load
             loadCustomAgents();  // Load custom agents on page load
             loadUsageStats();     // Load usage statistics
 
@@ -4508,6 +4512,95 @@
 
                 container.appendChild(agentDiv);
             });
+        }
+
+        // ============================================
+        // GLOBAL AGENTS LOADING
+        // ============================================
+
+        function loadGlobalAgents() {
+            fetch('/api/global-agents')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.agents && data.agents.length > 0) {
+                        displayGlobalAgents(data.agents);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading global agents:', error);
+                });
+        }
+
+        function displayGlobalAgents(agents) {
+            const container = document.getElementById('globalAgentsList');
+            const title = document.getElementById('globalAgentsTitle');
+
+            if (!container) return;
+
+            // Show the section title
+            if (title) {
+                title.style.display = 'block';
+            }
+
+            // Clear existing content
+            container.innerHTML = '';
+
+            // Add each global agent
+            agents.forEach(agent => {
+                const agentDiv = document.createElement('div');
+                agentDiv.className = 'agent-item custom-agent-item';
+                agentDiv.onclick = (e) => {
+                    selectGlobalAgent(e, agent.id, agent.name, agent.emoji || '🤖', agent.description);
+                };
+
+                agentDiv.innerHTML = `
+                    <div class="agent-avatar" style="background: linear-gradient(135deg, #9C27B0, #E91E63);">
+                        ${agent.emoji || '🤖'}
+                    </div>
+                    <div class="agent-info">
+                        <div class="agent-name">${agent.name}</div>
+                        <div class="agent-role">${agent.description || 'Global Agent'}</div>
+                    </div>
+                `;
+
+                container.appendChild(agentDiv);
+            });
+        }
+
+        function selectGlobalAgent(event, agentId, agentName, emoji, description) {
+            event.preventDefault();
+
+            // Update current agent display
+            const agentDisplay = document.getElementById('currentAgentName');
+            if (agentDisplay) {
+                agentDisplay.textContent = agentName;
+            }
+
+            // Update current agent emoji
+            const agentEmoji = document.querySelector('.current-agent-emoji');
+            if (agentEmoji) {
+                agentEmoji.textContent = emoji;
+            }
+
+            // Store selected agent info
+            window.selectedGlobalAgent = {
+                id: agentId,
+                name: agentName,
+                emoji: emoji,
+                description: description,
+                isGlobal: true
+            };
+
+            // Clear custom agent selection
+            window.selectedCustomAgent = null;
+
+            // Visual feedback
+            document.querySelectorAll('.agent-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+
+            console.log('Selected global agent:', agentName);
         }
 
         function showCustomAgentShare(event, agentName, shareUrl) {
