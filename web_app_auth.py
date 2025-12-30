@@ -5798,6 +5798,25 @@ def chat():
         # ============================================
 
         # ============================================
+        # RESTRICT EXPENSIVE MODELS (>$6) TO PRO/ENTERPRISE
+        # ============================================
+        # Models that cost over $6 per million tokens are restricted
+        # to Pro ($49/mo) and Enterprise ($199/mo) plans only
+        EXPENSIVE_MODELS = ['claude-opus-4', 'gpt-4-turbo']  # $15 and $10 respectively
+
+        if model_key in EXPENSIVE_MODELS:
+            if tier not in ['pro', 'enterprise']:
+                conn.close()
+                model_name = 'Claude Opus 4' if model_key == 'claude-opus-4' else 'GPT-4 Turbo'
+                return jsonify({
+                    'error': f'{model_name} is only available for Pro ($49/mo) and Enterprise ($199/mo) subscribers due to high API costs.',
+                    'upgrade_required': True,
+                    'current_tier': tier,
+                    'required_tiers': ['pro', 'enterprise']
+                }), 403  # 403 Forbidden
+        # ============================================
+
+        # ============================================
         # COST MONITORING - BLOCK EXPENSIVE MODELS
         # ============================================
         # Check if user has hit their daily cost limit
