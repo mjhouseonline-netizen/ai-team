@@ -858,6 +858,38 @@ def init_database():
         except sqlite3.OperationalError as e:
             print(f"⚠️  Could not add is_public column: {e}")
 
+    if 'integrations' not in global_agent_columns:
+        try:
+            cursor.execute("ALTER TABLE global_agents ADD COLUMN integrations TEXT DEFAULT NULL")
+            print("✅ Added integrations column to global_agents (JSON array of enabled integrations)")
+        except sqlite3.OperationalError as e:
+            print(f"⚠️  Could not add integrations column: {e}")
+
+    # ============================================
+    # USER INTEGRATIONS TABLE (OAuth Tokens)
+    # ============================================
+
+    # Create table for storing user OAuth tokens for external services
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS user_integrations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            service TEXT NOT NULL,
+            access_token TEXT,
+            refresh_token TEXT,
+            token_expiry TIMESTAMP,
+            service_user_id TEXT,
+            service_email TEXT,
+            scopes TEXT,
+            is_active BOOLEAN DEFAULT 1,
+            connected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_used_at TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id),
+            UNIQUE(user_id, service)
+        )
+    """)
+    print("✅ User integrations table initialized")
+
     print("✅ Cost monitoring tables initialized")
 
     conn.commit()
@@ -4115,6 +4147,83 @@ OAUTH_CONFIG = {
         'auth_url': 'https://slack.com/oauth/v2/authorize',
         'token_url': 'https://slack.com/api/oauth.v2.access',
         'scopes': ['chat:write', 'channels:read']
+    },
+    # Email Integrations
+    'gmail': {
+        'auth_url': 'https://accounts.google.com/o/oauth2/v2/auth',
+        'token_url': 'https://oauth2.googleapis.com/token',
+        'scopes': [
+            'https://www.googleapis.com/auth/gmail.send',
+            'https://www.googleapis.com/auth/gmail.readonly',
+            'https://www.googleapis.com/auth/gmail.compose'
+        ],
+        'name': 'Gmail',
+        'icon': '📧'
+    },
+    'outlook': {
+        'auth_url': 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
+        'token_url': 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+        'scopes': ['Mail.Send', 'Mail.Read', 'Mail.ReadWrite'],
+        'name': 'Outlook',
+        'icon': '📨'
+    },
+    # Social Media Integrations
+    'twitter': {
+        'auth_url': 'https://twitter.com/i/oauth2/authorize',
+        'token_url': 'https://api.twitter.com/2/oauth2/token',
+        'scopes': ['tweet.read', 'tweet.write', 'users.read'],
+        'name': 'Twitter/X',
+        'icon': '🐦'
+    },
+    'linkedin': {
+        'auth_url': 'https://www.linkedin.com/oauth/v2/authorization',
+        'token_url': 'https://www.linkedin.com/oauth/v2/accessToken',
+        'scopes': ['w_member_social', 'r_liteprofile', 'r_emailaddress'],
+        'name': 'LinkedIn',
+        'icon': '💼'
+    },
+    # Meeting Integrations
+    'zoom': {
+        'auth_url': 'https://zoom.us/oauth/authorize',
+        'token_url': 'https://zoom.us/oauth/token',
+        'scopes': ['meeting:read', 'recording:read', 'cloud_recording:read'],
+        'name': 'Zoom',
+        'icon': '🎥'
+    },
+    'google_calendar': {
+        'auth_url': 'https://accounts.google.com/o/oauth2/v2/auth',
+        'token_url': 'https://oauth2.googleapis.com/token',
+        'scopes': ['https://www.googleapis.com/auth/calendar.readonly'],
+        'name': 'Google Calendar',
+        'icon': '📅'
+    }
+}
+
+# Available integrations for agents
+AVAILABLE_INTEGRATIONS = {
+    'email': {
+        'name': 'Email',
+        'description': 'Send and read emails',
+        'services': ['gmail', 'outlook'],
+        'icon': '📧'
+    },
+    'social_media': {
+        'name': 'Social Media',
+        'description': 'Post to social platforms',
+        'services': ['twitter', 'linkedin'],
+        'icon': '📱'
+    },
+    'meetings': {
+        'name': 'Meetings',
+        'description': 'Access meeting recordings and transcripts',
+        'services': ['zoom', 'google_calendar'],
+        'icon': '🎥'
+    },
+    'productivity': {
+        'name': 'Productivity',
+        'description': 'Connect to productivity tools',
+        'services': ['google_sheets', 'slack'],
+        'icon': '📊'
     }
 }
 
