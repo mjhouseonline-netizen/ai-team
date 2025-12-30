@@ -4227,6 +4227,233 @@ AVAILABLE_INTEGRATIONS = {
     }
 }
 
+# ============================================
+# USER OAUTH INTEGRATIONS API
+# ============================================
+
+@app.route('/api/user-integrations', methods=['GET'])
+@login_required
+def get_user_integrations():
+    """Get user's OAuth integration connections"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Get all user's connected integrations
+        cursor.execute("""
+            SELECT service, service_email, service_user_id,
+                   token_expiry, connected_at, last_used_at, is_active
+            FROM user_integrations
+            WHERE user_id = ?
+        """, (current_user.id,))
+
+        connected = {}
+        for row in cursor.fetchall():
+            service, email, user_id, expiry, connected, last_used, is_active = row
+            connected[service] = {
+                'service': service,
+                'email': email,
+                'user_id': user_id,
+                'expiry': expiry,
+                'connected_at': connected,
+                'last_used_at': last_used,
+                'is_active': bool(is_active)
+            }
+
+        # Get integrations needed by user's global agents
+        cursor.execute("""
+            SELECT DISTINCT ga.integrations
+            FROM global_agents ga
+            INNER JOIN user_global_agents uga ON ga.id = uga.global_agent_id
+            WHERE uga.user_id = ? AND ga.is_active = 1 AND ga.integrations IS NOT NULL
+        """, (current_user.id,))
+
+        needed_categories = set()
+        for row in cursor.fetchall():
+            if row[0]:
+                integrations = json.loads(row[0])
+                needed_categories.update(integrations)
+
+        # Build available integrations list with connection status
+        available = []
+        for category, info in AVAILABLE_INTEGRATIONS.items():
+            for service in info['services']:
+                if service in OAUTH_CONFIG:
+                    oauth_info = OAUTH_CONFIG[service]
+                    available.append({
+                        'service': service,
+                        'name': oauth_info['name'],
+                        'icon': oauth_info['icon'],
+                        'category': category,
+                        'is_connected': service in connected,
+                        'is_needed': category in needed_categories,
+                        'connection_info': connected.get(service)
+                    })
+
+        conn.close()
+
+        return jsonify({
+            'available': available,
+            'needed_categories': list(needed_categories)
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Error getting user integrations: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/user-integrations/connect/<service>', methods=['POST'])
+@login_required
+def connect_oauth_integration(service):
+    """Start OAuth flow for a service"""
+    try:
+        if service not in OAUTH_CONFIG:
+            return jsonify({'error': 'Service not supported'}), 400
+
+        oauth_config = OAUTH_CONFIG[service]
+
+        # Generate state for CSRF protection
+        state = secrets.token_urlsafe(32)
+
+        # Store state in session
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS oauth_states (
+                state TEXT PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                service TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        cursor.execute("""
+            INSERT INTO oauth_states (state, user_id, service)
+            VALUES (?, ?, ?)
+        """, (state, current_user.id, service))
+
+        conn.commit()
+        conn.close()
+
+        # Build OAuth authorization URL
+        callback_url = f"{request.host_url.rstrip('/')}/api/oauth/callback/{service}"
+        scopes = ' '.join(oauth_config['scopes']) if isinstance(oauth_config['scopes'], list) else oauth_config['scopes']
+
+        # Note: client_id should be loaded from environment variables for each service
+        # This is a placeholder - you'll need to configure actual OAuth apps
+        auth_url = f"{oauth_config['auth_url']}?client_id=YOUR_{service.upper()}_CLIENT_ID&redirect_uri={callback_url}&state={state}&scope={scopes}&response_type=code&access_type=offline"
+
+        return jsonify({
+            'auth_url': auth_url,
+            'state': state
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Error starting OAuth flow: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/oauth/callback/<service>')
+def oauth_callback(service):
+    """Handle OAuth callback and exchange code for tokens"""
+    try:
+        code = request.args.get('code')
+        state = request.args.get('state')
+        error = request.args.get('error')
+
+        if error:
+            return f"<html><body><h2>Authorization failed</h2><p>{error}</p><a href='/integrations'>Back to Integrations</a></body></html>", 400
+
+        if not code or not state:
+            return "<html><body><h2>Invalid callback</h2><p>Missing code or state</p></body></html>", 400
+
+        # Verify state and get user_id
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT user_id, service FROM oauth_states WHERE state = ?
+        """, (state,))
+
+        oauth_state = cursor.fetchone()
+
+        if not oauth_state:
+            conn.close()
+            return "<html><body><h2>Invalid state</h2><p>State not found or expired</p></body></html>", 400
+
+        user_id, stored_service = oauth_state
+
+        if stored_service != service:
+            conn.close()
+            return "<html><body><h2>Service mismatch</h2></body></html>", 400
+
+        # Delete used state
+        cursor.execute("DELETE FROM oauth_states WHERE state = ?", (state,))
+        conn.commit()
+
+        # Exchange authorization code for access token
+        # NOTE: This is a placeholder - actual OAuth token exchange requires:
+        # 1. Making POST request to oauth_config['token_url']
+        # 2. Including client_id, client_secret, code, redirect_uri
+        # 3. Parsing response to get access_token, refresh_token, expiry
+
+        # For now, store a placeholder (you'll need to implement actual OAuth exchange)
+        cursor.execute("""
+            INSERT OR REPLACE INTO user_integrations
+            (user_id, service, access_token, refresh_token, token_expiry, is_active)
+            VALUES (?, ?, ?, ?, datetime('now', '+3600 seconds'), 1)
+        """, (user_id, service, f'PLACEHOLDER_TOKEN_{service}', f'PLACEHOLDER_REFRESH_{service}'))
+
+        conn.commit()
+        conn.close()
+
+        # Redirect to integrations page with success message
+        return f"""
+        <html>
+        <head><title>Connected Successfully</title></head>
+        <body style="font-family: system-ui; text-align: center; padding: 50px;">
+            <h1 style="color: #48bb78;">✓ Successfully Connected</h1>
+            <p>You've connected {OAUTH_CONFIG[service]['name']} to your AI Team account.</p>
+            <p><a href="/integrations" style="background: #667eea; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; display: inline-block; margin-top: 20px;">Back to Integrations</a></p>
+            <script>
+                setTimeout(function() {{ window.location.href = '/integrations'; }}, 3000);
+            </script>
+        </body>
+        </html>
+        """, 200
+
+    except Exception as e:
+        print(f"❌ OAuth callback error: {str(e)}")
+        return f"<html><body><h2>Error</h2><p>{str(e)}</p></body></html>", 500
+
+@app.route('/api/user-integrations/<service>', methods=['DELETE'])
+@login_required
+def disconnect_oauth_integration(service):
+    """Disconnect an OAuth integration"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            DELETE FROM user_integrations
+            WHERE user_id = ? AND service = ?
+        """, (current_user.id, service))
+
+        if cursor.rowcount == 0:
+            conn.close()
+            return jsonify({'error': 'Integration not found'}), 404
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': f'{service} disconnected successfully'
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Error disconnecting integration: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/integrations/oauth/<integration_key>/start')
 @login_required
 def start_oauth_flow(integration_key):
