@@ -190,6 +190,7 @@
                 <label>Promo Code Type:</label>
                 <select id="discountType" onchange="toggleDiscountFields()">
                     <option value="tier">Tier Upgrade</option>
+                    <option value="trial">Free Trial</option>
                     <option value="amount">Dollar Amount Discount</option>
                     <option value="percent">Percentage Discount</option>
                 </select>
@@ -201,6 +202,17 @@
                     <option value="freeforlife">Free For Life (Unlimited)</option>
                     <option value="starter">Starter (100 msgs/day)</option>
                     <option value="pro">Pro (500 msgs/day)</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="trialGroup" style="display: none;">
+                <label>Trial Duration:</label>
+                <select id="trialDuration">
+                    <option value="7">1 Week (7 days)</option>
+                    <option value="14">2 Weeks (14 days)</option>
+                    <option value="21">3 Weeks (21 days)</option>
+                    <option value="30">1 Month (30 days)</option>
+                    <option value="60">2 Months (60 days)</option>
                 </select>
             </div>
 
@@ -250,14 +262,21 @@
         function toggleDiscountFields() {
             const discountType = document.getElementById('discountType').value;
             const tierGroup = document.getElementById('tierGroup');
+            const trialGroup = document.getElementById('trialGroup');
             const discountValueGroup = document.getElementById('discountValueGroup');
             const discountValueLabel = document.getElementById('discountValueLabel');
 
+            // Hide all groups first
+            tierGroup.style.display = 'none';
+            trialGroup.style.display = 'none';
+            discountValueGroup.style.display = 'none';
+
+            // Show appropriate group based on type
             if (discountType === 'tier') {
                 tierGroup.style.display = 'block';
-                discountValueGroup.style.display = 'none';
+            } else if (discountType === 'trial') {
+                trialGroup.style.display = 'block';
             } else {
-                tierGroup.style.display = 'none';
                 discountValueGroup.style.display = 'block';
 
                 if (discountType === 'amount') {
@@ -274,6 +293,7 @@
             const count = parseInt(document.getElementById('count').value);
             const prefix = document.getElementById('prefix').value.trim();
             const discountValue = parseFloat(document.getElementById('discountValue').value);
+            const trialDuration = parseInt(document.getElementById('trialDuration').value);
             const messageDiv = document.getElementById('generateMessage');
 
             if (count < 1 || count > 100) {
@@ -282,7 +302,7 @@
             }
 
             // Validate discount value for amount/percent types
-            if (discountType !== 'tier') {
+            if (discountType === 'amount' || discountType === 'percent') {
                 if (!discountValue || discountValue <= 0) {
                     messageDiv.innerHTML = '<p class="error">❌ Please enter a valid discount value</p>';
                     return;
@@ -301,7 +321,8 @@
                     count,
                     prefix,
                     discount_type: discountType,
-                    discount_value: discountType !== 'tier' ? discountValue : null
+                    discount_value: (discountType === 'amount' || discountType === 'percent') ? discountValue : null,
+                    trial_days: discountType === 'trial' ? trialDuration : null
                 };
 
                 const response = await fetch('/api/admin/generate-promo-codes', {
@@ -319,6 +340,14 @@
                     let discountLabel = '';
                     if (discountType === 'tier') {
                         discountLabel = tier.toUpperCase();
+                    } else if (discountType === 'trial') {
+                        const days = trialDuration;
+                        if (days === 7) discountLabel = '1 WEEK FREE';
+                        else if (days === 14) discountLabel = '2 WEEKS FREE';
+                        else if (days === 21) discountLabel = '3 WEEKS FREE';
+                        else if (days === 30) discountLabel = '1 MONTH FREE';
+                        else if (days === 60) discountLabel = '2 MONTHS FREE';
+                        else discountLabel = `${days} DAYS FREE`;
                     } else if (discountType === 'amount') {
                         discountLabel = `$${discountValue} OFF`;
                     } else if (discountType === 'percent') {

@@ -809,6 +809,13 @@ def init_database():
         except sqlite3.OperationalError as e:
             print(f"⚠️  Could not add promo_code_applied column: {e}")
 
+    if 'trial_end_date' not in user_columns:
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN trial_end_date TIMESTAMP DEFAULT NULL")
+            print("✅ Added trial_end_date column to users (for free trial promo codes)")
+        except sqlite3.OperationalError as e:
+            print(f"⚠️  Could not add trial_end_date column: {e}")
+
     print("✅ Cost monitoring tables initialized")
 
     conn.commit()
@@ -879,6 +886,14 @@ def init_promo_codes_table():
             print("✅ Added discount_value column")
         except sqlite3.OperationalError as e:
             print(f"Warning: Could not add discount_value column: {e}")
+
+    if 'trial_days' not in existing_columns:
+        try:
+            print("Adding trial_days column to promo_codes table...")
+            cursor.execute("ALTER TABLE promo_codes ADD COLUMN trial_days INTEGER DEFAULT NULL")
+            print("✅ Added trial_days column (for free trial promo codes)")
+        except sqlite3.OperationalError as e:
+            print(f"Warning: Could not add trial_days column: {e}")
 
     # Create promo_code_usage table
     cursor.execute("""
@@ -6848,15 +6863,16 @@ def generate_promo_code(length=12):
     return ''.join(secrets.choice(chars) for _ in range(length))
 
 
-def create_promo_codes(tier, count, prefix="", discount_type="tier", discount_value=None):
+def create_promo_codes(tier, count, prefix="", discount_type="tier", discount_value=None, trial_days=None):
     """Create multiple promo codes for a tier or discount
 
     Args:
         tier: Subscription tier (for tier upgrades) or empty string for discounts
         count: Number of codes to generate
         prefix: Optional prefix for codes
-        discount_type: 'tier', 'amount', or 'percent'
+        discount_type: 'tier', 'amount', 'percent', or 'trial'
         discount_value: Dollar amount or percentage value (for amount/percent discounts)
+        trial_days: Number of days for free trial (for trial codes)
     """
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -6870,9 +6886,9 @@ def create_promo_codes(tier, count, prefix="", discount_type="tier", discount_va
             max_uses = -1  # -1 means unlimited uses
 
             cursor.execute("""
-                INSERT INTO promo_codes (code, tier, max_uses, is_active, single_use, discount_type, discount_value)
-                VALUES (?, ?, ?, 1, 0, ?, ?)
-            """, (code, tier or 'free', max_uses, discount_type, discount_value))
+                INSERT INTO promo_codes (code, tier, max_uses, is_active, single_use, discount_type, discount_value, trial_days)
+                VALUES (?, ?, ?, 1, 0, ?, ?, ?)
+            """, (code, tier or 'free', max_uses, discount_type, discount_value, trial_days))
             codes.append(code)
         except sqlite3.IntegrityError:
             # Code already exists, try again
@@ -6895,7 +6911,7 @@ def validate_promo_code(code):
 
     cursor.execute("""
         SELECT id, tier, max_uses, times_used, expires_at, is_active, single_use,
-               discount_type, discount_value
+               discount_type, discount_value, trial_days
         FROM promo_codes
         WHERE code = ?
     """, (code.upper(),))
@@ -6906,7 +6922,7 @@ def validate_promo_code(code):
     if not result:
         return False, "Invalid promo code"
 
-    promo_id, tier, max_uses, times_used, expires_at, is_active, single_use, discount_type, discount_value = result
+    promo_id, tier, max_uses, times_used, expires_at, is_active, single_use, discount_type, discount_value, trial_days = result
 
     if not is_active:
         return False, "This promo code is no longer active"
@@ -6930,7 +6946,8 @@ def validate_promo_code(code):
         'tier': tier,
         'single_use': single_use,
         'discount_type': discount_type or 'tier',
-        'discount_value': discount_value
+        'discount_value': discount_value,
+        'trial_days': trial_days
     }
 
 
@@ -6946,6 +6963,7 @@ def redeem_promo_code(code, user_id):
     tier = result.get('tier')
     discount_type = result.get('discount_type', 'tier')
     discount_value = result.get('discount_value')
+    trial_days = result.get('trial_days')
 
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -6984,6 +7002,33 @@ def redeem_promo_code(code, user_id):
             """, (tier, user_id))
             success_message = tier
 
+        elif discount_type == 'trial':
+            # Free trial - set trial end date
+            from datetime import datetime, timedelta
+            trial_end = datetime.utcnow() + timedelta(days=trial_days)
+            trial_end_str = trial_end.isoformat()
+
+            cursor.execute("""
+                UPDATE users
+                SET subscription_tier = 'pro',
+                    trial_end_date = ?,
+                    promo_code_applied = ?
+                WHERE id = ?
+            """, (trial_end_str, code, user_id))
+
+            if trial_days == 7:
+                success_message = "1 week free trial activated"
+            elif trial_days == 14:
+                success_message = "2 weeks free trial activated"
+            elif trial_days == 21:
+                success_message = "3 weeks free trial activated"
+            elif trial_days == 30:
+                success_message = "1 month free trial activated"
+            elif trial_days == 60:
+                success_message = "2 months free trial activated"
+            else:
+                success_message = f"{trial_days} days free trial activated"
+
         elif discount_type == 'amount':
             # Dollar amount discount
             cursor.execute("""
@@ -7013,7 +7058,7 @@ def redeem_promo_code(code, user_id):
         conn.commit()
         conn.close()
 
-        return True, {'type': discount_type, 'message': success_message, 'value': discount_value if discount_type != 'tier' else None}
+        return True, {'type': discount_type, 'message': success_message, 'value': discount_value if discount_type != 'tier' else trial_days}
 
     except Exception as e:
         conn.close()
@@ -7198,12 +7243,13 @@ def admin_generate_promo_codes():
         prefix = data.get('prefix', '')
         discount_type = data.get('discount_type', 'tier')
         discount_value = data.get('discount_value')
+        trial_days = data.get('trial_days')
 
-        print(f"Generating {count} promo codes - Type: {discount_type}, Tier: {tier}, Prefix: {prefix}")
+        print(f"Generating {count} promo codes - Type: {discount_type}, Tier: {tier}, Prefix: {prefix}, Trial Days: {trial_days}")
 
         # Validate discount type
-        if discount_type not in ['tier', 'amount', 'percent']:
-            return jsonify({'error': 'Invalid discount type. Must be tier, amount, or percent'}), 400
+        if discount_type not in ['tier', 'amount', 'percent', 'trial']:
+            return jsonify({'error': 'Invalid discount type. Must be tier, amount, percent, or trial'}), 400
 
         # Validate tier for tier-based codes
         if discount_type == 'tier' and tier not in SUBSCRIPTION_TIERS:
@@ -7217,7 +7263,12 @@ def admin_generate_promo_codes():
             if discount_type == 'percent' and discount_value > 100:
                 return jsonify({'error': 'Percentage discount cannot exceed 100%'}), 400
 
-        codes = create_promo_codes(tier, count, prefix, discount_type, discount_value)
+        # Validate trial_days for trial codes
+        if discount_type == 'trial':
+            if trial_days is None or trial_days <= 0:
+                return jsonify({'error': 'Trial days must be greater than 0'}), 400
+
+        codes = create_promo_codes(tier, count, prefix, discount_type, discount_value, trial_days)
 
         print(f"✅ Successfully generated {len(codes)} promo codes")
 
@@ -7226,7 +7277,8 @@ def admin_generate_promo_codes():
             'codes': codes,
             'count': len(codes),
             'discount_type': discount_type,
-            'discount_value': discount_value
+            'discount_value': discount_value,
+            'trial_days': trial_days
         }), 200
 
     except Exception as e:
