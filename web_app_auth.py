@@ -5571,7 +5571,7 @@ def call_mistral_with_history(model_id, system_prompt, history, new_message, max
 def route_to_model(model_key, system_prompt, history, new_message):
     """Route to appropriate AI model with conversation history"""
     if model_key not in MODELS:
-        model_key = 'llama-3.3-70b'  # Default fallback (best value for free users)
+        model_key = 'gemini-2.0-flash'  # Default fallback (free, no API key needed)
     
     config = MODELS[model_key]
     provider = config['provider']
@@ -5734,14 +5734,14 @@ def chat():
             data = request.json
             message = data.get('message')
             agent = data.get('agent', 'Ember')
-            model_key = data.get('model', 'llama-3.3-70b')  # Default to Llama 3.3 70B (best value)
+            model_key = data.get('model', 'gemini-2.0-flash')  # Default to Gemini (free)
             attached_file = data.get('file')
             uploaded_file = None
         else:
             # FormData request (new format with file upload)
             message = request.form.get('message', '')
             agent = request.form.get('agent', 'Luna')
-            model_key = request.form.get('model', 'llama-3.3-70b')  # Default to Llama 3.3 70B (best value)
+            model_key = request.form.get('model', 'gemini-2.0-flash')  # Default to Gemini (free)
             attached_file = None
             uploaded_file = request.files.get('file')
         
