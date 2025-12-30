@@ -5781,41 +5781,88 @@ def chat():
             last_reset = None
             tier_info = SUBSCRIPTION_TIERS.get('free', {'messages_per_day': 25})
             daily_limit = tier_info['messages_per_day']
-        
-        # ============================================
-        # BLOCK FREE USERS FROM CLAUDE API (COST SAVINGS)
-        # ============================================
-        # Claude API costs money per request. Only allow paid subscribers
-        # (starter and pro) to use Claude models to prevent API cost overruns
-        # from free and freeforlife promo code users.
-        if model_key in ['claude-sonnet-4.5', 'claude-opus-4', 'claude-haiku']:
-            if not is_paid_user(tier):
-                conn.close()
-                return jsonify({
-                    'error': 'Claude AI models are only available for paid subscribers. Upgrade to Starter ($19/mo) or Pro ($49/mo) to access Claude\'s advanced AI capabilities with superior reasoning and coding abilities.',
-                    'upgrade_required': True,
-                    'current_tier': tier,
-                    'available_tiers': ['starter', 'pro']
-                }), 403  # 403 Forbidden
-        # ============================================
 
         # ============================================
-        # RESTRICT EXPENSIVE MODELS (>$6) TO PRO/ENTERPRISE
+        # TIER-BASED MODEL ACCESS RESTRICTIONS
         # ============================================
-        # Models that cost over $6 per million tokens are restricted
-        # to Pro ($49/mo) and Enterprise ($199/mo) plans only
-        EXPENSIVE_MODELS = ['claude-opus-4', 'gpt-4-turbo']  # $15 and $10 respectively
 
-        if model_key in EXPENSIVE_MODELS:
-            if tier not in ['pro', 'enterprise']:
-                conn.close()
-                model_name = 'Claude Opus 4' if model_key == 'claude-opus-4' else 'GPT-4 Turbo'
-                return jsonify({
-                    'error': f'{model_name} is only available for Pro ($49/mo) and Enterprise ($199/mo) subscribers due to high API costs.',
-                    'upgrade_required': True,
-                    'current_tier': tier,
-                    'required_tiers': ['pro', 'enterprise']
-                }), 403  # 403 Forbidden
+        # Define models by tier
+        FREE_TIER_MODELS = [
+            'gemini-2.0-flash',      # FREE
+            'gemini-1.5-pro',        # FREE
+            'llama-3.3-70b'          # $0.18 - Cheap Llama model
+        ]
+
+        STARTER_TIER_MODELS = FREE_TIER_MODELS + [
+            # $2-3 range models
+            'grok-2',                # $2
+            'grok-2-vision',         # $2
+            'mistral-large',         # $2
+            'gpt-4o',                # $2.50
+            'llama-3.1-405b',        # $2.70
+            'perplexity-sonar-pro',  # $3
+            'claude-sonnet-4.5'      # $3
+        ]
+
+        PRO_TIER_MODELS = STARTER_TIER_MODELS + [
+            # All other models under $6
+            'mistral-small',         # $0.20
+            'deepseek-v3',           # $0.27
+            'gpt-4o-mini',           # $0.15
+            'deepseek-r1',           # $0.55
+            'claude-haiku-4.5',      # $0.80
+            'perplexity-sonar'       # $1
+        ]
+
+        ENTERPRISE_ONLY_MODELS = [
+            'claude-opus-4',         # $15
+            'gpt-4-turbo'            # $10
+        ]
+
+        # Check model access based on tier
+        if tier in ['free', 'freeforlife']:
+            allowed_models = FREE_TIER_MODELS
+            tier_name = 'Free'
+            upgrade_tier = 'Starter ($19/mo)'
+        elif tier == 'starter':
+            allowed_models = STARTER_TIER_MODELS
+            tier_name = 'Starter'
+            upgrade_tier = 'Pro ($49/mo)'
+        elif tier == 'pro':
+            allowed_models = PRO_TIER_MODELS
+            tier_name = 'Pro'
+            upgrade_tier = 'Enterprise ($199/mo)'
+        elif tier == 'enterprise':
+            allowed_models = PRO_TIER_MODELS + ENTERPRISE_ONLY_MODELS
+            tier_name = 'Enterprise'
+            upgrade_tier = None
+        else:
+            # Default to free tier if unknown tier
+            allowed_models = FREE_TIER_MODELS
+            tier_name = 'Free'
+            upgrade_tier = 'Starter ($19/mo)'
+
+        # Block model if not in allowed list
+        if model_key not in allowed_models:
+            conn.close()
+
+            # Determine which tier has this model
+            if model_key in ENTERPRISE_ONLY_MODELS:
+                required_tier = 'Pro ($49/mo) or Enterprise ($199/mo)'
+            elif model_key in PRO_TIER_MODELS:
+                required_tier = 'Pro ($49/mo)'
+            elif model_key in STARTER_TIER_MODELS:
+                required_tier = 'Starter ($19/mo)'
+            else:
+                required_tier = 'a paid plan'
+
+            return jsonify({
+                'error': f'This model is not available on your {tier_name} plan. Upgrade to {required_tier} to access this model.',
+                'upgrade_required': True,
+                'current_tier': tier,
+                'required_tier': required_tier,
+                'blocked_model': model_key
+            }), 403  # 403 Forbidden
         # ============================================
 
         # ============================================

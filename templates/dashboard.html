@@ -2833,35 +2833,38 @@
                 <div class="model-selector-header">
                     <span class="model-label">Model:</span>
                     <select id="modelSelect" class="model-select">
-                        <optgroup label="🆓 Free Models">
-                            <option value="gemini-2.0-flash" selected>Gemini 2.0 Flash</option>
-                            <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                        <!-- Free Tier: Gemini + Llama 3.3 70B -->
+                        <optgroup label="🆓 Free Tier">
+                            <option value="gemini-2.0-flash" selected data-tier="free">Gemini 2.0 Flash</option>
+                            <option value="gemini-1.5-pro" data-tier="free">Gemini 1.5 Pro</option>
+                            <option value="llama-3.3-70b" data-tier="free">Llama 3.3 70B</option>
                         </optgroup>
-                        <optgroup label="💎 Budget Models">
-                            <option value="llama-3.3-70b">Llama 3.3 70B</option>
-                            <option value="mistral-small">Mistral Small</option>
-                            <option value="deepseek-v3">DeepSeek V3</option>
-                            <option value="gpt-4o-mini">GPT-4o Mini</option>
+
+                        <!-- Starter Tier: $2-3 models -->
+                        <optgroup label="💼 Starter ($19/mo)">
+                            <option value="grok-2" data-tier="starter">Grok 2</option>
+                            <option value="grok-2-vision" data-tier="starter">Grok 2 Vision</option>
+                            <option value="mistral-large" data-tier="starter">Mistral Large</option>
+                            <option value="gpt-4o" data-tier="starter">GPT-4o</option>
+                            <option value="llama-3.1-405b" data-tier="starter">Llama 3.1 405B</option>
+                            <option value="perplexity-sonar-pro" data-tier="starter">Perplexity Pro</option>
+                            <option value="claude-sonnet-4.5" data-tier="starter">Claude Sonnet 4.5</option>
                         </optgroup>
-                        <optgroup label="🧠 Claude (Anthropic)">
-                            <option value="claude-haiku-4.5">Claude Haiku 4.5</option>
-                            <option value="claude-sonnet-4.5">Claude Sonnet 4.5</option>
-                            <option value="claude-opus-4" data-tier-required="pro">Claude Opus 4 ⭐</option>
+
+                        <!-- Pro Tier: Everything else under $6 -->
+                        <optgroup label="⭐ Pro ($49/mo)">
+                            <option value="mistral-small" data-tier="pro">Mistral Small</option>
+                            <option value="deepseek-v3" data-tier="pro">DeepSeek V3</option>
+                            <option value="gpt-4o-mini" data-tier="pro">GPT-4o Mini</option>
+                            <option value="deepseek-r1" data-tier="pro">DeepSeek R1</option>
+                            <option value="claude-haiku-4.5" data-tier="pro">Claude Haiku 4.5</option>
+                            <option value="perplexity-sonar" data-tier="pro">Perplexity Sonar</option>
                         </optgroup>
-                        <optgroup label="🤖 GPT (OpenAI)">
-                            <option value="gpt-4o">GPT-4o</option>
-                            <option value="gpt-4-turbo" data-tier-required="pro">GPT-4 Turbo ⭐</option>
-                        </optgroup>
-                        <optgroup label="🔍 Search & Reasoning">
-                            <option value="perplexity-sonar">Perplexity Sonar</option>
-                            <option value="perplexity-sonar-pro">Perplexity Pro</option>
-                            <option value="deepseek-r1">DeepSeek R1</option>
-                        </optgroup>
-                        <optgroup label="🌟 Premium Models">
-                            <option value="grok-2">Grok 2</option>
-                            <option value="grok-2-vision">Grok 2 Vision</option>
-                            <option value="llama-3.1-405b">Llama 3.1 405B</option>
-                            <option value="mistral-large">Mistral Large</option>
+
+                        <!-- Enterprise Only: $6+ models -->
+                        <optgroup label="💎 Pro/Enterprise Only">
+                            <option value="claude-opus-4" data-tier="enterprise">Claude Opus 4</option>
+                            <option value="gpt-4-turbo" data-tier="enterprise">GPT-4 Turbo</option>
                         </optgroup>
                     </select>
                 </div>
@@ -2878,35 +2881,38 @@
                         <div class="settings-section">
                             <div class="settings-label">Model</div>
                             <select id="modelSelectMobile" class="model-select-compact">
-                                <optgroup label="🆓 Free Models">
-                                    <option value="gemini-2.0-flash" selected>Gemini 2.0 Flash</option>
-                                    <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                                <!-- Free Tier: Gemini + Llama 3.3 70B -->
+                                <optgroup label="🆓 Free Tier">
+                                    <option value="gemini-2.0-flash" selected data-tier="free">Gemini 2.0 Flash</option>
+                                    <option value="gemini-1.5-pro" data-tier="free">Gemini 1.5 Pro</option>
+                                    <option value="llama-3.3-70b" data-tier="free">Llama 3.3 70B</option>
                                 </optgroup>
-                                <optgroup label="💎 Budget Models">
-                                    <option value="llama-3.3-70b">Llama 3.3 70B</option>
-                                    <option value="mistral-small">Mistral Small</option>
-                                    <option value="deepseek-v3">DeepSeek V3</option>
-                                    <option value="gpt-4o-mini">GPT-4o Mini</option>
+
+                                <!-- Starter Tier: $2-3 models -->
+                                <optgroup label="💼 Starter ($19/mo)">
+                                    <option value="grok-2" data-tier="starter">Grok 2</option>
+                                    <option value="grok-2-vision" data-tier="starter">Grok 2 Vision</option>
+                                    <option value="mistral-large" data-tier="starter">Mistral Large</option>
+                                    <option value="gpt-4o" data-tier="starter">GPT-4o</option>
+                                    <option value="llama-3.1-405b" data-tier="starter">Llama 3.1 405B</option>
+                                    <option value="perplexity-sonar-pro" data-tier="starter">Perplexity Pro</option>
+                                    <option value="claude-sonnet-4.5" data-tier="starter">Claude Sonnet 4.5</option>
                                 </optgroup>
-                                <optgroup label="🧠 Claude (Anthropic)">
-                                    <option value="claude-haiku-4.5">Claude Haiku 4.5</option>
-                                    <option value="claude-sonnet-4.5">Claude Sonnet 4.5</option>
-                                    <option value="claude-opus-4" data-tier-required="pro">Claude Opus 4 ⭐</option>
+
+                                <!-- Pro Tier: Everything else under $6 -->
+                                <optgroup label="⭐ Pro ($49/mo)">
+                                    <option value="mistral-small" data-tier="pro">Mistral Small</option>
+                                    <option value="deepseek-v3" data-tier="pro">DeepSeek V3</option>
+                                    <option value="gpt-4o-mini" data-tier="pro">GPT-4o Mini</option>
+                                    <option value="deepseek-r1" data-tier="pro">DeepSeek R1</option>
+                                    <option value="claude-haiku-4.5" data-tier="pro">Claude Haiku 4.5</option>
+                                    <option value="perplexity-sonar" data-tier="pro">Perplexity Sonar</option>
                                 </optgroup>
-                                <optgroup label="🤖 GPT (OpenAI)">
-                                    <option value="gpt-4o">GPT-4o</option>
-                                    <option value="gpt-4-turbo" data-tier-required="pro">GPT-4 Turbo ⭐</option>
-                                </optgroup>
-                                <optgroup label="🔍 Search & Reasoning">
-                                    <option value="perplexity-sonar">Perplexity Sonar</option>
-                                    <option value="perplexity-sonar-pro">Perplexity Pro</option>
-                                    <option value="deepseek-r1">DeepSeek R1</option>
-                                </optgroup>
-                                <optgroup label="🌟 Premium Models">
-                                    <option value="grok-2">Grok 2</option>
-                                    <option value="grok-2-vision">Grok 2 Vision</option>
-                                    <option value="llama-3.1-405b">Llama 3.1 405B</option>
-                                    <option value="mistral-large">Mistral Large</option>
+
+                                <!-- Enterprise Only: $6+ models -->
+                                <optgroup label="💎 Pro/Enterprise Only">
+                                    <option value="claude-opus-4" data-tier="enterprise">Claude Opus 4</option>
+                                    <option value="gpt-4-turbo" data-tier="enterprise">GPT-4 Turbo</option>
                                 </optgroup>
                             </select>
                         </div>
@@ -4382,10 +4388,20 @@
             syncModelSelectors();
         });
 
-        // Apply tier restrictions to expensive models
+        // Apply tier restrictions to model selectors
         function applyModelTierRestrictions() {
             const userTier = '{{ current_user.subscription_tier }}';
-            const isPaidUser = (userTier === 'pro' || userTier === 'enterprise');
+
+            // Define tier hierarchy
+            const tierHierarchy = {
+                'free': 0,
+                'freeforlife': 0,
+                'starter': 1,
+                'pro': 2,
+                'enterprise': 3
+            };
+
+            const userTierLevel = tierHierarchy[userTier] || 0;
 
             // Get both selectors
             const selectors = [
@@ -4396,14 +4412,30 @@
             selectors.forEach(selector => {
                 if (!selector) return;
 
-                // Find all options that require pro/enterprise tier
-                const restrictedOptions = selector.querySelectorAll('[data-tier-required="pro"]');
+                // Process each option
+                const options = selector.querySelectorAll('option[data-tier]');
 
-                restrictedOptions.forEach(option => {
-                    if (!isPaidUser) {
-                        // Disable the option for non-paid users
+                options.forEach(option => {
+                    const requiredTier = option.getAttribute('data-tier');
+                    const requiredTierLevel = tierHierarchy[requiredTier] || 0;
+
+                    if (userTierLevel < requiredTierLevel) {
+                        // User doesn't have access to this model
                         option.disabled = true;
-                        option.textContent = option.textContent + ' (Pro/Enterprise Only)';
+
+                        // Add upgrade message
+                        let upgradeTier = '';
+                        if (requiredTier === 'starter') {
+                            upgradeTier = ' (Upgrade to Starter)';
+                        } else if (requiredTier === 'pro') {
+                            upgradeTier = ' (Upgrade to Pro)';
+                        } else if (requiredTier === 'enterprise') {
+                            upgradeTier = ' (Pro/Enterprise Only)';
+                        }
+
+                        if (!option.textContent.includes('Upgrade')) {
+                            option.textContent = option.textContent + upgradeTier;
+                        }
                     }
                 });
             });
