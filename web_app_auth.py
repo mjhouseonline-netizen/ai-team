@@ -1559,6 +1559,76 @@ STYLE RULES:
             'traceback': traceback.format_exc()
         }), 500
 
+@app.route('/admin/migrate-starter-agents')
+def migrate_starter_agents():
+    """Migrate old starter agents from custom_agents to global_agents system"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Step 1: Delete old starter agents from custom_agents table
+        starter_agent_names = ['Content Helper', 'Email Assistant', 'Meeting Summarizer']
+
+        deleted_count = 0
+        for agent_name in starter_agent_names:
+            cursor.execute("""
+                DELETE FROM custom_agents WHERE name = ?
+            """, (agent_name,))
+            deleted_count += cursor.rowcount
+
+        # Step 2: Ensure global agents exist
+        initialize_default_global_agents()
+
+        # Step 3: Get all users
+        cursor.execute("SELECT id FROM users WHERE is_active = 1")
+        all_users = cursor.fetchall()
+
+        # Step 4: Assign global agents to all users
+        assigned_count = 0
+        for user_row in all_users:
+            user_id = user_row[0]
+
+            # Assign default global agents to this user
+            for agent in DEFAULT_GLOBAL_AGENTS:
+                cursor.execute("""
+                    SELECT id FROM global_agents WHERE name = ?
+                """, (agent['name'],))
+
+                result = cursor.fetchone()
+                if result:
+                    global_agent_id = result[0]
+
+                    # Assign to user (skip if already assigned)
+                    try:
+                        cursor.execute("""
+                            INSERT INTO user_global_agents (user_id, global_agent_id, assigned_by, assigned_at)
+                            VALUES (?, ?, 1, CURRENT_TIMESTAMP)
+                        """, (user_id, global_agent_id))
+                        assigned_count += 1
+                    except sqlite3.IntegrityError:
+                        # Already assigned, skip
+                        pass
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': 'Migration completed successfully!',
+            'deleted_custom_agents': deleted_count,
+            'users_processed': len(all_users),
+            'global_agents_assigned': assigned_count,
+            'instructions': 'Refresh your dashboard to see the updated agents!'
+        }), 200
+
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
 # ============================================
 # PUBLIC PAGES
 # ============================================
