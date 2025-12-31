@@ -230,6 +230,25 @@
             </div>
 
             <div class="form-group">
+                <label>Usage Limit:</label>
+                <select id="maxUses">
+                    <option value="-1">Unlimited Uses</option>
+                    <option value="0">Single Use (One Time Only)</option>
+                    <option value="5">5 Uses</option>
+                    <option value="10">10 Uses</option>
+                    <option value="25">25 Uses</option>
+                    <option value="50">50 Uses</option>
+                    <option value="100">100 Uses</option>
+                    <option value="custom">Custom Amount...</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="customMaxUsesGroup" style="display: none;">
+                <label>Custom Usage Limit:</label>
+                <input type="number" id="customMaxUses" placeholder="Enter number of uses" min="1">
+            </div>
+
+            <div class="form-group">
                 <label>Prefix (optional):</label>
                 <input type="text" id="prefix" placeholder="e.g., LAUNCH-">
             </div>
@@ -287,6 +306,20 @@
             }
         }
 
+        // Toggle custom max uses input
+        document.addEventListener('DOMContentLoaded', function() {
+            const maxUsesSelect = document.getElementById('maxUses');
+            const customMaxUsesGroup = document.getElementById('customMaxUsesGroup');
+
+            maxUsesSelect.addEventListener('change', function() {
+                if (this.value === 'custom') {
+                    customMaxUsesGroup.style.display = 'block';
+                } else {
+                    customMaxUsesGroup.style.display = 'none';
+                }
+            });
+        });
+
         async function generateCodes() {
             const discountType = document.getElementById('discountType').value;
             const tier = document.getElementById('tier').value;
@@ -294,7 +327,21 @@
             const prefix = document.getElementById('prefix').value.trim();
             const discountValue = parseFloat(document.getElementById('discountValue').value);
             const trialDuration = parseInt(document.getElementById('trialDuration').value);
+            const maxUsesSelect = document.getElementById('maxUses').value;
+            const customMaxUses = parseInt(document.getElementById('customMaxUses').value);
             const messageDiv = document.getElementById('generateMessage');
+
+            // Determine max_uses value
+            let maxUses = -1; // Default to unlimited
+            if (maxUsesSelect === 'custom') {
+                if (!customMaxUses || customMaxUses < 1) {
+                    messageDiv.innerHTML = '<p class="error">❌ Please enter a valid custom usage limit (must be at least 1)</p>';
+                    return;
+                }
+                maxUses = customMaxUses;
+            } else {
+                maxUses = parseInt(maxUsesSelect);
+            }
 
             if (count < 1 || count > 100) {
                 messageDiv.innerHTML = '<p class="error">❌ Please enter between 1 and 100 codes</p>';
@@ -322,7 +369,8 @@
                     prefix,
                     discount_type: discountType,
                     discount_value: (discountType === 'amount' || discountType === 'percent') ? discountValue : null,
-                    trial_days: discountType === 'trial' ? trialDuration : null
+                    trial_days: discountType === 'trial' ? trialDuration : null,
+                    max_uses: maxUses
                 };
 
                 const response = await fetch('/api/admin/generate-promo-codes', {
@@ -354,7 +402,12 @@
                         discountLabel = `${discountValue}% OFF`;
                     }
 
-                    messageDiv.innerHTML = `<p class="success">✅ Generated ${data.count} codes!</p>`;
+                    // Determine usage limit label
+                    let usageLabel = maxUses === -1 ? '∞ Unlimited' :
+                                   maxUses === 0 ? '🔒 Single Use' :
+                                   `${maxUses} Uses`;
+
+                    messageDiv.innerHTML = `<p class="success">✅ Generated ${data.count} codes! (${usageLabel})</p>`;
 
                     // Display codes
                     const codesDisplay = document.getElementById('generatedCodes');
@@ -363,10 +416,13 @@
                     codesList.innerHTML = data.codes.map(code => `
                         <div class="code-item">
                             <span class="code-text">${code}</span>
-                            <span class="code-tier">${discountLabel}</span>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <span class="code-tier">${discountLabel}</span>
+                                <span style="font-size: 0.85em; color: #7f8c8d; padding: 4px 8px; background: #ecf0f1; border-radius: 12px;">${usageLabel}</span>
+                            </div>
                         </div>
                     `).join('');
-                    
+
                     codesDisplay.style.display = 'block';
                 } else {
                     messageDiv.innerHTML = `<p class="error">❌ ${data.error}</p>`;
@@ -400,24 +456,52 @@
                             <thead>
                                 <tr>
                                     <th>Code</th>
-                                    <th>Tier</th>
-                                    <th>Usage</th>
+                                    <th>Type</th>
+                                    <th>Discount/Tier</th>
+                                    <th>Usage Limit</th>
                                     <th>Status</th>
                                     <th>Created</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                ${data.codes.map(code => `
-                                    <tr>
-                                        <td><span class="code-text">${code.code}</span></td>
-                                        <td><span class="code-tier">${code.tier.toUpperCase()}</span></td>
-                                        <td>${code.times_used} / ${code.max_uses}</td>
-                                        <td class="${code.times_used >= code.max_uses ? 'used' : 'available'}">
-                                            ${code.times_used >= code.max_uses ? '🔴 Used' : '🟢 Available'}
-                                        </td>
-                                        <td>${new Date(code.created_at).toLocaleDateString()}</td>
-                                    </tr>
-                                `).join('')}
+                                ${data.codes.map(code => {
+                                    // Determine discount label
+                                    let discountLabel = '';
+                                    let discountType = code.discount_type || 'tier';
+
+                                    if (discountType === 'tier') {
+                                        discountLabel = code.tier.toUpperCase();
+                                    } else if (discountType === 'trial' && code.trial_days) {
+                                        discountLabel = `${code.trial_days} Days Free`;
+                                    } else if (discountType === 'amount' && code.discount_value) {
+                                        discountLabel = `$${code.discount_value} OFF`;
+                                    } else if (discountType === 'percent' && code.discount_value) {
+                                        discountLabel = `${code.discount_value}% OFF`;
+                                    } else {
+                                        discountLabel = code.tier.toUpperCase();
+                                    }
+
+                                    // Determine usage display
+                                    let usageDisplay = code.max_uses === -1 ?
+                                        `${code.times_used} / ∞` :
+                                        `${code.times_used} / ${code.max_uses}`;
+
+                                    // Determine if fully used
+                                    let isUsed = code.max_uses !== -1 && code.times_used >= code.max_uses;
+
+                                    return `
+                                        <tr>
+                                            <td><span class="code-text">${code.code}</span></td>
+                                            <td><span style="font-size: 0.85em; color: #7f8c8d;">${discountType.charAt(0).toUpperCase() + discountType.slice(1)}</span></td>
+                                            <td><span class="code-tier">${discountLabel}</span></td>
+                                            <td>${usageDisplay}</td>
+                                            <td class="${isUsed ? 'used' : 'available'}">
+                                                ${isUsed ? '🔴 Used Up' : '🟢 Available'}
+                                            </td>
+                                            <td>${new Date(code.created_at).toLocaleDateString()}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
                             </tbody>
                         </table>
                     `;
