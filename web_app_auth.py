@@ -773,7 +773,7 @@ def init_database():
 
     if 'last_cost_reset' not in user_columns:
         try:
-            cursor.execute("ALTER TABLE users ADD COLUMN last_cost_reset TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+            cursor.execute("ALTER TABLE users ADD COLUMN last_cost_reset TIMESTAMP DEFAULT NULL")
             print("✅ Added last_cost_reset column to users")
         except sqlite3.OperationalError as e:
             print(f"⚠️  Could not add last_cost_reset column: {e}")
@@ -846,7 +846,7 @@ def init_database():
 
     if 'share_code' not in global_agent_columns:
         try:
-            cursor.execute("ALTER TABLE global_agents ADD COLUMN share_code TEXT UNIQUE")
+            cursor.execute("ALTER TABLE global_agents ADD COLUMN share_code TEXT DEFAULT NULL")
             print("✅ Added share_code column to global_agents (for public sharing)")
         except sqlite3.OperationalError as e:
             print(f"⚠️  Could not add share_code column: {e}")
