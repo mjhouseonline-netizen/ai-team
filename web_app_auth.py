@@ -4850,8 +4850,8 @@ def start_oauth_flow(integration_key):
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/integrations/oauth/callback')
-def oauth_callback():
-    """Handle OAuth callback"""
+def oauth_callback_legacy():
+    """Handle OAuth callback (legacy endpoint)"""
     try:
         code = request.args.get('code')
         state = request.args.get('state')
