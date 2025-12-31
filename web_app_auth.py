@@ -9242,6 +9242,41 @@ def get_global_agents():
         print(f"❌ Error getting global agents: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/admin/users', methods=['GET'])
+@login_required
+def admin_get_all_users():
+    """Admin: Get all users for assignment"""
+    if current_user.id != 1:  # Admin only
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT id, username, email, subscription_tier, created_at
+            FROM users
+            WHERE id != 1
+            ORDER BY created_at DESC
+        """)
+
+        users = []
+        for row in cursor.fetchall():
+            users.append({
+                'id': row[0],
+                'username': row[1],
+                'email': row[2],
+                'subscription_tier': row[3],
+                'created_at': row[4]
+            })
+
+        conn.close()
+        return jsonify({'users': users}), 200
+
+    except Exception as e:
+        print(f"❌ Error getting users: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/admin/global-agents', methods=['GET'])
 @login_required
 def admin_get_all_global_agents():
