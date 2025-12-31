@@ -8065,7 +8065,7 @@ def generate_promo_code(length=12):
     return ''.join(secrets.choice(chars) for _ in range(length))
 
 
-def create_promo_codes(tier, count, prefix="", discount_type="tier", discount_value=None, trial_days=None):
+def create_promo_codes(tier, count, prefix="", discount_type="tier", discount_value=None, trial_days=None, max_uses=-1):
     """Create multiple promo codes for a tier or discount
 
     Args:
@@ -8075,6 +8075,7 @@ def create_promo_codes(tier, count, prefix="", discount_type="tier", discount_va
         discount_type: 'tier', 'amount', 'percent', or 'trial'
         discount_value: Dollar amount or percentage value (for amount/percent discounts)
         trial_days: Number of days for free trial (for trial codes)
+        max_uses: Maximum number of uses per code (-1 for unlimited, 0 for single-use, positive number for limited uses)
     """
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -8084,13 +8085,11 @@ def create_promo_codes(tier, count, prefix="", discount_type="tier", discount_va
         code = f"{prefix}{generate_promo_code(8)}" if prefix else generate_promo_code(12)
 
         try:
-            # Set max_uses = -1 for unlimited uses (default behavior)
-            max_uses = -1  # -1 means unlimited uses
-
+            # max_uses: -1 = unlimited, 0 = single use, positive number = limited uses
             cursor.execute("""
                 INSERT INTO promo_codes (code, tier, max_uses, is_active, single_use, discount_type, discount_value, trial_days)
-                VALUES (?, ?, ?, 1, 0, ?, ?, ?)
-            """, (code, tier or 'free', max_uses, discount_type, discount_value, trial_days))
+                VALUES (?, ?, ?, 1, ?, ?, ?, ?)
+            """, (code, tier or 'free', max_uses, 1 if max_uses == 0 else 0, discount_type, discount_value, trial_days))
             codes.append(code)
         except sqlite3.IntegrityError:
             # Code already exists, try again
@@ -8446,8 +8445,9 @@ def admin_generate_promo_codes():
         discount_type = data.get('discount_type', 'tier')
         discount_value = data.get('discount_value')
         trial_days = data.get('trial_days')
+        max_uses = data.get('max_uses', -1)  # -1 for unlimited by default
 
-        print(f"Generating {count} promo codes - Type: {discount_type}, Tier: {tier}, Prefix: {prefix}, Trial Days: {trial_days}")
+        print(f"Generating {count} promo codes - Type: {discount_type}, Tier: {tier}, Prefix: {prefix}, Max Uses: {max_uses}, Trial Days: {trial_days}")
 
         # Validate discount type
         if discount_type not in ['tier', 'amount', 'percent', 'trial']:
@@ -8470,7 +8470,7 @@ def admin_generate_promo_codes():
             if trial_days is None or trial_days <= 0:
                 return jsonify({'error': 'Trial days must be greater than 0'}), 400
 
-        codes = create_promo_codes(tier, count, prefix, discount_type, discount_value, trial_days)
+        codes = create_promo_codes(tier, count, prefix, discount_type, discount_value, trial_days, max_uses)
 
         print(f"✅ Successfully generated {len(codes)} promo codes")
 
@@ -8505,14 +8505,15 @@ def admin_list_promo_codes():
         print("Loading promo codes...")
         
         cursor.execute("""
-            SELECT code, tier, max_uses, times_used, is_active, created_at
+            SELECT code, tier, max_uses, times_used, is_active, created_at,
+                   discount_type, discount_value, trial_days
             FROM promo_codes
             ORDER BY created_at DESC
         """)
-        
+
         results = cursor.fetchall()
         conn.close()
-        
+
         codes = [
             {
                 'code': row[0],
@@ -8520,7 +8521,10 @@ def admin_list_promo_codes():
                 'max_uses': row[2],
                 'times_used': row[3],
                 'is_active': row[4],
-                'created_at': row[5]
+                'created_at': row[5],
+                'discount_type': row[6] or 'tier',
+                'discount_value': row[7],
+                'trial_days': row[8]
             }
             for row in results
         ]
