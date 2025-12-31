@@ -491,20 +491,27 @@ Do NOT:
             <input type="hidden" id="assignAgentId">
 
             <div class="form-group">
-                <label class="form-label">User IDs (comma-separated)</label>
-                <input type="text" id="assignUserIds" class="form-input" placeholder="2, 3, 4, 5">
-                <div class="form-hint">Enter user IDs to assign this agent to</div>
+                <label class="form-label">Select Users</label>
+                <input type="text" id="userSearch" class="form-input" placeholder="🔍 Search users..." onkeyup="filterUsers()" style="margin-bottom: 15px;">
+
+                <div id="usersList" style="max-height: 400px; overflow-y: auto; border: 2px solid #e2e8f0; border-radius: 8px; padding: 15px; background: #f9fafb;">
+                    <div style="text-align: center; padding: 20px; color: #718096;">
+                        <p>⏳ Loading users...</p>
+                    </div>
+                </div>
+                <div class="form-hint">Select which users should have access to this agent</div>
             </div>
 
             <div style="display: flex; gap: 10px;">
                 <button class="btn btn-secondary" onclick="closeAssignModal()">Cancel</button>
-                <button class="btn btn-primary" onclick="assignAgent()" style="flex: 1;">Assign</button>
+                <button class="btn btn-primary" onclick="assignAgent()" style="flex: 1;">Assign to Selected Users</button>
             </div>
         </div>
     </div>
 
     <script>
         let allAgents = [];
+        let allUsers = [];
 
         // Load all global agents
         async function loadAgents() {
@@ -720,10 +727,64 @@ Do NOT:
             }
         }
 
-        function openAssignModal(agentId) {
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/admin/users');
+                const data = await response.json();
+                allUsers = data.users || [];
+                renderUsersList(allUsers);
+            } catch (error) {
+                console.error('Error loading users:', error);
+                document.getElementById('usersList').innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #f56565;">
+                        <p>❌ Error loading users</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderUsersList(users) {
+            const container = document.getElementById('usersList');
+
+            if (users.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #718096;">
+                        <p>No users found</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = users.map(user => `
+                <label style="display: flex; align-items: center; gap: 12px; padding: 12px; background: white; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; border: 2px solid transparent;" onmouseover="this.style.borderColor='#667eea'" onmouseout="this.style.borderColor='transparent'">
+                    <input type="checkbox" class="user-checkbox" value="${user.id}" style="width: 18px; height: 18px; cursor: pointer;">
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; color: #1a202c;">${user.username || user.email}</div>
+                        <div style="font-size: 0.85em; color: #718096;">
+                            ${user.email} • ID: ${user.id} • ${user.subscription_tier || 'free'}
+                        </div>
+                    </div>
+                </label>
+            `).join('');
+        }
+
+        function filterUsers() {
+            const query = document.getElementById('userSearch').value.toLowerCase();
+            const filtered = allUsers.filter(user =>
+                (user.username && user.username.toLowerCase().includes(query)) ||
+                (user.email && user.email.toLowerCase().includes(query)) ||
+                (user.id && user.id.toString().includes(query))
+            );
+            renderUsersList(filtered);
+        }
+
+        async function openAssignModal(agentId) {
             document.getElementById('assignAgentId').value = agentId;
-            document.getElementById('assignUserIds').value = '';
+            document.getElementById('userSearch').value = '';
             document.getElementById('assignModal').classList.add('active');
+
+            // Load users when modal opens
+            await loadUsers();
         }
 
         function closeAssignModal() {
@@ -732,12 +793,11 @@ Do NOT:
 
         async function assignAgent() {
             const agentId = document.getElementById('assignAgentId').value;
-            const userIdsText = document.getElementById('assignUserIds').value;
-
-            const user_ids = userIdsText.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+            const user_ids = Array.from(document.querySelectorAll('.user-checkbox:checked'))
+                .map(checkbox => parseInt(checkbox.value));
 
             if (user_ids.length === 0) {
-                alert('Please enter at least one valid user ID');
+                alert('Please select at least one user');
                 return;
             }
 
