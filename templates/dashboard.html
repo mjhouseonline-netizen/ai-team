@@ -1998,10 +1998,10 @@
         .history-item {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 12px 16px;
+            gap: 8px;
+            padding: 6px 12px;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.15s;
             border-bottom: 1px solid #f3f4f6;
             position: relative;
         }
@@ -2020,54 +2020,59 @@
             color: white;
             border: none;
             font-weight: 600;
+            padding: 8px 12px;
         }
 
         .history-item.history-new-chat:hover {
-            transform: translateY(-2px);
+            transform: translateY(-1px);
         }
 
         .history-icon {
-            font-size: 20px;
+            font-size: 16px;
             flex-shrink: 0;
-            width: 32px;
-            height: 32px;
+            width: 24px;
+            height: 24px;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #f3f4f6;
-            border-radius: 8px;
         }
 
         .history-new-chat .history-icon {
-            background: rgba(255,255,255,0.2);
+            font-size: 18px;
         }
 
         .history-content {
             flex: 1;
             min-width: 0;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
         }
 
         .history-title {
-            font-weight: 600;
-            font-size: 14px;
+            font-weight: 500;
+            font-size: 13px;
             color: #1f2937;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            flex: 1;
         }
 
         .history-new-chat .history-title {
             color: white;
+            font-weight: 600;
         }
 
         .history-time {
-            font-size: 12px;
-            color: #6b7280;
-            margin-top: 2px;
+            font-size: 10px;
+            color: #9ca3af;
+            flex-shrink: 0;
         }
 
         .history-new-chat .history-time {
-            color: rgba(255,255,255,0.8);
+            color: rgba(255,255,255,0.7);
+            font-size: 11px;
         }
 
         .history-delete {
@@ -2075,10 +2080,11 @@
             border: none;
             color: #ef4444;
             cursor: pointer;
-            padding: 4px;
+            padding: 2px;
             border-radius: 4px;
             display: none;
             transition: all 0.2s;
+            flex-shrink: 0;
         }
 
         .history-item:hover .history-delete {
@@ -2090,13 +2096,13 @@
         }
 
         .history-group-label {
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 600;
-            color: #6b7280;
+            color: #9ca3af;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            padding: 12px 16px 8px 16px;
-            background: #f9fafb;
+            padding: 8px 12px 4px 12px;
+            background: transparent;
         }
 
         /* Share Links Section */
@@ -3832,7 +3838,8 @@
             
             recognition.onresult = function(event) {
                 const transcript = event.results[0][0].transcript;
-                document.getElementById('messageInput').value = transcript;
+                const messageInput = document.getElementById('messageInput');
+                messageInput.value = transcript;
                 stopVoiceRecording();
 
                 if (voiceConversationMode) {
@@ -3840,7 +3847,11 @@
                     showNotification('🗣️ Sending: ' + transcript.substring(0, 30) + '...');
                     setTimeout(() => sendMessage(), 500);
                 } else {
-                    showNotification('✅ Voice input captured!');
+                    // Focus the input and show notification
+                    messageInput.focus();
+                    // Auto-resize the textarea to fit content
+                    autoResize(messageInput);
+                    showNotification(`✅ Voice captured: "${transcript.substring(0, 40)}${transcript.length > 40 ? '...' : ''}"`);
                 }
             };
             
@@ -3974,12 +3985,22 @@
             currentSpeech.pitch = 1.0; // Normal pitch
             currentSpeech.volume = 1.0; // Full volume
 
-            // Select a good voice if available
+            // Select a female voice if available
             const voices = window.speechSynthesis.getVoices();
+            // Try to find a female voice with priority order
             const preferredVoice = voices.find(voice =>
                 voice.lang.startsWith('en') &&
-                (voice.name.includes('Google') || voice.name.includes('Microsoft'))
+                voice.name.toLowerCase().includes('female')
+            ) || voices.find(voice =>
+                voice.lang.startsWith('en') &&
+                (voice.name.includes('Samantha') || voice.name.includes('Victoria') ||
+                 voice.name.includes('Karen') || voice.name.includes('Zira') ||
+                 voice.name.includes('Google US English') && voice.name.includes('Female'))
+            ) || voices.find(voice =>
+                voice.lang.startsWith('en') &&
+                voice.name.includes('Google')
             );
+
             if (preferredVoice) {
                 currentSpeech.voice = preferredVoice;
             }
@@ -4300,10 +4321,9 @@
                     <div class="history-icon">✨</div>
                     <div class="history-content">
                         <div class="history-title">New Chat</div>
-                        <div class="history-time">Start fresh conversation</div>
                     </div>
                 </div>
-                <div style="border-bottom: 1px solid #e5e7eb; margin: 10px 0;"></div>
+                <div style="border-bottom: 1px solid #e5e7eb; margin: 6px 0;"></div>
             `;
             
             // Add conversations by date group
@@ -4314,16 +4334,15 @@
                     const isCurrentConv = currentConversationId === conv.id;
                     const isInactive = conv.is_active === false;
                     const opacity = isInactive ? 'opacity: 0.6;' : '';
-                    const inactiveLabel = isInactive ? '<span style="font-size: 10px; color: #ef4444; margin-left: 5px;">(archived)</span>' : '';
                     html += `
                         <div class="history-item ${isCurrentConv ? 'active' : ''}" onclick="loadConversation(${conv.id})" style="${opacity}">
                             <div class="history-icon">${getAgentIcon(conv.agent)}</div>
                             <div class="history-content">
-                                <div class="history-title">${conv.title}${inactiveLabel}</div>
+                                <div class="history-title">${conv.title}</div>
                                 <div class="history-time">${formatTime(conv.updated_at)}</div>
                             </div>
                             <button class="history-delete" onclick="deleteConversation(${conv.id}, event)">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
                                 </svg>
                             </button>
