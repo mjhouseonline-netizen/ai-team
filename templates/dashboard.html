@@ -5967,6 +5967,9 @@ Please provide your response following these guidelines.`;
             function selectAgent(agentName, emoji, role) {
                 console.log('🎯 Selecting agent:', agentName);
 
+                // Close all dropdowns when selecting an agent
+                closeAllDropdowns();
+
                 // Update header display
                 const currentAgentName = document.getElementById('currentAgentName');
                 const currentAgentAvatar = document.getElementById('currentAgentAvatar');
@@ -6065,7 +6068,7 @@ Please provide your response following these guidelines.`;
         #supportChatButton {
             position: fixed;
             bottom: 30px;
-            right: 30px;
+            left: 30px;
             width: 60px;
             height: 60px;
             border-radius: 50%;
@@ -6088,7 +6091,7 @@ Please provide your response following these guidelines.`;
         #supportChatbox {
             position: fixed;
             bottom: 100px;
-            right: 30px;
+            left: 30px;
             width: 380px;
             height: 500px;
             background: white;
@@ -6200,13 +6203,13 @@ Please provide your response following these guidelines.`;
         @media (max-width: 768px) {
             #supportChatbox {
                 width: 90%;
-                right: 5%;
+                left: 5%;
                 bottom: 80px;
             }
 
             #supportChatButton {
                 bottom: 20px;
-                right: 20px;
+                left: 20px;
             }
         }
     </style>
