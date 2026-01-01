@@ -21,6 +21,10 @@ import mimetypes
 import stripe
 from openai import OpenAI
 import google.generativeai as genai
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # ============================================
 # NOTION INTEGRATION IMPORT
@@ -38,6 +42,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', os.urandom(24).hex())
 app.config['ANTHROPIC_API_KEY'] = os.environ.get('ANTHROPIC_API_KEY')
 app.config['OPENAI_API_KEY'] = os.environ.get('OPENAI_API_KEY')
+app.config['GOOGLE_AI_API_KEY'] = os.environ.get('GOOGLE_AI_API_KEY')
 
 # Initialize OpenAI client with proper error handling
 try:
@@ -6476,7 +6481,7 @@ def call_ai_with_image(model_key, system_prompt, history, message, image_path):
         elif provider == 'google':
             # Gemini vision
             from PIL import Image
-            genai.configure(api_key=os.environ.get('GOOGLE_API_KEY'))
+            genai.configure(api_key=os.environ.get('GOOGLE_AI_API_KEY'))
             
             img = Image.open(image_path)
             gemini_model = genai.GenerativeModel(model_id)
