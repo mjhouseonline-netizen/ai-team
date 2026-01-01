@@ -3043,8 +3043,9 @@
         <div class="input-container" {% if is_guest %}style="grid-row: 3 !important; background: #ffffff !important; display: block !important; position: relative !important; z-index: 20 !important; visibility: visible !important; opacity: 1 !important; padding: 16px 24px !important; border-top: 1px solid #e5e7eb !important;"{% endif %}>
             <div class="input-wrapper">
                 <div class="input-area">
-                    <input type="file" id="fileInput" style="display:none;" accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.txt,.md,.csv,.doc,.docx,.xls,.xlsx">
-                    
+                    <input type="file" id="fileInput" multiple style="display:none;" accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.txt,.md,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx">
+                    <input type="file" id="folderInput" webkitdirectory directory multiple style="display:none;">
+
                     <textarea
                         id="messageInput"
                         placeholder="message..."
@@ -3063,11 +3064,19 @@
                             <div class="input-options-menu" id="inputOptionsMenu">
                                 <button onclick="document.getElementById('fileInput').click(); closeInputOptions();" class="option-item">
                                     <span class="option-icon">📎</span>
-                                    <span class="option-text">Upload File</span>
+                                    <span class="option-text">Upload Files</span>
+                                </button>
+                                <button onclick="document.getElementById('folderInput').click(); closeInputOptions();" class="option-item">
+                                    <span class="option-icon">📁</span>
+                                    <span class="option-text">Upload Folder</span>
                                 </button>
                                 <button onclick="toggleVoice(); closeInputOptions();" class="option-item">
                                     <span class="option-icon">🎤</span>
                                     <span class="option-text">Voice Input</span>
+                                </button>
+                                <button onclick="toggleVoiceConversation(); closeInputOptions();" class="option-item" id="voiceConversationBtn">
+                                    <span class="option-icon">🗣️</span>
+                                    <span class="option-text" id="voiceConversationText">Voice Conversation</span>
                                 </button>
                                 <button onclick="toggleImageMode(); closeInputOptions();" class="option-item">
                                     <span class="option-icon">🎨</span>
@@ -3079,9 +3088,8 @@
                         <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send</button>
                     </div>
                 </div>
-                <div class="file-preview" id="filePreview">
-                    <span id="fileName"></span>
-                    <button class="remove-file-btn" onclick="removeFile()">✕</button>
+                <div class="file-preview" id="filePreview" style="display:none; flex-wrap: wrap; gap: 8px;">
+                    <!-- Multiple file previews will be added here dynamically -->
                 </div>
             </div>
         </div>
@@ -3415,34 +3423,83 @@
             }
         }
 
-        // File Upload System with Preview
-        let uploadedFile = null;
+        // File Upload System with Preview - Support Multiple Files
+        let uploadedFiles = [];
 
-        // Handle file selection
+        // Handle multiple file selection
         document.getElementById('fileInput').addEventListener('change', function(event) {
-            const file = event.target.files[0];
-            if (file) {
-                uploadedFile = file;
-                showFilePreview(file);
+            const files = Array.from(event.target.files);
+            if (files.length > 0) {
+                files.forEach(file => {
+                    if (!uploadedFiles.some(f => f.name === file.name && f.size === file.size)) {
+                        uploadedFiles.push(file);
+                    }
+                });
+                showFilePreview();
             }
         });
 
-        function showFilePreview(file) {
+        // Handle folder selection
+        document.getElementById('folderInput').addEventListener('change', function(event) {
+            const files = Array.from(event.target.files);
+            if (files.length > 0) {
+                files.forEach(file => {
+                    if (!uploadedFiles.some(f => f.name === file.name && f.size === file.size)) {
+                        uploadedFiles.push(file);
+                    }
+                });
+                showFilePreview();
+                showNotification(`📁 Added ${files.length} files from folder`);
+            }
+        });
+
+        function showFilePreview() {
             const preview = document.getElementById('filePreview');
-            const fileName = document.getElementById('fileName');
-            
-            // Show file name and size
-            const fileSize = (file.size / 1024).toFixed(1) + ' KB';
-            fileName.textContent = `📎 ${file.name} (${fileSize})`;
-            
-            // Show preview container
+            preview.innerHTML = '';
+
+            if (uploadedFiles.length === 0) {
+                preview.style.display = 'none';
+                return;
+            }
+
+            uploadedFiles.forEach((file, index) => {
+                const fileSize = (file.size / 1024).toFixed(1) + ' KB';
+                const fileDiv = document.createElement('div');
+                fileDiv.style.cssText = `
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 8px 12px;
+                    background: var(--bg-secondary);
+                    border-radius: 8px;
+                    font-size: 13px;
+                `;
+                fileDiv.innerHTML = `
+                    <span>📎 ${file.name} (${fileSize})</span>
+                    <button onclick="removeFile(${index})" style="
+                        background: none;
+                        border: none;
+                        cursor: pointer;
+                        color: var(--text-secondary);
+                        padding: 2px 6px;
+                        font-size: 16px;
+                    ">✕</button>
+                `;
+                preview.appendChild(fileDiv);
+            });
+
             preview.style.display = 'flex';
         }
 
-        function removeFile() {
-            uploadedFile = null;
+        function removeFile(index) {
+            if (index !== undefined) {
+                uploadedFiles.splice(index, 1);
+            } else {
+                uploadedFiles = [];
+            }
+            showFilePreview();
             document.getElementById('fileInput').value = '';
-            document.getElementById('filePreview').style.display = 'none';
+            document.getElementById('folderInput').value = '';
         }
 
         // Send Message Function
@@ -3451,36 +3508,39 @@
             const message = input.value.trim();
             const modelSelect = document.getElementById('modelSelect');
             const model = modelSelect.value;
-            
-            if (!message && !uploadedFile) {
+
+            if (!message && uploadedFiles.length === 0) {
                 return; // Don't send empty messages
             }
-            
+
             // Disable send button
             const sendBtn = document.getElementById('sendBtn');
             sendBtn.disabled = true;
             sendBtn.textContent = 'Sending...';
-            
+
             // Create FormData
             const formData = new FormData();
             formData.append('message', message);
             formData.append('model', model);
-            
-            // Add file if uploaded
-            if (uploadedFile) {
-                formData.append('file', uploadedFile);
+
+            // Add all uploaded files
+            if (uploadedFiles.length > 0) {
+                uploadedFiles.forEach((file, index) => {
+                    formData.append(`file_${index}`, file);
+                });
+                formData.append('file_count', uploadedFiles.length);
             }
-            
+
             // Add current agent
             const currentAgent = getCurrentAgent();
             formData.append('agent', currentAgent);
-            
+
             // Variable to track thinking indicator interval
             let thinkingInterval = null;
 
             try {
-                // Display user message immediately
-                displayUserMessage(message, uploadedFile);
+                // Display user message immediately with files
+                displayUserMessage(message, uploadedFiles.length > 0 ? uploadedFiles : null);
 
                 // Show thinking indicator
                 thinkingInterval = displayThinkingIndicator();
@@ -3544,32 +3604,46 @@
             return 'Luna'; // Default
         }
 
-        function displayUserMessage(message, file) {
+        function displayUserMessage(message, files) {
             const container = document.getElementById('chatContainer');
             const messageDiv = document.createElement('div');
             messageDiv.className = 'message user-message';
-            
+
             let content = '<div class="message-content">';
-            if (file) {
-                const fileType = file.type.split('/')[0];
-                if (fileType === 'image') {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        const img = document.createElement('img');
-                        img.src = e.target.result;
-                        img.style.maxWidth = '300px';
-                        img.style.borderRadius = '8px';
-                        img.style.marginBottom = '8px';
-                        messageDiv.querySelector('.message-content').prepend(img);
-                    };
-                    reader.readAsDataURL(file);
-                } else {
-                    content += `<div style="background: #f3f4f6; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; display: inline-block;">📎 ${file.name}</div><br>`;
+
+            // Handle multiple files
+            if (files && files.length > 0) {
+                const fileArray = Array.isArray(files) ? files : [files];
+
+                fileArray.forEach(file => {
+                    const fileType = file.type.split('/')[0];
+                    if (fileType === 'image') {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const img = document.createElement('img');
+                            img.src = e.target.result;
+                            img.style.maxWidth = '300px';
+                            img.style.borderRadius = '8px';
+                            img.style.marginBottom = '8px';
+                            img.style.marginRight = '8px';
+                            messageDiv.querySelector('.message-content').prepend(img);
+                        };
+                        reader.readAsDataURL(file);
+                    } else {
+                        const fileSize = (file.size / 1024).toFixed(1) + ' KB';
+                        content += `<div style="background: #f3f4f6; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; display: inline-block; margin-right: 8px;">📎 ${file.name} (${fileSize})</div>`;
+                    }
+                });
+
+                if (fileArray.length > 1) {
+                    content += `<div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">${fileArray.length} files attached</div>`;
                 }
+                content += '<br>';
             }
+
             content += message + '</div>';
             messageDiv.innerHTML = content;
-            
+
             container.appendChild(messageDiv);
             container.scrollTop = container.scrollHeight;
         }
@@ -3760,7 +3834,14 @@
                 const transcript = event.results[0][0].transcript;
                 document.getElementById('messageInput').value = transcript;
                 stopVoiceRecording();
-                showNotification('✅ Voice input captured!');
+
+                if (voiceConversationMode) {
+                    // Auto-send in voice conversation mode
+                    showNotification('🗣️ Sending: ' + transcript.substring(0, 30) + '...');
+                    setTimeout(() => sendMessage(), 500);
+                } else {
+                    showNotification('✅ Voice input captured!');
+                }
             };
             
             recognition.onerror = function(event) {
@@ -3830,6 +3911,102 @@
             if (status) {
                 status.style.display = 'none';
             }
+        }
+
+        // ============================================
+        // VOICE CONVERSATION MODE (TTS + Continuous)
+        // ============================================
+
+        let voiceConversationMode = false;
+        let currentSpeech = null;
+
+        function toggleVoiceConversation() {
+            // Check browser support for both features
+            if (!('speechSynthesis' in window)) {
+                showNotification('❌ Text-to-speech not supported in your browser');
+                return;
+            }
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                showNotification('❌ Voice input not supported in your browser');
+                return;
+            }
+
+            voiceConversationMode = !voiceConversationMode;
+
+            const btn = document.getElementById('voiceConversationBtn');
+            const btnText = document.getElementById('voiceConversationText');
+
+            if (voiceConversationMode) {
+                btn.style.background = 'linear-gradient(135deg, #10a37f, #0d8c6f)';
+                btn.style.color = 'white';
+                btnText.textContent = 'Stop Voice Chat';
+                showNotification('🗣️ Voice conversation mode ON - I\'ll speak responses!');
+            } else {
+                btn.style.background = '';
+                btn.style.color = '';
+                btnText.textContent = 'Voice Conversation';
+                stopSpeaking();
+                showNotification('Voice conversation mode OFF');
+            }
+        }
+
+        function speakText(text) {
+            // Stop any ongoing speech
+            stopSpeaking();
+
+            if (!voiceConversationMode || !text) return;
+
+            // Clean the text for better speech
+            const cleanText = text
+                .replace(/```[\s\S]*?```/g, '') // Remove code blocks
+                .replace(/`[^`]+`/g, '') // Remove inline code
+                .replace(/\*\*/g, '') // Remove bold markdown
+                .replace(/\*/g, '') // Remove italic markdown
+                .replace(/#{1,6}\s/g, '') // Remove headers
+                .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Convert links to text
+                .replace(/\n+/g, ' ') // Replace newlines with spaces
+                .trim();
+
+            if (!cleanText) return;
+
+            currentSpeech = new SpeechSynthesisUtterance(cleanText);
+            currentSpeech.rate = 1.0; // Normal speed
+            currentSpeech.pitch = 1.0; // Normal pitch
+            currentSpeech.volume = 1.0; // Full volume
+
+            // Select a good voice if available
+            const voices = window.speechSynthesis.getVoices();
+            const preferredVoice = voices.find(voice =>
+                voice.lang.startsWith('en') &&
+                (voice.name.includes('Google') || voice.name.includes('Microsoft'))
+            );
+            if (preferredVoice) {
+                currentSpeech.voice = preferredVoice;
+            }
+
+            currentSpeech.onend = function() {
+                if (voiceConversationMode) {
+                    // Auto-start listening for next input after speaking
+                    setTimeout(() => {
+                        if (voiceConversationMode) {
+                            startVoiceRecording();
+                        }
+                    }, 500);
+                }
+            };
+
+            currentSpeech.onerror = function(event) {
+                console.error('Speech synthesis error:', event);
+            };
+
+            window.speechSynthesis.speak(currentSpeech);
+        }
+
+        function stopSpeaking() {
+            if (window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+            }
+            currentSpeech = null;
         }
 
         function showNotification(message) {
@@ -5094,13 +5271,18 @@
             const container = document.getElementById('chatContainer');
             const messageDiv = document.createElement('div');
             messageDiv.className = 'message assistant-message';
-            
+
             // Format the message with proper paragraph breaks and styling
             const formattedMessage = formatAssistantMessage(message);
             messageDiv.innerHTML = `<div class="message-content">${formattedMessage}</div>`;
-            
+
             container.appendChild(messageDiv);
             container.scrollTop = container.scrollHeight;
+
+            // Speak the message if voice conversation mode is on
+            if (voiceConversationMode) {
+                speakText(message);
+            }
         }
 
         function formatAssistantMessage(message) {

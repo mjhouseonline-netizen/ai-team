@@ -6523,15 +6523,32 @@ def chat():
             model_key = data.get('model', 'gemini-2.0-flash')  # Default to Gemini (free)
             attached_file = data.get('file')
             uploaded_file = None
+            uploaded_files = []
         else:
             # FormData request (new format with file upload)
             message = request.form.get('message', '')
             agent = request.form.get('agent', 'Luna')
             model_key = request.form.get('model', 'gemini-2.0-flash')  # Default to Gemini (free)
             attached_file = None
-            uploaded_file = request.files.get('file')
-        
-        if not message and not uploaded_file:
+
+            # Handle multiple files
+            file_count = request.form.get('file_count', 0)
+            uploaded_files = []
+
+            if file_count:
+                file_count = int(file_count)
+                for i in range(file_count):
+                    file_key = f'file_{i}'
+                    if file_key in request.files:
+                        uploaded_files.append(request.files[file_key])
+
+            # Legacy single file support
+            if 'file' in request.files and not uploaded_files:
+                uploaded_files = [request.files['file']]
+
+            uploaded_file = uploaded_files[0] if uploaded_files else None
+
+        if not message and not uploaded_files:
             return jsonify({'error': 'Message or file required'}), 400
 
         # Check if user is authenticated or guest
@@ -6869,9 +6886,10 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
         else:
             history = get_conversation_history(current_user.id, agent, limit=10)
 
-        # Handle file uploads from FormData
+        # Handle file uploads from FormData (supports multiple files)
         file_info = None
-        if uploaded_file:
+        files_info = []
+        if uploaded_files:
             # Guests cannot upload files
             if is_guest:
                 conn.close()
@@ -6881,35 +6899,46 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
                     'signup_url': '/register'
                 }), 403
 
-            # Save the uploaded file
-            filename = secure_filename(uploaded_file.filename)
-            user_folder = os.path.join(UPLOAD_FOLDER, str(current_user.id))
-            os.makedirs(user_folder, exist_ok=True)
-            
-            filepath = os.path.join(user_folder, filename)
-            uploaded_file.save(filepath)
-            
-            file_extension = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
-            
-            file_info = {
-                'filename': filename,
-                'filepath': filepath,
-                'extension': file_extension
-            }
-            
-            # For text files, read content
-            if file_extension in ['txt', 'md', 'csv', 'json', 'py', 'js', 'html', 'css']:
-                try:
-                    with open(filepath, 'r', encoding='utf-8') as f:
-                        file_content = f.read()[:10000]  # Limit to 10k chars
-                    if message:
-                        message = f"{message}\n\nFile: {filename}\nContent:\n{file_content}"
-                    else:
-                        message = f"File: {filename}\nContent:\n{file_content}"
-                except Exception as e:
-                    print(f"Error reading file: {e}")
-                    if not message:
-                        message = f"I received a file named {filename} but couldn't read its content."
+            # Process all uploaded files
+            file_contents = []
+            for uploaded_file in uploaded_files:
+                # Save the uploaded file
+                filename = secure_filename(uploaded_file.filename)
+                user_folder = os.path.join(UPLOAD_FOLDER, str(current_user.id))
+                os.makedirs(user_folder, exist_ok=True)
+
+                filepath = os.path.join(user_folder, filename)
+                uploaded_file.save(filepath)
+
+                file_extension = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+
+                file_data = {
+                    'filename': filename,
+                    'filepath': filepath,
+                    'extension': file_extension
+                }
+                files_info.append(file_data)
+
+                # For text files, read content
+                if file_extension in ['txt', 'md', 'csv', 'json', 'py', 'js', 'html', 'css', 'xml']:
+                    try:
+                        with open(filepath, 'r', encoding='utf-8') as f:
+                            file_content = f.read()[:10000]  # Limit to 10k chars per file
+                        file_contents.append(f"File: {filename}\nContent:\n{file_content}")
+                    except Exception as e:
+                        print(f"Error reading file {filename}: {e}")
+                        file_contents.append(f"File: {filename} (could not read content)")
+
+            # Add file contents to message
+            if file_contents:
+                files_text = "\n\n---\n\n".join(file_contents)
+                if message:
+                    message = f"{message}\n\n{files_text}"
+                else:
+                    message = files_text
+
+            # Keep backward compatibility for single file
+            file_info = files_info[0] if files_info else None
         
         # Handle file attachments (JSON format - old system)
         elif attached_file and 'filepath' in attached_file:
