@@ -963,18 +963,55 @@
             color: var(--text-secondary);
         }
 
-        /* Messages */
+        /* Messages - ChatGPT Style */
         .message {
-            margin: 20px 0;
+            margin-bottom: 16px;
             display: flex;
-            gap: 12px;
-            padding: 16px 0;
+            width: 100%;
+            padding: 20px 0;
         }
 
-        .message.user {
-            background: var(--bg-secondary);
-            margin: 20px -24px;
-            padding: 20px 24px;
+        /* User messages - right side with background */
+        .user-message {
+            justify-content: flex-end;
+            background: transparent;
+        }
+
+        .user-message .message-wrapper {
+            max-width: 80%;
+            display: flex;
+            gap: 12px;
+            flex-direction: row-reverse;
+        }
+
+        .user-message .message-content {
+            background: #f4f4f4;
+            padding: 12px 16px;
+            border-radius: 18px;
+            border-bottom-right-radius: 4px;
+            font-size: 15px;
+            line-height: 1.6;
+            color: #1f1f1f;
+        }
+
+        /* Assistant messages - left side */
+        .assistant-message {
+            justify-content: flex-start;
+            background: transparent;
+        }
+
+        .assistant-message .message-wrapper {
+            max-width: 100%;
+            display: flex;
+            gap: 12px;
+        }
+
+        .assistant-message .message-content {
+            flex: 1;
+            padding: 0;
+            font-size: 15px;
+            line-height: 1.7;
+            color: var(--text-primary);
         }
 
         .avatar {
@@ -989,17 +1026,37 @@
             background: linear-gradient(135deg, #667eea, #764ba2);
         }
 
-        .message.user .avatar {
+        .user-message .avatar {
             background: #5436da;
         }
 
-        .message-content {
-            flex: 1;
-            font-size: 15px;
-            line-height: 1.7;
+        /* Message actions */
+        .message-actions {
+            display: flex;
+            gap: 4px;
+            margin-top: 8px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .assistant-message:hover .message-actions {
+            opacity: 1;
+        }
+
+        .message-action-btn {
+            background: none;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .message-action-btn:hover {
+            background: var(--bg-secondary);
             color: var(--text-primary);
-            word-wrap: break-word;
-            max-width: 100%;
         }
         
         .message-content p {
@@ -2053,89 +2110,80 @@
         .history-item {
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 6px 12px;
+            gap: 10px;
+            padding: 10px 12px;
             cursor: pointer;
             transition: all 0.15s;
-            border-bottom: 1px solid #f3f4f6;
+            border-radius: 8px;
+            margin: 0 8px 4px 8px;
             position: relative;
         }
 
         .history-item:hover {
-            background: #f9fafb;
+            background: #f3f4f6;
         }
 
         .history-item.active {
-            background: #e6f7f2;
-            border-left: 3px solid #10a37f;
+            background: #ececec;
         }
 
         .history-item.history-new-chat {
-            background: linear-gradient(135deg, #10a37f, #0d8c6f);
-            color: white;
-            border: none;
-            font-weight: 600;
-            padding: 8px 12px;
+            background: transparent;
+            border: 1px solid #d1d5db;
+            color: #1f2937;
+            font-weight: 500;
+            margin-bottom: 12px;
         }
 
         .history-item.history-new-chat:hover {
-            transform: translateY(-1px);
+            background: #f9fafb;
         }
 
         .history-icon {
-            font-size: 16px;
+            font-size: 14px;
             flex-shrink: 0;
-            width: 24px;
-            height: 24px;
+            width: 20px;
+            height: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
+            color: #6b7280;
         }
 
         .history-new-chat .history-icon {
-            font-size: 18px;
+            font-size: 16px;
         }
 
         .history-content {
             flex: 1;
             min-width: 0;
-            display: flex;
-            align-items: baseline;
-            gap: 8px;
         }
 
         .history-title {
-            font-weight: 500;
-            font-size: 13px;
+            font-weight: 400;
+            font-size: 14px;
             color: #1f2937;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-            flex: 1;
+            line-height: 1.4;
         }
 
         .history-new-chat .history-title {
-            color: white;
-            font-weight: 600;
+            color: #1f2937;
+            font-weight: 500;
         }
 
         .history-time {
-            font-size: 10px;
-            color: #9ca3af;
-            flex-shrink: 0;
-        }
-
-        .history-new-chat .history-time {
-            color: rgba(255,255,255,0.7);
-            font-size: 11px;
+            display: none;
         }
 
         .history-delete {
             background: none;
             border: none;
-            color: #ef4444;
+            color: #9ca3af;
             cursor: pointer;
-            padding: 2px;
+            padding: 4px;
             border-radius: 4px;
             display: none;
             transition: all 0.2s;
@@ -2147,16 +2195,15 @@
         }
 
         .history-delete:hover {
-            background: #fee2e2;
+            background: #e5e7eb;
+            color: #ef4444;
         }
 
         .history-group-label {
-            font-size: 10px;
+            font-size: 11px;
             font-weight: 600;
-            color: #9ca3af;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            padding: 8px 12px 4px 12px;
+            color: #6b7280;
+            padding: 16px 12px 8px 12px;
             background: transparent;
         }
 
@@ -3667,7 +3714,9 @@
             const messageDiv = document.createElement('div');
             messageDiv.className = 'message user-message';
 
-            let content = '<div class="message-content">';
+            let content = '<div class="message-wrapper">';
+            content += '<div class="avatar">👤</div>';
+            content += '<div class="message-content">';
 
             // Handle multiple files
             if (files && files.length > 0) {
@@ -3689,17 +3738,17 @@
                         reader.readAsDataURL(file);
                     } else {
                         const fileSize = (file.size / 1024).toFixed(1) + ' KB';
-                        content += `<div style="background: #f3f4f6; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; display: inline-block; margin-right: 8px;">📎 ${file.name} (${fileSize})</div>`;
+                        content += `<div style="background: #e0e0e0; padding: 6px 10px; border-radius: 6px; margin-bottom: 6px; font-size: 13px;">📎 ${file.name} (${fileSize})</div>`;
                     }
                 });
 
                 if (fileArray.length > 1) {
-                    content += `<div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">${fileArray.length} files attached</div>`;
+                    content += `<div style="font-size: 12px; color: #555; margin-bottom: 6px;">${fileArray.length} files attached</div>`;
                 }
-                content += '<br>';
             }
 
-            content += message + '</div>';
+            content += message;
+            content += '</div></div>';
             messageDiv.innerHTML = content;
 
             container.appendChild(messageDiv);
@@ -4372,12 +4421,11 @@
             // Add "New Chat" button at top
             html += `
                 <div class="history-item history-new-chat" onclick="startNewChat()">
-                    <div class="history-icon">✨</div>
+                    <div class="history-icon">✏️</div>
                     <div class="history-content">
-                        <div class="history-title">New Chat</div>
+                        <div class="history-title">New chat</div>
                     </div>
                 </div>
-                <div style="border-bottom: 1px solid #e5e7eb; margin: 6px 0;"></div>
             `;
             
             // Add conversations by date group
@@ -4390,13 +4438,12 @@
                     const opacity = isInactive ? 'opacity: 0.6;' : '';
                     html += `
                         <div class="history-item ${isCurrentConv ? 'active' : ''}" onclick="loadConversation(${conv.id})" style="${opacity}">
-                            <div class="history-icon">${getAgentIcon(conv.agent)}</div>
+                            <div class="history-icon">💬</div>
                             <div class="history-content">
                                 <div class="history-title">${conv.title}</div>
-                                <div class="history-time">${formatTime(conv.updated_at)}</div>
                             </div>
-                            <button class="history-delete" onclick="deleteConversation(${conv.id}, event)">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <button class="history-delete" onclick="deleteConversation(${conv.id}, event)" title="Delete chat">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
                                 </svg>
                             </button>
@@ -5358,9 +5405,37 @@
             const messageDiv = document.createElement('div');
             messageDiv.className = 'message assistant-message';
 
+            const currentAgent = getCurrentAgent();
+            const agentIcon = getAgentIcon(currentAgent);
+
             // Format the message with proper paragraph breaks and styling
             const formattedMessage = formatAssistantMessage(message);
-            messageDiv.innerHTML = `<div class="message-content">${formattedMessage}</div>`;
+
+            const messageId = 'msg_' + Date.now();
+            messageDiv.id = messageId;
+
+            messageDiv.innerHTML = `
+                <div class="message-wrapper">
+                    <div class="avatar">${agentIcon}</div>
+                    <div style="flex: 1;">
+                        <div class="message-content">${formattedMessage}</div>
+                        <div class="message-actions">
+                            <button class="message-action-btn" onclick="copyMessage('${messageId}')" title="Copy">
+                                📋 Copy
+                            </button>
+                            <button class="message-action-btn" onclick="regenerateResponse()" title="Regenerate">
+                                🔄 Regenerate
+                            </button>
+                            <button class="message-action-btn" onclick="likeMessage('${messageId}')" title="Good response">
+                                👍
+                            </button>
+                            <button class="message-action-btn" onclick="dislikeMessage('${messageId}')" title="Bad response">
+                                👎
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
 
             container.appendChild(messageDiv);
             container.scrollTop = container.scrollHeight;
@@ -5369,6 +5444,53 @@
             if (voiceConversationMode) {
                 speakText(message);
             }
+        }
+
+        // Message action functions
+        function copyMessage(messageId) {
+            const messageDiv = document.getElementById(messageId);
+            const messageContent = messageDiv.querySelector('.message-content');
+            const text = messageContent.innerText || messageContent.textContent;
+
+            navigator.clipboard.writeText(text).then(() => {
+                showNotification('✅ Message copied to clipboard');
+            }).catch(err => {
+                console.error('Copy failed:', err);
+                showNotification('❌ Failed to copy message');
+            });
+        }
+
+        function regenerateResponse() {
+            showNotification('🔄 Regenerating response...');
+            // Get the last user message and resend it
+            const messages = document.querySelectorAll('.user-message');
+            if (messages.length > 0) {
+                const lastUserMessage = messages[messages.length - 1];
+                const text = lastUserMessage.querySelector('.message-content').textContent;
+
+                // Remove the last assistant message
+                const assistantMessages = document.querySelectorAll('.assistant-message');
+                if (assistantMessages.length > 0) {
+                    assistantMessages[assistantMessages.length - 1].remove();
+                }
+
+                // Resend the message
+                setTimeout(() => sendMessage(), 500);
+            }
+        }
+
+        function likeMessage(messageId) {
+            const btn = event.target;
+            btn.style.color = '#10a37f';
+            btn.textContent = '👍✓';
+            showNotification('✅ Thanks for your feedback!');
+        }
+
+        function dislikeMessage(messageId) {
+            const btn = event.target;
+            btn.style.color = '#ef4444';
+            btn.textContent = '👎✓';
+            showNotification('📝 Thanks for your feedback. We\'ll improve!');
         }
 
         function formatAssistantMessage(message) {
