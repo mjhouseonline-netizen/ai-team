@@ -4908,11 +4908,16 @@
             try {
                 // Fetch agent data
                 const response = await fetch('/api/custom-agents');
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
                 const data = await response.json();
                 const agent = data.agents.find(a => a.id === agentId);
 
                 if (!agent) {
-                    alert('Agent not found');
+                    showNotification('❌ Agent not found');
                     return;
                 }
 
@@ -4943,7 +4948,7 @@
                 }
             } catch (error) {
                 console.error('Error loading agent for edit:', error);
-                alert('Failed to load agent data');
+                showNotification(`❌ Failed to load agent data: ${error.message}`);
             }
         }
 
@@ -4954,7 +4959,7 @@
             const instructions = document.getElementById('agentInstructions').value.trim();
 
             if (!name || !role || !instructions) {
-                alert('Please fill in all required fields');
+                showNotification('⚠️ Please fill in all required fields');
                 return;
             }
 
@@ -4979,11 +4984,11 @@
                     closeCustomAgentModal();
                     loadCustomAgents(); // Reload the list
                 } else {
-                    alert(data.message || data.error || 'Failed to update agent');
+                    showNotification(`❌ ${data.message || data.error || 'Failed to update agent'}`);
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Failed to update agent. Please try again.');
+                showNotification('❌ Failed to update agent. Please try again.');
             }
         }
 
@@ -5003,12 +5008,12 @@
                     showNotification('✅ Agent deleted successfully!');
                     loadCustomAgents(); // Reload the list
                 } else {
-                    alert('Error deleting agent: ' + (data.error || 'Unknown error'));
+                    showNotification(`❌ Error deleting agent: ${data.error || 'Unknown error'}`);
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Failed to delete agent. Please try again.');
+                showNotification('❌ Failed to delete agent. Please try again.');
             });
         }
 
@@ -5041,7 +5046,7 @@
             const iconImage = document.getElementById('agentIconImage').files[0];
 
             if (!name || !role || !instructions) {
-                alert('Please fill in all required fields');
+                showNotification('⚠️ Please fill in all required fields');
                 return;
             }
 
@@ -5072,11 +5077,11 @@
                     document.getElementById('customAgentForm').reset();
                     clearAgentIcon();
                 } else {
-                    alert(data.message || data.error || 'Failed to create agent');
+                    showNotification(`❌ ${data.message || data.error || 'Failed to create agent'}`);
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Failed to create agent. Please try again.');
+                showNotification('❌ Failed to create agent. Please try again.');
             }
         }
 
