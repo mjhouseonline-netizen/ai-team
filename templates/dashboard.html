@@ -4558,6 +4558,13 @@
             // Ensure all dropdowns are closed on page load
             closeAllDropdowns();
 
+            // Explicitly ensure history dropdown is closed
+            const historyDropdown = document.getElementById('historyDropdownMenu');
+            if (historyDropdown) {
+                historyDropdown.style.display = 'none';
+                historyDropdown.classList.remove('active');
+            }
+
             // Apply tier restrictions to model selectors
             applyModelTierRestrictions();
 
@@ -5936,6 +5943,23 @@ Please provide your response following these guidelines.`;
 
                 console.log('✅ Agent switched to:', agentName);
             }
+        }
+
+        // Wrapper function for switchAgent (used when loading conversations)
+        function switchAgent(agentName) {
+            // Agent metadata
+            const agentData = {
+                'Luna': { emoji: '🌙', role: 'Research & Analysis' },
+                'Mila': { emoji: '📋', role: 'Organization & Planning' },
+                'Sage': { emoji: '🧙', role: 'Writing & Content' },
+                'Ember': { emoji: '🔥', role: 'Creative Direction' },
+                'Sol': { emoji: '☀️', role: 'Strategic Thinking' },
+                'Nova': { emoji: '⭐', role: 'Technical Solutions' },
+                'Theo': { emoji: '💼', role: 'Implementation' }
+            };
+
+            const agent = agentData[agentName] || { emoji: '🤖', role: 'AI Assistant' };
+            selectAgent(agentName, agent.emoji, agent.role);
         }
     </script>
 
