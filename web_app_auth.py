@@ -5177,6 +5177,7 @@ def cancel():
     """Payment cancelled page"""
     return render_template('cancel.html')
 
+
 @app.route('/api/stripe-webhook', methods=['POST'])
 @app.route('/stripe-webhook', methods=['POST'])
 @app.route('/webhook', methods=['POST'])
