@@ -399,32 +399,58 @@
         // Display promo codes table
         function displayPromoCodesTable(codes) {
             const tableDiv = document.getElementById('promoCodesTable');
-            
+
             const tableHTML = `
                 <table>
                     <thead>
                         <tr>
                             <th>Code</th>
-                            <th>Tier</th>
-                            <th>Max Uses</th>
-                            <th>Times Used</th>
+                            <th>Type</th>
+                            <th>Discount/Tier</th>
+                            <th>Usage Limit</th>
                             <th>Status</th>
                             <th>Created</th>
                             <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${codes.map(code => `
+                        ${codes.map(code => {
+                            // Determine discount label
+                            let discountLabel = '';
+                            let discountType = code.discount_type || 'tier';
+
+                            if (discountType === 'tier') {
+                                discountLabel = formatTier(code.tier);
+                            } else if (discountType === 'trial' && code.trial_days) {
+                                discountLabel = `${code.trial_days} Days Free`;
+                            } else if (discountType === 'amount' && code.discount_value) {
+                                discountLabel = `$${code.discount_value} OFF`;
+                            } else if (discountType === 'percent' && code.discount_value) {
+                                discountLabel = `${code.discount_value}% OFF`;
+                            } else {
+                                discountLabel = formatTier(code.tier);
+                            }
+
+                            // Determine usage display
+                            let usageDisplay = code.max_uses === -1 ?
+                                `${code.times_used} / ∞` :
+                                `${code.times_used} / ${code.max_uses}`;
+
+                            // Determine type label
+                            let typeLabel = discountType.charAt(0).toUpperCase() + discountType.slice(1);
+
+                            return `
                             <tr>
                                 <td><code style="background: #f3f4f6; padding: 4px 8px; border-radius: 4px;">${code.code}</code></td>
-                                <td>${formatTier(code.tier)}</td>
-                                <td>${code.max_uses}</td>
-                                <td>${code.times_used}</td>
+                                <td><span style="font-size: 0.9em; color: #6b7280;">${typeLabel}</span></td>
+                                <td><strong style="color: #10a37f;">${discountLabel}</strong></td>
+                                <td>${usageDisplay}</td>
                                 <td><span class="badge ${code.is_active ? 'badge-active' : 'badge-inactive'}">${code.is_active ? 'Active' : 'Inactive'}</span></td>
                                 <td>${formatDate(code.created_at)}</td>
                                 <td><button class="copy-btn" onclick="copyToClipboard('${code.code}')">📋 Copy</button></td>
                             </tr>
-                        `).join('')}
+                            `;
+                        }).join('')}
                     </tbody>
                 </table>
             `;
