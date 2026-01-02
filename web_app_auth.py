@@ -5007,6 +5007,10 @@ def get_user_promo_discount(user_id):
 def create_checkout_session():
     """Create Stripe checkout session for subscription"""
     try:
+        # Check if Stripe is configured
+        if not stripe.api_key or stripe.api_key == 'your_stripe_secret_key_here':
+            return jsonify({'error': 'Stripe is not configured. Please contact the administrator to set up payment processing.'}), 500
+
         price_id = request.form.get('price_id')
 
         # Determine plan details based on price_id
