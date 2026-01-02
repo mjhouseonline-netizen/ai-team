@@ -963,18 +963,55 @@
             color: var(--text-secondary);
         }
 
-        /* Messages */
+        /* Messages - ChatGPT Style */
         .message {
-            margin: 20px 0;
+            margin-bottom: 16px;
             display: flex;
-            gap: 12px;
-            padding: 16px 0;
+            width: 100%;
+            padding: 20px 0;
         }
 
-        .message.user {
-            background: var(--bg-secondary);
-            margin: 20px -24px;
-            padding: 20px 24px;
+        /* User messages - right side with background */
+        .user-message {
+            justify-content: flex-end;
+            background: transparent;
+        }
+
+        .user-message .message-wrapper {
+            max-width: 80%;
+            display: flex;
+            gap: 12px;
+            flex-direction: row-reverse;
+        }
+
+        .user-message .message-content {
+            background: #f4f4f4;
+            padding: 12px 16px;
+            border-radius: 18px;
+            border-bottom-right-radius: 4px;
+            font-size: 15px;
+            line-height: 1.6;
+            color: #1f1f1f;
+        }
+
+        /* Assistant messages - left side */
+        .assistant-message {
+            justify-content: flex-start;
+            background: transparent;
+        }
+
+        .assistant-message .message-wrapper {
+            max-width: 100%;
+            display: flex;
+            gap: 12px;
+        }
+
+        .assistant-message .message-content {
+            flex: 1;
+            padding: 0;
+            font-size: 15px;
+            line-height: 1.7;
+            color: var(--text-primary);
         }
 
         .avatar {
@@ -989,17 +1026,37 @@
             background: linear-gradient(135deg, #667eea, #764ba2);
         }
 
-        .message.user .avatar {
+        .user-message .avatar {
             background: #5436da;
         }
 
-        .message-content {
-            flex: 1;
-            font-size: 15px;
-            line-height: 1.7;
+        /* Message actions */
+        .message-actions {
+            display: flex;
+            gap: 4px;
+            margin-top: 8px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .assistant-message:hover .message-actions {
+            opacity: 1;
+        }
+
+        .message-action-btn {
+            background: none;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .message-action-btn:hover {
+            background: var(--bg-secondary);
             color: var(--text-primary);
-            word-wrap: break-word;
-            max-width: 100%;
         }
         
         .message-content p {
@@ -1122,8 +1179,15 @@
             padding: 12px 16px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 12px;
             transition: all 0.2s;
+        }
+
+        .input-area .input-buttons-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
         }
 
         .input-area:focus-within {
@@ -1283,12 +1347,13 @@
             font-size: 15px;
             outline: none;
             resize: none;
-            min-height: 24px;
+            min-height: 20px;
             max-height: 200px;
             overflow-y: auto;
             font-family: inherit;
-            line-height: 1.5;
+            line-height: 1.4;
             color: var(--text-primary);
+            padding: 0;
         }
 
         #messageInput::placeholder {
@@ -1315,6 +1380,45 @@
         .send-btn:disabled {
             background: var(--border);
             cursor: not-allowed;
+        }
+
+        .voice-conversation-btn {
+            background: white;
+            border: 2px solid #e5e7eb;
+            color: #6b7280;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.2s;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+
+        .voice-conversation-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: scale(1.05);
+        }
+
+        .voice-conversation-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(16, 163, 127, 0.4);
+            }
+            50% {
+                box-shadow: 0 0 0 8px rgba(16, 163, 127, 0);
+            }
         }
 
         .file-preview {
@@ -1798,7 +1902,7 @@
                 width: 100%;
                 order: 1;
                 font-size: 16px !important;
-                min-height: 48px;
+                min-height: 24px;
                 padding: 8px;
                 border: none;
                 background: transparent;
@@ -1808,8 +1912,10 @@
             .input-buttons-row {
                 order: 2;
                 display: flex;
-                gap: 8px;
+                gap: 12px;
                 align-items: center;
+                justify-content: space-between;
+                width: 100%;
             }
 
             .input-options-container {
@@ -1834,6 +1940,12 @@
                 min-height: 48px;
                 font-size: 16px;
                 padding: 12px 24px;
+            }
+
+            .voice-conversation-btn {
+                width: 48px;
+                height: 48px;
+                font-size: 20px;
             }
 
             .desktop-only {
@@ -1984,62 +2096,87 @@
             background: white;
             border-radius: 12px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-            min-width: 350px;
-            max-width: 400px;
+            min-width: 300px;
+            max-width: 300px;
+            max-height: 500px;
             display: none;
             z-index: 1000;
             border: 1px solid #e5e7eb;
+            overflow: hidden;
         }
 
         .history-dropdown.active {
             display: block;
         }
 
+        .history-dropdown > div {
+            max-height: 500px;
+            overflow-y: auto;
+            padding: 8px 0;
+        }
+
+        .history-dropdown > div::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .history-dropdown > div::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .history-dropdown > div::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 3px;
+        }
+
+        .history-dropdown > div::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+
         .history-item {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 12px 16px;
+            gap: 10px;
+            padding: 10px 12px;
             cursor: pointer;
-            transition: all 0.2s;
-            border-bottom: 1px solid #f3f4f6;
+            transition: all 0.15s;
+            border-radius: 8px;
+            margin: 0 8px 4px 8px;
             position: relative;
         }
 
         .history-item:hover {
-            background: #f9fafb;
+            background: #f3f4f6;
         }
 
         .history-item.active {
-            background: #e6f7f2;
-            border-left: 3px solid #10a37f;
+            background: #ececec;
         }
 
         .history-item.history-new-chat {
-            background: linear-gradient(135deg, #10a37f, #0d8c6f);
-            color: white;
-            border: none;
-            font-weight: 600;
+            background: transparent;
+            border: 1px solid #d1d5db;
+            color: #1f2937;
+            font-weight: 500;
+            margin-bottom: 12px;
         }
 
         .history-item.history-new-chat:hover {
-            transform: translateY(-2px);
+            background: #f9fafb;
         }
 
         .history-icon {
-            font-size: 20px;
+            font-size: 14px;
             flex-shrink: 0;
-            width: 32px;
-            height: 32px;
+            width: 20px;
+            height: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #f3f4f6;
-            border-radius: 8px;
+            color: #6b7280;
         }
 
         .history-new-chat .history-icon {
-            background: rgba(255,255,255,0.2);
+            font-size: 16px;
         }
 
         .history-content {
@@ -2048,37 +2185,34 @@
         }
 
         .history-title {
-            font-weight: 600;
+            font-weight: 400;
             font-size: 14px;
             color: #1f2937;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            line-height: 1.4;
         }
 
         .history-new-chat .history-title {
-            color: white;
+            color: #1f2937;
+            font-weight: 500;
         }
 
         .history-time {
-            font-size: 12px;
-            color: #6b7280;
-            margin-top: 2px;
-        }
-
-        .history-new-chat .history-time {
-            color: rgba(255,255,255,0.8);
+            display: none;
         }
 
         .history-delete {
             background: none;
             border: none;
-            color: #ef4444;
+            color: #9ca3af;
             cursor: pointer;
             padding: 4px;
             border-radius: 4px;
             display: none;
             transition: all 0.2s;
+            flex-shrink: 0;
         }
 
         .history-item:hover .history-delete {
@@ -2086,17 +2220,16 @@
         }
 
         .history-delete:hover {
-            background: #fee2e2;
+            background: #e5e7eb;
+            color: #ef4444;
         }
 
         .history-group-label {
             font-size: 11px;
             font-weight: 600;
             color: #6b7280;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            padding: 12px 16px 8px 16px;
-            background: #f9fafb;
+            padding: 16px 12px 8px 12px;
+            background: transparent;
         }
 
         /* Share Links Section */
@@ -2658,7 +2791,10 @@
                 </div>
             </div>
             {% else %}
-            <!-- Regular Mode: Show custom agents list -->
+            <!-- Regular Mode: Show global agents and custom agents -->
+            <div class="section-title" id="globalAgentsTitle" style="display: none;">My Agents</div>
+            <div id="globalAgentsList"></div>
+
             <div class="section-title" id="customAgentsTitle" style="display: none;">Custom Agents</div>
             <div id="customAgentsList"></div>
             {% endif %}
@@ -2830,19 +2966,38 @@
                 <div class="model-selector-header">
                     <span class="model-label">Model:</span>
                     <select id="modelSelect" class="model-select">
-                        <optgroup label="Claude (Anthropic)">
-                            <option value="claude-sonnet-4.5">Sonnet 4.5</option>
-                            <option value="claude-opus-4">Opus 4</option>
-                            <option value="claude-haiku-4.5">Haiku 4.5</option>
+                        <!-- Free Tier: Gemini + Llama 3.3 70B -->
+                        <optgroup label="🆓 Free Tier">
+                            <option value="gemini-2.0-flash" selected data-tier="free">Gemini 2.0 Flash</option>
+                            <option value="gemini-1.5-pro" data-tier="free">Gemini 1.5 Pro</option>
+                            <option value="llama-3.3-70b" data-tier="free">Llama 3.3 70B</option>
                         </optgroup>
-                        <optgroup label="GPT (OpenAI)">
-                            <option value="gpt-4o">GPT-4o</option>
-                            <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                            <option value="gpt-4o-mini">GPT-4o Mini</option>
+
+                        <!-- Starter Tier: $2-3 models -->
+                        <optgroup label="💼 Starter ($19/mo)">
+                            <option value="grok-2" data-tier="starter">Grok 2</option>
+                            <option value="grok-2-vision" data-tier="starter">Grok 2 Vision</option>
+                            <option value="mistral-large" data-tier="starter">Mistral Large</option>
+                            <option value="gpt-4o" data-tier="starter">GPT-4o</option>
+                            <option value="llama-3.1-405b" data-tier="starter">Llama 3.1 405B</option>
+                            <option value="perplexity-sonar-pro" data-tier="starter">Perplexity Pro</option>
+                            <option value="claude-sonnet-4.5" data-tier="starter">Claude Sonnet 4.5</option>
                         </optgroup>
-                        <optgroup label="Gemini (Google)">
-                            <option value="gemini-2.0-flash" selected>Gemini 2.0 FREE</option>
-                            <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+
+                        <!-- Pro Tier: Everything else under $6 -->
+                        <optgroup label="⭐ Pro ($49/mo)">
+                            <option value="mistral-small" data-tier="pro">Mistral Small</option>
+                            <option value="deepseek-v3" data-tier="pro">DeepSeek V3</option>
+                            <option value="gpt-4o-mini" data-tier="pro">GPT-4o Mini</option>
+                            <option value="deepseek-r1" data-tier="pro">DeepSeek R1</option>
+                            <option value="claude-haiku-4.5" data-tier="pro">Claude Haiku 4.5</option>
+                            <option value="perplexity-sonar" data-tier="pro">Perplexity Sonar</option>
+                        </optgroup>
+
+                        <!-- Enterprise Only: $6+ models -->
+                        <optgroup label="💎 Pro/Enterprise Only">
+                            <option value="claude-opus-4" data-tier="enterprise">Claude Opus 4</option>
+                            <option value="gpt-4-turbo" data-tier="enterprise">GPT-4 Turbo</option>
                         </optgroup>
                     </select>
                 </div>
@@ -2858,20 +3013,39 @@
                     <div class="settings-dropdown" id="settingsDropdown">
                         <div class="settings-section">
                             <div class="settings-label">Model</div>
-                            <select id="modelSelect" class="model-select-compact">
-                                <optgroup label="Claude (Anthropic)">
-                                    <option value="claude-sonnet-4.5">Sonnet 4.5</option>
-                                    <option value="claude-opus-4">Opus 4</option>
-                                    <option value="claude-haiku-4.5">Haiku 4.5</option>
+                            <select id="modelSelectMobile" class="model-select-compact">
+                                <!-- Free Tier: Gemini + Llama 3.3 70B -->
+                                <optgroup label="🆓 Free Tier">
+                                    <option value="gemini-2.0-flash" selected data-tier="free">Gemini 2.0 Flash</option>
+                                    <option value="gemini-1.5-pro" data-tier="free">Gemini 1.5 Pro</option>
+                                    <option value="llama-3.3-70b" data-tier="free">Llama 3.3 70B</option>
                                 </optgroup>
-                                <optgroup label="GPT (OpenAI)">
-                                    <option value="gpt-4o">GPT-4o</option>
-                                    <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                                    <option value="gpt-4o-mini">GPT-4o Mini</option>
+
+                                <!-- Starter Tier: $2-3 models -->
+                                <optgroup label="💼 Starter ($19/mo)">
+                                    <option value="grok-2" data-tier="starter">Grok 2</option>
+                                    <option value="grok-2-vision" data-tier="starter">Grok 2 Vision</option>
+                                    <option value="mistral-large" data-tier="starter">Mistral Large</option>
+                                    <option value="gpt-4o" data-tier="starter">GPT-4o</option>
+                                    <option value="llama-3.1-405b" data-tier="starter">Llama 3.1 405B</option>
+                                    <option value="perplexity-sonar-pro" data-tier="starter">Perplexity Pro</option>
+                                    <option value="claude-sonnet-4.5" data-tier="starter">Claude Sonnet 4.5</option>
                                 </optgroup>
-                                <optgroup label="Gemini (Google)">
-                                    <option value="gemini-2.0-flash" selected>Gemini 2.0 FREE</option>
-                                    <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+
+                                <!-- Pro Tier: Everything else under $6 -->
+                                <optgroup label="⭐ Pro ($49/mo)">
+                                    <option value="mistral-small" data-tier="pro">Mistral Small</option>
+                                    <option value="deepseek-v3" data-tier="pro">DeepSeek V3</option>
+                                    <option value="gpt-4o-mini" data-tier="pro">GPT-4o Mini</option>
+                                    <option value="deepseek-r1" data-tier="pro">DeepSeek R1</option>
+                                    <option value="claude-haiku-4.5" data-tier="pro">Claude Haiku 4.5</option>
+                                    <option value="perplexity-sonar" data-tier="pro">Perplexity Sonar</option>
+                                </optgroup>
+
+                                <!-- Enterprise Only: $6+ models -->
+                                <optgroup label="💎 Pro/Enterprise Only">
+                                    <option value="claude-opus-4" data-tier="enterprise">Claude Opus 4</option>
+                                    <option value="gpt-4-turbo" data-tier="enterprise">GPT-4 Turbo</option>
                                 </optgroup>
                             </select>
                         </div>
@@ -3002,8 +3176,9 @@
         <div class="input-container" {% if is_guest %}style="grid-row: 3 !important; background: #ffffff !important; display: block !important; position: relative !important; z-index: 20 !important; visibility: visible !important; opacity: 1 !important; padding: 16px 24px !important; border-top: 1px solid #e5e7eb !important;"{% endif %}>
             <div class="input-wrapper">
                 <div class="input-area">
-                    <input type="file" id="fileInput" style="display:none;" accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.txt,.md,.csv,.doc,.docx,.xls,.xlsx">
-                    
+                    <input type="file" id="fileInput" multiple style="display:none;" accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.txt,.md,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx">
+                    <input type="file" id="folderInput" webkitdirectory directory multiple style="display:none;">
+
                     <textarea
                         id="messageInput"
                         placeholder="message..."
@@ -3022,7 +3197,11 @@
                             <div class="input-options-menu" id="inputOptionsMenu">
                                 <button onclick="document.getElementById('fileInput').click(); closeInputOptions();" class="option-item">
                                     <span class="option-icon">📎</span>
-                                    <span class="option-text">Upload File</span>
+                                    <span class="option-text">Upload Files</span>
+                                </button>
+                                <button onclick="document.getElementById('folderInput').click(); closeInputOptions();" class="option-item">
+                                    <span class="option-icon">📁</span>
+                                    <span class="option-text">Upload Folder</span>
                                 </button>
                                 <button onclick="toggleVoice(); closeInputOptions();" class="option-item">
                                     <span class="option-icon">🎤</span>
@@ -3034,13 +3213,13 @@
                                 </button>
                             </div>
                         </div>
-                        
+
+                        <button class="voice-conversation-btn" id="voiceConversationBtn" onclick="toggleVoiceConversation()" title="Voice Conversation">🎤</button>
                         <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send</button>
                     </div>
                 </div>
-                <div class="file-preview" id="filePreview">
-                    <span id="fileName"></span>
-                    <button class="remove-file-btn" onclick="removeFile()">✕</button>
+                <div class="file-preview" id="filePreview" style="display:none; flex-wrap: wrap; gap: 8px;">
+                    <!-- Multiple file previews will be added here dynamically -->
                 </div>
             </div>
         </div>
@@ -3263,11 +3442,20 @@
             const clickedInsideDropdown = (
                 event.target.closest('.user-dropdown') ||
                 event.target.closest('.dropdown-menu') ||
-                event.target.closest('.history-dropdown')
+                event.target.closest('.history-dropdown') ||
+                event.target.closest('.settings-dropdown')
+            );
+
+            // Don't close dropdowns if clicking on a select element (fixes mobile model selector)
+            const clickedOnSelect = (
+                event.target.tagName === 'SELECT' ||
+                event.target.tagName === 'OPTION' ||
+                event.target.closest('select')
             );
 
             // If clicked outside all triggers and dropdowns, close all
-            if (!clickedOnDropdownTrigger && !clickedInsideDropdown) {
+            // BUT: Keep dropdowns open when interacting with select elements
+            if (!clickedOnDropdownTrigger && !clickedInsideDropdown && !clickedOnSelect) {
                 closeAllDropdowns();
             }
         });
@@ -3365,34 +3553,83 @@
             }
         }
 
-        // File Upload System with Preview
-        let uploadedFile = null;
+        // File Upload System with Preview - Support Multiple Files
+        let uploadedFiles = [];
 
-        // Handle file selection
+        // Handle multiple file selection
         document.getElementById('fileInput').addEventListener('change', function(event) {
-            const file = event.target.files[0];
-            if (file) {
-                uploadedFile = file;
-                showFilePreview(file);
+            const files = Array.from(event.target.files);
+            if (files.length > 0) {
+                files.forEach(file => {
+                    if (!uploadedFiles.some(f => f.name === file.name && f.size === file.size)) {
+                        uploadedFiles.push(file);
+                    }
+                });
+                showFilePreview();
             }
         });
 
-        function showFilePreview(file) {
+        // Handle folder selection
+        document.getElementById('folderInput').addEventListener('change', function(event) {
+            const files = Array.from(event.target.files);
+            if (files.length > 0) {
+                files.forEach(file => {
+                    if (!uploadedFiles.some(f => f.name === file.name && f.size === file.size)) {
+                        uploadedFiles.push(file);
+                    }
+                });
+                showFilePreview();
+                showNotification(`📁 Added ${files.length} files from folder`);
+            }
+        });
+
+        function showFilePreview() {
             const preview = document.getElementById('filePreview');
-            const fileName = document.getElementById('fileName');
-            
-            // Show file name and size
-            const fileSize = (file.size / 1024).toFixed(1) + ' KB';
-            fileName.textContent = `📎 ${file.name} (${fileSize})`;
-            
-            // Show preview container
+            preview.innerHTML = '';
+
+            if (uploadedFiles.length === 0) {
+                preview.style.display = 'none';
+                return;
+            }
+
+            uploadedFiles.forEach((file, index) => {
+                const fileSize = (file.size / 1024).toFixed(1) + ' KB';
+                const fileDiv = document.createElement('div');
+                fileDiv.style.cssText = `
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 8px 12px;
+                    background: var(--bg-secondary);
+                    border-radius: 8px;
+                    font-size: 13px;
+                `;
+                fileDiv.innerHTML = `
+                    <span>📎 ${file.name} (${fileSize})</span>
+                    <button onclick="removeFile(${index})" style="
+                        background: none;
+                        border: none;
+                        cursor: pointer;
+                        color: var(--text-secondary);
+                        padding: 2px 6px;
+                        font-size: 16px;
+                    ">✕</button>
+                `;
+                preview.appendChild(fileDiv);
+            });
+
             preview.style.display = 'flex';
         }
 
-        function removeFile() {
-            uploadedFile = null;
+        function removeFile(index) {
+            if (index !== undefined) {
+                uploadedFiles.splice(index, 1);
+            } else {
+                uploadedFiles = [];
+            }
+            showFilePreview();
             document.getElementById('fileInput').value = '';
-            document.getElementById('filePreview').style.display = 'none';
+            document.getElementById('folderInput').value = '';
         }
 
         // Send Message Function
@@ -3401,36 +3638,54 @@
             const message = input.value.trim();
             const modelSelect = document.getElementById('modelSelect');
             const model = modelSelect.value;
-            
-            if (!message && !uploadedFile) {
+
+            if (!message && uploadedFiles.length === 0) {
                 return; // Don't send empty messages
             }
-            
+
+            // Check if user wants to switch agents
+            const switchPattern = /switch\s+to\s+(\w+(?:\s+\w+)*)/i;
+            const switchMatch = message.match(switchPattern);
+            if (switchMatch && uploadedFiles.length === 0) {
+                const targetAgent = switchMatch[1];
+                // Try to switch to the agent
+                const success = switchToAgent(targetAgent);
+                if (success) {
+                    input.value = '';
+                    autoResize(input);
+                    return; // Don't send the message, just switch
+                }
+                // If agent not found, continue to send as regular message
+            }
+
             // Disable send button
             const sendBtn = document.getElementById('sendBtn');
             sendBtn.disabled = true;
             sendBtn.textContent = 'Sending...';
-            
+
             // Create FormData
             const formData = new FormData();
             formData.append('message', message);
             formData.append('model', model);
-            
-            // Add file if uploaded
-            if (uploadedFile) {
-                formData.append('file', uploadedFile);
+
+            // Add all uploaded files
+            if (uploadedFiles.length > 0) {
+                uploadedFiles.forEach((file, index) => {
+                    formData.append(`file_${index}`, file);
+                });
+                formData.append('file_count', uploadedFiles.length);
             }
-            
+
             // Add current agent
             const currentAgent = getCurrentAgent();
             formData.append('agent', currentAgent);
-            
+
             // Variable to track thinking indicator interval
             let thinkingInterval = null;
 
             try {
-                // Display user message immediately
-                displayUserMessage(message, uploadedFile);
+                // Display user message immediately with files
+                displayUserMessage(message, uploadedFiles.length > 0 ? uploadedFiles : null);
 
                 // Show thinking indicator
                 thinkingInterval = displayThinkingIndicator();
@@ -3461,6 +3716,16 @@
 
                     // Display the AI response
                     displayAssistantMessage(data.response);
+
+                    // Check if user mentioned any agents
+                    if (data.mentioned_agents && data.mentioned_agents.length > 0) {
+                        if (data.mentioned_agents.length === 1) {
+                            displaySystemMessage(`🤝 You mentioned ${data.mentioned_agents[0]}. Type "switch to ${data.mentioned_agents[0]}" to chat with them.`);
+                        } else {
+                            const mentionedList = data.mentioned_agents.join(', ');
+                            displaySystemMessage(`🤝 You mentioned: ${mentionedList}. Type "switch to [agent name]" to chat with any of them.`);
+                        }
+                    }
 
                     // Check if agent suggested delegation
                     if (data.delegation_suggested) {
@@ -3494,32 +3759,48 @@
             return 'Luna'; // Default
         }
 
-        function displayUserMessage(message, file) {
+        function displayUserMessage(message, files) {
             const container = document.getElementById('chatContainer');
             const messageDiv = document.createElement('div');
             messageDiv.className = 'message user-message';
-            
-            let content = '<div class="message-content">';
-            if (file) {
-                const fileType = file.type.split('/')[0];
-                if (fileType === 'image') {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        const img = document.createElement('img');
-                        img.src = e.target.result;
-                        img.style.maxWidth = '300px';
-                        img.style.borderRadius = '8px';
-                        img.style.marginBottom = '8px';
-                        messageDiv.querySelector('.message-content').prepend(img);
-                    };
-                    reader.readAsDataURL(file);
-                } else {
-                    content += `<div style="background: #f3f4f6; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; display: inline-block;">📎 ${file.name}</div><br>`;
+
+            let content = '<div class="message-wrapper">';
+            content += '<div class="avatar">👤</div>';
+            content += '<div class="message-content">';
+
+            // Handle multiple files
+            if (files && files.length > 0) {
+                const fileArray = Array.isArray(files) ? files : [files];
+
+                fileArray.forEach(file => {
+                    const fileType = file.type.split('/')[0];
+                    if (fileType === 'image') {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const img = document.createElement('img');
+                            img.src = e.target.result;
+                            img.style.maxWidth = '300px';
+                            img.style.borderRadius = '8px';
+                            img.style.marginBottom = '8px';
+                            img.style.marginRight = '8px';
+                            messageDiv.querySelector('.message-content').prepend(img);
+                        };
+                        reader.readAsDataURL(file);
+                    } else {
+                        const fileSize = (file.size / 1024).toFixed(1) + ' KB';
+                        content += `<div style="background: #e0e0e0; padding: 6px 10px; border-radius: 6px; margin-bottom: 6px; font-size: 13px;">📎 ${file.name} (${fileSize})</div>`;
+                    }
+                });
+
+                if (fileArray.length > 1) {
+                    content += `<div style="font-size: 12px; color: #555; margin-bottom: 6px;">${fileArray.length} files attached</div>`;
                 }
             }
-            content += message + '</div>';
+
+            content += message;
+            content += '</div></div>';
             messageDiv.innerHTML = content;
-            
+
             container.appendChild(messageDiv);
             container.scrollTop = container.scrollHeight;
         }
@@ -3606,8 +3887,11 @@
             const messageDiv = document.createElement('div');
             messageDiv.className = 'message system-message';
             messageDiv.innerHTML = `
-                <div class="message-content" style="background: #eff6ff; padding: 16px; border-radius: 12px; border: 2px solid #3b82f6;">
-                    <div style="color: #1e40af; font-weight: 500;">💡 ${reason}</div>
+                <div class="message-content" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 16px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    <div style="color: white; font-weight: 500;">
+                        <span style="font-size: 20px;">🤝</span> ${reason}<br>
+                        <span style="font-size: 14px; opacity: 0.9;">Type "switch to ${suggestedAgent}" to continue with them.</span>
+                    </div>
                 </div>
             `;
 
@@ -3616,14 +3900,24 @@
         }
 
         function switchToAgent(agentName) {
-            // Find and click the agent button in the sidebar
-            const agentButtons = document.querySelectorAll('.agent-button');
-            agentButtons.forEach(btn => {
-                if (btn.textContent.includes(agentName)) {
-                    btn.click();
-                    displaySystemMessage(`✅ Switched to ${agentName}`);
+            // Find and click the agent in the sidebar (case-insensitive)
+            const agentItems = document.querySelectorAll('.agent-item');
+            let found = false;
+
+            agentItems.forEach(item => {
+                const nameElement = item.querySelector('.agent-name');
+                if (nameElement) {
+                    const itemName = nameElement.textContent.trim();
+                    // Case-insensitive partial match
+                    if (itemName.toLowerCase().includes(agentName.toLowerCase())) {
+                        item.click();
+                        displaySystemMessage(`✅ Switched to ${itemName}`);
+                        found = true;
+                    }
                 }
             });
+
+            return found;
         }
 
         // Handle Enter key
@@ -3636,8 +3930,13 @@
 
         // Auto-resize textarea
         function autoResize(textarea) {
-            textarea.style.height = 'auto';
-            textarea.style.height = Math.min(textarea.scrollHeight, 150) + 'px';
+            // Reset to minimum height first
+            textarea.style.height = '20px';
+
+            // If there's content, expand to fit
+            if (textarea.value.trim()) {
+                textarea.style.height = Math.min(textarea.scrollHeight, 150) + 'px';
+            }
         }
 
         // ============================================
@@ -3708,9 +4007,21 @@
             
             recognition.onresult = function(event) {
                 const transcript = event.results[0][0].transcript;
-                document.getElementById('messageInput').value = transcript;
+                const messageInput = document.getElementById('messageInput');
+                messageInput.value = transcript;
                 stopVoiceRecording();
-                showNotification('✅ Voice input captured!');
+
+                if (voiceConversationMode) {
+                    // Auto-send in voice conversation mode
+                    showNotification('🗣️ Sending: ' + transcript.substring(0, 30) + '...');
+                    setTimeout(() => sendMessage(), 500);
+                } else {
+                    // Focus the input and show notification
+                    messageInput.focus();
+                    // Auto-resize the textarea to fit content
+                    autoResize(messageInput);
+                    showNotification(`✅ Voice captured: "${transcript.substring(0, 40)}${transcript.length > 40 ? '...' : ''}"`);
+                }
             };
             
             recognition.onerror = function(event) {
@@ -3780,6 +4091,109 @@
             if (status) {
                 status.style.display = 'none';
             }
+        }
+
+        // ============================================
+        // VOICE CONVERSATION MODE (TTS + Continuous)
+        // ============================================
+
+        let voiceConversationMode = false;
+        let currentSpeech = null;
+
+        function toggleVoiceConversation() {
+            // Check browser support for both features
+            if (!('speechSynthesis' in window)) {
+                showNotification('❌ Text-to-speech not supported in your browser');
+                return;
+            }
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                showNotification('❌ Voice input not supported in your browser');
+                return;
+            }
+
+            voiceConversationMode = !voiceConversationMode;
+
+            const btn = document.getElementById('voiceConversationBtn');
+
+            if (voiceConversationMode) {
+                btn.classList.add('active');
+                btn.title = 'Stop Voice Conversation';
+                showNotification('🗣️ Voice conversation mode ON - I\'ll speak responses!');
+            } else {
+                btn.classList.remove('active');
+                btn.title = 'Voice Conversation';
+                stopSpeaking();
+                showNotification('Voice conversation mode OFF');
+            }
+        }
+
+        function speakText(text) {
+            // Stop any ongoing speech
+            stopSpeaking();
+
+            if (!voiceConversationMode || !text) return;
+
+            // Clean the text for better speech
+            const cleanText = text
+                .replace(/```[\s\S]*?```/g, '') // Remove code blocks
+                .replace(/`[^`]+`/g, '') // Remove inline code
+                .replace(/\*\*/g, '') // Remove bold markdown
+                .replace(/\*/g, '') // Remove italic markdown
+                .replace(/#{1,6}\s/g, '') // Remove headers
+                .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Convert links to text
+                .replace(/\n+/g, ' ') // Replace newlines with spaces
+                .trim();
+
+            if (!cleanText) return;
+
+            currentSpeech = new SpeechSynthesisUtterance(cleanText);
+            currentSpeech.rate = 1.0; // Normal speed
+            currentSpeech.pitch = 1.0; // Normal pitch
+            currentSpeech.volume = 1.0; // Full volume
+
+            // Select a female voice if available
+            const voices = window.speechSynthesis.getVoices();
+            // Try to find a female voice with priority order
+            const preferredVoice = voices.find(voice =>
+                voice.lang.startsWith('en') &&
+                voice.name.toLowerCase().includes('female')
+            ) || voices.find(voice =>
+                voice.lang.startsWith('en') &&
+                (voice.name.includes('Samantha') || voice.name.includes('Victoria') ||
+                 voice.name.includes('Karen') || voice.name.includes('Zira') ||
+                 voice.name.includes('Google US English') && voice.name.includes('Female'))
+            ) || voices.find(voice =>
+                voice.lang.startsWith('en') &&
+                voice.name.includes('Google')
+            );
+
+            if (preferredVoice) {
+                currentSpeech.voice = preferredVoice;
+            }
+
+            currentSpeech.onend = function() {
+                if (voiceConversationMode) {
+                    // Auto-start listening for next input after speaking
+                    setTimeout(() => {
+                        if (voiceConversationMode) {
+                            startVoiceRecording();
+                        }
+                    }, 500);
+                }
+            };
+
+            currentSpeech.onerror = function(event) {
+                console.error('Speech synthesis error:', event);
+            };
+
+            window.speechSynthesis.speak(currentSpeech);
+        }
+
+        function stopSpeaking() {
+            if (window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+            }
+            currentSpeech = null;
         }
 
         function showNotification(message) {
@@ -4065,18 +4479,16 @@
             // Group conversations by date
             const grouped = groupConversationsByDate(conversations);
             
-            let html = '<div style="max-height: 400px; overflow-y: auto;">';
-            
+            let html = '<div>';
+
             // Add "New Chat" button at top
             html += `
                 <div class="history-item history-new-chat" onclick="startNewChat()">
-                    <div class="history-icon">✨</div>
+                    <div class="history-icon">✏️</div>
                     <div class="history-content">
-                        <div class="history-title">New Chat</div>
-                        <div class="history-time">Start fresh conversation</div>
+                        <div class="history-title">New chat</div>
                     </div>
                 </div>
-                <div style="border-bottom: 1px solid #e5e7eb; margin: 10px 0;"></div>
             `;
             
             // Add conversations by date group
@@ -4087,16 +4499,14 @@
                     const isCurrentConv = currentConversationId === conv.id;
                     const isInactive = conv.is_active === false;
                     const opacity = isInactive ? 'opacity: 0.6;' : '';
-                    const inactiveLabel = isInactive ? '<span style="font-size: 10px; color: #ef4444; margin-left: 5px;">(archived)</span>' : '';
                     html += `
                         <div class="history-item ${isCurrentConv ? 'active' : ''}" onclick="loadConversation(${conv.id})" style="${opacity}">
-                            <div class="history-icon">${getAgentIcon(conv.agent)}</div>
+                            <div class="history-icon">💬</div>
                             <div class="history-content">
-                                <div class="history-title">${conv.title}${inactiveLabel}</div>
-                                <div class="history-time">${formatTime(conv.updated_at)}</div>
+                                <div class="history-title">${conv.title}</div>
                             </div>
-                            <button class="history-delete" onclick="deleteConversation(${conv.id}, event)">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <button class="history-delete" onclick="deleteConversation(${conv.id}, event)" title="Delete chat">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
                                 </svg>
                             </button>
@@ -4324,12 +4734,103 @@
         // Load conversations on page load
         document.addEventListener('DOMContentLoaded', function() {
             loadConversations();
+            loadGlobalAgents();  // Load global agents on page load
             loadCustomAgents();  // Load custom agents on page load
             loadUsageStats();     // Load usage statistics
 
             // Ensure all dropdowns are closed on page load
             closeAllDropdowns();
+
+            // Explicitly ensure history dropdown is closed
+            const historyDropdown = document.getElementById('historyDropdownMenu');
+            if (historyDropdown) {
+                historyDropdown.style.display = 'none';
+                historyDropdown.classList.remove('active');
+            }
+
+            // Initialize message input height
+            const messageInput = document.getElementById('messageInput');
+            if (messageInput) {
+                messageInput.style.height = '20px';
+            }
+
+            // Apply tier restrictions to model selectors
+            applyModelTierRestrictions();
+
+            // Sync model selectors (desktop and mobile)
+            syncModelSelectors();
         });
+
+        // Apply tier restrictions to model selectors
+        function applyModelTierRestrictions() {
+            const userTier = '{{ current_user.subscription_tier }}';
+
+            // Define tier hierarchy
+            const tierHierarchy = {
+                'free': 0,
+                'freeforlife': 0,
+                'starter': 1,
+                'pro': 2,
+                'enterprise': 3
+            };
+
+            const userTierLevel = tierHierarchy[userTier] || 0;
+
+            // Get both selectors
+            const selectors = [
+                document.getElementById('modelSelect'),
+                document.getElementById('modelSelectMobile')
+            ];
+
+            selectors.forEach(selector => {
+                if (!selector) return;
+
+                // Process each option
+                const options = selector.querySelectorAll('option[data-tier]');
+
+                options.forEach(option => {
+                    const requiredTier = option.getAttribute('data-tier');
+                    const requiredTierLevel = tierHierarchy[requiredTier] || 0;
+
+                    if (userTierLevel < requiredTierLevel) {
+                        // User doesn't have access to this model
+                        option.disabled = true;
+
+                        // Add upgrade message
+                        let upgradeTier = '';
+                        if (requiredTier === 'starter') {
+                            upgradeTier = ' (Upgrade to Starter)';
+                        } else if (requiredTier === 'pro') {
+                            upgradeTier = ' (Upgrade to Pro)';
+                        } else if (requiredTier === 'enterprise') {
+                            upgradeTier = ' (Pro/Enterprise Only)';
+                        }
+
+                        if (!option.textContent.includes('Upgrade')) {
+                            option.textContent = option.textContent + upgradeTier;
+                        }
+                    }
+                });
+            });
+        }
+
+        // Sync desktop and mobile model selectors
+        function syncModelSelectors() {
+            const desktopSelect = document.getElementById('modelSelect');
+            const mobileSelect = document.getElementById('modelSelectMobile');
+
+            if (!desktopSelect || !mobileSelect) return;
+
+            // When desktop changes, update mobile
+            desktopSelect.addEventListener('change', function() {
+                mobileSelect.value = this.value;
+            });
+
+            // When mobile changes, update desktop
+            mobileSelect.addEventListener('change', function() {
+                desktopSelect.value = this.value;
+            });
+        }
 
         // ============================================
         // CUSTOM AGENTS LOADING
@@ -4416,6 +4917,98 @@
 
                 container.appendChild(agentDiv);
             });
+        }
+
+        // ============================================
+        // GLOBAL AGENTS LOADING
+        // ============================================
+
+        function loadGlobalAgents() {
+            fetch('/api/global-agents')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.agents && data.agents.length > 0) {
+                        displayGlobalAgents(data.agents);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading global agents:', error);
+                });
+        }
+
+        function displayGlobalAgents(agents) {
+            const container = document.getElementById('globalAgentsList');
+            const title = document.getElementById('globalAgentsTitle');
+
+            if (!container) return;
+
+            // Show the section title
+            if (title) {
+                title.style.display = 'block';
+            }
+
+            // Clear existing content
+            container.innerHTML = '';
+
+            // Add each global agent
+            agents.forEach(agent => {
+                const agentDiv = document.createElement('div');
+                agentDiv.className = 'agent-item custom-agent-item';
+                agentDiv.onclick = (e) => {
+                    selectGlobalAgent(e, agent.id, agent.name, agent.emoji || '🤖', agent.description);
+                };
+
+                agentDiv.innerHTML = `
+                    <div class="agent-avatar" style="background: linear-gradient(135deg, #9C27B0, #E91E63);">
+                        ${agent.emoji || '🤖'}
+                    </div>
+                    <div class="agent-info">
+                        <div class="agent-name">${agent.name}</div>
+                        <div class="agent-role">${agent.description || 'Global Agent'}</div>
+                    </div>
+                `;
+
+                container.appendChild(agentDiv);
+            });
+        }
+
+        function selectGlobalAgent(event, agentId, agentName, emoji, description) {
+            event.preventDefault();
+
+            // Close all dropdowns when selecting a global agent
+            closeAllDropdowns();
+
+            // Update current agent display
+            const agentDisplay = document.getElementById('currentAgentName');
+            if (agentDisplay) {
+                agentDisplay.textContent = agentName;
+            }
+
+            // Update current agent emoji
+            const agentEmoji = document.querySelector('.current-agent-emoji');
+            if (agentEmoji) {
+                agentEmoji.textContent = emoji;
+            }
+
+            // Store selected agent info
+            window.selectedGlobalAgent = {
+                id: agentId,
+                name: agentName,
+                emoji: emoji,
+                description: description,
+                isGlobal: true
+            };
+
+            // Clear custom agent selection
+            window.selectedCustomAgent = null;
+
+            // Visual feedback
+            document.querySelectorAll('.agent-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+
+            console.log('Selected global agent:', agentName);
         }
 
         function showCustomAgentShare(event, agentName, shareUrl) {
@@ -4549,6 +5142,9 @@
 
         function selectCustomAgent(eventOrId, agentIdOrName, name, emoji, description, iconImage) {
             console.log('🎯 Selecting custom agent');
+
+            // Close all dropdowns when selecting a custom agent
+            closeAllDropdowns();
 
             // Handle both call signatures:
             // 1. selectCustomAgent(agentId, agentName) - 2 params for guest mode
@@ -4691,11 +5287,16 @@
             try {
                 // Fetch agent data
                 const response = await fetch('/api/custom-agents');
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
                 const data = await response.json();
                 const agent = data.agents.find(a => a.id === agentId);
 
                 if (!agent) {
-                    alert('Agent not found');
+                    showNotification('❌ Agent not found');
                     return;
                 }
 
@@ -4726,7 +5327,7 @@
                 }
             } catch (error) {
                 console.error('Error loading agent for edit:', error);
-                alert('Failed to load agent data');
+                showNotification(`❌ Failed to load agent data: ${error.message}`);
             }
         }
 
@@ -4737,7 +5338,7 @@
             const instructions = document.getElementById('agentInstructions').value.trim();
 
             if (!name || !role || !instructions) {
-                alert('Please fill in all required fields');
+                showNotification('⚠️ Please fill in all required fields');
                 return;
             }
 
@@ -4762,11 +5363,11 @@
                     closeCustomAgentModal();
                     loadCustomAgents(); // Reload the list
                 } else {
-                    alert(data.message || data.error || 'Failed to update agent');
+                    showNotification(`❌ ${data.message || data.error || 'Failed to update agent'}`);
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Failed to update agent. Please try again.');
+                showNotification('❌ Failed to update agent. Please try again.');
             }
         }
 
@@ -4786,12 +5387,12 @@
                     showNotification('✅ Agent deleted successfully!');
                     loadCustomAgents(); // Reload the list
                 } else {
-                    alert('Error deleting agent: ' + (data.error || 'Unknown error'));
+                    showNotification(`❌ Error deleting agent: ${data.error || 'Unknown error'}`);
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Failed to delete agent. Please try again.');
+                showNotification('❌ Failed to delete agent. Please try again.');
             });
         }
 
@@ -4824,7 +5425,7 @@
             const iconImage = document.getElementById('agentIconImage').files[0];
 
             if (!name || !role || !instructions) {
-                alert('Please fill in all required fields');
+                showNotification('⚠️ Please fill in all required fields');
                 return;
             }
 
@@ -4855,11 +5456,11 @@
                     document.getElementById('customAgentForm').reset();
                     clearAgentIcon();
                 } else {
-                    alert(data.message || data.error || 'Failed to create agent');
+                    showNotification(`❌ ${data.message || data.error || 'Failed to create agent'}`);
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Failed to create agent. Please try again.');
+                showNotification('❌ Failed to create agent. Please try again.');
             }
         }
 
@@ -4872,13 +5473,93 @@
             const container = document.getElementById('chatContainer');
             const messageDiv = document.createElement('div');
             messageDiv.className = 'message assistant-message';
-            
+
+            const currentAgent = getCurrentAgent();
+            const agentIcon = getAgentIcon(currentAgent);
+
             // Format the message with proper paragraph breaks and styling
             const formattedMessage = formatAssistantMessage(message);
-            messageDiv.innerHTML = `<div class="message-content">${formattedMessage}</div>`;
-            
+
+            const messageId = 'msg_' + Date.now();
+            messageDiv.id = messageId;
+
+            messageDiv.innerHTML = `
+                <div class="message-wrapper">
+                    <div class="avatar">${agentIcon}</div>
+                    <div style="flex: 1;">
+                        <div class="message-content">${formattedMessage}</div>
+                        <div class="message-actions">
+                            <button class="message-action-btn" onclick="copyMessage('${messageId}')" title="Copy">
+                                📋 Copy
+                            </button>
+                            <button class="message-action-btn" onclick="regenerateResponse()" title="Regenerate">
+                                🔄 Regenerate
+                            </button>
+                            <button class="message-action-btn" onclick="likeMessage('${messageId}')" title="Good response">
+                                👍
+                            </button>
+                            <button class="message-action-btn" onclick="dislikeMessage('${messageId}')" title="Bad response">
+                                👎
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
             container.appendChild(messageDiv);
             container.scrollTop = container.scrollHeight;
+
+            // Speak the message if voice conversation mode is on
+            if (voiceConversationMode) {
+                speakText(message);
+            }
+        }
+
+        // Message action functions
+        function copyMessage(messageId) {
+            const messageDiv = document.getElementById(messageId);
+            const messageContent = messageDiv.querySelector('.message-content');
+            const text = messageContent.innerText || messageContent.textContent;
+
+            navigator.clipboard.writeText(text).then(() => {
+                showNotification('✅ Message copied to clipboard');
+            }).catch(err => {
+                console.error('Copy failed:', err);
+                showNotification('❌ Failed to copy message');
+            });
+        }
+
+        function regenerateResponse() {
+            showNotification('🔄 Regenerating response...');
+            // Get the last user message and resend it
+            const messages = document.querySelectorAll('.user-message');
+            if (messages.length > 0) {
+                const lastUserMessage = messages[messages.length - 1];
+                const text = lastUserMessage.querySelector('.message-content').textContent;
+
+                // Remove the last assistant message
+                const assistantMessages = document.querySelectorAll('.assistant-message');
+                if (assistantMessages.length > 0) {
+                    assistantMessages[assistantMessages.length - 1].remove();
+                }
+
+                // Resend the message
+                setTimeout(() => sendMessage(), 500);
+            }
+        }
+
+        function likeMessage(messageId) {
+            const btn = event.target;
+            btn.style.color = '#10a37f';
+            btn.textContent = '👍✓';
+            showNotification('✅ Thanks for your feedback!');
+        }
+
+        function dislikeMessage(messageId) {
+            const btn = event.target;
+            btn.style.color = '#ef4444';
+            btn.textContent = '👎✓';
+            showNotification('📝 Thanks for your feedback. We\'ll improve!');
         }
 
         function formatAssistantMessage(message) {
@@ -5477,6 +6158,9 @@ Please provide your response following these guidelines.`;
             function selectAgent(agentName, emoji, role) {
                 console.log('🎯 Selecting agent:', agentName);
 
+                // Close all dropdowns when selecting an agent
+                closeAllDropdowns();
+
                 // Update header display
                 const currentAgentName = document.getElementById('currentAgentName');
                 const currentAgentAvatar = document.getElementById('currentAgentAvatar');
@@ -5533,6 +6217,23 @@ Please provide your response following these guidelines.`;
                 console.log('✅ Agent switched to:', agentName);
             }
         }
+
+        // Wrapper function for switchAgent (used when loading conversations)
+        function switchAgent(agentName) {
+            // Agent metadata
+            const agentData = {
+                'Luna': { emoji: '🌙', role: 'Research & Analysis' },
+                'Mila': { emoji: '📋', role: 'Organization & Planning' },
+                'Sage': { emoji: '🧙', role: 'Writing & Content' },
+                'Ember': { emoji: '🔥', role: 'Creative Direction' },
+                'Sol': { emoji: '☀️', role: 'Strategic Thinking' },
+                'Nova': { emoji: '⭐', role: 'Technical Solutions' },
+                'Theo': { emoji: '💼', role: 'Implementation' }
+            };
+
+            const agent = agentData[agentName] || { emoji: '🤖', role: 'AI Assistant' };
+            selectAgent(agentName, agent.emoji, agent.role);
+        }
     </script>
 
     <script src="/static/dashboard_ultimate.js"></script>
@@ -5557,7 +6258,7 @@ Please provide your response following these guidelines.`;
     <style>
         #supportChatButton {
             position: fixed;
-            bottom: 30px;
+            bottom: 100px;
             right: 30px;
             width: 60px;
             height: 60px;
@@ -5580,7 +6281,7 @@ Please provide your response following these guidelines.`;
 
         #supportChatbox {
             position: fixed;
-            bottom: 100px;
+            bottom: 170px;
             right: 30px;
             width: 380px;
             height: 500px;
@@ -5694,11 +6395,11 @@ Please provide your response following these guidelines.`;
             #supportChatbox {
                 width: 90%;
                 right: 5%;
-                bottom: 80px;
+                bottom: 100px;
             }
 
             #supportChatButton {
-                bottom: 20px;
+                bottom: 80px;
                 right: 20px;
             }
         }

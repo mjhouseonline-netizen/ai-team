@@ -263,14 +263,27 @@
             display: flex;
             gap: 15px;
             margin-bottom: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
 
         .search-box {
             flex: 1;
-            padding: 12px 20px;
+            padding: 14px 20px;
             border: 2px solid #e2e8f0;
-            border-radius: 8px;
+            border-radius: 10px;
             font-size: 1em;
+            transition: all 0.2s;
+            background: #f9fafb;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
         .empty-state {
@@ -329,21 +342,32 @@
 
         <!-- Main Content -->
         <div class="main-content">
-            <div class="page-header">
-                <div>
-                    <h1>🤖 Global Agents Manager</h1>
-                    <p>Create and manage focused, single-purpose AI agents for your clients</p>
+            <!-- Enhanced Page Header -->
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px; padding: 40px; margin-bottom: 30px; color: white; box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);">
+                <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 15px;">
+                    <div style="font-size: 3.5em;">🤖</div>
+                    <div>
+                        <h1 style="margin: 0; font-size: 2.5em; font-weight: 700; color: white;">Global Agents Manager</h1>
+                        <p style="margin: 10px 0 0 0; font-size: 1.1em; opacity: 0.95;">Create and manage focused, single-purpose AI agents for your clients</p>
+                    </div>
                 </div>
             </div>
 
-            <div class="alert alert-info">
-                <strong>💡 What are Global Agents?</strong><br>
-                Global agents are pre-configured, focused AI assistants that do one thing well. Create them here, then assign them to specific users/clients. Each agent should have a single, clear purpose (e.g., "Content Helper", "Email Assistant").
+            <!-- Info Card -->
+            <div style="background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%); border: 2px solid #0ea5e9; border-radius: 12px; padding: 25px; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.1);">
+                <div style="display: flex; align-items: start; gap: 15px;">
+                    <div style="font-size: 2em; flex-shrink: 0;">💡</div>
+                    <div>
+                        <strong style="color: #0c4a6e; font-size: 1.1em; display: block; margin-bottom: 8px;">What are Global Agents?</strong>
+                        <p style="color: #0369a1; margin: 0; line-height: 1.6;">Global agents are pre-configured, focused AI assistants that do one thing well. Create them here, then assign them to specific users/clients. Each agent should have a single, clear purpose (e.g., "Content Helper", "Email Assistant").</p>
+                    </div>
+                </div>
             </div>
 
+            <!-- Search and Create Section -->
             <div class="header-actions">
-                <input type="text" id="searchBox" class="search-box" placeholder="Search agents..." onkeyup="filterAgents()">
-                <button class="btn btn-primary" onclick="openCreateModal()" style="white-space: nowrap;">
+                <input type="text" id="searchBox" class="search-box" placeholder="🔍 Search agents..." onkeyup="filterAgents()">
+                <button class="btn btn-primary" onclick="openCreateModal()" style="white-space: nowrap; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4); font-size: 1.05em; padding: 14px 28px;">
                     ✨ Create Global Agent
                 </button>
             </div>
@@ -419,6 +443,29 @@ Do NOT:
                 </div>
 
                 <div class="form-group">
+                    <label class="form-label">Integrations (Optional)</label>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 15px; background: #f7fafc; border-radius: 8px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" class="integration-checkbox" value="email">
+                            <span>📧 Email (Gmail, Outlook)</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" class="integration-checkbox" value="social_media">
+                            <span>📱 Social Media (Twitter, LinkedIn)</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" class="integration-checkbox" value="meetings">
+                            <span>🎥 Meetings (Zoom, Google Calendar)</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" class="integration-checkbox" value="productivity">
+                            <span>📊 Productivity (Google Sheets, Slack)</span>
+                        </label>
+                    </div>
+                    <div class="form-hint">Select which external services this agent can connect to. Users will need to authorize connections when they start using the agent.</div>
+                </div>
+
+                <div class="form-group">
                     <label>
                         <input type="checkbox" id="agentActive" checked>
                         Active (users can see and use this agent)
@@ -444,20 +491,27 @@ Do NOT:
             <input type="hidden" id="assignAgentId">
 
             <div class="form-group">
-                <label class="form-label">User IDs (comma-separated)</label>
-                <input type="text" id="assignUserIds" class="form-input" placeholder="2, 3, 4, 5">
-                <div class="form-hint">Enter user IDs to assign this agent to</div>
+                <label class="form-label">Select Users</label>
+                <input type="text" id="userSearch" class="form-input" placeholder="🔍 Search users..." onkeyup="filterUsers()" style="margin-bottom: 15px;">
+
+                <div id="usersList" style="max-height: 400px; overflow-y: auto; border: 2px solid #e2e8f0; border-radius: 8px; padding: 15px; background: #f9fafb;">
+                    <div style="text-align: center; padding: 20px; color: #718096;">
+                        <p>⏳ Loading users...</p>
+                    </div>
+                </div>
+                <div class="form-hint">Select which users should have access to this agent</div>
             </div>
 
             <div style="display: flex; gap: 10px;">
                 <button class="btn btn-secondary" onclick="closeAssignModal()">Cancel</button>
-                <button class="btn btn-primary" onclick="assignAgent()" style="flex: 1;">Assign</button>
+                <button class="btn btn-primary" onclick="assignAgent()" style="flex: 1;">Assign to Selected Users</button>
             </div>
         </div>
     </div>
 
     <script>
         let allAgents = [];
+        let allUsers = [];
 
         // Load all global agents
         async function loadAgents() {
@@ -491,33 +545,50 @@ Do NOT:
                 return;
             }
 
-            grid.innerHTML = agents.map(agent => `
-                <div class="agent-card ${!agent.is_active ? 'inactive' : ''}">
-                    <div class="agent-header">
-                        <div class="agent-emoji">${agent.emoji}</div>
-                        <div class="agent-info">
-                            <div class="agent-name">${agent.name}</div>
-                            <div class="agent-category">${agent.category}</div>
+            const integrationIcons = {
+                'email': '📧',
+                'social_media': '📱',
+                'meetings': '🎥',
+                'productivity': '📊'
+            };
+
+            grid.innerHTML = agents.map(agent => {
+                const integrationsHtml = agent.integrations && agent.integrations.length > 0
+                    ? `<div class="stat-item" title="Integrations: ${agent.integrations.join(', ')}">
+                           <span>🔌</span>
+                           <span>${agent.integrations.map(i => integrationIcons[i] || '🔗').join(' ')}</span>
+                       </div>`
+                    : '';
+
+                return `
+                    <div class="agent-card ${!agent.is_active ? 'inactive' : ''}">
+                        <div class="agent-header">
+                            <div class="agent-emoji">${agent.emoji}</div>
+                            <div class="agent-info">
+                                <div class="agent-name">${agent.name}</div>
+                                <div class="agent-category">${agent.category}</div>
+                            </div>
+                        </div>
+                        <div class="agent-description">${agent.description}</div>
+                        <div class="agent-stats">
+                            <div class="stat-item">
+                                <span>👥</span>
+                                <span>${agent.user_count} users</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>${agent.is_active ? '✅' : '⏸️'}</span>
+                                <span>${agent.is_active ? 'Active' : 'Inactive'}</span>
+                            </div>
+                            ${integrationsHtml}
+                        </div>
+                        <div class="agent-actions">
+                            <button class="btn btn-primary" onclick="openEditModal(${agent.id})">Edit</button>
+                            <button class="btn btn-secondary" onclick="openAssignModal(${agent.id})">Assign</button>
+                            <button class="btn btn-danger" onclick="deleteAgent(${agent.id})">Delete</button>
                         </div>
                     </div>
-                    <div class="agent-description">${agent.description}</div>
-                    <div class="agent-stats">
-                        <div class="stat-item">
-                            <span>👥</span>
-                            <span>${agent.user_count} users</span>
-                        </div>
-                        <div class="stat-item">
-                            <span>${agent.is_active ? '✅' : '⏸️'}</span>
-                            <span>${agent.is_active ? 'Active' : 'Inactive'}</span>
-                        </div>
-                    </div>
-                    <div class="agent-actions">
-                        <button class="btn btn-primary" onclick="openEditModal(${agent.id})">Edit</button>
-                        <button class="btn btn-secondary" onclick="openAssignModal(${agent.id})">Assign</button>
-                        <button class="btn btn-danger" onclick="deleteAgent(${agent.id})">Delete</button>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         function filterAgents() {
@@ -535,6 +606,12 @@ Do NOT:
             document.getElementById('agentForm').reset();
             document.getElementById('agentId').value = '';
             document.getElementById('agentActive').checked = true;
+
+            // Uncheck all integration checkboxes
+            document.querySelectorAll('.integration-checkbox').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+
             document.getElementById('agentModal').classList.add('active');
         }
 
@@ -551,6 +628,12 @@ Do NOT:
             document.getElementById('agentPrompt').value = agent.system_prompt;
             document.getElementById('agentVariables').value = agent.template_variables ? JSON.stringify(agent.template_variables, null, 2) : '';
             document.getElementById('agentActive').checked = agent.is_active;
+
+            // Set integration checkboxes
+            document.querySelectorAll('.integration-checkbox').forEach(checkbox => {
+                checkbox.checked = agent.integrations && agent.integrations.includes(checkbox.value);
+            });
+
             document.getElementById('agentModal').classList.add('active');
         }
 
@@ -570,6 +653,10 @@ Do NOT:
             const variablesText = document.getElementById('agentVariables').value.trim();
             const is_active = document.getElementById('agentActive').checked;
 
+            // Collect selected integrations
+            const integrations = Array.from(document.querySelectorAll('.integration-checkbox:checked'))
+                .map(checkbox => checkbox.value);
+
             let template_variables = null;
             if (variablesText) {
                 try {
@@ -587,6 +674,7 @@ Do NOT:
                 description,
                 system_prompt,
                 template_variables,
+                integrations,
                 is_active
             };
 
@@ -639,10 +727,64 @@ Do NOT:
             }
         }
 
-        function openAssignModal(agentId) {
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/admin/users');
+                const data = await response.json();
+                allUsers = data.users || [];
+                renderUsersList(allUsers);
+            } catch (error) {
+                console.error('Error loading users:', error);
+                document.getElementById('usersList').innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #f56565;">
+                        <p>❌ Error loading users</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderUsersList(users) {
+            const container = document.getElementById('usersList');
+
+            if (users.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #718096;">
+                        <p>No users found</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = users.map(user => `
+                <label style="display: flex; align-items: center; gap: 12px; padding: 12px; background: white; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; border: 2px solid transparent;" onmouseover="this.style.borderColor='#667eea'" onmouseout="this.style.borderColor='transparent'">
+                    <input type="checkbox" class="user-checkbox" value="${user.id}" style="width: 18px; height: 18px; cursor: pointer;">
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; color: #1a202c;">${user.username || user.email}</div>
+                        <div style="font-size: 0.85em; color: #718096;">
+                            ${user.email} • ID: ${user.id} • ${user.subscription_tier || 'free'}
+                        </div>
+                    </div>
+                </label>
+            `).join('');
+        }
+
+        function filterUsers() {
+            const query = document.getElementById('userSearch').value.toLowerCase();
+            const filtered = allUsers.filter(user =>
+                (user.username && user.username.toLowerCase().includes(query)) ||
+                (user.email && user.email.toLowerCase().includes(query)) ||
+                (user.id && user.id.toString().includes(query))
+            );
+            renderUsersList(filtered);
+        }
+
+        async function openAssignModal(agentId) {
             document.getElementById('assignAgentId').value = agentId;
-            document.getElementById('assignUserIds').value = '';
+            document.getElementById('userSearch').value = '';
             document.getElementById('assignModal').classList.add('active');
+
+            // Load users when modal opens
+            await loadUsers();
         }
 
         function closeAssignModal() {
@@ -651,12 +793,11 @@ Do NOT:
 
         async function assignAgent() {
             const agentId = document.getElementById('assignAgentId').value;
-            const userIdsText = document.getElementById('assignUserIds').value;
-
-            const user_ids = userIdsText.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+            const user_ids = Array.from(document.querySelectorAll('.user-checkbox:checked'))
+                .map(checkbox => parseInt(checkbox.value));
 
             if (user_ids.length === 0) {
-                alert('Please enter at least one valid user ID');
+                alert('Please select at least one user');
                 return;
             }
 

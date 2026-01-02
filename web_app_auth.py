@@ -21,6 +21,11 @@ import mimetypes
 import stripe
 from openai import OpenAI
 import google.generativeai as genai
+from dotenv import load_dotenv
+from agent_collaboration import detect_agent_mentions, suggest_agent_transfer
+
+# Load environment variables from .env file
+load_dotenv()
 
 # ============================================
 # NOTION INTEGRATION IMPORT
@@ -38,6 +43,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', os.urandom(24).hex())
 app.config['ANTHROPIC_API_KEY'] = os.environ.get('ANTHROPIC_API_KEY')
 app.config['OPENAI_API_KEY'] = os.environ.get('OPENAI_API_KEY')
+app.config['GOOGLE_AI_API_KEY'] = os.environ.get('GOOGLE_AI_API_KEY')
 
 # Initialize OpenAI client with proper error handling
 try:
@@ -278,7 +284,27 @@ MODEL_COSTS = {
     # Google Gemini Models (Free for now)
     'gemini-2.0-flash': 0.0,
     'gemini-1.5-pro': 0.0,
-    'gemini-1.5-flash': 0.0
+    'gemini-1.5-flash': 0.0,
+
+    # DeepSeek Models (Ultra cheap)
+    'deepseek-v3': 0.00027,          # $0.27/1M tokens ≈ $0.00027/msg
+    'deepseek-r1': 0.00055,          # $0.55/1M tokens ≈ $0.00055/msg
+
+    # Perplexity Models
+    'perplexity-sonar': 0.001,       # $1/1M tokens ≈ $0.001/msg
+    'perplexity-sonar-pro': 0.003,   # $3/1M tokens ≈ $0.003/msg
+
+    # Grok Models
+    'grok-2': 0.002,                 # $2/1M tokens ≈ $0.002/msg
+    'grok-2-vision': 0.002,          # $2/1M tokens ≈ $0.002/msg
+
+    # Meta Llama Models
+    'llama-3.3-70b': 0.00018,        # $0.18/1M tokens ≈ $0.00018/msg
+    'llama-3.1-405b': 0.0027,        # $2.70/1M tokens ≈ $0.0027/msg
+
+    # Mistral Models
+    'mistral-large': 0.002,          # $2/1M tokens ≈ $0.002/msg
+    'mistral-small': 0.0002          # $0.20/1M tokens ≈ $0.0002/msg
 }
 
 # Cost thresholds per tier (daily limits in USD)
@@ -753,7 +779,7 @@ def init_database():
 
     if 'last_cost_reset' not in user_columns:
         try:
-            cursor.execute("ALTER TABLE users ADD COLUMN last_cost_reset TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+            cursor.execute("ALTER TABLE users ADD COLUMN last_cost_reset TIMESTAMP DEFAULT NULL")
             print("✅ Added last_cost_reset column to users")
         except sqlite3.OperationalError as e:
             print(f"⚠️  Could not add last_cost_reset column: {e}")
@@ -815,6 +841,60 @@ def init_database():
             print("✅ Added trial_end_date column to users (for free trial promo codes)")
         except sqlite3.OperationalError as e:
             print(f"⚠️  Could not add trial_end_date column: {e}")
+
+    # ============================================
+    # GLOBAL AGENTS TABLE MIGRATIONS
+    # ============================================
+
+    # Check for global_agents columns
+    cursor.execute("PRAGMA table_info(global_agents)")
+    global_agent_columns = [col[1] for col in cursor.fetchall()]
+
+    if 'share_code' not in global_agent_columns:
+        try:
+            cursor.execute("ALTER TABLE global_agents ADD COLUMN share_code TEXT DEFAULT NULL")
+            print("✅ Added share_code column to global_agents (for public sharing)")
+        except sqlite3.OperationalError as e:
+            print(f"⚠️  Could not add share_code column: {e}")
+
+    if 'is_public' not in global_agent_columns:
+        try:
+            cursor.execute("ALTER TABLE global_agents ADD COLUMN is_public BOOLEAN DEFAULT 0")
+            print("✅ Added is_public column to global_agents (for public access)")
+        except sqlite3.OperationalError as e:
+            print(f"⚠️  Could not add is_public column: {e}")
+
+    if 'integrations' not in global_agent_columns:
+        try:
+            cursor.execute("ALTER TABLE global_agents ADD COLUMN integrations TEXT DEFAULT NULL")
+            print("✅ Added integrations column to global_agents (JSON array of enabled integrations)")
+        except sqlite3.OperationalError as e:
+            print(f"⚠️  Could not add integrations column: {e}")
+
+    # ============================================
+    # USER INTEGRATIONS TABLE (OAuth Tokens)
+    # ============================================
+
+    # Create table for storing user OAuth tokens for external services
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS user_integrations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            service TEXT NOT NULL,
+            access_token TEXT,
+            refresh_token TEXT,
+            token_expiry TIMESTAMP,
+            service_user_id TEXT,
+            service_email TEXT,
+            scopes TEXT,
+            is_active BOOLEAN DEFAULT 1,
+            connected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_used_at TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id),
+            UNIQUE(user_id, service)
+        )
+    """)
+    print("✅ User integrations table initialized")
 
     print("✅ Cost monitoring tables initialized")
 
@@ -924,10 +1004,153 @@ def init_promo_codes_table():
     conn.close()
     print("✅ Promo codes tables initialized")
 
+# ============================================
+# DEFAULT GLOBAL AGENTS (ASSIGNED TO ALL NEW USERS)
+# ============================================
+
+DEFAULT_GLOBAL_AGENTS = [
+    {
+        'name': 'Content Helper',
+        'description': 'Social media content creation and optimization',
+        'emoji': '✍️',
+        'category': 'productivity',
+        'system_prompt': '''You are a Content Helper specialized in social media content creation.
+
+Your capabilities:
+1. Transform messy ideas into polished posts
+2. Shorten content while maintaining tone and voice
+3. Generate content ideas through strategic questions
+
+When users share messy ideas, clean them up into engaging posts.
+When asked to shorten content, preserve the original tone.
+When users don't know what to post, ask 3-5 targeted questions about:
+- Their target audience
+- Recent business updates
+- Pain points they solve
+- Success stories or testimonials
+
+Always match the user's brand voice and keep responses actionable.''',
+        'template_variables': json.dumps({
+            'business_name': {'type': 'text', 'description': 'Your business or brand name', 'default': ''},
+            'tone': {'type': 'select', 'options': ['Professional', 'Casual', 'Friendly', 'Authoritative'], 'default': 'Professional'},
+            'audience': {'type': 'text', 'description': 'Your target audience', 'default': ''}
+        })
+    },
+    {
+        'name': 'Email Assistant',
+        'description': 'Draft professional emails and responses',
+        'emoji': '📧',
+        'category': 'productivity',
+        'system_prompt': '''You are an Email Assistant that helps write clear, professional emails.
+
+Your role:
+- Draft emails based on brief descriptions
+- Improve tone and clarity of existing drafts
+- Suggest subject lines
+- Keep emails concise and actionable
+
+Always ask for context if needed: recipient, purpose, desired tone.''',
+        'template_variables': json.dumps({
+            'signature': {'type': 'text', 'description': 'Your email signature', 'default': ''},
+            'tone': {'type': 'select', 'options': ['Formal', 'Professional', 'Friendly', 'Casual'], 'default': 'Professional'}
+        })
+    },
+    {
+        'name': 'Meeting Summarizer',
+        'description': 'Create meeting notes and action items',
+        'emoji': '📝',
+        'category': 'productivity',
+        'system_prompt': '''You are a Meeting Summarizer that creates clear, actionable meeting notes.
+
+Your tasks:
+- Extract key discussion points
+- Identify action items with owners
+- Highlight decisions made
+- Note follow-up questions
+
+Format output with clear sections: Summary, Action Items, Decisions, Next Steps.''',
+        'template_variables': None
+    }
+]
+
+def initialize_default_global_agents():
+    """Create default global agents in the database if they don't exist"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        for agent in DEFAULT_GLOBAL_AGENTS:
+            # Check if this agent already exists
+            cursor.execute("""
+                SELECT id FROM global_agents WHERE name = ?
+            """, (agent['name'],))
+
+            if not cursor.fetchone():
+                # Create the global agent
+                cursor.execute("""
+                    INSERT INTO global_agents (
+                        name, description, emoji, category, system_prompt,
+                        template_variables, created_by, is_active, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, 1, 1, CURRENT_TIMESTAMP)
+                """, (
+                    agent['name'],
+                    agent['description'],
+                    agent['emoji'],
+                    agent['category'],
+                    agent['system_prompt'],
+                    agent.get('template_variables')
+                ))
+                print(f"✅ Created global agent: {agent['name']}")
+
+        conn.commit()
+        conn.close()
+        return True
+
+    except Exception as e:
+        print(f"❌ Error initializing default global agents: {str(e)}")
+        return False
+
+def assign_default_global_agents_to_user(user_id):
+    """Assign all default global agents to a new user"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Get IDs of default global agents
+        for agent in DEFAULT_GLOBAL_AGENTS:
+            cursor.execute("""
+                SELECT id FROM global_agents WHERE name = ?
+            """, (agent['name'],))
+
+            result = cursor.fetchone()
+            if result:
+                global_agent_id = result[0]
+
+                # Assign to user (skip if already assigned)
+                try:
+                    cursor.execute("""
+                        INSERT INTO user_global_agents (user_id, global_agent_id, assigned_by, assigned_at)
+                        VALUES (?, ?, 1, CURRENT_TIMESTAMP)
+                    """, (user_id, global_agent_id))
+                except sqlite3.IntegrityError:
+                    # Already assigned, skip
+                    pass
+
+        conn.commit()
+        conn.close()
+
+        print(f"✅ Assigned {len(DEFAULT_GLOBAL_AGENTS)} global agents to user {user_id}")
+        return True
+
+    except Exception as e:
+        print(f"❌ Error assigning global agents to user: {str(e)}")
+        return False
+
 # Initialize database on startup
 try:
     init_database()
     init_promo_codes_table()
+    initialize_default_global_agents()
     print("✅ Database initialization completed successfully")
 except Exception as e:
     print(f"⚠️  Database initialization error: {str(e)}")
@@ -1375,7 +1598,8 @@ def emergency_database_init():
         # Force database initialization
         init_database()
         init_promo_codes_table()
-        
+        initialize_default_global_agents()
+
         # Check if custom_agents table exists and has correct columns
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
@@ -1537,6 +1761,76 @@ STYLE RULES:
             'traceback': traceback.format_exc()
         }), 500
 
+@app.route('/admin/migrate-starter-agents')
+def migrate_starter_agents():
+    """Migrate old starter agents from custom_agents to global_agents system"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Step 1: Delete old starter agents from custom_agents table
+        starter_agent_names = ['Content Helper', 'Email Assistant', 'Meeting Summarizer']
+
+        deleted_count = 0
+        for agent_name in starter_agent_names:
+            cursor.execute("""
+                DELETE FROM custom_agents WHERE name = ?
+            """, (agent_name,))
+            deleted_count += cursor.rowcount
+
+        # Step 2: Ensure global agents exist
+        initialize_default_global_agents()
+
+        # Step 3: Get all users
+        cursor.execute("SELECT id FROM users WHERE is_active = 1")
+        all_users = cursor.fetchall()
+
+        # Step 4: Assign global agents to all users
+        assigned_count = 0
+        for user_row in all_users:
+            user_id = user_row[0]
+
+            # Assign default global agents to this user
+            for agent in DEFAULT_GLOBAL_AGENTS:
+                cursor.execute("""
+                    SELECT id FROM global_agents WHERE name = ?
+                """, (agent['name'],))
+
+                result = cursor.fetchone()
+                if result:
+                    global_agent_id = result[0]
+
+                    # Assign to user (skip if already assigned)
+                    try:
+                        cursor.execute("""
+                            INSERT INTO user_global_agents (user_id, global_agent_id, assigned_by, assigned_at)
+                            VALUES (?, ?, 1, CURRENT_TIMESTAMP)
+                        """, (user_id, global_agent_id))
+                        assigned_count += 1
+                    except sqlite3.IntegrityError:
+                        # Already assigned, skip
+                        pass
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': 'Migration completed successfully!',
+            'deleted_custom_agents': deleted_count,
+            'users_processed': len(all_users),
+            'global_agents_assigned': assigned_count,
+            'instructions': 'Refresh your dashboard to see the updated agents!'
+        }), 200
+
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
 # ============================================
 # PUBLIC PAGES
 # ============================================
@@ -1611,8 +1905,8 @@ def api_signup():
             user = User(id=user_id, username=username, email=email)
             login_user(user)
 
-            # Create starter agents for new user
-            create_starter_agents_for_user(user_id)
+            # Assign default global agents to new user
+            assign_default_global_agents_to_user(user_id)
 
             conn.close()
             return jsonify({'success': True}), 200
@@ -4001,8 +4295,521 @@ OAUTH_CONFIG = {
         'auth_url': 'https://slack.com/oauth/v2/authorize',
         'token_url': 'https://slack.com/api/oauth.v2.access',
         'scopes': ['chat:write', 'channels:read']
+    },
+    # Email Integrations
+    'gmail': {
+        'auth_url': 'https://accounts.google.com/o/oauth2/v2/auth',
+        'token_url': 'https://oauth2.googleapis.com/token',
+        'scopes': [
+            'https://www.googleapis.com/auth/gmail.send',
+            'https://www.googleapis.com/auth/gmail.readonly',
+            'https://www.googleapis.com/auth/gmail.compose'
+        ],
+        'name': 'Gmail',
+        'icon': '📧'
+    },
+    'outlook': {
+        'auth_url': 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
+        'token_url': 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+        'scopes': ['Mail.Send', 'Mail.Read', 'Mail.ReadWrite'],
+        'name': 'Outlook',
+        'icon': '📨'
+    },
+    # Social Media Integrations
+    'twitter': {
+        'auth_url': 'https://twitter.com/i/oauth2/authorize',
+        'token_url': 'https://api.twitter.com/2/oauth2/token',
+        'scopes': ['tweet.read', 'tweet.write', 'users.read'],
+        'name': 'Twitter/X',
+        'icon': '🐦'
+    },
+    'linkedin': {
+        'auth_url': 'https://www.linkedin.com/oauth/v2/authorization',
+        'token_url': 'https://www.linkedin.com/oauth/v2/accessToken',
+        'scopes': ['w_member_social', 'r_liteprofile', 'r_emailaddress'],
+        'name': 'LinkedIn',
+        'icon': '💼'
+    },
+    # Meeting Integrations
+    'zoom': {
+        'auth_url': 'https://zoom.us/oauth/authorize',
+        'token_url': 'https://zoom.us/oauth/token',
+        'scopes': ['meeting:read', 'recording:read', 'cloud_recording:read'],
+        'name': 'Zoom',
+        'icon': '🎥'
+    },
+    'google_calendar': {
+        'auth_url': 'https://accounts.google.com/o/oauth2/v2/auth',
+        'token_url': 'https://oauth2.googleapis.com/token',
+        'scopes': ['https://www.googleapis.com/auth/calendar.readonly'],
+        'name': 'Google Calendar',
+        'icon': '📅'
     }
 }
+
+# Available integrations for agents
+AVAILABLE_INTEGRATIONS = {
+    'email': {
+        'name': 'Email',
+        'description': 'Send and read emails',
+        'services': ['gmail', 'outlook'],
+        'icon': '📧'
+    },
+    'social_media': {
+        'name': 'Social Media',
+        'description': 'Post to social platforms',
+        'services': ['twitter', 'linkedin'],
+        'icon': '📱'
+    },
+    'meetings': {
+        'name': 'Meetings',
+        'description': 'Access meeting recordings and transcripts',
+        'services': ['zoom', 'google_calendar'],
+        'icon': '🎥'
+    },
+    'productivity': {
+        'name': 'Productivity',
+        'description': 'Connect to productivity tools',
+        'services': ['google_sheets', 'slack'],
+        'icon': '📊'
+    }
+}
+
+# ============================================
+# USER OAUTH INTEGRATIONS API
+# ============================================
+
+@app.route('/api/user-integrations', methods=['GET'])
+@login_required
+def get_user_integrations():
+    """Get user's OAuth integration connections"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Get all user's connected integrations
+        cursor.execute("""
+            SELECT service, service_email, service_user_id,
+                   token_expiry, connected_at, last_used_at, is_active
+            FROM user_integrations
+            WHERE user_id = ?
+        """, (current_user.id,))
+
+        connected = {}
+        for row in cursor.fetchall():
+            service, email, user_id, expiry, connected, last_used, is_active = row
+            connected[service] = {
+                'service': service,
+                'email': email,
+                'user_id': user_id,
+                'expiry': expiry,
+                'connected_at': connected,
+                'last_used_at': last_used,
+                'is_active': bool(is_active)
+            }
+
+        # Get integrations needed by user's global agents
+        cursor.execute("""
+            SELECT DISTINCT ga.integrations
+            FROM global_agents ga
+            INNER JOIN user_global_agents uga ON ga.id = uga.global_agent_id
+            WHERE uga.user_id = ? AND ga.is_active = 1 AND ga.integrations IS NOT NULL
+        """, (current_user.id,))
+
+        needed_categories = set()
+        for row in cursor.fetchall():
+            if row[0]:
+                integrations = json.loads(row[0])
+                needed_categories.update(integrations)
+
+        # Build available integrations list with connection status
+        available = []
+        for category, info in AVAILABLE_INTEGRATIONS.items():
+            for service in info['services']:
+                if service in OAUTH_CONFIG:
+                    oauth_info = OAUTH_CONFIG[service]
+                    available.append({
+                        'service': service,
+                        'name': oauth_info['name'],
+                        'icon': oauth_info['icon'],
+                        'category': category,
+                        'is_connected': service in connected,
+                        'is_needed': category in needed_categories,
+                        'connection_info': connected.get(service)
+                    })
+
+        conn.close()
+
+        return jsonify({
+            'available': available,
+            'needed_categories': list(needed_categories)
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Error getting user integrations: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/user-integrations/connect/<service>', methods=['POST'])
+@login_required
+def connect_oauth_integration(service):
+    """Start OAuth flow for a service"""
+    try:
+        if service not in OAUTH_CONFIG:
+            return jsonify({'error': 'Service not supported'}), 400
+
+        oauth_config = OAUTH_CONFIG[service]
+
+        # Generate state for CSRF protection
+        state = secrets.token_urlsafe(32)
+
+        # Store state in session
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS oauth_states (
+                state TEXT PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                service TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        cursor.execute("""
+            INSERT INTO oauth_states (state, user_id, service)
+            VALUES (?, ?, ?)
+        """, (state, current_user.id, service))
+
+        conn.commit()
+        conn.close()
+
+        # Build OAuth authorization URL
+        callback_url = f"{request.host_url.rstrip('/')}/api/oauth/callback/{service}"
+        scopes = ' '.join(oauth_config['scopes']) if isinstance(oauth_config['scopes'], list) else oauth_config['scopes']
+
+        # Note: client_id should be loaded from environment variables for each service
+        # This is a placeholder - you'll need to configure actual OAuth apps
+        auth_url = f"{oauth_config['auth_url']}?client_id=YOUR_{service.upper()}_CLIENT_ID&redirect_uri={callback_url}&state={state}&scope={scopes}&response_type=code&access_type=offline"
+
+        return jsonify({
+            'auth_url': auth_url,
+            'state': state
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Error starting OAuth flow: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/oauth/callback/<service>')
+def oauth_callback(service):
+    """Handle OAuth callback and exchange code for tokens"""
+    try:
+        code = request.args.get('code')
+        state = request.args.get('state')
+        error = request.args.get('error')
+
+        if error:
+            return f"<html><body><h2>Authorization failed</h2><p>{error}</p><a href='/integrations'>Back to Integrations</a></body></html>", 400
+
+        if not code or not state:
+            return "<html><body><h2>Invalid callback</h2><p>Missing code or state</p></body></html>", 400
+
+        # Verify state and get user_id
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT user_id, service FROM oauth_states WHERE state = ?
+        """, (state,))
+
+        oauth_state = cursor.fetchone()
+
+        if not oauth_state:
+            conn.close()
+            return "<html><body><h2>Invalid state</h2><p>State not found or expired</p></body></html>", 400
+
+        user_id, stored_service = oauth_state
+
+        if stored_service != service:
+            conn.close()
+            return "<html><body><h2>Service mismatch</h2></body></html>", 400
+
+        # Delete used state
+        cursor.execute("DELETE FROM oauth_states WHERE state = ?", (state,))
+        conn.commit()
+
+        # Exchange authorization code for access token
+        # NOTE: This is a placeholder - actual OAuth token exchange requires:
+        # 1. Making POST request to oauth_config['token_url']
+        # 2. Including client_id, client_secret, code, redirect_uri
+        # 3. Parsing response to get access_token, refresh_token, expiry
+
+        # For now, store a placeholder (you'll need to implement actual OAuth exchange)
+        cursor.execute("""
+            INSERT OR REPLACE INTO user_integrations
+            (user_id, service, access_token, refresh_token, token_expiry, is_active)
+            VALUES (?, ?, ?, ?, datetime('now', '+3600 seconds'), 1)
+        """, (user_id, service, f'PLACEHOLDER_TOKEN_{service}', f'PLACEHOLDER_REFRESH_{service}'))
+
+        conn.commit()
+        conn.close()
+
+        # Redirect to integrations page with success message
+        return f"""
+        <html>
+        <head><title>Connected Successfully</title></head>
+        <body style="font-family: system-ui; text-align: center; padding: 50px;">
+            <h1 style="color: #48bb78;">✓ Successfully Connected</h1>
+            <p>You've connected {OAUTH_CONFIG[service]['name']} to your AI Team account.</p>
+            <p><a href="/integrations" style="background: #667eea; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; display: inline-block; margin-top: 20px;">Back to Integrations</a></p>
+            <script>
+                setTimeout(function() {{ window.location.href = '/integrations'; }}, 3000);
+            </script>
+        </body>
+        </html>
+        """, 200
+
+    except Exception as e:
+        print(f"❌ OAuth callback error: {str(e)}")
+        return f"<html><body><h2>Error</h2><p>{str(e)}</p></body></html>", 500
+
+@app.route('/api/user-integrations/<service>', methods=['DELETE'])
+@login_required
+def disconnect_oauth_integration(service):
+    """Disconnect an OAuth integration"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            DELETE FROM user_integrations
+            WHERE user_id = ? AND service = ?
+        """, (current_user.id, service))
+
+        if cursor.rowcount == 0:
+            conn.close()
+            return jsonify({'error': 'Integration not found'}), 404
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': f'{service} disconnected successfully'
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Error disconnecting integration: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# ============================================
+# INTEGRATION HELPER FUNCTIONS (FOR AGENTS)
+# ============================================
+
+def get_user_oauth_token(user_id, service):
+    """Get OAuth access token for a service"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT access_token, refresh_token, token_expiry
+            FROM user_integrations
+            WHERE user_id = ? AND service = ? AND is_active = 1
+        """, (user_id, service))
+
+        result = cursor.fetchone()
+        conn.close()
+
+        if result:
+            return {
+                'access_token': result[0],
+                'refresh_token': result[1],
+                'token_expiry': result[2]
+            }
+        return None
+
+    except Exception as e:
+        print(f"Error getting OAuth token: {e}")
+        return None
+
+def send_email_via_integration(user_id, to_email, subject, body):
+    """
+    Send email via Gmail integration
+
+    NOTE: This is a placeholder. In production, this would:
+    1. Get user's Gmail OAuth token
+    2. Use Gmail API to send email
+    3. Handle token refresh if expired
+    4. Return success/failure status
+    """
+    token_info = get_user_oauth_token(user_id, 'gmail')
+
+    if not token_info:
+        return {
+            'success': False,
+            'error': 'Gmail not connected. Please connect Gmail via Integrations page.'
+        }
+
+    # PLACEHOLDER: Actual Gmail API call would go here
+    # Example:
+    # from googleapiclient.discovery import build
+    # from google.oauth2.credentials import Credentials
+    #
+    # creds = Credentials(token=token_info['access_token'])
+    # service = build('gmail', 'v1', credentials=creds)
+    # message = create_message('me', to_email, subject, body)
+    # result = service.users().messages().send(userId='me', body=message).execute()
+
+    print(f"[PLACEHOLDER] Would send email to {to_email} via Gmail")
+
+    return {
+        'success': True,
+        'message': 'Email functionality requires OAuth app configuration',
+        'placeholder': True
+    }
+
+def post_to_twitter(user_id, text):
+    """
+    Post to Twitter/X via integration
+
+    NOTE: This is a placeholder. In production, this would:
+    1. Get user's Twitter OAuth token
+    2. Use Twitter API v2 to create tweet
+    3. Handle token refresh if needed
+    4. Return tweet ID and URL
+    """
+    token_info = get_user_oauth_token(user_id, 'twitter')
+
+    if not token_info:
+        return {
+            'success': False,
+            'error': 'Twitter not connected. Please connect Twitter via Integrations page.'
+        }
+
+    print(f"[PLACEHOLDER] Would post to Twitter: {text}")
+
+    return {
+        'success': True,
+        'message': 'Twitter posting requires OAuth app configuration',
+        'placeholder': True
+    }
+
+def post_to_linkedin(user_id, text):
+    """
+    Post to LinkedIn via integration
+
+    NOTE: This is a placeholder for LinkedIn posting
+    """
+    token_info = get_user_oauth_token(user_id, 'linkedin')
+
+    if not token_info:
+        return {
+            'success': False,
+            'error': 'LinkedIn not connected'
+        }
+
+    print(f"[PLACEHOLDER] Would post to LinkedIn: {text}")
+
+    return {
+        'success': True,
+        'message': 'LinkedIn posting requires OAuth app configuration',
+        'placeholder': True
+    }
+
+def create_calendar_event(user_id, title, start_time, end_time, description=None):
+    """
+    Create Google Calendar event via integration
+
+    NOTE: This is a placeholder. In production, this would:
+    1. Get user's Google Calendar OAuth token
+    2. Use Google Calendar API to create event
+    3. Return event ID and link
+    """
+    token_info = get_user_oauth_token(user_id, 'google_calendar')
+
+    if not token_info:
+        return {
+            'success': False,
+            'error': 'Google Calendar not connected'
+        }
+
+    print(f"[PLACEHOLDER] Would create calendar event: {title}")
+
+    return {
+        'success': True,
+        'message': 'Calendar integration requires OAuth app configuration',
+        'placeholder': True
+    }
+
+def get_available_integration_actions(user_id):
+    """
+    Get list of available integration actions based on user's connections
+
+    Returns a dictionary of available actions organized by category
+    """
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT service FROM user_integrations
+            WHERE user_id = ? AND is_active = 1
+        """, (user_id,))
+
+        connected_services = [row[0] for row in cursor.fetchall()]
+        conn.close()
+
+        actions = {
+            'email': [],
+            'social': [],
+            'calendar': [],
+            'productivity': []
+        }
+
+        if 'gmail' in connected_services:
+            actions['email'].extend([
+                {'name': 'send_email', 'description': 'Send email via Gmail'},
+                {'name': 'read_emails', 'description': 'Read recent emails'},
+                {'name': 'search_emails', 'description': 'Search emails'}
+            ])
+
+        if 'outlook' in connected_services:
+            actions['email'].extend([
+                {'name': 'send_outlook_email', 'description': 'Send email via Outlook'},
+                {'name': 'read_outlook_emails', 'description': 'Read Outlook emails'}
+            ])
+
+        if 'twitter' in connected_services:
+            actions['social'].extend([
+                {'name': 'post_tweet', 'description': 'Post to Twitter'},
+                {'name': 'get_mentions', 'description': 'Get Twitter mentions'}
+            ])
+
+        if 'linkedin' in connected_services:
+            actions['social'].extend([
+                {'name': 'post_linkedin', 'description': 'Post to LinkedIn'},
+                {'name': 'get_connections', 'description': 'Get LinkedIn connections'}
+            ])
+
+        if 'google_calendar' in connected_services:
+            actions['calendar'].extend([
+                {'name': 'create_event', 'description': 'Create calendar event'},
+                {'name': 'list_events', 'description': 'List upcoming events'},
+                {'name': 'update_event', 'description': 'Update existing event'}
+            ])
+
+        if 'zoom' in connected_services:
+            actions['calendar'].extend([
+                {'name': 'create_zoom_meeting', 'description': 'Create Zoom meeting'},
+                {'name': 'list_meetings', 'description': 'List scheduled Zoom meetings'}
+            ])
+
+        return actions
+
+    except Exception as e:
+        print(f"Error getting available actions: {e}")
+        return {}
 
 @app.route('/api/integrations/oauth/<integration_key>/start')
 @login_required
@@ -4049,8 +4856,8 @@ def start_oauth_flow(integration_key):
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/integrations/oauth/callback')
-def oauth_callback():
-    """Handle OAuth callback"""
+def oauth_callback_legacy():
+    """Handle OAuth callback (legacy endpoint)"""
     try:
         code = request.args.get('code')
         state = request.args.get('state')
@@ -4842,6 +5649,96 @@ MODELS = {
         'description': 'Advanced - 2M token context',
         'max_tokens': 2000,
         'cost': '$1.25/1M tokens'
+    },
+
+    # DeepSeek Models (Chinese AI - Very cost-effective)
+    'deepseek-v3': {
+        'provider': 'deepseek',
+        'model_id': 'deepseek-chat',
+        'name': 'DeepSeek V3',
+        'description': 'Ultra cheap - Great reasoning',
+        'max_tokens': 2000,
+        'cost': '$0.27/1M tokens'
+    },
+    'deepseek-r1': {
+        'provider': 'deepseek',
+        'model_id': 'deepseek-reasoner',
+        'name': 'DeepSeek R1',
+        'description': 'Chain-of-thought - Deep reasoning',
+        'max_tokens': 2000,
+        'cost': '$0.55/1M tokens'
+    },
+
+    # Perplexity Models (Real-time search-augmented)
+    'perplexity-sonar': {
+        'provider': 'perplexity',
+        'model_id': 'sonar',
+        'name': 'Perplexity Sonar',
+        'description': 'Real-time search - Up-to-date info',
+        'max_tokens': 2000,
+        'cost': '$1/1M tokens'
+    },
+    'perplexity-sonar-pro': {
+        'provider': 'perplexity',
+        'model_id': 'sonar-pro',
+        'name': 'Perplexity Sonar Pro',
+        'description': 'Advanced search - Best for research',
+        'max_tokens': 2000,
+        'cost': '$3/1M tokens'
+    },
+
+    # Grok Models (xAI - Elon Musk)
+    'grok-2': {
+        'provider': 'grok',
+        'model_id': 'grok-2-latest',
+        'name': 'Grok 2',
+        'description': 'Latest Grok - Real-time X/Twitter data',
+        'max_tokens': 2000,
+        'cost': '$2/1M tokens'
+    },
+    'grok-2-vision': {
+        'provider': 'grok',
+        'model_id': 'grok-2-vision-latest',
+        'name': 'Grok 2 Vision',
+        'description': 'Multimodal - Image understanding',
+        'max_tokens': 2000,
+        'cost': '$2/1M tokens'
+    },
+
+    # Meta Llama Models (Open source)
+    'llama-3.3-70b': {
+        'provider': 'openrouter',
+        'model_id': 'meta-llama/llama-3.3-70b-instruct',
+        'name': 'Llama 3.3 70B',
+        'description': 'Meta\'s latest - Open source power',
+        'max_tokens': 2000,
+        'cost': '$0.18/1M tokens'
+    },
+    'llama-3.1-405b': {
+        'provider': 'openrouter',
+        'model_id': 'meta-llama/llama-3.1-405b-instruct',
+        'name': 'Llama 3.1 405B',
+        'description': 'Largest open model - Top performance',
+        'max_tokens': 2000,
+        'cost': '$2.70/1M tokens'
+    },
+
+    # Mistral Models (European AI)
+    'mistral-large': {
+        'provider': 'mistral',
+        'model_id': 'mistral-large-latest',
+        'name': 'Mistral Large',
+        'description': 'European flagship - Multilingual',
+        'max_tokens': 2000,
+        'cost': '$2/1M tokens'
+    },
+    'mistral-small': {
+        'provider': 'mistral',
+        'model_id': 'mistral-small-latest',
+        'name': 'Mistral Small',
+        'description': 'Fast & efficient - Cost-effective',
+        'max_tokens': 2000,
+        'cost': '$0.20/1M tokens'
     }
 }
 
@@ -5328,10 +6225,140 @@ def call_gemini_with_history(model_id, system_prompt, history, new_message, max_
     
     return response.text
 
+def call_deepseek_with_history(model_id, system_prompt, history, new_message, max_tokens=2000):
+    """Call DeepSeek with conversation history (OpenAI-compatible API)"""
+    import openai
+
+    deepseek_api_key = os.environ.get('DEEPSEEK_API_KEY')
+    if not deepseek_api_key:
+        raise Exception("DeepSeek API key not configured")
+
+    deepseek_client = openai.OpenAI(
+        api_key=deepseek_api_key,
+        base_url="https://api.deepseek.com"
+    )
+
+    # Format for OpenAI-compatible API
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.extend(history)
+    messages.append({"role": "user", "content": new_message})
+
+    response = deepseek_client.chat.completions.create(
+        model=model_id,
+        messages=messages,
+        max_tokens=max_tokens
+    )
+
+    return response.choices[0].message.content
+
+def call_perplexity_with_history(model_id, system_prompt, history, new_message, max_tokens=2000):
+    """Call Perplexity with conversation history (OpenAI-compatible API)"""
+    import openai
+
+    perplexity_api_key = os.environ.get('PERPLEXITY_API_KEY')
+    if not perplexity_api_key:
+        raise Exception("Perplexity API key not configured")
+
+    perplexity_client = openai.OpenAI(
+        api_key=perplexity_api_key,
+        base_url="https://api.perplexity.ai"
+    )
+
+    # Format for OpenAI-compatible API
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.extend(history)
+    messages.append({"role": "user", "content": new_message})
+
+    response = perplexity_client.chat.completions.create(
+        model=model_id,
+        messages=messages,
+        max_tokens=max_tokens
+    )
+
+    return response.choices[0].message.content
+
+def call_grok_with_history(model_id, system_prompt, history, new_message, max_tokens=2000):
+    """Call Grok (xAI) with conversation history (OpenAI-compatible API)"""
+    import openai
+
+    grok_api_key = os.environ.get('GROK_API_KEY')
+    if not grok_api_key:
+        raise Exception("Grok API key not configured")
+
+    grok_client = openai.OpenAI(
+        api_key=grok_api_key,
+        base_url="https://api.x.ai/v1"
+    )
+
+    # Format for OpenAI-compatible API
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.extend(history)
+    messages.append({"role": "user", "content": new_message})
+
+    response = grok_client.chat.completions.create(
+        model=model_id,
+        messages=messages,
+        max_tokens=max_tokens
+    )
+
+    return response.choices[0].message.content
+
+def call_openrouter_with_history(model_id, system_prompt, history, new_message, max_tokens=2000):
+    """Call OpenRouter (for Llama and other open models) with conversation history"""
+    import openai
+
+    openrouter_api_key = os.environ.get('OPENROUTER_API_KEY')
+    if not openrouter_api_key:
+        raise Exception("OpenRouter API key not configured")
+
+    openrouter_client = openai.OpenAI(
+        api_key=openrouter_api_key,
+        base_url="https://openrouter.ai/api/v1"
+    )
+
+    # Format for OpenAI-compatible API
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.extend(history)
+    messages.append({"role": "user", "content": new_message})
+
+    response = openrouter_client.chat.completions.create(
+        model=model_id,
+        messages=messages,
+        max_tokens=max_tokens
+    )
+
+    return response.choices[0].message.content
+
+def call_mistral_with_history(model_id, system_prompt, history, new_message, max_tokens=2000):
+    """Call Mistral with conversation history (OpenAI-compatible API)"""
+    import openai
+
+    mistral_api_key = os.environ.get('MISTRAL_API_KEY')
+    if not mistral_api_key:
+        raise Exception("Mistral API key not configured")
+
+    mistral_client = openai.OpenAI(
+        api_key=mistral_api_key,
+        base_url="https://api.mistral.ai/v1"
+    )
+
+    # Format for OpenAI-compatible API
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.extend(history)
+    messages.append({"role": "user", "content": new_message})
+
+    response = mistral_client.chat.completions.create(
+        model=model_id,
+        messages=messages,
+        max_tokens=max_tokens
+    )
+
+    return response.choices[0].message.content
+
 def route_to_model(model_key, system_prompt, history, new_message):
     """Route to appropriate AI model with conversation history"""
     if model_key not in MODELS:
-        model_key = 'claude-sonnet-4.5'  # Default fallback
+        model_key = 'gemini-2.0-flash'  # Default fallback (free, no API key needed)
     
     config = MODELS[model_key]
     provider = config['provider']
@@ -5345,14 +6372,24 @@ def route_to_model(model_key, system_prompt, history, new_message):
             return call_gpt_with_history(model_id, system_prompt, history, new_message, max_tokens)
         elif provider == 'google':
             return call_gemini_with_history(model_id, system_prompt, history, new_message, max_tokens)
+        elif provider == 'deepseek':
+            return call_deepseek_with_history(model_id, system_prompt, history, new_message, max_tokens)
+        elif provider == 'perplexity':
+            return call_perplexity_with_history(model_id, system_prompt, history, new_message, max_tokens)
+        elif provider == 'grok':
+            return call_grok_with_history(model_id, system_prompt, history, new_message, max_tokens)
+        elif provider == 'openrouter':
+            return call_openrouter_with_history(model_id, system_prompt, history, new_message, max_tokens)
+        elif provider == 'mistral':
+            return call_mistral_with_history(model_id, system_prompt, history, new_message, max_tokens)
         else:
             raise Exception(f"Unknown provider: {provider}")
     except Exception as e:
         print(f"Error with {provider} ({model_key}): {e}")
-        # Fallback to Claude if other model fails
-        if provider != 'anthropic':
-            print(f"Falling back to Claude Sonnet...")
-            return call_claude_with_history('claude-sonnet-4-20250514', system_prompt, history, new_message, 2000)
+        # Fallback to Gemini (free) if other model fails
+        if provider not in ['google', 'gemini']:
+            print(f"Falling back to Gemini 2.0 Flash...")
+            return call_gemini_with_history('gemini-2.0-flash-exp', system_prompt, history, new_message, 2000)
         raise
 
 def call_ai_with_image(model_key, system_prompt, history, message, image_path):
@@ -5445,7 +6482,7 @@ def call_ai_with_image(model_key, system_prompt, history, message, image_path):
         elif provider == 'google':
             # Gemini vision
             from PIL import Image
-            genai.configure(api_key=os.environ.get('GOOGLE_API_KEY'))
+            genai.configure(api_key=os.environ.get('GOOGLE_AI_API_KEY'))
             
             img = Image.open(image_path)
             gemini_model = genai.GenerativeModel(model_id)
@@ -5484,18 +6521,35 @@ def chat():
             data = request.json
             message = data.get('message')
             agent = data.get('agent', 'Ember')
-            model_key = data.get('model', 'claude-sonnet-4.5')
+            model_key = data.get('model', 'gemini-2.0-flash')  # Default to Gemini (free)
             attached_file = data.get('file')
             uploaded_file = None
+            uploaded_files = []
         else:
             # FormData request (new format with file upload)
             message = request.form.get('message', '')
             agent = request.form.get('agent', 'Luna')
-            model_key = request.form.get('model', 'gemini-2.0-flash')
+            model_key = request.form.get('model', 'gemini-2.0-flash')  # Default to Gemini (free)
             attached_file = None
-            uploaded_file = request.files.get('file')
-        
-        if not message and not uploaded_file:
+
+            # Handle multiple files
+            file_count = request.form.get('file_count', 0)
+            uploaded_files = []
+
+            if file_count:
+                file_count = int(file_count)
+                for i in range(file_count):
+                    file_key = f'file_{i}'
+                    if file_key in request.files:
+                        uploaded_files.append(request.files[file_key])
+
+            # Legacy single file support
+            if 'file' in request.files and not uploaded_files:
+                uploaded_files = [request.files['file']]
+
+            uploaded_file = uploaded_files[0] if uploaded_files else None
+
+        if not message and not uploaded_files:
             return jsonify({'error': 'Message or file required'}), 400
 
         # Check if user is authenticated or guest
@@ -5529,22 +6583,88 @@ def chat():
             last_reset = None
             tier_info = SUBSCRIPTION_TIERS.get('free', {'messages_per_day': 25})
             daily_limit = tier_info['messages_per_day']
-        
+
         # ============================================
-        # BLOCK FREE USERS FROM CLAUDE API (COST SAVINGS)
+        # TIER-BASED MODEL ACCESS RESTRICTIONS
         # ============================================
-        # Claude API costs money per request. Only allow paid subscribers
-        # (starter and pro) to use Claude models to prevent API cost overruns
-        # from free and freeforlife promo code users.
-        if model_key in ['claude-sonnet-4.5', 'claude-opus-4', 'claude-haiku']:
-            if not is_paid_user(tier):
-                conn.close()
-                return jsonify({
-                    'error': 'Claude AI models are only available for paid subscribers. Upgrade to Starter ($19/mo) or Pro ($49/mo) to access Claude\'s advanced AI capabilities with superior reasoning and coding abilities.',
-                    'upgrade_required': True,
-                    'current_tier': tier,
-                    'available_tiers': ['starter', 'pro']
-                }), 403  # 403 Forbidden
+
+        # Define models by tier
+        FREE_TIER_MODELS = [
+            'gemini-2.0-flash',      # FREE
+            'gemini-1.5-pro',        # FREE
+            'llama-3.3-70b'          # $0.18 - Cheap Llama model
+        ]
+
+        STARTER_TIER_MODELS = FREE_TIER_MODELS + [
+            # $2-3 range models
+            'grok-2',                # $2
+            'grok-2-vision',         # $2
+            'mistral-large',         # $2
+            'gpt-4o',                # $2.50
+            'llama-3.1-405b',        # $2.70
+            'perplexity-sonar-pro',  # $3
+            'claude-sonnet-4.5'      # $3
+        ]
+
+        PRO_TIER_MODELS = STARTER_TIER_MODELS + [
+            # All other models under $6
+            'mistral-small',         # $0.20
+            'deepseek-v3',           # $0.27
+            'gpt-4o-mini',           # $0.15
+            'deepseek-r1',           # $0.55
+            'claude-haiku-4.5',      # $0.80
+            'perplexity-sonar'       # $1
+        ]
+
+        ENTERPRISE_ONLY_MODELS = [
+            'claude-opus-4',         # $15
+            'gpt-4-turbo'            # $10
+        ]
+
+        # Check model access based on tier
+        if tier in ['free', 'freeforlife']:
+            allowed_models = FREE_TIER_MODELS
+            tier_name = 'Free'
+            upgrade_tier = 'Starter ($19/mo)'
+        elif tier == 'starter':
+            allowed_models = STARTER_TIER_MODELS
+            tier_name = 'Starter'
+            upgrade_tier = 'Pro ($49/mo)'
+        elif tier == 'pro':
+            allowed_models = PRO_TIER_MODELS
+            tier_name = 'Pro'
+            upgrade_tier = 'Enterprise ($199/mo)'
+        elif tier == 'enterprise':
+            allowed_models = PRO_TIER_MODELS + ENTERPRISE_ONLY_MODELS
+            tier_name = 'Enterprise'
+            upgrade_tier = None
+        else:
+            # Default to free tier if unknown tier
+            allowed_models = FREE_TIER_MODELS
+            tier_name = 'Free'
+            upgrade_tier = 'Starter ($19/mo)'
+
+        # Block model if not in allowed list
+        if model_key not in allowed_models:
+            conn.close()
+
+            # Determine which tier has this model
+            if model_key in ENTERPRISE_ONLY_MODELS:
+                required_tier = 'Pro ($49/mo) or Enterprise ($199/mo)'
+            elif model_key in PRO_TIER_MODELS:
+                required_tier = 'Pro ($49/mo)'
+            elif model_key in STARTER_TIER_MODELS:
+                required_tier = 'Starter ($19/mo)'
+            else:
+                required_tier = 'a paid plan'
+
+            return jsonify({
+                'error': f'This model is not available on your {tier_name} plan. Upgrade to {required_tier} to access this model.',
+                'upgrade_required': True,
+                'current_tier': tier,
+                'required_tier': required_tier,
+                'blocked_model': model_key
+            }), 403  # 403 Forbidden
         # ============================================
 
         # ============================================
@@ -5652,8 +6772,113 @@ CRITICAL FORMATTING RULES:
 
 Remember: You are {agent}. Natural conversation only. No formatting."""
             else:
-                conn.close()
-                return jsonify({'error': f'Agent "{agent}" not found'}), 400
+                # Check for global agent
+                if not is_guest:
+                    cursor.execute("""
+                        SELECT ga.system_prompt, ga.integrations
+                        FROM global_agents ga
+                        INNER JOIN user_global_agents uga ON ga.id = uga.global_agent_id
+                        WHERE uga.user_id = ? AND ga.name = ? AND ga.is_active = 1
+                    """, (current_user.id, agent))
+
+                    global_agent = cursor.fetchone()
+                    if global_agent:
+                        base_prompt = global_agent[0]
+                        integrations_json = global_agent[1]
+
+                        # Check if agent has integrations enabled
+                        integration_context = ""
+                        if integrations_json:
+                            try:
+                                needed_categories = json.loads(integrations_json)
+
+                                # Get user's connected OAuth services
+                                cursor.execute("""
+                                    SELECT service, service_email, is_active
+                                    FROM user_integrations
+                                    WHERE user_id = ? AND is_active = 1
+                                """, (current_user.id,))
+
+                                connected_services = {}
+                                for row in cursor.fetchall():
+                                    service, email, is_active = row
+                                    connected_services[service] = email
+
+                                # Map categories to services and check connections
+                                available_integrations = []
+                                missing_integrations = []
+
+                                for category in needed_categories:
+                                    if category in AVAILABLE_INTEGRATIONS:
+                                        cat_info = AVAILABLE_INTEGRATIONS[category]
+                                        for service in cat_info['services']:
+                                            if service in connected_services:
+                                                available_integrations.append({
+                                                    'service': service,
+                                                    'name': OAUTH_CONFIG[service]['name'],
+                                                    'email': connected_services[service],
+                                                    'icon': OAUTH_CONFIG[service]['icon']
+                                                })
+                                            else:
+                                                missing_integrations.append({
+                                                    'service': service,
+                                                    'name': OAUTH_CONFIG[service]['name']
+                                                })
+
+                                # Add integration context to system prompt
+                                if available_integrations:
+                                    integration_list = "\n".join([
+                                        f"- {integ['icon']} {integ['name']} ({integ['email']})"
+                                        for integ in available_integrations
+                                    ])
+                                    integration_context = f"""
+
+CONNECTED INTEGRATIONS:
+You have access to the following connected services:
+{integration_list}
+
+You can reference these integrations in your responses. For example:
+- If email is connected, you can mention "I can help you draft emails"
+- If social media is connected, you can say "I can help with your social posts"
+- If calendar is connected, you can reference scheduling capabilities
+
+Note: While you can reference these services, actual API calls are not yet implemented.
+The user has authorized these connections."""
+
+                                if missing_integrations:
+                                    missing_list = ", ".join([m['name'] for m in missing_integrations])
+                                    integration_context += f"""
+
+DISCONNECTED INTEGRATIONS:
+The following integrations are configured but not connected: {missing_list}
+If the user asks about these, suggest they connect them via the Integrations page."""
+
+                            except Exception as e:
+                                print(f"Error loading integrations for agent: {e}")
+                                integration_context = ""
+
+                        # Wrap global agent prompt with formatting rules and integrations
+                        system_prompt = f"""You are {agent}. Your role and personality:
+
+{base_prompt}
+{integration_context}
+
+CRITICAL FORMATTING RULES:
+- Write in natural, conversational paragraphs
+- Do NOT use asterisks (**), hashtags (##), dashes (---), or bullet points (•)
+- Do NOT use markdown formatting of any kind
+- Ask only ONE question per response (if you need to ask questions)
+- Write like you're talking to someone, not writing a document
+- Keep responses clear and focused
+- When introducing yourself, say "I'm {agent}" (not Luna or any other name)
+
+Remember: You are {agent}. Natural conversation only. No formatting."""
+                    else:
+                        conn.close()
+                        return jsonify({'error': f'Agent "{agent}" not found'}), 400
+                else:
+                    conn.close()
+                    return jsonify({'error': f'Agent "{agent}" not found'}), 400
         
         # Get conversation history (last 10 messages for context - optimized for speed)
         # Guests don't have history (not logged in)
@@ -5662,9 +6887,10 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
         else:
             history = get_conversation_history(current_user.id, agent, limit=10)
 
-        # Handle file uploads from FormData
+        # Handle file uploads from FormData (supports multiple files)
         file_info = None
-        if uploaded_file:
+        files_info = []
+        if uploaded_files:
             # Guests cannot upload files
             if is_guest:
                 conn.close()
@@ -5674,35 +6900,46 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
                     'signup_url': '/register'
                 }), 403
 
-            # Save the uploaded file
-            filename = secure_filename(uploaded_file.filename)
-            user_folder = os.path.join(UPLOAD_FOLDER, str(current_user.id))
-            os.makedirs(user_folder, exist_ok=True)
-            
-            filepath = os.path.join(user_folder, filename)
-            uploaded_file.save(filepath)
-            
-            file_extension = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
-            
-            file_info = {
-                'filename': filename,
-                'filepath': filepath,
-                'extension': file_extension
-            }
-            
-            # For text files, read content
-            if file_extension in ['txt', 'md', 'csv', 'json', 'py', 'js', 'html', 'css']:
-                try:
-                    with open(filepath, 'r', encoding='utf-8') as f:
-                        file_content = f.read()[:10000]  # Limit to 10k chars
-                    if message:
-                        message = f"{message}\n\nFile: {filename}\nContent:\n{file_content}"
-                    else:
-                        message = f"File: {filename}\nContent:\n{file_content}"
-                except Exception as e:
-                    print(f"Error reading file: {e}")
-                    if not message:
-                        message = f"I received a file named {filename} but couldn't read its content."
+            # Process all uploaded files
+            file_contents = []
+            for uploaded_file in uploaded_files:
+                # Save the uploaded file
+                filename = secure_filename(uploaded_file.filename)
+                user_folder = os.path.join(UPLOAD_FOLDER, str(current_user.id))
+                os.makedirs(user_folder, exist_ok=True)
+
+                filepath = os.path.join(user_folder, filename)
+                uploaded_file.save(filepath)
+
+                file_extension = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+
+                file_data = {
+                    'filename': filename,
+                    'filepath': filepath,
+                    'extension': file_extension
+                }
+                files_info.append(file_data)
+
+                # For text files, read content
+                if file_extension in ['txt', 'md', 'csv', 'json', 'py', 'js', 'html', 'css', 'xml']:
+                    try:
+                        with open(filepath, 'r', encoding='utf-8') as f:
+                            file_content = f.read()[:10000]  # Limit to 10k chars per file
+                        file_contents.append(f"File: {filename}\nContent:\n{file_content}")
+                    except Exception as e:
+                        print(f"Error reading file {filename}: {e}")
+                        file_contents.append(f"File: {filename} (could not read content)")
+
+            # Add file contents to message
+            if file_contents:
+                files_text = "\n\n---\n\n".join(file_contents)
+                if message:
+                    message = f"{message}\n\n{files_text}"
+                else:
+                    message = files_text
+
+            # Keep backward compatibility for single file
+            file_info = files_info[0] if files_info else None
         
         # Handle file attachments (JSON format - old system)
         elif attached_file and 'filepath' in attached_file:
@@ -5801,16 +7038,15 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
         # ============================================
 
         # ============================================
-        # DELEGATION DETECTION
+        # DELEGATION DETECTION & AGENT MENTIONS
         # ============================================
+        # Check if user mentioned any agents in their message
+        mentioned_agents = []
+        if not is_guest:
+            mentioned_agents = detect_agent_mentions(message, current_user.id)
+
         # Check if the agent suggested switching to another agent
-        delegation_suggestion = None
-        for other_agent in AGENT_CAPABILITIES.keys():
-            if other_agent != agent:
-                # Look for phrases like "Sol would be perfect for this" or "bring Sol into"
-                if f"{other_agent} would be" in ai_response or f"bring {other_agent}" in ai_response:
-                    delegation_suggestion = other_agent
-                    break
+        delegation_suggestion = suggest_agent_transfer(ai_response, agent)
 
         response_data = {
             'success': True,
@@ -5828,7 +7064,11 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
         if delegation_suggestion:
             response_data['delegation_suggested'] = True
             response_data['suggested_agent'] = delegation_suggestion
-            response_data['suggestion_reason'] = f"{agent} suggests {delegation_suggestion} for this task"
+            response_data['suggestion_reason'] = f"{agent} suggests switching to {delegation_suggestion} for this task"
+
+        # Add mentioned agents to response
+        if mentioned_agents:
+            response_data['mentioned_agents'] = mentioned_agents
 
         # Add cost warning if present
         if cost_warning:
@@ -6863,7 +8103,7 @@ def generate_promo_code(length=12):
     return ''.join(secrets.choice(chars) for _ in range(length))
 
 
-def create_promo_codes(tier, count, prefix="", discount_type="tier", discount_value=None, trial_days=None):
+def create_promo_codes(tier, count, prefix="", discount_type="tier", discount_value=None, trial_days=None, max_uses=-1):
     """Create multiple promo codes for a tier or discount
 
     Args:
@@ -6873,6 +8113,7 @@ def create_promo_codes(tier, count, prefix="", discount_type="tier", discount_va
         discount_type: 'tier', 'amount', 'percent', or 'trial'
         discount_value: Dollar amount or percentage value (for amount/percent discounts)
         trial_days: Number of days for free trial (for trial codes)
+        max_uses: Maximum number of uses per code (-1 for unlimited, 0 for single-use, positive number for limited uses)
     """
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -6882,13 +8123,11 @@ def create_promo_codes(tier, count, prefix="", discount_type="tier", discount_va
         code = f"{prefix}{generate_promo_code(8)}" if prefix else generate_promo_code(12)
 
         try:
-            # Set max_uses = -1 for unlimited uses (default behavior)
-            max_uses = -1  # -1 means unlimited uses
-
+            # max_uses: -1 = unlimited, 0 = single use, positive number = limited uses
             cursor.execute("""
                 INSERT INTO promo_codes (code, tier, max_uses, is_active, single_use, discount_type, discount_value, trial_days)
-                VALUES (?, ?, ?, 1, 0, ?, ?, ?)
-            """, (code, tier or 'free', max_uses, discount_type, discount_value, trial_days))
+                VALUES (?, ?, ?, 1, ?, ?, ?, ?)
+            """, (code, tier or 'free', max_uses, 1 if max_uses == 0 else 0, discount_type, discount_value, trial_days))
             codes.append(code)
         except sqlite3.IntegrityError:
             # Code already exists, try again
@@ -7244,8 +8483,9 @@ def admin_generate_promo_codes():
         discount_type = data.get('discount_type', 'tier')
         discount_value = data.get('discount_value')
         trial_days = data.get('trial_days')
+        max_uses = data.get('max_uses', -1)  # -1 for unlimited by default
 
-        print(f"Generating {count} promo codes - Type: {discount_type}, Tier: {tier}, Prefix: {prefix}, Trial Days: {trial_days}")
+        print(f"Generating {count} promo codes - Type: {discount_type}, Tier: {tier}, Prefix: {prefix}, Max Uses: {max_uses}, Trial Days: {trial_days}")
 
         # Validate discount type
         if discount_type not in ['tier', 'amount', 'percent', 'trial']:
@@ -7268,7 +8508,7 @@ def admin_generate_promo_codes():
             if trial_days is None or trial_days <= 0:
                 return jsonify({'error': 'Trial days must be greater than 0'}), 400
 
-        codes = create_promo_codes(tier, count, prefix, discount_type, discount_value, trial_days)
+        codes = create_promo_codes(tier, count, prefix, discount_type, discount_value, trial_days, max_uses)
 
         print(f"✅ Successfully generated {len(codes)} promo codes")
 
@@ -7303,14 +8543,15 @@ def admin_list_promo_codes():
         print("Loading promo codes...")
         
         cursor.execute("""
-            SELECT code, tier, max_uses, times_used, is_active, created_at
+            SELECT code, tier, max_uses, times_used, is_active, created_at,
+                   discount_type, discount_value, trial_days
             FROM promo_codes
             ORDER BY created_at DESC
         """)
-        
+
         results = cursor.fetchall()
         conn.close()
-        
+
         codes = [
             {
                 'code': row[0],
@@ -7318,7 +8559,10 @@ def admin_list_promo_codes():
                 'max_uses': row[2],
                 'times_used': row[3],
                 'is_active': row[4],
-                'created_at': row[5]
+                'created_at': row[5],
+                'discount_type': row[6] or 'tier',
+                'discount_value': row[7],
+                'trial_days': row[8]
             }
             for row in results
         ]
@@ -8040,6 +9284,41 @@ def get_global_agents():
         print(f"❌ Error getting global agents: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/admin/users', methods=['GET'])
+@login_required
+def admin_get_all_users():
+    """Admin: Get all users for assignment"""
+    if current_user.id != 1:  # Admin only
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT id, username, email, subscription_tier, created_at
+            FROM users
+            WHERE id != 1
+            ORDER BY created_at DESC
+        """)
+
+        users = []
+        for row in cursor.fetchall():
+            users.append({
+                'id': row[0],
+                'username': row[1],
+                'email': row[2],
+                'subscription_tier': row[3],
+                'created_at': row[4]
+            })
+
+        conn.close()
+        return jsonify({'users': users}), 200
+
+    except Exception as e:
+        print(f"❌ Error getting users: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/admin/global-agents', methods=['GET'])
 @login_required
 def admin_get_all_global_agents():
@@ -8053,7 +9332,7 @@ def admin_get_all_global_agents():
 
         cursor.execute("""
             SELECT id, name, description, emoji, category, system_prompt,
-                   template_variables, is_active, created_at
+                   template_variables, is_active, created_at, integrations
             FROM global_agents
             ORDER BY created_at DESC
         """)
@@ -8076,6 +9355,7 @@ def admin_get_all_global_agents():
                 'template_variables': json.loads(row[6]) if row[6] else None,
                 'is_active': bool(row[7]),
                 'created_at': row[8],
+                'integrations': json.loads(row[9]) if row[9] else [],
                 'user_count': user_count
             })
 
@@ -8101,6 +9381,7 @@ def admin_create_global_agent():
         category = data.get('category', 'general')
         system_prompt = data.get('system_prompt')
         template_variables = data.get('template_variables')
+        integrations = data.get('integrations', [])
 
         if not name or not system_prompt:
             return jsonify({'error': 'Name and system prompt required'}), 400
@@ -8109,15 +9390,19 @@ def admin_create_global_agent():
         if isinstance(template_variables, dict):
             template_variables = json.dumps(template_variables)
 
+        # Convert integrations to JSON if it's a list
+        if isinstance(integrations, list):
+            integrations = json.dumps(integrations)
+
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
 
         cursor.execute("""
             INSERT INTO global_agents (
                 name, description, emoji, category, system_prompt,
-                template_variables, created_by
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (name, description, emoji, category, system_prompt, template_variables, current_user.id))
+                template_variables, integrations, created_by
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (name, description, emoji, category, system_prompt, template_variables, integrations, current_user.id))
 
         agent_id = cursor.lastrowid
         conn.commit()
@@ -8169,6 +9454,10 @@ def admin_update_global_agent(agent_id):
             updates.append('template_variables = ?')
             tv = data['template_variables']
             params.append(json.dumps(tv) if isinstance(tv, dict) else tv)
+        if 'integrations' in data:
+            updates.append('integrations = ?')
+            integ = data['integrations']
+            params.append(json.dumps(integ) if isinstance(integ, list) else integ)
         if 'is_active' in data:
             updates.append('is_active = ?')
             params.append(1 if data['is_active'] else 0)
@@ -8301,100 +9590,177 @@ def admin_unassign_global_agent(agent_id):
         print(f"❌ Error unassigning global agent: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-# ============================================
-# STARTER AGENTS FOR NEW USERS
-# ============================================
+@app.route('/api/admin/global-agents/<int:agent_id>/share', methods=['POST'])
+@login_required
+def share_global_agent(agent_id):
+    """Admin: Generate share code for public access to global agent"""
+    if current_user.id != 1:  # Admin only
+        return jsonify({'error': 'Unauthorized'}), 403
 
-STARTER_AGENTS = [
-    {
-        'name': 'Content Helper',
-        'description': 'Social media content creation and optimization',
-        'emoji': '✍️',
-        'system_prompt': '''You are a Content Helper specialized in social media content creation.
-
-Your capabilities:
-1. Transform messy ideas into polished posts
-2. Shorten content while maintaining tone and voice
-3. Generate content ideas through strategic questions
-
-When users share messy ideas, clean them up into engaging posts.
-When asked to shorten content, preserve the original tone.
-When users don't know what to post, ask 3-5 targeted questions about:
-- Their target audience
-- Recent business updates
-- Pain points they solve
-- Success stories or testimonials
-
-Always match the user's brand voice and keep responses actionable.''',
-        'template_variables': json.dumps({
-            'business_name': {'type': 'text', 'description': 'Your business or brand name', 'default': ''},
-            'tone': {'type': 'select', 'options': ['Professional', 'Casual', 'Friendly', 'Authoritative'], 'default': 'Professional'},
-            'audience': {'type': 'text', 'description': 'Your target audience', 'default': ''}
-        })
-    },
-    {
-        'name': 'Email Assistant',
-        'description': 'Draft professional emails and responses',
-        'emoji': '📧',
-        'system_prompt': '''You are an Email Assistant that helps write clear, professional emails.
-
-Your role:
-- Draft emails based on brief descriptions
-- Improve tone and clarity of existing drafts
-- Suggest subject lines
-- Keep emails concise and actionable
-
-Always ask for context if needed: recipient, purpose, desired tone.''',
-        'template_variables': json.dumps({
-            'signature': {'type': 'text', 'description': 'Your email signature', 'default': ''},
-            'tone': {'type': 'select', 'options': ['Formal', 'Professional', 'Friendly', 'Casual'], 'default': 'Professional'}
-        })
-    },
-    {
-        'name': 'Meeting Summarizer',
-        'description': 'Create meeting notes and action items',
-        'emoji': '📝',
-        'system_prompt': '''You are a Meeting Summarizer that creates clear, actionable meeting notes.
-
-Your tasks:
-- Extract key discussion points
-- Identify action items with owners
-- Highlight decisions made
-- Note follow-up questions
-
-Format output with clear sections: Summary, Action Items, Decisions, Next Steps.'''
-    }
-]
-
-def create_starter_agents_for_user(user_id):
-    """Create default starter agents for a new user"""
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
 
-        for agent in STARTER_AGENTS:
+        # Get agent details
+        cursor.execute("SELECT name, share_code FROM global_agents WHERE id = ?", (agent_id,))
+        result = cursor.fetchone()
+
+        if not result:
+            conn.close()
+            return jsonify({'error': 'Global agent not found'}), 404
+
+        agent_name, existing_share_code = result
+
+        # Generate new share code if doesn't exist
+        if not existing_share_code:
+            import secrets
+            share_code = secrets.token_urlsafe(16)
+
             cursor.execute("""
-                INSERT INTO custom_agents (
-                    user_id, name, description, emoji, system_prompt, template_variables, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-            """, (
-                user_id,
-                agent['name'],
-                agent['description'],
-                agent['emoji'],
-                agent['system_prompt'],
-                agent.get('template_variables')
-            ))
+                UPDATE global_agents
+                SET share_code = ?, is_public = 1
+                WHERE id = ?
+            """, (share_code, agent_id))
+
+            conn.commit()
+        else:
+            share_code = existing_share_code
+            # Just make sure it's public
+            cursor.execute("""
+                UPDATE global_agents
+                SET is_public = 1
+                WHERE id = ?
+            """, (agent_id,))
+            conn.commit()
+
+        conn.close()
+
+        # Generate shareable URL
+        share_url = f"{request.host_url}global/{share_code}"
+
+        return jsonify({
+            'success': True,
+            'share_code': share_code,
+            'share_url': share_url,
+            'message': f'Public link created for "{agent_name}"'
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Error sharing global agent: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/global-agents/<int:agent_id>/unshare', methods=['POST'])
+@login_required
+def unshare_global_agent(agent_id):
+    """Admin: Remove public access to global agent"""
+    if current_user.id != 1:  # Admin only
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            UPDATE global_agents
+            SET is_public = 0
+            WHERE id = ?
+        """, (agent_id,))
 
         conn.commit()
         conn.close()
 
-        print(f"✅ Created {len(STARTER_AGENTS)} starter agents for user {user_id}")
-        return True
+        return jsonify({
+            'success': True,
+            'message': 'Global agent is now private (only assigned users can access)'
+        }), 200
 
     except Exception as e:
-        print(f"❌ Error creating starter agents: {str(e)}")
-        return False
+        print(f"❌ Error unsharing global agent: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# Public endpoint to access shared global agents
+@app.route('/global/<share_code>')
+def view_shared_global_agent(share_code):
+    """Public page to chat with a shared global agent (no login required)"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT name, description, emoji, system_prompt, is_public
+            FROM global_agents
+            WHERE share_code = ?
+        """, (share_code,))
+
+        agent = cursor.fetchone()
+        conn.close()
+
+        if not agent:
+            return "Global agent not found", 404
+
+        agent_name, description, emoji, system_prompt, is_public = agent
+
+        if not is_public:
+            return "This global agent is not publicly accessible", 403
+
+        # Render public chat page for this global agent
+        return render_template('global_agent_public.html',
+                             agent_name=agent_name,
+                             description=description,
+                             emoji=emoji,
+                             share_code=share_code)
+
+    except Exception as e:
+        print(f"❌ Error loading shared global agent: {str(e)}")
+        return "Error loading global agent", 500
+
+# API endpoint for guests to chat with shared global agents
+@app.route('/api/global/chat', methods=['POST'])
+def global_agent_chat():
+    """Chat with a shared global agent (no login required)"""
+    try:
+        data = request.json
+        share_code = data.get('share_code')
+        message = data.get('message')
+
+        if not share_code or not message:
+            return jsonify({'error': 'Missing required fields'}), 400
+
+        # Get global agent by share_code
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT name, system_prompt, is_public
+            FROM global_agents
+            WHERE share_code = ?
+        """, (share_code,))
+
+        agent_data = cursor.fetchone()
+        conn.close()
+
+        if not agent_data:
+            return jsonify({'error': 'Global agent not found'}), 404
+
+        agent_name, system_prompt, is_public = agent_data
+
+        if not is_public:
+            return jsonify({'error': 'This global agent is not publicly accessible'}), 403
+
+        # Use Gemini for free tier (no API cost for public agents)
+        import google.generativeai as genai
+        genai.configure(api_key=app.config.get('GOOGLE_AI_API_KEY'))
+        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+
+        full_prompt = f"{system_prompt}\n\nUser: {message}"
+        response = model.generate_content(full_prompt)
+        ai_response = response.text
+
+        return jsonify({'response': ai_response}), 200
+
+    except Exception as e:
+        print(f"❌ Global agent chat error: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
 
 # ============================================
 # AGENT TEMPLATE RENDERING
