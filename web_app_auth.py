@@ -100,6 +100,31 @@ login_manager.login_view = 'login'
 # STATIC FILES - Serve images, CSS, JS, etc.
 # ============================================
 
+# STRIPE WEBHOOK
+@app.route('/api/stripe-webhook', methods=['POST'])
+def stripe_webhook():
+    payload = request.data
+    sig_header = request.headers.get('Stripe-Signature')
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload,
+            sig_header,
+            STRIPE_WEBHOOK_SECRET
+        )
+    except Exception as e:
+        return f'Webhook error: {str(e)}', 400
+
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+
+        if session.get('payment_status') == 'paid':
+            email = session.get('customer_details', {}).get('email')
+            print(f"Stripe payment confirmed for {email}")
+
+    return jsonify({'received': True}), 200
+
+
 @app.route('/static/<path:filename>')
 def serve_static(filename):
     """Serve static files (images, CSS, JS)"""
