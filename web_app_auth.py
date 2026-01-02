@@ -1005,70 +1005,113 @@ def init_promo_codes_table():
     print("✅ Promo codes tables initialized")
 
 # ============================================
-# DEFAULT GLOBAL AGENTS (ASSIGNED TO ALL NEW USERS)
+# ============================================
+# GLOBAL AGENTS (System-level utilities)
+# ============================================
+# CRITICAL: Global agents are DISABLED by default
+# Only admin can enable and assign global agents
+# DO NOT auto-assign to new users
 # ============================================
 
 DEFAULT_GLOBAL_AGENTS = [
     {
-        'name': 'Content Helper',
-        'description': 'Social media content creation and optimization',
+        'name': 'Research Agent',
+        'description': 'Gather, summarise, and structure information clearly',
+        'emoji': '🔍',
+        'category': 'utility',
+        'system_prompt': '''You are a Research Agent. Your purpose is to gather, summarise, and structure information clearly.
+
+What you CAN do:
+- Research topics
+- Summarise documents or inputs
+- Extract key points
+- Structure findings into sections
+
+What you CANNOT do:
+- Write final publish-ready content
+- Make strategic or business decisions
+- Personalise tone unless explicitly asked
+
+You are a utility agent. Defer to Stand Alone Client Agents when a task clearly belongs to a client's private agent.''',
+        'template_variables': None
+    },
+    {
+        'name': 'Analysis Agent',
+        'description': 'Help analyse information, logic, trade-offs, and comparisons',
+        'emoji': '📊',
+        'category': 'utility',
+        'system_prompt': '''You are an Analysis Agent. Your purpose is to help analyse information, logic, trade-offs, and comparisons.
+
+What you CAN do:
+- Break down concepts or numbers
+- Compare options
+- Explain implications and risks
+
+What you CANNOT do:
+- Provide legal, financial, or medical advice
+- Automate decisions
+- Act as a strategist
+
+You are a utility agent. Defer to Stand Alone Client Agents when a task clearly belongs to a client's private agent.''',
+        'template_variables': None
+    },
+    {
+        'name': 'Drafting Agent',
+        'description': 'Produce first-pass written drafts from clear instructions',
         'emoji': '✍️',
-        'category': 'productivity',
-        'system_prompt': '''You are a Content Helper specialized in social media content creation.
+        'category': 'utility',
+        'system_prompt': '''You are a Drafting Agent. Your purpose is to produce first-pass written drafts from clear instructions.
 
-Your capabilities:
-1. Transform messy ideas into polished posts
-2. Shorten content while maintaining tone and voice
-3. Generate content ideas through strategic questions
+What you CAN do:
+- Draft content
+- Rewrite or restructure text
+- Improve clarity and flow
 
-When users share messy ideas, clean them up into engaging posts.
-When asked to shorten content, preserve the original tone.
-When users don't know what to post, ask 3-5 targeted questions about:
-- Their target audience
-- Recent business updates
-- Pain points they solve
-- Success stories or testimonials
+What you CANNOT do:
+- Define strategy
+- Plan campaigns
+- Replace stand alone content agents
 
-Always match the user's brand voice and keep responses actionable.''',
-        'template_variables': json.dumps({
-            'business_name': {'type': 'text', 'description': 'Your business or brand name', 'default': ''},
-            'tone': {'type': 'select', 'options': ['Professional', 'Casual', 'Friendly', 'Authoritative'], 'default': 'Professional'},
-            'audience': {'type': 'text', 'description': 'Your target audience', 'default': ''}
-        })
+You are a utility agent. Defer to Stand Alone Client Agents when a task clearly belongs to a client's private agent.''',
+        'template_variables': None
     },
     {
-        'name': 'Email Assistant',
-        'description': 'Draft professional emails and responses',
-        'emoji': '📧',
-        'category': 'productivity',
-        'system_prompt': '''You are an Email Assistant that helps write clear, professional emails.
+        'name': 'Organisation Agent',
+        'description': 'Organise and structure information',
+        'emoji': '📋',
+        'category': 'utility',
+        'system_prompt': '''You are an Organisation Agent. Your purpose is to organise and structure information.
 
-Your role:
-- Draft emails based on brief descriptions
-- Improve tone and clarity of existing drafts
-- Suggest subject lines
-- Keep emails concise and actionable
+What you CAN do:
+- Sort notes and ideas
+- Create lists or steps
+- Summarise conversations or threads
 
-Always ask for context if needed: recipient, purpose, desired tone.''',
-        'template_variables': json.dumps({
-            'signature': {'type': 'text', 'description': 'Your email signature', 'default': ''},
-            'tone': {'type': 'select', 'options': ['Formal', 'Professional', 'Friendly', 'Casual'], 'default': 'Professional'}
-        })
+What you CANNOT do:
+- Automate tools
+- Perform integrations
+- Manage external systems
+
+You are a utility agent. Defer to Stand Alone Client Agents when a task clearly belongs to a client's private agent.''',
+        'template_variables': None
     },
     {
-        'name': 'Meeting Summarizer',
-        'description': 'Create meeting notes and action items',
-        'emoji': '📝',
-        'category': 'productivity',
-        'system_prompt': '''You are a Meeting Summarizer that creates clear, actionable meeting notes.
+        'name': 'Instruction Interpreter',
+        'description': 'Help users clarify what they are asking for',
+        'emoji': '💡',
+        'category': 'utility',
+        'system_prompt': '''You are an Instruction Interpreter. Your purpose is to help users clarify what they are asking for.
 
-Your tasks:
-- Extract key discussion points
-- Identify action items with owners
-- Highlight decisions made
-- Note follow-up questions
+What you CAN do:
+- Rewrite unclear prompts
+- Ask clarifying questions
+- Turn vague requests into clear instructions
 
-Format output with clear sections: Summary, Action Items, Decisions, Next Steps.''',
+What you CANNOT do:
+- Complete the task itself
+- Produce final outputs
+
+You are a utility agent. Defer to Stand Alone Client Agents when a task clearly belongs to a client's private agent.''',
         'template_variables': None
     }
 ]
@@ -1111,40 +1154,17 @@ def initialize_default_global_agents():
         return False
 
 def assign_default_global_agents_to_user(user_id):
-    """Assign all default global agents to a new user"""
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
+    """
+    DEPRECATED: DO NOT USE
 
-        # Get IDs of default global agents
-        for agent in DEFAULT_GLOBAL_AGENTS:
-            cursor.execute("""
-                SELECT id FROM global_agents WHERE name = ?
-            """, (agent['name'],))
+    Global agents are DISABLED by default per platform architecture.
+    Only admin can manually assign global agents through the admin portal.
 
-            result = cursor.fetchone()
-            if result:
-                global_agent_id = result[0]
-
-                # Assign to user (skip if already assigned)
-                try:
-                    cursor.execute("""
-                        INSERT INTO user_global_agents (user_id, global_agent_id, assigned_by, assigned_at)
-                        VALUES (?, ?, 1, CURRENT_TIMESTAMP)
-                    """, (user_id, global_agent_id))
-                except sqlite3.IntegrityError:
-                    # Already assigned, skip
-                    pass
-
-        conn.commit()
-        conn.close()
-
-        print(f"✅ Assigned {len(DEFAULT_GLOBAL_AGENTS)} global agents to user {user_id}")
-        return True
-
-    except Exception as e:
-        print(f"❌ Error assigning global agents to user: {str(e)}")
-        return False
+    This function exists only for backwards compatibility but should never be called.
+    """
+    print(f"⚠️  WARNING: assign_default_global_agents_to_user() called but is DEPRECATED")
+    print(f"   Global agents must be manually assigned by admin only")
+    return False
 
 # Initialize database on startup
 try:
@@ -1905,8 +1925,9 @@ def api_signup():
             user = User(id=user_id, username=username, email=email)
             login_user(user)
 
-            # Assign default global agents to new user
-            assign_default_global_agents_to_user(user_id)
+            # NOTE: Global agents are DISABLED by default
+            # Only admin can manually assign global agents
+            # DO NOT auto-assign global agents to new users
 
             conn.close()
             return jsonify({'success': True}), 200
