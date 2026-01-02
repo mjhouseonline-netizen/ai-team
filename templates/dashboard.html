@@ -4873,6 +4873,7 @@
                     // Don't trigger if clicking dropdown or its contents
                     if (!e.target.closest('.agent-actions-dropdown') &&
                         !e.target.closest('.agent-menu-btn')) {
+                        e.stopPropagation(); // Prevent event bubbling
                         selectCustomAgent(e, agent.id, agent.name, agent.emoji || '🤖', agent.description || agent.role, agent.icon_image);
                     }
                 };
@@ -4957,6 +4958,7 @@
                 const agentDiv = document.createElement('div');
                 agentDiv.className = 'agent-item custom-agent-item';
                 agentDiv.onclick = (e) => {
+                    e.stopPropagation(); // Prevent event bubbling
                     selectGlobalAgent(e, agent.id, agent.name, agent.emoji || '🤖', agent.description);
                 };
 
