@@ -22,6 +22,7 @@ import stripe
 from openai import OpenAI
 import google.generativeai as genai
 from dotenv import load_dotenv
+from agent_collaboration import detect_agent_mentions, suggest_agent_transfer
 
 # Load environment variables from .env file
 load_dotenv()
@@ -7037,16 +7038,15 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
         # ============================================
 
         # ============================================
-        # DELEGATION DETECTION
+        # DELEGATION DETECTION & AGENT MENTIONS
         # ============================================
+        # Check if user mentioned any agents in their message
+        mentioned_agents = []
+        if not is_guest:
+            mentioned_agents = detect_agent_mentions(message, current_user.id)
+
         # Check if the agent suggested switching to another agent
-        delegation_suggestion = None
-        for other_agent in AGENT_CAPABILITIES.keys():
-            if other_agent != agent:
-                # Look for phrases like "Sol would be perfect for this" or "bring Sol into"
-                if f"{other_agent} would be" in ai_response or f"bring {other_agent}" in ai_response:
-                    delegation_suggestion = other_agent
-                    break
+        delegation_suggestion = suggest_agent_transfer(ai_response, agent)
 
         response_data = {
             'success': True,
@@ -7064,7 +7064,11 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
         if delegation_suggestion:
             response_data['delegation_suggested'] = True
             response_data['suggested_agent'] = delegation_suggestion
-            response_data['suggestion_reason'] = f"{agent} suggests {delegation_suggestion} for this task"
+            response_data['suggestion_reason'] = f"{agent} suggests switching to {delegation_suggestion} for this task"
+
+        # Add mentioned agents to response
+        if mentioned_agents:
+            response_data['mentioned_agents'] = mentioned_agents
 
         # Add cost warning if present
         if cost_warning:

@@ -3702,6 +3702,12 @@
                     // Display the AI response
                     displayAssistantMessage(data.response);
 
+                    // Check if user mentioned any agents
+                    if (data.mentioned_agents && data.mentioned_agents.length > 0) {
+                        const mentionedList = data.mentioned_agents.join(', ');
+                        displaySystemMessage(`🤝 You mentioned: ${mentionedList}. Would you like to collaborate with them?`);
+                    }
+
                     // Check if agent suggested delegation
                     if (data.delegation_suggested) {
                         displayDelegationSuggestion(data.suggested_agent, data.suggestion_reason);
@@ -3862,8 +3868,16 @@
             const messageDiv = document.createElement('div');
             messageDiv.className = 'message system-message';
             messageDiv.innerHTML = `
-                <div class="message-content" style="background: #eff6ff; padding: 16px; border-radius: 12px; border: 2px solid #3b82f6;">
-                    <div style="color: #1e40af; font-weight: 500;">💡 ${reason}</div>
+                <div class="message-content" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 16px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    <div style="color: white; font-weight: 500; margin-bottom: 12px;">
+                        <span style="font-size: 20px;">🤝</span> ${reason}
+                    </div>
+                    <button onclick="switchToAgent('${suggestedAgent}')"
+                            style="background: white; color: #764ba2; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.2s;"
+                            onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.2)'"
+                            onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'">
+                        Switch to ${suggestedAgent} →
+                    </button>
                 </div>
             `;
 
