@@ -4975,6 +4975,9 @@
         function selectGlobalAgent(event, agentId, agentName, emoji, description) {
             event.preventDefault();
 
+            // Close all dropdowns when selecting a global agent
+            closeAllDropdowns();
+
             // Update current agent display
             const agentDisplay = document.getElementById('currentAgentName');
             if (agentDisplay) {
@@ -5139,6 +5142,9 @@
 
         function selectCustomAgent(eventOrId, agentIdOrName, name, emoji, description, iconImage) {
             console.log('🎯 Selecting custom agent');
+
+            // Close all dropdowns when selecting a custom agent
+            closeAllDropdowns();
 
             // Handle both call signatures:
             // 1. selectCustomAgent(agentId, agentName) - 2 params for guest mode
