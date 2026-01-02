@@ -9387,6 +9387,9 @@ def clone_shared_agent(share_code):
 def get_global_agents():
     """Get all global agents available to current user"""
     try:
+        # DEBUG: Log current user info
+        print(f"🔍 DEBUG /api/global-agents: current_user.id = {current_user.id}, email = {getattr(current_user, 'email', 'N/A')}")
+
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
 
@@ -9415,11 +9418,16 @@ def get_global_agents():
                 'type': 'global'  # Mark as global agent
             })
 
+        # DEBUG: Log result count
+        print(f"🔍 DEBUG /api/global-agents: Returning {len(agents)} agents for user {current_user.id}")
+
         conn.close()
         return jsonify({'agents': agents}), 200
 
     except Exception as e:
         print(f"❌ Error getting global agents: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/global-agents/<int:agent_id>/unassign', methods=['POST'])
