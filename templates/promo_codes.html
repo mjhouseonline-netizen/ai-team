@@ -297,24 +297,52 @@
                             <thead>
                                 <tr>
                                     <th>Code</th>
-                                    <th>Tier</th>
-                                    <th>Usage</th>
+                                    <th>Type</th>
+                                    <th>Discount/Tier</th>
+                                    <th>Usage Limit</th>
                                     <th>Status</th>
                                     <th>Created</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                ${data.codes.map(code => `
-                                    <tr>
-                                        <td><span class="code-text">${code.code}</span></td>
-                                        <td><span class="code-tier">${code.tier.toUpperCase()}</span></td>
-                                        <td>${code.times_used} / ${code.max_uses}</td>
-                                        <td class="${code.times_used >= code.max_uses ? 'used' : 'available'}">
-                                            ${code.times_used >= code.max_uses ? '🔴 Used' : '🟢 Available'}
-                                        </td>
-                                        <td>${new Date(code.created_at).toLocaleDateString()}</td>
-                                    </tr>
-                                `).join('')}
+                                ${data.codes.map(code => {
+                                    // Determine discount label
+                                    let discountLabel = '';
+                                    let discountType = code.discount_type || 'tier';
+
+                                    if (discountType === 'tier') {
+                                        discountLabel = code.tier.toUpperCase();
+                                    } else if (discountType === 'trial' && code.trial_days) {
+                                        discountLabel = `${code.trial_days} Days Free`;
+                                    } else if (discountType === 'amount' && code.discount_value) {
+                                        discountLabel = `$${code.discount_value} OFF`;
+                                    } else if (discountType === 'percent' && code.discount_value) {
+                                        discountLabel = `${code.discount_value}% OFF`;
+                                    } else {
+                                        discountLabel = code.tier.toUpperCase();
+                                    }
+
+                                    // Determine usage display
+                                    let usageDisplay = code.max_uses === -1 ?
+                                        `${code.times_used} / ∞` :
+                                        `${code.times_used} / ${code.max_uses}`;
+
+                                    // Determine if fully used
+                                    let isUsed = code.max_uses !== -1 && code.times_used >= code.max_uses;
+
+                                    return `
+                                        <tr>
+                                            <td><span class="code-text">${code.code}</span></td>
+                                            <td><span style="font-size: 0.85em; color: #7f8c8d;">${discountType.charAt(0).toUpperCase() + discountType.slice(1)}</span></td>
+                                            <td><span class="code-tier">${discountLabel}</span></td>
+                                            <td>${usageDisplay}</td>
+                                            <td class="${isUsed ? 'used' : 'available'}">
+                                                ${isUsed ? '🔴 Used Up' : '🟢 Available'}
+                                            </td>
+                                            <td>${new Date(code.created_at).toLocaleDateString()}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
                             </tbody>
                         </table>
                     `;
