@@ -5012,6 +5012,8 @@ def create_checkout_session():
             return jsonify({'error': 'Stripe is not configured. Please contact the administrator to set up payment processing.'}), 500
 
         price_id = request.form.get('price_id')
+        print(f"🔍 Checkout requested for price_id: {price_id}")
+        print(f"🔍 Available price IDs: STARTER={STRIPE_STARTER_PRICE_ID}, PRO={STRIPE_PRO_PRICE_ID}, ENTERPRISE={STRIPE_ENTERPRISE_PRICE_ID}")
 
         # Determine plan details based on price_id
         if price_id == STRIPE_STARTER_PRICE_ID:
@@ -5021,7 +5023,8 @@ def create_checkout_session():
         elif price_id == STRIPE_ENTERPRISE_PRICE_ID:
             plan_name = 'enterprise'
         else:
-            return jsonify({'error': 'Invalid price ID'}), 400
+            print(f"❌ Invalid price_id received: {price_id}")
+            return jsonify({'error': f'Invalid price ID: {price_id}'}), 400
 
         # Get or create Stripe customer
         conn = sqlite3.connect(DB_PATH)
@@ -5087,13 +5090,25 @@ def create_checkout_session():
         if discounts:
             session_params['discounts'] = discounts
 
+        print(f"🔍 Creating Stripe checkout session with params: customer={customer_id}, price={price_id}, plan={plan_name}")
         checkout_session = stripe.checkout.Session.create(**session_params)
+        print(f"✅ Checkout session created successfully: {checkout_session.id}")
 
         return redirect(checkout_session.url)
-        
+
     except Exception as e:
-        print(f"Error creating checkout session: {str(e)}")
-        return jsonify({'error': 'Error creating checkout session'}), 500
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"❌ Error creating checkout session: {str(e)}")
+        print(f"Full traceback:\n{error_trace}")
+
+        # Return detailed error in development
+        error_message = f"Error creating checkout session: {str(e)}"
+        return jsonify({
+            'error': error_message,
+            'details': str(e),
+            'type': type(e).__name__
+        }), 500
 
 
 @app.route('/api/get-active-discount')
