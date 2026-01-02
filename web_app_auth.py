@@ -5178,6 +5178,8 @@ def cancel():
     return render_template('cancel.html')
 
 
+@app.route('/api/stripe-webhook', methods=['POST'])
+@app.route('/stripe-webhook', methods=['POST'])
 @app.route('/webhook', methods=['POST'])
 def stripe_webhook():
     """Handle Stripe webhook events"""
