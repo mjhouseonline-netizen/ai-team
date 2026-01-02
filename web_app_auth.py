@@ -5078,6 +5078,7 @@ def create_checkout_session():
                 'quantity': 1,
             }],
             'mode': 'subscription',
+            'allow_promotion_codes': True,  # Enable promo code entry in checkout UI
             'success_url': request.host_url + 'success?session_id={CHECKOUT_SESSION_ID}',
             'cancel_url': request.host_url + 'cancel',
             'metadata': {
