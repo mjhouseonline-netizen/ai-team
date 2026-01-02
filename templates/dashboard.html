@@ -4959,8 +4959,12 @@
                 const agentDiv = document.createElement('div');
                 agentDiv.className = 'agent-item custom-agent-item';
                 agentDiv.onclick = (e) => {
-                    e.stopPropagation(); // Prevent event bubbling
-                    selectGlobalAgent(e, agent.id, agent.name, agent.emoji || '🤖', agent.description);
+                    // Don't trigger if clicking dropdown or its contents
+                    if (!e.target.closest('.agent-actions-dropdown') &&
+                        !e.target.closest('.agent-menu-btn')) {
+                        e.stopPropagation(); // Prevent event bubbling
+                        selectGlobalAgent(e, agent.id, agent.name, agent.emoji || '🤖', agent.description);
+                    }
                 };
 
                 agentDiv.innerHTML = `
@@ -4971,10 +4975,53 @@
                         <div class="agent-name">${agent.name}</div>
                         <div class="agent-role">${agent.description || 'Global Agent'}</div>
                     </div>
+                    <div class="agent-actions">
+                        <button class="agent-menu-btn" onclick="toggleAgentDropdown(event, this)" title="Actions">
+                            ⋮
+                        </button>
+                        <div class="agent-actions-dropdown">
+                            <div class="dropdown-item dropdown-item-danger" onclick="unassignGlobalAgent(event, ${agent.id})">
+                                <span class="dropdown-icon">✖️</span>
+                                <span>Unassign</span>
+                            </div>
+                        </div>
+                    </div>
                 `;
 
                 container.appendChild(agentDiv);
             });
+        }
+
+        async function unassignGlobalAgent(event, agentId) {
+            event.stopPropagation(); // Prevent agent selection
+
+            if (!confirm('Are you sure you want to unassign this global agent? You can always re-assign it later.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/global-agents/${agentId}/unassign`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showNotification('Global agent unassigned successfully');
+                    // Reload global agents list
+                    loadGlobalAgents();
+                } else {
+                    showNotification(data.error || 'Failed to unassign agent', 'error');
+                }
+            } catch (error) {
+                console.error('Error unassigning global agent:', error);
+                showNotification('Error unassigning agent', 'error');
+            }
         }
 
         function selectGlobalAgent(event, agentId, agentName, emoji, description) {

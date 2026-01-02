@@ -9272,9 +9272,9 @@ def get_global_agents():
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
 
-        # Get all active global agents assigned to this user
+        # Get all active global agents assigned to this user (DISTINCT to prevent duplicates)
         cursor.execute("""
-            SELECT
+            SELECT DISTINCT
                 ga.id, ga.name, ga.description, ga.emoji, ga.category,
                 ga.system_prompt, ga.template_variables, ga.created_at
             FROM global_agents ga
@@ -9302,6 +9302,33 @@ def get_global_agents():
 
     except Exception as e:
         print(f"❌ Error getting global agents: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/global-agents/<int:agent_id>/unassign', methods=['POST'])
+@login_required
+def unassign_global_agent(agent_id):
+    """Unassign a global agent from current user"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Delete the assignment
+        cursor.execute("""
+            DELETE FROM user_global_agents
+            WHERE user_id = ? AND global_agent_id = ?
+        """, (current_user.id, agent_id))
+
+        conn.commit()
+        rows_deleted = cursor.rowcount
+        conn.close()
+
+        if rows_deleted > 0:
+            return jsonify({'success': True, 'message': 'Global agent unassigned'}), 200
+        else:
+            return jsonify({'error': 'Agent not found or already unassigned'}), 404
+
+    except Exception as e:
+        print(f"❌ Error unassigning global agent: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/admin/users', methods=['GET'])
