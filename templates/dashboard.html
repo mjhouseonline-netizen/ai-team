@@ -3643,6 +3643,21 @@
                 return; // Don't send empty messages
             }
 
+            // Check if user wants to switch agents
+            const switchPattern = /switch\s+to\s+(\w+(?:\s+\w+)*)/i;
+            const switchMatch = message.match(switchPattern);
+            if (switchMatch && uploadedFiles.length === 0) {
+                const targetAgent = switchMatch[1];
+                // Try to switch to the agent
+                const success = switchToAgent(targetAgent);
+                if (success) {
+                    input.value = '';
+                    autoResize(input);
+                    return; // Don't send the message, just switch
+                }
+                // If agent not found, continue to send as regular message
+            }
+
             // Disable send button
             const sendBtn = document.getElementById('sendBtn');
             sendBtn.disabled = true;
@@ -3701,6 +3716,16 @@
 
                     // Display the AI response
                     displayAssistantMessage(data.response);
+
+                    // Check if user mentioned any agents
+                    if (data.mentioned_agents && data.mentioned_agents.length > 0) {
+                        if (data.mentioned_agents.length === 1) {
+                            displaySystemMessage(`🤝 You mentioned ${data.mentioned_agents[0]}. Type "switch to ${data.mentioned_agents[0]}" to chat with them.`);
+                        } else {
+                            const mentionedList = data.mentioned_agents.join(', ');
+                            displaySystemMessage(`🤝 You mentioned: ${mentionedList}. Type "switch to [agent name]" to chat with any of them.`);
+                        }
+                    }
 
                     // Check if agent suggested delegation
                     if (data.delegation_suggested) {
@@ -3862,8 +3887,11 @@
             const messageDiv = document.createElement('div');
             messageDiv.className = 'message system-message';
             messageDiv.innerHTML = `
-                <div class="message-content" style="background: #eff6ff; padding: 16px; border-radius: 12px; border: 2px solid #3b82f6;">
-                    <div style="color: #1e40af; font-weight: 500;">💡 ${reason}</div>
+                <div class="message-content" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 16px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    <div style="color: white; font-weight: 500;">
+                        <span style="font-size: 20px;">🤝</span> ${reason}<br>
+                        <span style="font-size: 14px; opacity: 0.9;">Type "switch to ${suggestedAgent}" to continue with them.</span>
+                    </div>
                 </div>
             `;
 
@@ -3872,14 +3900,24 @@
         }
 
         function switchToAgent(agentName) {
-            // Find and click the agent button in the sidebar
-            const agentButtons = document.querySelectorAll('.agent-button');
-            agentButtons.forEach(btn => {
-                if (btn.textContent.includes(agentName)) {
-                    btn.click();
-                    displaySystemMessage(`✅ Switched to ${agentName}`);
+            // Find and click the agent in the sidebar (case-insensitive)
+            const agentItems = document.querySelectorAll('.agent-item');
+            let found = false;
+
+            agentItems.forEach(item => {
+                const nameElement = item.querySelector('.agent-name');
+                if (nameElement) {
+                    const itemName = nameElement.textContent.trim();
+                    // Case-insensitive partial match
+                    if (itemName.toLowerCase().includes(agentName.toLowerCase())) {
+                        item.click();
+                        displaySystemMessage(`✅ Switched to ${itemName}`);
+                        found = true;
+                    }
                 }
             });
+
+            return found;
         }
 
         // Handle Enter key
