@@ -170,14 +170,14 @@
             display: none;
             position: absolute;
             top: 15px;
-            right: 15px;
+            left: 15px;  /* Moved to left side */
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
             color: white;
-            width: 32px;
-            height: 32px;
-            border-radius: 6px;
-            font-size: 20px;
+            width: 24px;  /* Smaller size */
+            height: 24px;  /* Smaller size */
+            border-radius: 50%;  /* Round instead of square */
+            font-size: 16px;  /* Smaller font */
             cursor: pointer;
             transition: all 0.3s;
             align-items: center;
@@ -600,6 +600,19 @@
             opacity: 1;
             visibility: visible;
             transform: translateY(0);
+        }
+
+        /* Settings in Sidebar */
+        .settings-menu-sidebar {
+            position: relative;
+        }
+
+        .settings-menu-sidebar .settings-dropdown {
+            position: absolute;
+            top: 0;
+            left: calc(100% + 10px);
+            right: auto;
+            width: 220px;
         }
 
         .settings-section {
@@ -2822,6 +2835,53 @@
                 </div>
             </a>
 
+            <!-- Settings Button in Sidebar -->
+            <div class="settings-menu-sidebar">
+                <div class="agent-item" onclick="toggleSettingsMenu(event)" style="cursor: pointer;">
+                    <div class="agent-avatar" style="background: linear-gradient(135deg, #667eea, #764ba2);">⚙️</div>
+                    <div class="agent-info">
+                        <div class="agent-name">Settings</div>
+                        <div class="agent-role">Model & preferences</div>
+                    </div>
+                </div>
+
+                <div class="settings-dropdown" id="settingsDropdownSidebar">
+                    <div class="settings-section">
+                        <div class="settings-label">Model</div>
+                        <select id="modelSelectSidebar" class="model-select-compact">
+                            <!-- Free Tier: Gemini + Llama 3.3 70B -->
+                            <optgroup label="🆓 Free Tier">
+                                <option value="gemini-2.0-flash" selected data-tier="free">Gemini 2.0 Flash</option>
+                                <option value="gemini-1.5-pro" data-tier="free">Gemini 1.5 Pro</option>
+                                <option value="llama-3.3-70b" data-tier="free">Llama 3.3 70B</option>
+                            </optgroup>
+
+                            <!-- Starter Tier: $2-3 models -->
+                            <optgroup label="💼 Starter ($19/mo)">
+                                <option value="grok-2" data-tier="starter">Grok 2</option>
+                                <option value="grok-2-vision" data-tier="starter">Grok 2 Vision</option>
+                                <option value="mistral-large" data-tier="starter">Mistral Large</option>
+                            </optgroup>
+
+                            <!-- Pro Tier: $5-10 models -->
+                            <optgroup label="⭐ Pro ($49/mo)">
+                                <option value="gpt-4o" data-tier="pro">GPT-4o</option>
+                                <option value="gpt-4o-mini" data-tier="pro">GPT-4o Mini</option>
+                                <option value="claude-3.5-sonnet" data-tier="pro">Claude 3.5 Sonnet</option>
+                                <option value="claude-3.5-haiku" data-tier="pro">Claude 3.5 Haiku</option>
+                            </optgroup>
+
+                            <!-- Enterprise Tier: $15+ models -->
+                            <optgroup label="🚀 Enterprise ($99/mo)">
+                                <option value="o1-preview" data-tier="enterprise">o1 Preview</option>
+                                <option value="o1-mini" data-tier="enterprise">o1 Mini</option>
+                                <option value="claude-opus-4" data-tier="enterprise">Claude Opus 4</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
             <a href="/promo-codes" class="agent-item" id="promoSidebarLink" style="{% if current_user.id != 1 %}display: none;{% endif %} text-decoration: none; color: white;">
                 <div class="agent-avatar" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">🎫</div>
                 <div class="agent-info">
@@ -3478,18 +3538,28 @@
         function toggleSettingsMenu(event) {
             if (event) event.stopPropagation();
 
-            // Close all other dropdowns first
-            closeAllDropdowns('settingsDropdown');
+            // Determine which dropdown to toggle based on which button was clicked
+            const clickedElement = event.target.closest('.settings-menu, .settings-menu-sidebar');
+            let dropdownId = 'settingsDropdown'; // Default to header dropdown
 
-            const dropdown = document.getElementById('settingsDropdown');
-            dropdown.classList.toggle('show');
+            if (clickedElement && clickedElement.classList.contains('settings-menu-sidebar')) {
+                dropdownId = 'settingsDropdownSidebar';
+            }
+
+            // Close all other dropdowns first
+            closeAllDropdowns(dropdownId);
+
+            const dropdown = document.getElementById(dropdownId);
+            if (dropdown) {
+                dropdown.classList.toggle('show');
+            }
         }
 
         function closeSettingsMenu() {
-            const dropdown = document.getElementById('settingsDropdown');
-            if (dropdown) {
-                dropdown.classList.remove('show');
-            }
+            const dropdown1 = document.getElementById('settingsDropdown');
+            const dropdown2 = document.getElementById('settingsDropdownSidebar');
+            if (dropdown1) dropdown1.classList.remove('show');
+            if (dropdown2) dropdown2.classList.remove('show');
         }
 
         function toggleUsageDetails() {
@@ -4816,21 +4886,26 @@
             });
         }
 
-        // Sync desktop and mobile model selectors
+        // Sync desktop, mobile, and sidebar model selectors
         function syncModelSelectors() {
             const desktopSelect = document.getElementById('modelSelect');
             const mobileSelect = document.getElementById('modelSelectMobile');
+            const sidebarSelect = document.getElementById('modelSelectSidebar');
 
-            if (!desktopSelect || !mobileSelect) return;
+            const selects = [desktopSelect, mobileSelect, sidebarSelect].filter(s => s);
 
-            // When desktop changes, update mobile
-            desktopSelect.addEventListener('change', function() {
-                mobileSelect.value = this.value;
-            });
+            if (selects.length === 0) return;
 
-            // When mobile changes, update desktop
-            mobileSelect.addEventListener('change', function() {
-                desktopSelect.value = this.value;
+            // Add change listeners to sync all selects
+            selects.forEach(select => {
+                select.addEventListener('change', function() {
+                    const newValue = this.value;
+                    selects.forEach(otherSelect => {
+                        if (otherSelect !== select) {
+                            otherSelect.value = newValue;
+                        }
+                    });
+                });
             });
         }
 
