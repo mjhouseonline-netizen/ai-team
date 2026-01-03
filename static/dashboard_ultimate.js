@@ -4,13 +4,12 @@
 // ================================================
 
 // Global State
+// Note: imageMode and recognition are declared in dashboard.html to avoid redeclaration errors
 let currentAgent = 'Luna';
 let currentAgentEmoji = '🌙';
 let currentAgentRole = 'Research Analyst';
-let imageMode = false;
 let voiceMode = false;
 let uploadedFile = null;
-let recognition = null;
 let speechSynthesis = window.speechSynthesis;
 
 const agentGradients = {
