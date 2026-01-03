@@ -3277,8 +3277,8 @@
                             </div>
                         </div>
 
-                        <button class="voice-conversation-btn" id="voiceConversationBtn" onclick="toggleVoiceConversation()" title="Voice Conversation">🎤</button>
-                        <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send</button>
+                        <button type="button" class="voice-conversation-btn" id="voiceConversationBtn" onclick="toggleVoiceConversation()" title="Voice Conversation">🎤</button>
+                        <button type="button" class="send-btn" id="sendBtn" onclick="sendMessage()">Send</button>
                     </div>
                 </div>
                 <div class="file-preview" id="filePreview" style="display:none; flex-wrap: wrap; gap: 8px;">
@@ -4020,7 +4020,7 @@
         function toggleImageMode() {
             imageMode = !imageMode;
             const input = document.getElementById('messageInput');
-            const sendBtn = document.getElementById('sendButton');
+            const sendBtn = document.getElementById('sendBtn');
             
             if (imageMode) {
                 input.placeholder = '🎨 Describe the image you want to generate...';
@@ -4429,9 +4429,9 @@
             
             const currentAgent = getCurrentAgent();
             const selectedModel = document.getElementById('modelSelect')?.value || 'gemini-2.0-flash';
-            
+
             // Disable send button
-            const sendBtn = document.getElementById('sendButton');
+            const sendBtn = document.getElementById('sendBtn');
             if (sendBtn) sendBtn.disabled = true;
             
             // Check if in image mode
