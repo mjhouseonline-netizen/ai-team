@@ -610,7 +610,35 @@ def init_database():
     cursor.execute("PRAGMA table_info(users)")
     existing_columns = [col[1] for col in cursor.fetchall()]
     print(f"Database columns check: {existing_columns}")
-    
+
+    # CRITICAL: Migration for password_hash column (must exist for authentication)
+    if 'password_hash' not in existing_columns:
+        try:
+            print("⚠️  CRITICAL: password_hash column missing! Adding it now...")
+            cursor.execute("ALTER TABLE users ADD COLUMN password_hash TEXT NOT NULL DEFAULT ''")
+            print("✅ Added password_hash column")
+        except sqlite3.OperationalError as e:
+            print(f"❌ Error adding password_hash: {e}")
+            # If this fails, we need to recreate the table
+            print("⚠️  Attempting to recreate users table with proper schema...")
+            cursor.execute("DROP TABLE IF EXISTS users")
+            cursor.execute("""
+                CREATE TABLE users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE NOT NULL,
+                    email TEXT UNIQUE NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    subscription_tier TEXT DEFAULT 'free',
+                    messages_today INTEGER DEFAULT 0,
+                    last_message_reset TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    is_active BOOLEAN DEFAULT 1,
+                    stripe_customer_id TEXT UNIQUE,
+                    stripe_subscription_id TEXT UNIQUE
+                )
+            """)
+            print("✅ Recreated users table with password_hash column")
+
     # Migration: Add Stripe columns if they don't exist
     if 'stripe_customer_id' not in existing_columns:
         try:
