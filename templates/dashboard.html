@@ -3405,6 +3405,10 @@
     </div>
 
     <script>
+        // Global variables
+        let imageMode = false;
+        let recognition = null;
+
         // Combined Input Options Dropdown
         function toggleInputOptions() {
             const menu = document.getElementById('inputOptionsMenu');
@@ -4075,7 +4079,7 @@
         // ============================================
         // IMAGE GENERATION FUNCTIONALITY
         // ============================================
-        // Note: imageMode variable is declared in dashboard_ultimate.js
+        // Note: imageMode variable is declared in global variables section above
 
         function toggleImageMode() {
             imageMode = !imageMode;
@@ -4108,9 +4112,8 @@
         // ============================================
         // VOICE INPUT FUNCTIONALITY
         // ============================================
-        
+
         let isRecording = false;
-        let recognition = null;
 
         function toggleVoice() {
             if (!isRecording) {
