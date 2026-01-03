@@ -639,6 +639,42 @@ def init_database():
             """)
             print("✅ Recreated users table with password_hash column")
 
+    # Migration: Add is_active column if it doesn't exist
+    if 'is_active' not in existing_columns:
+        try:
+            print("Adding is_active column...")
+            cursor.execute("ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT 1")
+            print("✅ Added is_active column")
+        except sqlite3.OperationalError as e:
+            print(f"Warning: {e}")
+
+    # Migration: Add created_at column if it doesn't exist
+    if 'created_at' not in existing_columns:
+        try:
+            print("Adding created_at column...")
+            cursor.execute("ALTER TABLE users ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+            print("✅ Added created_at column")
+        except sqlite3.OperationalError as e:
+            print(f"Warning: {e}")
+
+    # Migration: Add messages_today column if it doesn't exist
+    if 'messages_today' not in existing_columns:
+        try:
+            print("Adding messages_today column...")
+            cursor.execute("ALTER TABLE users ADD COLUMN messages_today INTEGER DEFAULT 0")
+            print("✅ Added messages_today column")
+        except sqlite3.OperationalError as e:
+            print(f"Warning: {e}")
+
+    # Migration: Add subscription_tier column if it doesn't exist
+    if 'subscription_tier' not in existing_columns:
+        try:
+            print("Adding subscription_tier column...")
+            cursor.execute("ALTER TABLE users ADD COLUMN subscription_tier TEXT DEFAULT 'free'")
+            print("✅ Added subscription_tier column")
+        except sqlite3.OperationalError as e:
+            print(f"Warning: {e}")
+
     # Migration: Add Stripe columns if they don't exist
     if 'stripe_customer_id' not in existing_columns:
         try:
