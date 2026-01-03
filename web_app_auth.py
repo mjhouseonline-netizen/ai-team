@@ -115,52 +115,18 @@ if NOTION_AVAILABLE:
 else:
     print("⚠️  Notion integration disabled")
 
-# Database path - use persistent disk if available, fallback to current directory
+# Database path - use local database (Render /data has worker process permission issues)
 import os
 import shutil
 
-# Function to test if a database path is actually usable
-def test_database_path(path):
-    """Test if we can actually connect to and write to a database at this path"""
-    try:
-        test_conn = sqlite3.connect(path, check_same_thread=False, timeout=5.0)
-        test_conn.execute('CREATE TABLE IF NOT EXISTS _test (id INTEGER)')
-        test_conn.execute('DROP TABLE IF EXISTS _test')
-        test_conn.close()
-        return True
-    except Exception as e:
-        print(f"⚠️  Cannot use database at {path}: {e}")
-        return False
+# IMPORTANT: On Render, /data exists but causes "unable to open database file" errors
+# in Gunicorn worker processes due to permission issues. We use local ai_team.db instead,
+# which works reliably across all processes.
 
-# Check for /data directory and database file
-DB_PATH = None
+DB_PATH = 'ai_team.db'
+print(f"✅ Using local database: {DB_PATH}")
 
-if os.path.exists('/data'):
-    potential_path = '/data/ai_team.db'
-
-    # If database doesn't exist in /data but exists locally, try to copy it
-    if not os.path.exists(potential_path) and os.path.exists('ai_team.db'):
-        try:
-            print("📋 Copying database to persistent storage...")
-            shutil.copy('ai_team.db', potential_path)
-            print(f"✅ Database copied to {potential_path}")
-        except Exception as e:
-            print(f"⚠️  Failed to copy database to /data: {e}")
-            potential_path = None
-
-    # Test if we can actually use this path
-    if potential_path and test_database_path(potential_path):
-        DB_PATH = potential_path
-        print(f"✅ Using persistent disk: {DB_PATH}")
-    else:
-        print(f"⚠️  Cannot use /data directory, falling back to local database")
-        DB_PATH = 'ai_team.db'
-
-if not DB_PATH:
-    DB_PATH = 'ai_team.db'
-    print(f"⚠️  No persistent disk found, using local: {DB_PATH}")
-
-# Final verification
+# Ensure database exists by checking for it
 if not os.path.exists(DB_PATH):
     print(f"⚠️  Database file not found at {DB_PATH}, will be created on first use")
 
