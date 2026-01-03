@@ -124,13 +124,26 @@ if os.path.exists('/data'):
     DB_PATH = '/data/ai_team.db'
     # If database doesn't exist in /data but exists locally, copy it
     if not os.path.exists(DB_PATH) and os.path.exists('ai_team.db'):
-        print("📋 Copying database to persistent storage...")
-        shutil.copy('ai_team.db', DB_PATH)
-        print(f"✅ Database copied to {DB_PATH}")
+        try:
+            print("📋 Copying database to persistent storage...")
+            shutil.copy('ai_team.db', DB_PATH)
+            print(f"✅ Database copied to {DB_PATH}")
+        except Exception as e:
+            print(f"⚠️  Failed to copy database to /data: {e}")
+            print(f"⚠️  Falling back to local database")
+            DB_PATH = 'ai_team.db'
     elif not os.path.exists(DB_PATH):
-        print(f"⚠️  WARNING: Database file not found at {DB_PATH}")
-        print("⚠️  Database will be created on first use")
-    print(f"✅ Using persistent disk: {DB_PATH}")
+        # Check if we can write to /data
+        if os.access('/data', os.W_OK):
+            print(f"⚠️  WARNING: Database file not found at {DB_PATH}")
+            print("⚠️  Database will be created on first use")
+        else:
+            print(f"⚠️  /data directory is not writable")
+            print(f"⚠️  Falling back to local database")
+            DB_PATH = 'ai_team.db'
+
+    if DB_PATH == '/data/ai_team.db':
+        print(f"✅ Using persistent disk: {DB_PATH}")
 else:
     DB_PATH = 'ai_team.db'
     if not os.path.exists(DB_PATH):
