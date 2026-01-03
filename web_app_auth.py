@@ -153,18 +153,44 @@ else:
 
 # Helper function for database connection
 def get_db_connection():
-    """Get SQLite database connection"""
+    """Get SQLite database connection with proper error handling"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        # Try to connect with check_same_thread=False for better compatibility
+        conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=10.0)
         # Enable foreign keys
         conn.execute('PRAGMA foreign_keys = ON')
+        # Test that we can actually write
+        conn.execute('PRAGMA journal_mode=WAL')
         return conn
     except sqlite3.OperationalError as e:
-        print(f"❌ Database connection error: {e}")
+        error_msg = str(e)
+        print(f"❌ Database connection error: {error_msg}")
         print(f"❌ DB_PATH: {DB_PATH}")
         print(f"❌ File exists: {os.path.exists(DB_PATH)}")
-        print(f"❌ Directory exists: {os.path.exists(os.path.dirname(DB_PATH) or '.')}")
-        print(f"❌ Directory writable: {os.access(os.path.dirname(DB_PATH) or '.', os.W_OK)}")
+
+        db_dir = os.path.dirname(DB_PATH) if os.path.dirname(DB_PATH) else '.'
+        print(f"❌ Directory: {db_dir}")
+        print(f"❌ Directory exists: {os.path.exists(db_dir)}")
+        print(f"❌ Directory writable: {os.access(db_dir, os.W_OK)}")
+
+        if os.path.exists(DB_PATH):
+            print(f"❌ File readable: {os.access(DB_PATH, os.R_OK)}")
+            print(f"❌ File writable: {os.access(DB_PATH, os.W_OK)}")
+            print(f"❌ File permissions: {oct(os.stat(DB_PATH).st_mode)[-3:]}")
+
+        # If it's a permission error and we're using /data, try to fall back
+        if 'unable to open database file' in error_msg and DB_PATH.startswith('/data'):
+            print(f"⚠️  Attempting fallback to local database...")
+            try:
+                fallback_path = 'ai_team.db'
+                conn = sqlite3.connect(fallback_path, check_same_thread=False, timeout=10.0)
+                conn.execute('PRAGMA foreign_keys = ON')
+                conn.execute('PRAGMA journal_mode=WAL')
+                print(f"✅ Fallback successful: using {fallback_path}")
+                return conn
+            except Exception as fallback_error:
+                print(f"❌ Fallback also failed: {fallback_error}")
+
         raise
 
 # ============================================
@@ -6830,8 +6856,14 @@ def chat():
 
         # For authenticated users: check message limits
         if not is_guest:
-            conn = sqlite3.connect(DB_PATH)
-            cursor = conn.cursor()
+            try:
+                conn = get_db_connection()
+                cursor = conn.cursor()
+            except Exception as e:
+                print(f"❌ Database connection failed in chat endpoint: {e}")
+                print(f"❌ DB_PATH: {DB_PATH}")
+                print(f"❌ File exists: {os.path.exists(DB_PATH)}")
+                return jsonify({'error': f'Database connection error: {str(e)}'}), 500
 
             cursor.execute("""
                 SELECT subscription_tier, messages_today, last_message_reset
@@ -6849,8 +6881,15 @@ def chat():
             daily_limit = tier_info['messages_per_day']
         else:
             # Guest user - use free tier settings
-            conn = sqlite3.connect(DB_PATH)
-            cursor = conn.cursor()
+            try:
+                conn = get_db_connection()
+                cursor = conn.cursor()
+            except Exception as e:
+                print(f"❌ Database connection failed for guest user: {e}")
+                print(f"❌ DB_PATH: {DB_PATH}")
+                print(f"❌ File exists: {os.path.exists(DB_PATH)}")
+                return jsonify({'error': f'Database connection error: {str(e)}'}), 500
+
             tier = 'free'
             messages_today = 0
             last_reset = None
