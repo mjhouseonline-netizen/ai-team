@@ -123,28 +123,32 @@ import shutil
 # in Gunicorn worker processes due to permission issues. We use local ai_team.db instead,
 # which works reliably across all processes.
 
-DB_PATH = 'ai_team.db'
+# Use absolute path to ensure database is found regardless of working directory
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ai_team.db')
+print(f"🔍 Database path: {DB_PATH}")
 
-# If local database doesn't exist but /data/ai_team.db does, copy it
-if not os.path.exists(DB_PATH) and os.path.exists('/data/ai_team.db'):
-    try:
-        print(f"📋 Copying database from /data to local directory...")
-        shutil.copy('/data/ai_team.db', DB_PATH)
-        print(f"✅ Database copied from /data/ai_team.db to {DB_PATH}")
-    except Exception as e:
-        print(f"⚠️  Failed to copy database from /data: {e}")
-        print(f"⚠️  Will use fresh database")
+# Ensure database directory exists and is writable
+db_dir = os.path.dirname(DB_PATH)
+if not os.path.exists(db_dir):
+    os.makedirs(db_dir, exist_ok=True)
+    print(f"📁 Created database directory: {db_dir}")
 
-print(f"✅ Using local database: {DB_PATH}")
-
-# Ensure database exists by checking for it
-if not os.path.exists(DB_PATH):
-    print(f"⚠️  Database file not found at {DB_PATH}, will be created on first use")
+# Check if database file exists
+if os.path.exists(DB_PATH):
+    print(f"✅ Database file exists: {DB_PATH}")
+else:
+    print(f"⚠️  Database will be created at: {DB_PATH}")
 
 # Helper function for database connection
 def get_db_connection():
     """Get SQLite database connection with proper error handling"""
     try:
+        # Ensure directory exists
+        db_dir = os.path.dirname(DB_PATH)
+        if db_dir and not os.path.exists(db_dir):
+            os.makedirs(db_dir, exist_ok=True)
+            print(f"📁 Created directory: {db_dir}")
+
         # Try to connect with check_same_thread=False for better compatibility
         conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=10.0)
         # Enable foreign keys
@@ -161,22 +165,30 @@ def get_db_connection():
         db_dir = os.path.dirname(DB_PATH) if os.path.dirname(DB_PATH) else '.'
         print(f"❌ Directory: {db_dir}")
         print(f"❌ Directory exists: {os.path.exists(db_dir)}")
-        print(f"❌ Directory writable: {os.access(db_dir, os.W_OK)}")
+        if os.path.exists(db_dir):
+            print(f"❌ Directory writable: {os.access(db_dir, os.W_OK)}")
 
         if os.path.exists(DB_PATH):
             print(f"❌ File readable: {os.access(DB_PATH, os.R_OK)}")
             print(f"❌ File writable: {os.access(DB_PATH, os.W_OK)}")
-            print(f"❌ File permissions: {oct(os.stat(DB_PATH).st_mode)[-3:]}")
-
-        # If it's a permission error and we're using /data, try to fall back
-        if 'unable to open database file' in error_msg and DB_PATH.startswith('/data'):
-            print(f"⚠️  Attempting fallback to local database...")
             try:
-                fallback_path = 'ai_team.db'
+                print(f"❌ File permissions: {oct(os.stat(DB_PATH).st_mode)[-3:]}")
+            except:
+                pass
+
+        # If connection failed, try creating a new database in temp directory as last resort
+        if 'unable to open database file' in error_msg:
+            print(f"⚠️  Attempting to create database in /tmp as fallback...")
+            try:
+                import tempfile
+                fallback_path = os.path.join(tempfile.gettempdir(), 'ai_team.db')
+                print(f"⚠️  Fallback path: {fallback_path}")
                 conn = sqlite3.connect(fallback_path, check_same_thread=False, timeout=10.0)
                 conn.execute('PRAGMA foreign_keys = ON')
                 conn.execute('PRAGMA journal_mode=WAL')
                 print(f"✅ Fallback successful: using {fallback_path}")
+                # Update global DB_PATH to use fallback
+                globals()['DB_PATH'] = fallback_path
                 return conn
             except Exception as fallback_error:
                 print(f"❌ Fallback also failed: {fallback_error}")
