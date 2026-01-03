@@ -1380,6 +1380,48 @@ try:
     init_database()
     init_promo_codes_table()
     initialize_default_global_agents()
+
+    # Ensure admin user exists
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Check if admin user exists
+        cursor.execute("SELECT id FROM users WHERE email = ?", ('bubblesfox@gmail.com',))
+        if not cursor.fetchone():
+            print("⚠️  Admin user not found, creating default admin account...")
+            # Create admin user with default password (you should change this!)
+            from werkzeug.security import generate_password_hash
+            password_hash = generate_password_hash('admin123')  # CHANGE THIS PASSWORD!
+
+            cursor.execute("""
+                INSERT INTO users (username, email, password_hash, subscription_tier, stripe_customer_id)
+                VALUES (?, ?, ?, ?, ?)
+            """, ('bubblesfox', 'bubblesfox@gmail.com', password_hash, 'enterprise', 'manual'))
+            conn.commit()
+
+            # Get the new user ID
+            admin_id = cursor.lastrowid
+
+            # Assign all global agents to admin
+            cursor.execute("SELECT id FROM global_agents")
+            global_agents = cursor.fetchall()
+            for (agent_id,) in global_agents:
+                cursor.execute("""
+                    INSERT OR IGNORE INTO user_global_agents (user_id, global_agent_id)
+                    VALUES (?, ?)
+                """, (admin_id, agent_id))
+            conn.commit()
+
+            print(f"✅ Admin user created: bubblesfox@gmail.com (password: admin123)")
+            print("⚠️  IMPORTANT: Change the admin password immediately!")
+        else:
+            print("✅ Admin user exists")
+
+        conn.close()
+    except Exception as e:
+        print(f"⚠️  Error checking/creating admin user: {e}")
+
     print("✅ Database initialization completed successfully")
 except Exception as e:
     print(f"⚠️  Database initialization error: {str(e)}")
