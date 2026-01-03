@@ -2898,6 +2898,16 @@
                 </div>
             </a>
 
+            {% if current_user.subscription_tier and current_user.subscription_tier != 'free' %}
+            <a href="#" onclick="manageBilling(); return false;" class="agent-item" style="text-decoration: none; color: white;">
+                <div class="agent-avatar" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);">💳</div>
+                <div class="agent-info">
+                    <div class="agent-name">Manage Subscription</div>
+                    <div class="agent-role">Billing & Cancellation</div>
+                </div>
+            </a>
+            {% endif %}
+
             <a href="/faq" class="agent-item" style="text-decoration: none; color: white;" target="_blank">
                 <div class="agent-avatar" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">❓</div>
                 <div class="agent-info">
@@ -4291,6 +4301,32 @@
                 notification.style.transition = 'opacity 0.3s';
                 setTimeout(() => notification.remove(), 300);
             }, 3000);
+        }
+
+        async function manageBilling() {
+            try {
+                showNotification('Opening billing portal...');
+
+                const response = await fetch('/api/create-portal-session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.url) {
+                    // Redirect to Stripe Customer Portal
+                    window.location.href = data.url;
+                } else {
+                    showNotification(data.error || 'Failed to open billing portal');
+                }
+            } catch (error) {
+                console.error('Error opening billing portal:', error);
+                showNotification('Error opening billing portal');
+            }
         }
 
         // ============================================

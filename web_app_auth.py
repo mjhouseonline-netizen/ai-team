@@ -5086,6 +5086,43 @@ def pricing():
                          enterprise_price_id=STRIPE_ENTERPRISE_PRICE_ID)
 
 
+@app.route('/api/create-portal-session', methods=['POST'])
+@login_required
+def create_portal_session():
+    """Create a Stripe Customer Portal session for subscription management"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Get user's Stripe customer ID
+        cursor.execute("SELECT stripe_customer_id FROM users WHERE id = ?", (current_user.id,))
+        result = cursor.fetchone()
+        conn.close()
+
+        if not result or not result[0]:
+            return jsonify({
+                'error': 'No active subscription found'
+            }), 400
+
+        stripe_customer_id = result[0]
+
+        # Create a portal session
+        session = stripe.billing_portal.Session.create(
+            customer=stripe_customer_id,
+            return_url=request.host_url + 'dashboard',
+        )
+
+        return jsonify({
+            'url': session.url
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Error creating portal session: {str(e)}")
+        return jsonify({
+            'error': str(e)
+        }), 500
+
+
 # ============================================
 # STRIPE PROMO CODE / DISCOUNT HELPERS
 # ============================================
