@@ -119,37 +119,50 @@ else:
 import os
 import shutil
 
+# Function to test if a database path is actually usable
+def test_database_path(path):
+    """Test if we can actually connect to and write to a database at this path"""
+    try:
+        test_conn = sqlite3.connect(path, check_same_thread=False, timeout=5.0)
+        test_conn.execute('CREATE TABLE IF NOT EXISTS _test (id INTEGER)')
+        test_conn.execute('DROP TABLE IF EXISTS _test')
+        test_conn.close()
+        return True
+    except Exception as e:
+        print(f"⚠️  Cannot use database at {path}: {e}")
+        return False
+
 # Check for /data directory and database file
+DB_PATH = None
+
 if os.path.exists('/data'):
-    DB_PATH = '/data/ai_team.db'
-    # If database doesn't exist in /data but exists locally, copy it
-    if not os.path.exists(DB_PATH) and os.path.exists('ai_team.db'):
+    potential_path = '/data/ai_team.db'
+
+    # If database doesn't exist in /data but exists locally, try to copy it
+    if not os.path.exists(potential_path) and os.path.exists('ai_team.db'):
         try:
             print("📋 Copying database to persistent storage...")
-            shutil.copy('ai_team.db', DB_PATH)
-            print(f"✅ Database copied to {DB_PATH}")
+            shutil.copy('ai_team.db', potential_path)
+            print(f"✅ Database copied to {potential_path}")
         except Exception as e:
             print(f"⚠️  Failed to copy database to /data: {e}")
-            print(f"⚠️  Falling back to local database")
-            DB_PATH = 'ai_team.db'
-    elif not os.path.exists(DB_PATH):
-        # Check if we can write to /data
-        if os.access('/data', os.W_OK):
-            print(f"⚠️  WARNING: Database file not found at {DB_PATH}")
-            print("⚠️  Database will be created on first use")
-        else:
-            print(f"⚠️  /data directory is not writable")
-            print(f"⚠️  Falling back to local database")
-            DB_PATH = 'ai_team.db'
+            potential_path = None
 
-    if DB_PATH == '/data/ai_team.db':
+    # Test if we can actually use this path
+    if potential_path and test_database_path(potential_path):
+        DB_PATH = potential_path
         print(f"✅ Using persistent disk: {DB_PATH}")
-else:
+    else:
+        print(f"⚠️  Cannot use /data directory, falling back to local database")
+        DB_PATH = 'ai_team.db'
+
+if not DB_PATH:
     DB_PATH = 'ai_team.db'
-    if not os.path.exists(DB_PATH):
-        print(f"⚠️  WARNING: Database file not found at {DB_PATH}")
-        print("⚠️  Database will be created on first use")
     print(f"⚠️  No persistent disk found, using local: {DB_PATH}")
+
+# Final verification
+if not os.path.exists(DB_PATH):
+    print(f"⚠️  Database file not found at {DB_PATH}, will be created on first use")
 
 # Helper function for database connection
 def get_db_connection():
