@@ -117,17 +117,42 @@ else:
 
 # Database path - use persistent disk if available, fallback to current directory
 import os
+import shutil
+
+# Check for /data directory and database file
 if os.path.exists('/data'):
     DB_PATH = '/data/ai_team.db'
-    print("✅ Using persistent disk: /data/ai_team.db")
+    # If database doesn't exist in /data but exists locally, copy it
+    if not os.path.exists(DB_PATH) and os.path.exists('ai_team.db'):
+        print("📋 Copying database to persistent storage...")
+        shutil.copy('ai_team.db', DB_PATH)
+        print(f"✅ Database copied to {DB_PATH}")
+    elif not os.path.exists(DB_PATH):
+        print(f"⚠️  WARNING: Database file not found at {DB_PATH}")
+        print("⚠️  Database will be created on first use")
+    print(f"✅ Using persistent disk: {DB_PATH}")
 else:
     DB_PATH = 'ai_team.db'
-    print("⚠️  No persistent disk found, using local: ai_team.db")
+    if not os.path.exists(DB_PATH):
+        print(f"⚠️  WARNING: Database file not found at {DB_PATH}")
+        print("⚠️  Database will be created on first use")
+    print(f"⚠️  No persistent disk found, using local: {DB_PATH}")
 
 # Helper function for database connection
 def get_db_connection():
     """Get SQLite database connection"""
-    return sqlite3.connect(DB_PATH)
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        # Enable foreign keys
+        conn.execute('PRAGMA foreign_keys = ON')
+        return conn
+    except sqlite3.OperationalError as e:
+        print(f"❌ Database connection error: {e}")
+        print(f"❌ DB_PATH: {DB_PATH}")
+        print(f"❌ File exists: {os.path.exists(DB_PATH)}")
+        print(f"❌ Directory exists: {os.path.exists(os.path.dirname(DB_PATH) or '.')}")
+        print(f"❌ Directory writable: {os.access(os.path.dirname(DB_PATH) or '.', os.W_OK)}")
+        raise
 
 # ============================================
 # USER MODEL
