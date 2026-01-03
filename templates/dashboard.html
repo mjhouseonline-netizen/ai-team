@@ -2882,6 +2882,14 @@
                 </div>
             </div>
 
+            <a href="#" onclick="openChangePasswordModal(); return false;" class="agent-item" style="text-decoration: none; color: white;">
+                <div class="agent-avatar" style="background: linear-gradient(135deg, #f59e0b, #d97706);">🔐</div>
+                <div class="agent-info">
+                    <div class="agent-name">Change Password</div>
+                    <div class="agent-role">Update your password</div>
+                </div>
+            </a>
+
             <a href="/promo-codes" class="agent-item" id="promoSidebarLink" style="{% if current_user.id != 1 %}display: none;{% endif %} text-decoration: none; color: white;">
                 <div class="agent-avatar" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">🎫</div>
                 <div class="agent-info">
@@ -3349,6 +3357,32 @@
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Create Agent</button>
                     <button type="button" class="btn btn-secondary" onclick="closeCustomAgentModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div class="modal" id="changePasswordModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeChangePasswordModal()">✕</button>
+            <h2 class="modal-title">🔐 Change Password</h2>
+            <form id="changePasswordForm" onsubmit="changePassword(event)">
+                <div class="form-group">
+                    <label class="form-label">Current Password</label>
+                    <input type="password" id="currentPassword" class="form-input" required placeholder="Enter current password">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">New Password</label>
+                    <input type="password" id="newPassword" class="form-input" required placeholder="Enter new password" minlength="6">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Confirm New Password</label>
+                    <input type="password" id="confirmPassword" class="form-input" required placeholder="Confirm new password" minlength="6">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Change Password</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeChangePasswordModal()">Cancel</button>
                 </div>
             </form>
         </div>
@@ -6163,6 +6197,66 @@ Please provide your response following these guidelines.`;
         }
 
         // Custom Agent Selection Function
+
+        // ============================================
+        // CHANGE PASSWORD MODAL FUNCTIONS
+        // ============================================
+
+        function openChangePasswordModal() {
+            document.getElementById('changePasswordModal').style.display = 'flex';
+        }
+
+        function closeChangePasswordModal() {
+            document.getElementById('changePasswordModal').style.display = 'none';
+            document.getElementById('changePasswordForm').reset();
+        }
+
+        async function changePassword(event) {
+            event.preventDefault();
+
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            // Validate passwords match
+            if (newPassword !== confirmPassword) {
+                showNotification('❌ New passwords do not match');
+                return;
+            }
+
+            // Validate password length
+            if (newPassword.length < 6) {
+                showNotification('❌ Password must be at least 6 characters');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/change-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        currentPassword: currentPassword,
+                        newPassword: newPassword
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showNotification('✅ Password changed successfully!');
+                    closeChangePasswordModal();
+                } else {
+                    showNotification('❌ ' + (data.error || 'Failed to change password'));
+                }
+            } catch (error) {
+                console.error('Error changing password:', error);
+                showNotification('❌ Network error. Please try again.');
+            }
+        }
+
         console.log('✅ Chat History module loaded!');
     </script>
 
