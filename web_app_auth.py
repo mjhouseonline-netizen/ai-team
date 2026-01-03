@@ -611,11 +611,27 @@ def init_database():
     existing_columns = [col[1] for col in cursor.fetchall()]
     print(f"Database columns check: {existing_columns}")
 
+    # CRITICAL: Handle old 'password' column (should be 'password_hash')
+    if 'password' in existing_columns and 'password_hash' not in existing_columns:
+        print("⚠️  Old 'password' column found, renaming to 'password_hash'...")
+        # SQLite doesn't support RENAME COLUMN in old versions, so we need to create new column and copy
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN password_hash TEXT")
+            cursor.execute("UPDATE users SET password_hash = password WHERE password_hash IS NULL")
+            print("✅ Migrated data from 'password' to 'password_hash'")
+            # Note: We can't drop the old column easily in SQLite, but password_hash now has the data
+        except Exception as e:
+            print(f"⚠️  Migration note: {e}")
+
     # CRITICAL: Migration for password_hash column (must exist for authentication)
     if 'password_hash' not in existing_columns:
         try:
             print("⚠️  CRITICAL: password_hash column missing! Adding it now...")
             cursor.execute("ALTER TABLE users ADD COLUMN password_hash TEXT NOT NULL DEFAULT ''")
+            # If old 'password' column exists, copy data over
+            if 'password' in existing_columns:
+                cursor.execute("UPDATE users SET password_hash = password WHERE password_hash = ''")
+                print("✅ Copied passwords from old 'password' column")
             print("✅ Added password_hash column")
         except sqlite3.OperationalError as e:
             print(f"❌ Error adding password_hash: {e}")
