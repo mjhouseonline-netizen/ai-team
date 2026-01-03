@@ -124,6 +124,17 @@ import shutil
 # which works reliably across all processes.
 
 DB_PATH = 'ai_team.db'
+
+# If local database doesn't exist but /data/ai_team.db does, copy it
+if not os.path.exists(DB_PATH) and os.path.exists('/data/ai_team.db'):
+    try:
+        print(f"📋 Copying database from /data to local directory...")
+        shutil.copy('/data/ai_team.db', DB_PATH)
+        print(f"✅ Database copied from /data/ai_team.db to {DB_PATH}")
+    except Exception as e:
+        print(f"⚠️  Failed to copy database from /data: {e}")
+        print(f"⚠️  Will use fresh database")
+
 print(f"✅ Using local database: {DB_PATH}")
 
 # Ensure database exists by checking for it
