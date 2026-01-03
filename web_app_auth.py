@@ -1452,11 +1452,13 @@ try:
 
         # Check if admin user exists
         cursor.execute("SELECT id FROM users WHERE email = ?", ('bubblesfox@gmail.com',))
-        if not cursor.fetchone():
+        existing_user = cursor.fetchone()
+
+        from werkzeug.security import generate_password_hash
+        password_hash = generate_password_hash('admin123')  # CHANGE THIS PASSWORD!
+
+        if not existing_user:
             print("⚠️  Admin user not found, creating default admin account...")
-            # Create admin user with default password (you should change this!)
-            from werkzeug.security import generate_password_hash
-            password_hash = generate_password_hash('admin123')  # CHANGE THIS PASSWORD!
 
             cursor.execute("""
                 INSERT INTO users (username, email, password_hash, subscription_tier, stripe_customer_id)
@@ -1480,7 +1482,19 @@ try:
             print(f"✅ Admin user created: bubblesfox@gmail.com (password: admin123)")
             print("⚠️  IMPORTANT: Change the admin password immediately!")
         else:
-            print("✅ Admin user exists")
+            # Admin user exists - reset password to admin123 for recovery
+            admin_id = existing_user[0]
+            print(f"✅ Admin user exists (ID: {admin_id})")
+            print("🔑 Resetting admin password to: admin123")
+
+            cursor.execute("""
+                UPDATE users SET password_hash = ?, subscription_tier = 'enterprise'
+                WHERE id = ?
+            """, (password_hash, admin_id))
+            conn.commit()
+
+            print("✅ Admin password reset to: admin123")
+            print("⚠️  IMPORTANT: Change the admin password immediately after login!")
 
         conn.close()
     except Exception as e:
