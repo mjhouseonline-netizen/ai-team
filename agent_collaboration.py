@@ -23,7 +23,7 @@ def detect_agent_mentions(message, user_id):
     cursor = conn.cursor()
 
     # Custom agents
-    cursor.execute("SELECT name FROM custom_agents WHERE user_id = ? AND is_active = 1", (user_id,))
+    cursor.execute("SELECT name FROM custom_agents WHERE user_id = ?", (user_id,))
     custom_agents = [row[0] for row in cursor.fetchall()]
 
     # Global agents
