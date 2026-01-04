@@ -445,6 +445,9 @@
         <div class="header">
             <h1>💎 Stand Alone Client Agents Manager</h1>
             <p>Create and manage premium, single-purpose agents for specific clients. These are your primary paid deliverables.</p>
+            <p style="margin-top: 10px; opacity: 0.95; font-size: 0.95em;">
+                <strong>⚠️ PERMISSION MODEL:</strong> Admin can edit everything. Clients can edit NOTHING. These agents define scope and must remain locked.
+            </p>
         </div>
 
         <div class="top-actions">
@@ -496,6 +499,7 @@
                 <div class="form-group">
                     <label class="form-label">Description</label>
                     <input type="text" id="agentDescription" class="form-input" placeholder="Brief description of what this agent does">
+                    <div class="form-hint">⚠️ ADMIN ONLY - Clients cannot edit this or any other field</div>
                 </div>
 
                 <div class="form-group">
@@ -517,19 +521,21 @@
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Behaviour Rules</label>
-                    <textarea id="behaviourRules" class="form-textarea" placeholder="One task at a time&#10;1-3 options max&#10;Practical and direct&#10;Completion over perfection"></textarea>
+                    <label class="form-label">Behaviour Rules (Structured)</label>
+                    <textarea id="behaviourRules" class="form-textarea" placeholder="- One task at a time&#10;- 1-3 options max&#10;- Practical and direct&#10;- Completion over perfection"></textarea>
+                    <div class="form-hint">Enter each rule on a new line with a dash (-). Ensures consistency across agents.</div>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Boundaries (What it must NOT do)</label>
-                    <textarea id="boundaries" class="form-textarea" placeholder="Must NOT act as general assistant&#10;Must NOT switch roles&#10;Must NOT expand scope"></textarea>
+                    <textarea id="boundaries" class="form-textarea" placeholder="- Must NOT act as general assistant&#10;- Must NOT switch roles&#10;- Must NOT expand scope&#10;- Must NOT produce bulk outputs"></textarea>
+                    <div class="form-hint">⚠️ CRITICAL: These define scope protection. Clients cannot edit these.</div>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Priority Level</label>
-                    <input type="number" id="priorityLevel" class="form-input" value="1" min="1" max="10">
-                    <div class="form-hint">Higher priority agents appear first (1-10)</div>
+                    <label class="form-label">Priority Level (Optional)</label>
+                    <input type="number" id="priorityLevel" class="form-input" value="5" min="1" max="10">
+                    <div class="form-hint">Default: 5. Higher priority agents appear first. Only adjust when needed to avoid decision fatigue.</div>
                 </div>
 
                 <div class="template-box">
@@ -678,8 +684,8 @@
             const name = document.getElementById('agentName').value || '[AGENT NAME]';
             const primaryOutcome = document.getElementById('primaryOutcome').value || '[PRIMARY OUTCOME]';
             const responsibilities = document.getElementById('coreResponsibilities').value || '- [Responsibility 1]\n- [Responsibility 2]\n- [Responsibility 3]';
-            const behaviourRules = document.getElementById('behaviourRules').value || 'One task at a time\n1-3 options max\nPractical and direct\nCompletion over perfection';
-            const boundaries = document.getElementById('boundaries').value || 'Must NOT act as general assistant\nMust NOT switch roles\nMust NOT expand scope';
+            const behaviourRules = document.getElementById('behaviourRules').value || '- One task at a time\n- 1-3 options max\n- Practical and direct\n- Completion over perfection';
+            const boundaries = document.getElementById('boundaries').value || '- Must NOT act as general assistant\n- Must NOT switch roles\n- Must NOT expand scope\n- Must NOT produce bulk outputs';
 
             const template = `AGENT NAME: ${name}
 
@@ -688,6 +694,8 @@ ${primaryOutcome}
 
 ROLE DEFINITION:
 You are a Stand Alone Client Agent. Your sole responsibility is to deliver the PRIMARY OUTCOME stated above. You do not act outside this role.
+
+You do not act as a general assistant and you do not switch roles under any circumstance.
 
 CORE RESPONSIBILITIES:
 ${responsibilities}
@@ -818,8 +826,18 @@ As a Stand Alone Client Agent, you take priority over Global Agents for tasks wi
 
         // Reassign agent to different user
         async function reassignAgent(agentId) {
+            // WARNING: Reassigning should be RARE and INTENTIONAL
+            if (!confirm('⚠️ WARNING: Reassigning a Stand Alone Client Agent is an EXCEPTIONAL action.\n\nThese agents are client-specific. Reassignment should be rare and deliberate.\n\nAre you sure you want to proceed?')) {
+                return;
+            }
+
             const userId = prompt('Enter the new user ID to assign this agent to:');
             if (!userId) return;
+
+            // Double confirmation
+            if (!confirm(`Confirm: Reassign this agent to user ID ${userId}?\n\nThis is a permanent change.`)) {
+                return;
+            }
 
             try {
                 const response = await fetch(`/api/admin/client-agents/${agentId}/assign`, {
