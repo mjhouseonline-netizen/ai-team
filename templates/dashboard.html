@@ -608,12 +608,9 @@
         }
 
         .settings-menu-sidebar .settings-dropdown {
-            position: absolute;
-            top: 0;
-            left: calc(100% + 10px);
-            right: auto;
+            /* Position will be set dynamically by JavaScript */
             width: 220px;
-            z-index: 1000;
+            z-index: 9999;
         }
 
         .settings-section {
@@ -3532,6 +3529,16 @@
 
             if (clickedElement && clickedElement.classList.contains('settings-menu-sidebar')) {
                 dropdownId = 'settingsDropdownSidebar';
+
+                // Position the sidebar dropdown relative to the clicked button
+                const button = clickedElement.querySelector('.agent-item');
+                const dropdown = document.getElementById(dropdownId);
+                if (button && dropdown) {
+                    const rect = button.getBoundingClientRect();
+                    dropdown.style.position = 'fixed';
+                    dropdown.style.top = rect.top + 'px';
+                    dropdown.style.left = (rect.right + 10) + 'px';
+                }
             }
 
             // Close all other dropdowns first
@@ -3754,11 +3761,36 @@
                 return;
             }
 
-            // Check if user wants to switch agents
-            const switchPattern = /switch\s+to\s+(\w+(?:\s+\w+)*)/i;
-            const switchMatch = message.match(switchPattern);
-            if (switchMatch && uploadedFiles.length === 0) {
-                const targetAgent = switchMatch[1];
+            // Check if user wants to switch agents - support multiple patterns
+            let targetAgent = null;
+
+            // Pattern 1: "switch to [agent]"
+            const switchPattern = /(?:switch|change)\s+to\s+(\w+(?:\s+\w+)*)/i;
+            let match = message.match(switchPattern);
+            if (match) targetAgent = match[1];
+
+            // Pattern 2: "talk to [agent]", "speak to [agent]", "chat with [agent]"
+            if (!targetAgent) {
+                const talkPattern = /(?:talk|speak|chat)\s+(?:to|with)\s+(\w+(?:\s+\w+)*)/i;
+                match = message.match(talkPattern);
+                if (match) targetAgent = match[1];
+            }
+
+            // Pattern 3: "I want [agent]", "get me [agent]"
+            if (!targetAgent) {
+                const wantPattern = /(?:i\s+want|get\s+me|bring\s+me)\s+(\w+(?:\s+\w+)*)/i;
+                match = message.match(wantPattern);
+                if (match) targetAgent = match[1];
+            }
+
+            // Pattern 4: "hi [agent]", "hello [agent]", "hey [agent]" (only if it's the main part of message)
+            if (!targetAgent && message.trim().split(' ').length <= 3) {
+                const greetPattern = /^(?:hi|hello|hey)\s+(\w+(?:\s+\w+)*)$/i;
+                match = message.match(greetPattern);
+                if (match) targetAgent = match[1];
+            }
+
+            if (targetAgent && uploadedFiles.length === 0) {
                 // Try to switch to the agent
                 const success = switchToAgent(targetAgent);
                 if (success) {
