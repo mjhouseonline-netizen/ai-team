@@ -684,6 +684,31 @@
             color: var(--text-secondary);
         }
 
+        .new-chat-btn {
+            background: linear-gradient(135deg, #10a37f, #0d8c6f);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 8px rgba(16, 163, 127, 0.2);
+        }
+
+        .new-chat-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(16, 163, 127, 0.3);
+        }
+
+        .new-chat-btn:active {
+            transform: translateY(0);
+        }
+
         .header-btn {
             background: none;
             border: 1px solid var(--border);
@@ -1768,6 +1793,12 @@
                 font-size: 11px;
                 padding: 4px 8px;
                 white-space: nowrap;
+            }
+
+            .new-chat-btn {
+                font-size: 12px;
+                padding: 6px 12px;
+                gap: 4px;
             }
 
             .menu-btn {
@@ -3083,6 +3114,11 @@
             </div>
 
             <div class="header-right">
+
+                <!-- New Chat Button -->
+                <button class="new-chat-btn" onclick="startNewChat()" title="Start a fresh conversation">
+                    ✏️ New Chat
+                </button>
 
                 <!-- History Dropdown Menu -->
                 <div class="history-dropdown" id="historyDropdownMenu">
@@ -4781,27 +4817,36 @@
             // Clear chat container
             const chatContainer = document.getElementById('chatContainer');
             chatContainer.innerHTML = '';
-            
+
             // Reset conversation ID
             currentConversationId = null;
-            
+
             // Show welcome message
             const currentAgent = getCurrentAgent();
+            const agentIcon = getAgentIcon(currentAgent);
             const welcomeMsg = document.createElement('div');
             welcomeMsg.className = 'welcome';
             welcomeMsg.innerHTML = `
-                <h2>Hi! I'm ${currentAgent} ${getAgentIcon(currentAgent)}</h2>
-                <p>I'm ready to help you. What can I do for you today?</p>
+                <h2>Hi! I'm ${currentAgent} ${agentIcon}</h2>
+                <p>I'm ready for a fresh conversation. What can I do for you today?</p>
             `;
             chatContainer.appendChild(welcomeMsg);
-            
-            // Close dropdown
-            toggleHistoryDropdown();
-            
+
+            // Close dropdown if open
+            const historyDropdown = document.getElementById('historyDropdownMenu');
+            if (historyDropdown && historyDropdown.classList.contains('active')) {
+                toggleHistoryDropdown();
+            }
+
             // Update dropdown
             updateHistoryDropdown();
-            
-            showNotification('Started new chat');
+
+            // Show notification
+            showNotification(`✨ New chat started with ${currentAgent}`);
+
+            // Focus on input
+            const input = document.getElementById('messageInput');
+            if (input) input.focus();
         }
 
         // Delete conversation
