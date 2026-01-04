@@ -5980,6 +5980,14 @@ def admin_global_agents_manager():
         return redirect(url_for('dashboard'))
     return render_template('admin_global_agents.html', user=current_user)
 
+@app.route('/admin/client-agents-manager')
+@login_required
+def admin_client_agents_manager():
+    """Admin Stand Alone Client Agents management page (admin only)"""
+    if current_user.id != 1:
+        return redirect(url_for('dashboard'))
+    return render_template('admin_client_agents.html', user=current_user)
+
 @app.route('/admin/support-messages')
 @login_required
 def admin_support_messages():
