@@ -253,7 +253,7 @@ class User:
 
 @login_manager.user_loader
 def load_user(user_id):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT id, username, email, subscription_tier FROM users WHERE id = ?", (user_id,))
     result = cursor.fetchone()
@@ -467,7 +467,7 @@ def has_api_access(subscription_tier):
 def track_message_cost(user_id, model, cost, agent_name=None):
     """Track the cost of a single message"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Insert cost record
@@ -494,7 +494,7 @@ def track_message_cost(user_id, model, cost, agent_name=None):
 def get_user_daily_cost(user_id):
     """Get user's cost for today"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("SELECT daily_cost FROM users WHERE id = ?", (user_id,))
@@ -510,7 +510,7 @@ def reset_daily_costs():
     """Reset all users' daily costs (run at midnight UTC)"""
     try:
         from datetime import datetime
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Reset daily costs and unblock expensive models
@@ -539,7 +539,7 @@ def check_cost_threshold(user_id, tier):
     try:
         daily_cost = get_user_daily_cost(user_id)
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Get custom thresholds if set, otherwise use tier defaults
@@ -614,7 +614,7 @@ def is_model_blocked_for_user(user_id, model):
         if model not in EXPENSIVE_MODELS:
             return False
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("SELECT expensive_models_blocked FROM users WHERE id = ?", (user_id,))
@@ -632,7 +632,7 @@ def is_model_blocked_for_user(user_id, model):
 
 def init_database():
     """Initialize users database"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -1083,7 +1083,7 @@ def init_database():
 
 def init_promo_codes_table():
     """Initialize promo codes table"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     # Create promo_codes table
@@ -1453,7 +1453,7 @@ PRIORITY RULE: You must defer to Stand Alone Client Agents when a task clearly b
 def initialize_default_global_agents():
     """Create default global agents in the database if they don't exist"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         for agent in DEFAULT_GLOBAL_AGENTS:
@@ -1577,7 +1577,7 @@ def admin_usage():
     """Admin dashboard for cost monitoring and analytics"""
     # Check if user is admin (you can add admin check here)
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Today's costs
@@ -1709,7 +1709,7 @@ def set_user_budget():
         if not user_id:
             return jsonify({'error': 'user_id required'}), 400
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Update custom thresholds
@@ -1745,7 +1745,7 @@ def reset_user_budget():
         if not user_id:
             return jsonify({'error': 'user_id required'}), 400
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Reset to NULL (use tier defaults)
@@ -1775,7 +1775,7 @@ def reset_user_budget():
 def admin_cost_trends():
     """Get historical cost trend data for charts"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Daily costs for last 30 days
@@ -1842,7 +1842,7 @@ def admin_cost_trends():
 def check_agents():
     """Check all custom agents and their share codes"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         # First check what columns exist
@@ -1941,7 +1941,7 @@ def check_agents():
 def force_add_columns():
     """Force add missing columns to custom_agents table"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         # Check current columns
@@ -2011,7 +2011,7 @@ def emergency_database_init():
         initialize_default_global_agents()
 
         # Check if custom_agents table exists and has correct columns
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         cursor.execute("PRAGMA table_info(custom_agents)")
@@ -2060,7 +2060,7 @@ def emergency_database_init():
 def create_default_agent(user_id):
     """Create default custom agent for user - visit /admin/create-default-agent/1"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         # Check if user exists
@@ -2175,7 +2175,7 @@ STYLE RULES:
 def migrate_starter_agents():
     """Migrate old starter agents from custom_agents to global_agents system"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Step 1: Delete old starter agents from custom_agents table
@@ -2300,7 +2300,7 @@ def api_signup():
         password_hash = generate_password_hash(password)
         
         # Create user
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         try:
@@ -2342,7 +2342,7 @@ def api_login():
             return jsonify({'error': 'Username/email and password required'}), 400
         
         # Get user by EITHER username OR email
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute(
             "SELECT id, username, email, password_hash, subscription_tier FROM users WHERE (email = ? OR username = ?) AND is_active = 1",
@@ -2590,7 +2590,7 @@ def agent_link(agent_name):
 def test_custom_link(share_code):
     """Test if a share code exists in database"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         # Check what share_codes exist
@@ -2655,7 +2655,7 @@ def custom_agent_link(share_code):
     print(f"📁 Using database: {DB_PATH}")
     
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         # Check which columns exist
@@ -3075,7 +3075,7 @@ def embed_chat():
             return jsonify({'error': 'Missing required fields'}), 400
 
         # Get custom agent by share_code
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -3123,7 +3123,7 @@ CRITICAL FORMATTING RULES:
 def get_embed_code(agent_id):
     """Get embed code for a custom agent"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Verify ownership
@@ -3209,7 +3209,7 @@ def connect_social_platform(platform):
         if not access_token:
             return jsonify({'error': 'Access token required'}), 400
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Create social_accounts table if not exists
@@ -3254,7 +3254,7 @@ def connect_social_platform(platform):
 def get_social_accounts():
     """Get all connected social media accounts"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -3299,7 +3299,7 @@ def draft_social_post():
             system_prompt = agent_info['system_prompt']
         else:
             # Custom agent
-            conn = sqlite3.connect(DB_PATH)
+            conn = get_db_connection()
             cursor = conn.cursor()
             cursor.execute("""
                 SELECT system_prompt FROM custom_agents
@@ -3344,7 +3344,7 @@ Draft the post:"""
         drafted_post = response.text
 
         # Save draft for approval
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Create social_posts table
@@ -3393,7 +3393,7 @@ def approve_social_post(post_id):
         action = data.get('action', 'post_now')  # 'post_now' or 'schedule'
         scheduled_time = data.get('scheduled_at')
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Get post
@@ -3463,7 +3463,7 @@ def approve_social_post(post_id):
 def get_social_posts():
     """Get all social posts (drafts, scheduled, posted)"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -3858,7 +3858,7 @@ INTEGRATIONS_CONFIG = {
 def get_integrations():
     """Get all available integrations and user's connected status"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Create integrations table if not exists
@@ -3957,7 +3957,7 @@ def connect_integration():
                 'missing': missing_creds
             }), 400
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Store integration credentials
@@ -3989,7 +3989,7 @@ def connect_integration():
 def disconnect_integration(integration_key):
     """Disconnect an integration"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -4013,7 +4013,7 @@ def disconnect_integration(integration_key):
 def toggle_integration(integration_key):
     """Toggle integration active status"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -4054,7 +4054,7 @@ def execute_integration_action(integration_key):
             return jsonify({'error': 'Invalid integration'}), 400
 
         # Get user's credentials for this integration
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -4292,7 +4292,7 @@ def execute_ai_integration():
         integration_key = intent['integration']
 
         # Check if user has this integration connected
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -4342,7 +4342,7 @@ def receive_webhook(integration_key):
         payload = request.json or request.form.to_dict()
         headers = dict(request.headers)
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Create webhook_events table if not exists
@@ -4409,7 +4409,7 @@ def process_webhook_event(integration_key, payload, event_id):
                     print(f"Slack mention: {text}")
 
         # Mark as processed
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("UPDATE webhook_events SET processed = 1 WHERE id = ?", (event_id,))
         conn.commit()
@@ -4423,7 +4423,7 @@ def process_webhook_event(integration_key, payload, event_id):
 def get_webhook_events():
     """Get recent webhook events for user"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -4517,7 +4517,7 @@ def get_integration_templates():
     """Get all available integration templates"""
     try:
         # Get user's connected integrations
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -4560,7 +4560,7 @@ def enable_integration_template(template_id):
             return jsonify({'error': 'Template not found'}), 404
 
         # Store enabled template
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -4601,7 +4601,7 @@ def enable_integration_template(template_id):
 def get_integration_analytics():
     """Get usage analytics for integrations"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Create analytics table if not exists
@@ -4674,7 +4674,7 @@ def get_integration_analytics():
 def log_integration_usage(user_id, integration_key, action, success, error_message=None):
     """Log integration usage for analytics"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -4795,7 +4795,7 @@ AVAILABLE_INTEGRATIONS = {
 def get_user_integrations():
     """Get user's OAuth integration connections"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Get all user's connected integrations
@@ -4874,7 +4874,7 @@ def connect_oauth_integration(service):
         state = secrets.token_urlsafe(32)
 
         # Store state in session
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -4926,7 +4926,7 @@ def oauth_callback(service):
             return "<html><body><h2>Invalid callback</h2><p>Missing code or state</p></body></html>", 400
 
         # Verify state and get user_id
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -4989,7 +4989,7 @@ def oauth_callback(service):
 def disconnect_oauth_integration(service):
     """Disconnect an OAuth integration"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -5020,7 +5020,7 @@ def disconnect_oauth_integration(service):
 def get_user_oauth_token(user_id, service):
     """Get OAuth access token for a service"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -5160,7 +5160,7 @@ def get_available_integration_actions(user_id):
     Returns a dictionary of available actions organized by category
     """
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -5235,7 +5235,7 @@ def start_oauth_flow(integration_key):
         state = secrets.token_urlsafe(32)
 
         # Store state in session
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -5277,7 +5277,7 @@ def oauth_callback_legacy():
             return "OAuth failed: Missing code or state", 400
 
         # Verify state and get integration
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -5326,7 +5326,7 @@ def pricing():
 def create_portal_session():
     """Create a Stripe Customer Portal session for subscription management"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Get user's Stripe customer ID
@@ -5424,7 +5424,7 @@ def get_user_promo_discount(user_id):
         dict with discount_type, discount_value, promo_code or None
     """
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -5475,7 +5475,7 @@ def create_checkout_session():
             return jsonify({'error': f'Invalid price ID: {price_id}'}), 400
 
         # Get or create Stripe customer
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT stripe_customer_id FROM users WHERE id = ?", (current_user.id,))
         result = cursor.fetchone()
@@ -5681,7 +5681,7 @@ def handle_checkout_session_completed(session):
         customer_id = session['customer']
         subscription_id = session['subscription']
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Clear promo discount after successful payment (one-time use)
@@ -5711,7 +5711,7 @@ def handle_subscription_updated(subscription):
         customer_id = subscription['customer']
         status = subscription['status']
         
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         if status == 'active':
@@ -5737,7 +5737,7 @@ def handle_subscription_deleted(subscription):
     try:
         customer_id = subscription['customer']
         
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         cursor.execute("""
@@ -6611,7 +6611,7 @@ def upload_file():
 
 def get_conversation_history(user_id, agent_name, limit=10):
     """Get recent conversation history for context (default 10 for speed)"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -7581,7 +7581,7 @@ def generate_image_free():
             return jsonify({'error': 'No prompt provided'}), 400
         
         # Check user's message limit
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         cursor.execute("""
@@ -7667,7 +7667,7 @@ def clear_chat_history():
         data = request.json or {}
         agent = data.get('agent', 'all')
         
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         if agent == 'all':
@@ -7704,7 +7704,7 @@ def generate_image():
             }), 202
         
         # Check user's message limit
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         cursor.execute("""
@@ -7783,7 +7783,7 @@ def generate_image():
 def get_history():
     """Get chat history"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
             SELECT agent_name, message, response, timestamp 
@@ -7820,7 +7820,7 @@ def get_history():
 def get_conversations():
     """Get all conversation sessions for current user"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Include inactive conversations to show all history
@@ -7859,7 +7859,7 @@ def get_conversations():
 def get_conversation(conv_id):
     """Get specific conversation with all messages"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # First check if conversation exists at all (including inactive ones)
@@ -7933,7 +7933,7 @@ def create_conversation():
         agent_name = data.get('agent', 'Luna')
         title = data.get('title', 'New conversation')
         
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         cursor.execute("""
@@ -7961,7 +7961,7 @@ def create_conversation():
 def delete_conversation(conv_id):
     """Delete a conversation (soft delete)"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         # Verify ownership
@@ -8106,7 +8106,7 @@ def update_profile():
         if not new_username or not new_email:
             return jsonify({'error': 'Username and email required'}), 400
         
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         try:
@@ -8140,7 +8140,7 @@ def change_password():
             return jsonify({'error': 'Current and new password required'}), 400
         
         # Get current password hash
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT password_hash FROM users WHERE id = ?", (current_user.id,))
         result = cursor.fetchone()
@@ -8177,7 +8177,7 @@ def change_password():
 def get_user_stats():
     """Get current user's usage statistics"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         cursor.execute("""
@@ -8295,7 +8295,7 @@ def health():
 
 def init_api_keys_table():
     """Initialize API keys table for automation"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -8327,7 +8327,7 @@ def generate_api_key():
 
 def get_user_api_key(user_id):
     """Get user's API key"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT api_key FROM api_keys WHERE user_id = ? AND is_active = 1", (user_id,))
     result = cursor.fetchone()
@@ -8337,7 +8337,7 @@ def get_user_api_key(user_id):
 def create_user_api_key(user_id, name="Default API Key"):
     """Create a new API key for user"""
     api_key = generate_api_key()
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     # Deactivate old keys
@@ -8355,7 +8355,7 @@ def create_user_api_key(user_id, name="Default API Key"):
 
 def validate_api_key(api_key):
     """Validate API key and return user_id"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
         SELECT user_id FROM api_keys 
@@ -8381,7 +8381,7 @@ def validate_api_key(api_key):
 
 def init_api_usage_table():
     """Initialize API usage tracking table"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -8403,7 +8403,7 @@ init_api_usage_table()
 
 def log_api_request(user_id, endpoint, method, status_code=200):
     """Log API request"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
         INSERT INTO api_usage (user_id, endpoint, method, status_code)
@@ -8414,7 +8414,7 @@ def log_api_request(user_id, endpoint, method, status_code=200):
 
 def get_api_usage_stats(user_id):
     """Get API usage statistics for user"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     # Total requests
@@ -8440,7 +8440,7 @@ def get_api_usage_stats(user_id):
 
 def init_custom_agents_table():
     """Initialize custom agents table"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -8469,7 +8469,7 @@ init_custom_agents_table()
 
 def create_master_code():
     """Create master code for Amanda (if it doesn't exist)"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     try:
@@ -8492,7 +8492,7 @@ create_master_code()
 
 def create_api_key(user_id, name="Default"):
     """Create an API key for a user"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     api_key = generate_api_key()
@@ -8511,7 +8511,7 @@ def create_api_key(user_id, name="Default"):
 
 def get_user_api_keys(user_id):
     """Get all API keys for a user"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -8539,7 +8539,7 @@ def get_user_api_keys(user_id):
 
 def verify_api_key(api_key):
     """Verify an API key and return user_id"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -8565,7 +8565,7 @@ def verify_api_key(api_key):
 
 def delete_api_key(user_id, key_id):
     """Delete an API key"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -8598,7 +8598,7 @@ def create_promo_codes(tier, count, prefix="", discount_type="tier", discount_va
         trial_days: Number of days for free trial (for trial codes)
         max_uses: Maximum number of uses per code (-1 for unlimited, 0 for single-use, positive number for limited uses)
     """
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     codes = []
@@ -8628,7 +8628,7 @@ def create_promo_codes(tier, count, prefix="", discount_type="tier", discount_va
 
 def validate_promo_code(code):
     """Check if promo code is valid and available"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -8687,7 +8687,7 @@ def redeem_promo_code(code, user_id):
     discount_value = result.get('discount_value')
     trial_days = result.get('trial_days')
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
@@ -8886,7 +8886,7 @@ def apply_promo_upgrade():
             return jsonify({'error': f'This code is for {result["tier"]} plan, not {plan}'}), 400
         
         # Update user subscription in SQLite database
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         # Update user's subscription tier
@@ -9020,7 +9020,7 @@ def admin_list_promo_codes():
         return jsonify({'error': 'Unauthorized'}), 403
     
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         print("Loading promo codes...")
@@ -9069,7 +9069,7 @@ def admin_list_promo_codes():
 def get_custom_agents():
     """Get all custom agents for current user"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         # Check which columns exist
@@ -9176,7 +9176,7 @@ def create_custom_agent():
         custom_agents_limit = tier_info.get('custom_agents_limit', 1)
 
         # Count user's existing custom agents
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT COUNT(*) FROM custom_agents WHERE user_id = ?", (current_user.id,))
         current_count = cursor.fetchone()[0]
@@ -9225,7 +9225,7 @@ def create_custom_agent():
         if not instructions:
             return jsonify({'error': 'Instructions are required'}), 400
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # First check if columns exist, add if needed
@@ -9326,7 +9326,7 @@ def update_custom_agent(agent_id):
             data = request.form
             icon_file = request.files.get('icon_image')
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Verify ownership
@@ -9424,7 +9424,7 @@ def update_custom_agent(agent_id):
 def delete_custom_agent(agent_id):
     """Delete a custom agent"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         # Verify ownership
@@ -9457,7 +9457,7 @@ def delete_custom_agent(agent_id):
 def view_custom_agent(agent_id):
     """View a custom agent page (shareable link)"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         cursor.execute("""
@@ -9492,7 +9492,7 @@ def view_custom_agent(agent_id):
 def get_custom_agent(agent_id):
     """Get details for a specific custom agent"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -9531,7 +9531,7 @@ def get_custom_agent(agent_id):
 def share_custom_agent(agent_id):
     """Generate or regenerate a share code for an agent"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Verify ownership
@@ -9579,7 +9579,7 @@ def share_custom_agent(agent_id):
 def unshare_custom_agent(agent_id):
     """Remove share code and make agent private"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Verify ownership
@@ -9617,7 +9617,7 @@ def unshare_custom_agent(agent_id):
 def get_shared_agent(share_code):
     """Get public agent details by share code (no login required)"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -9668,7 +9668,7 @@ def clone_shared_agent(share_code):
         tier_info = SUBSCRIPTION_TIERS.get(tier, SUBSCRIPTION_TIERS['free'])
         custom_agents_limit = tier_info.get('custom_agents_limit', 1)
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Count user's existing custom agents
@@ -9735,7 +9735,7 @@ def get_global_agents():
         # DEBUG: Log current user info
         print(f"🔍 DEBUG /api/global-agents: current_user.id = {current_user.id}, email = {getattr(current_user, 'email', 'N/A')}")
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Get all active global agents assigned to this user (DISTINCT to prevent duplicates)
@@ -9780,7 +9780,7 @@ def get_global_agents():
 def unassign_global_agent(agent_id):
     """Unassign a global agent from current user"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Delete the assignment
@@ -9810,7 +9810,7 @@ def admin_get_all_users():
         return jsonify({'error': 'Unauthorized'}), 403
 
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -9845,7 +9845,7 @@ def admin_get_all_global_agents():
         return jsonify({'error': 'Unauthorized'}), 403
 
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -9912,7 +9912,7 @@ def admin_create_global_agent():
         if isinstance(integrations, list):
             integrations = json.dumps(integrations)
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -9946,7 +9946,7 @@ def admin_update_global_agent(agent_id):
     try:
         data = request.get_json()
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Build update query dynamically
@@ -10008,7 +10008,7 @@ def admin_delete_global_agent(agent_id):
         return jsonify({'error': 'Unauthorized'}), 403
 
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Delete user assignments first
@@ -10043,7 +10043,7 @@ def admin_assign_global_agent(agent_id):
         if not user_ids:
             return jsonify({'error': 'user_ids required'}), 400
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         assigned_count = 0
@@ -10085,7 +10085,7 @@ def admin_unassign_global_agent(agent_id):
         if not user_ids:
             return jsonify({'error': 'user_ids required'}), 400
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         for user_id in user_ids:
@@ -10116,7 +10116,7 @@ def share_global_agent(agent_id):
         return jsonify({'error': 'Unauthorized'}), 403
 
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Get agent details
@@ -10175,7 +10175,7 @@ def unshare_global_agent(agent_id):
         return jsonify({'error': 'Unauthorized'}), 403
 
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -10201,7 +10201,7 @@ def unshare_global_agent(agent_id):
 def view_shared_global_agent(share_code):
     """Public page to chat with a shared global agent (no login required)"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -10245,7 +10245,7 @@ def global_agent_chat():
             return jsonify({'error': 'Missing required fields'}), 400
 
         # Get global agent by share_code
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -10314,7 +10314,7 @@ def render_agent_template_api(agent_id):
         data = request.get_json()
         variables = data.get('variables', {})
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Get agent (check ownership)
@@ -10354,7 +10354,7 @@ def render_agent_template_api(agent_id):
 def view_shared_agent_page(share_code):
     """Web page to view and clone a shared agent"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -10709,7 +10709,7 @@ def download_website(filename):
 
 def check_message_limit(user_id):
     """Check if user has reached their daily message limit"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -10756,7 +10756,7 @@ def check_message_limit(user_id):
 
 def increment_message_count(user_id):
     """Increment user's daily message count"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -10773,7 +10773,7 @@ def increment_message_count(user_id):
 
 def init_webhooks_table():
     """Initialize webhooks table for Make.com integration"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -10799,7 +10799,7 @@ def trigger_webhook(user_id, event_type, data):
     try:
         import requests as webhook_requests
         
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         cursor.execute("""
@@ -10840,7 +10840,7 @@ def trigger_webhook(user_id, event_type, data):
 
 def init_support_messages_table():
     """Create support messages table for user help requests"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -10879,7 +10879,7 @@ def get_api_key():
         print(f"DEBUG: get-api-key called for user {current_user.id}")
         
         # Check if api_keys table exists
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='api_keys'")
         table_exists = cursor.fetchone()
@@ -10888,7 +10888,7 @@ def get_api_key():
             print("DEBUG: api_keys table doesn't exist, creating...")
             conn.close()
             init_api_keys_table()
-            conn = sqlite3.connect(DB_PATH)
+            conn = get_db_connection()
             cursor = conn.cursor()
         
         # Try to get existing key
@@ -10929,13 +10929,13 @@ def regenerate_api_key():
         print(f"DEBUG: Regenerating API key for user {current_user.id}")
         
         # Ensure table exists
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='api_keys'")
         if not cursor.fetchone():
             conn.close()
             init_api_keys_table()
-            conn = sqlite3.connect(DB_PATH)
+            conn = get_db_connection()
             cursor = conn.cursor()
         
         # Deactivate old keys
@@ -11030,7 +11030,7 @@ def api_chat():
         
         # Check daily message limit
         user_id = request.api_user_id
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         cursor.execute("SELECT subscription_tier FROM users WHERE id = ?", (user_id,))
@@ -11122,7 +11122,7 @@ def api_chat():
         ai_response = response.content[0].text
         
         # Save to chat history
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO chat_history (user_id, agent, message, response)
@@ -11259,7 +11259,7 @@ def api_usage():
     """Get current API usage and quota"""
     user_id = request.api_user_id
     
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     # Get user subscription tier
@@ -11307,7 +11307,7 @@ def api_usage():
 def get_webhooks():
     """Get all webhooks for current user"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         cursor.execute("""
@@ -11370,7 +11370,7 @@ def create_webhook():
     if event_type not in valid_events:
         return jsonify({'error': f'event_type must be one of: {", ".join(valid_events)}'}), 400
     
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -11392,7 +11392,7 @@ def create_webhook():
 @login_required
 def delete_webhook(webhook_id):
     """Delete a webhook"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     # Check ownership
@@ -11416,7 +11416,7 @@ def delete_webhook(webhook_id):
 @login_required
 def toggle_webhook(webhook_id):
     """Toggle webhook active status"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     # Check ownership
@@ -11521,7 +11521,7 @@ def support_send_message():
             user_name = data.get('name', 'Guest')
 
         # Save to database
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -11558,7 +11558,7 @@ def get_support_messages():
             user_id = None
             admin_mode = True
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
 
@@ -11599,7 +11599,7 @@ def resolve_support_message(message_id):
         data = request.get_json()
         admin_notes = data.get('notes', '')
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
