@@ -2837,17 +2837,24 @@
             </div>
             {% else %}
             <!-- Regular Mode: Show global agents and custom agents -->
-            <div class="section-title" id="globalAgentsTitle" style="display: none;">My Agents</div>
-            <div id="globalAgentsList"></div>
+            <div class="section-title" id="globalAgentsTitle" style="display: none; cursor: pointer; user-select: none;" onclick="toggleGlobalAgents()">
+                My Agents <span id="globalAgentsToggle" style="float: right; font-size: 10px;">▶</span>
+            </div>
+            <div id="globalAgentsList" style="display: none;"></div>
 
-            <div class="section-title" id="customAgentsTitle" style="display: none;">Custom Agents</div>
-            <div id="customAgentsList"></div>
+            <div class="section-title" id="customAgentsTitle" style="display: none; cursor: pointer; user-select: none;" onclick="toggleCustomAgents()">
+                Custom Agents <span id="customAgentsToggle" style="float: right; font-size: 10px;">▶</span>
+            </div>
+            <div id="customAgentsList" style="display: none;"></div>
             {% endif %}
 
             {% if not is_guest %}
             <!-- Settings & Tools - Hidden for guests -->
-            <div class="section-title" style="margin-top: 20px;">Settings & Tools</div>
+            <div class="section-title" style="margin-top: 20px; cursor: pointer; user-select: none;" onclick="toggleSettingsTools()">
+                ⚙️ Settings & Tools <span id="settingsToolsToggle" style="float: right; font-size: 10px;">▶</span>
+            </div>
 
+            <div class="settings-tools-section" id="settingsToolsSection" style="display: none;">
             <a href="/integrations" class="agent-item" style="text-decoration: none; color: white;">
                 <div class="agent-avatar" style="background: linear-gradient(135deg, #11998e, #38ef7d);">🔌</div>
                 <div class="agent-info">
@@ -2960,6 +2967,7 @@
                     <div class="agent-role">Guides & Tutorials</div>
                 </div>
             </a>
+            </div>
             {% endif %}
             <!-- End Settings & Tools -->
 
@@ -3464,6 +3472,51 @@
         function toggleShareableLinks() {
             const section = document.getElementById('shareLinksSection');
             const toggle = document.getElementById('shareLinksToggle');
+
+            if (section && toggle) {
+                if (section.style.display === 'none') {
+                    section.style.display = 'block';
+                    toggle.textContent = '▼';
+                } else {
+                    section.style.display = 'none';
+                    toggle.textContent = '▶';
+                }
+            }
+        }
+
+        function toggleSettingsTools() {
+            const section = document.getElementById('settingsToolsSection');
+            const toggle = document.getElementById('settingsToolsToggle');
+
+            if (section && toggle) {
+                if (section.style.display === 'none') {
+                    section.style.display = 'block';
+                    toggle.textContent = '▼';
+                } else {
+                    section.style.display = 'none';
+                    toggle.textContent = '▶';
+                }
+            }
+        }
+
+        function toggleCustomAgents() {
+            const section = document.getElementById('customAgentsList');
+            const toggle = document.getElementById('customAgentsToggle');
+
+            if (section && toggle) {
+                if (section.style.display === 'none') {
+                    section.style.display = 'block';
+                    toggle.textContent = '▼';
+                } else {
+                    section.style.display = 'none';
+                    toggle.textContent = '▶';
+                }
+            }
+        }
+
+        function toggleGlobalAgents() {
+            const section = document.getElementById('globalAgentsList');
+            const toggle = document.getElementById('globalAgentsToggle');
 
             if (section && toggle) {
                 if (section.style.display === 'none') {
