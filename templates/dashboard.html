@@ -3767,30 +3767,43 @@
             // Pattern 1: "switch to [agent]"
             const switchPattern = /(?:switch|change)\s+to\s+(\w+(?:\s+\w+)*)/i;
             let match = message.match(switchPattern);
-            if (match) targetAgent = match[1];
+            if (match) {
+                targetAgent = match[1];
+                console.log('🎯 Pattern 1 matched (switch/change to):', targetAgent);
+            }
 
             // Pattern 2: "talk to [agent]", "speak to [agent]", "chat with [agent]"
             if (!targetAgent) {
                 const talkPattern = /(?:talk|speak|chat)\s+(?:to|with)\s+(\w+(?:\s+\w+)*)/i;
                 match = message.match(talkPattern);
-                if (match) targetAgent = match[1];
+                if (match) {
+                    targetAgent = match[1];
+                    console.log('🎯 Pattern 2 matched (talk/speak/chat):', targetAgent);
+                }
             }
 
             // Pattern 3: "I want [agent]", "get me [agent]"
             if (!targetAgent) {
                 const wantPattern = /(?:i\s+want|get\s+me|bring\s+me)\s+(\w+(?:\s+\w+)*)/i;
                 match = message.match(wantPattern);
-                if (match) targetAgent = match[1];
+                if (match) {
+                    targetAgent = match[1];
+                    console.log('🎯 Pattern 3 matched (want/get me):', targetAgent);
+                }
             }
 
             // Pattern 4: "hi [agent]", "hello [agent]", "hey [agent]" (only if it's the main part of message)
             if (!targetAgent && message.trim().split(' ').length <= 3) {
                 const greetPattern = /^(?:hi|hello|hey)\s+(\w+(?:\s+\w+)*)$/i;
                 match = message.match(greetPattern);
-                if (match) targetAgent = match[1];
+                if (match) {
+                    targetAgent = match[1];
+                    console.log('🎯 Pattern 4 matched (greeting):', targetAgent);
+                }
             }
 
             if (targetAgent && uploadedFiles.length === 0) {
+                console.log('🔀 Agent switching triggered for:', targetAgent);
                 // Try to switch to the agent
                 const success = switchToAgent(targetAgent);
                 if (success) {
@@ -3799,6 +3812,7 @@
                     return; // Don't send the message, just switch
                 }
                 // If agent not found, continue to send as regular message
+                console.log('⚠️ Agent not found, sending as regular message');
             }
 
             // Disable send button
@@ -4053,22 +4067,35 @@
         }
 
         function switchToAgent(agentName) {
+            console.log('🔄 Attempting to switch to agent:', agentName);
+
             // Find and click the agent in the sidebar (case-insensitive)
             const agentItems = document.querySelectorAll('.agent-item');
+            console.log('📋 Found', agentItems.length, 'agent items');
+
             let found = false;
 
             agentItems.forEach(item => {
                 const nameElement = item.querySelector('.agent-name');
                 if (nameElement) {
                     const itemName = nameElement.textContent.trim();
+                    console.log('  Checking agent:', itemName);
+
                     // Case-insensitive partial match
                     if (itemName.toLowerCase().includes(agentName.toLowerCase())) {
+                        console.log('  ✅ Match found! Clicking:', itemName);
                         item.click();
                         displaySystemMessage(`✅ Switched to ${itemName}`);
                         found = true;
+                        return; // Exit forEach early
                     }
                 }
             });
+
+            if (!found) {
+                console.log('❌ No agent found matching:', agentName);
+                displaySystemMessage(`❌ Agent "${agentName}" not found. Try: Luna, Mila, Sage, Ember, Sol, Nova, or Theo`);
+            }
 
             return found;
         }
