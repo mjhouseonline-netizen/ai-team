@@ -119,19 +119,30 @@ else:
 import os
 import shutil
 
-# IMPORTANT: On Render, /data exists but causes "unable to open database file" errors
-# in Gunicorn worker processes due to permission issues. We use local ai_team.db instead,
-# which works reliably across all processes.
+# IMPORTANT: On Render, the application directory is not writable.
+# Use /tmp for database storage which is always writable.
+# /tmp is ephemeral but we can copy from /data on startup if it exists.
 
-# Use absolute path to ensure database is found regardless of working directory
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ai_team.db')
-print(f"🔍 Database path: {DB_PATH}")
+# Detect if we're on Render (production) or local
+IS_RENDER = os.path.exists('/opt/render')
 
-# Ensure database directory exists and is writable
-db_dir = os.path.dirname(DB_PATH)
-if not os.path.exists(db_dir):
-    os.makedirs(db_dir, exist_ok=True)
-    print(f"📁 Created database directory: {db_dir}")
+if IS_RENDER:
+    # On Render: use /tmp which is always writable
+    DB_PATH = '/tmp/ai_team.db'
+    print(f"🔍 Render detected - using /tmp database: {DB_PATH}")
+
+    # Try to copy from /data if it exists and /tmp doesn't have it yet
+    if not os.path.exists(DB_PATH) and os.path.exists('/data/ai_team.db'):
+        try:
+            print(f"📋 Copying database from /data to /tmp...")
+            shutil.copy('/data/ai_team.db', DB_PATH)
+            print(f"✅ Database copied from /data to {DB_PATH}")
+        except Exception as e:
+            print(f"⚠️  Failed to copy from /data: {e}")
+else:
+    # Local development: use local file
+    DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ai_team.db')
+    print(f"🔍 Local development - database path: {DB_PATH}")
 
 # Check if database file exists
 if os.path.exists(DB_PATH):
