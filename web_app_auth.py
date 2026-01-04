@@ -123,13 +123,13 @@ import shutil
 # Use /tmp for database storage which is always writable.
 # /tmp is ephemeral but we can copy from /data on startup if it exists.
 
-# Detect if we're on Render (production) or local
-IS_RENDER = os.path.exists('/opt/render')
+# Detect if we're on Render (production) - Render sets RENDER environment variable
+IS_RENDER = os.environ.get('RENDER') == 'true' or os.environ.get('RENDER_SERVICE_NAME') is not None
 
 if IS_RENDER:
     # On Render: use /tmp which is always writable
     DB_PATH = '/tmp/ai_team.db'
-    print(f"🔍 Render detected - using /tmp database: {DB_PATH}")
+    print(f"🔍 Render environment detected - using /tmp database: {DB_PATH}")
 
     # Try to copy from /data if it exists and /tmp doesn't have it yet
     if not os.path.exists(DB_PATH) and os.path.exists('/data/ai_team.db'):
@@ -139,14 +139,36 @@ if IS_RENDER:
             print(f"✅ Database copied from /data to {DB_PATH}")
         except Exception as e:
             print(f"⚠️  Failed to copy from /data: {e}")
+            print(f"   Will create fresh database in /tmp")
 else:
     # Local development: use local file
     DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ai_team.db')
     print(f"🔍 Local development - database path: {DB_PATH}")
 
+# Ensure /tmp is writable (Render check)
+if IS_RENDER:
+    try:
+        test_file = '/tmp/test_write.txt'
+        with open(test_file, 'w') as f:
+            f.write('test')
+        os.remove(test_file)
+        print(f"✅ /tmp directory is writable")
+    except Exception as e:
+        print(f"❌ /tmp is NOT writable: {e}")
+        print(f"   This is critical - application may fail")
+
 # Check if database file exists
 if os.path.exists(DB_PATH):
     print(f"✅ Database file exists: {DB_PATH}")
+    # Check if it's readable/writable
+    if os.access(DB_PATH, os.R_OK):
+        print(f"✅ Database is readable")
+    else:
+        print(f"❌ Database is NOT readable")
+    if os.access(DB_PATH, os.W_OK):
+        print(f"✅ Database is writable")
+    else:
+        print(f"❌ Database is NOT writable")
 else:
     print(f"⚠️  Database will be created at: {DB_PATH}")
 
