@@ -923,6 +923,34 @@ def init_database():
     """)
 
     # ============================================
+    # CLIENT AGENTS TABLE (STAND ALONE CLIENT AGENTS)
+    # ============================================
+    # Client agents are premium, single-purpose agents created for ONE specific client
+    # Primary paid deliverable - admin-only creation and assignment
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS client_agents (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT,
+            emoji TEXT DEFAULT '💎',
+            assigned_to_user_id INTEGER NOT NULL,
+            primary_outcome TEXT NOT NULL,
+            core_responsibilities TEXT,
+            behaviour_rules TEXT,
+            boundaries TEXT,
+            personalisation TEXT,
+            system_prompt TEXT NOT NULL,
+            priority_level INTEGER DEFAULT 1,
+            is_active BOOLEAN DEFAULT 1,
+            created_by INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (assigned_to_user_id) REFERENCES users (id),
+            FOREIGN KEY (created_by) REFERENCES users (id)
+        )
+    """)
+
+    # ============================================
     # COST MONITORING TABLES
     # ============================================
 
@@ -9868,6 +9896,307 @@ def get_standalone_agents():
 
     except Exception as e:
         print(f"❌ Error getting standalone agents: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+# ============================================
+# CLIENT AGENTS ENDPOINTS (STAND ALONE CLIENT AGENTS)
+# ============================================
+
+@app.route('/api/client-agents', methods=['GET'])
+@login_required
+def get_client_agents():
+    """Get all active client agents assigned to current user"""
+    try:
+        print(f"🔍 DEBUG /api/client-agents: current_user.id = {current_user.id}")
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Get all active client agents assigned to this user
+        cursor.execute("""
+            SELECT id, name, description, emoji, assigned_to_user_id,
+                   primary_outcome, core_responsibilities, behaviour_rules,
+                   boundaries, personalisation, system_prompt, priority_level,
+                   created_at
+            FROM client_agents
+            WHERE assigned_to_user_id = ? AND is_active = 1
+            ORDER BY priority_level DESC, name
+        """, (current_user.id,))
+
+        agents = []
+        for row in cursor.fetchall():
+            agents.append({
+                'id': row[0],
+                'name': row[1],
+                'description': row[2],
+                'emoji': row[3],
+                'assigned_to_user_id': row[4],
+                'primary_outcome': row[5],
+                'core_responsibilities': json.loads(row[6]) if row[6] else [],
+                'behaviour_rules': row[7],
+                'boundaries': row[8],
+                'personalisation': json.loads(row[9]) if row[9] else {},
+                'system_prompt': row[10],
+                'priority_level': row[11],
+                'created_at': row[12],
+                'type': 'client'  # Mark as client agent
+            })
+
+        print(f"🔍 DEBUG /api/client-agents: Returning {len(agents)} agents for user {current_user.id}")
+
+        conn.close()
+        return jsonify({'agents': agents}), 200
+
+    except Exception as e:
+        print(f"❌ Error getting client agents: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/client-agents', methods=['POST'])
+@login_required
+def admin_create_client_agent():
+    """Admin: Create a new client agent"""
+    if current_user.id != 1:  # Admin only
+        return jsonify({'error': 'Unauthorized - Admin access required'}), 403
+
+    try:
+        data = request.get_json()
+
+        # Validate required fields
+        required_fields = ['name', 'primary_outcome', 'assigned_to_user_id', 'system_prompt']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Insert new client agent
+        cursor.execute("""
+            INSERT INTO client_agents (
+                name, description, emoji, assigned_to_user_id, primary_outcome,
+                core_responsibilities, behaviour_rules, boundaries, personalisation,
+                system_prompt, priority_level, created_by
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            data['name'],
+            data.get('description', ''),
+            data.get('emoji', '💎'),
+            data['assigned_to_user_id'],
+            data['primary_outcome'],
+            json.dumps(data.get('core_responsibilities', [])),
+            data.get('behaviour_rules', ''),
+            data.get('boundaries', ''),
+            json.dumps(data.get('personalisation', {})),
+            data['system_prompt'],
+            data.get('priority_level', 1),
+            current_user.id
+        ))
+
+        conn.commit()
+        agent_id = cursor.lastrowid
+        conn.close()
+
+        print(f"✅ Admin {current_user.id} created client agent {agent_id}: {data['name']} for user {data['assigned_to_user_id']}")
+        return jsonify({'success': True, 'agent_id': agent_id, 'message': 'Client agent created successfully'}), 201
+
+    except Exception as e:
+        print(f"❌ Error creating client agent: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/client-agents/<int:agent_id>', methods=['PUT'])
+@login_required
+def admin_update_client_agent(agent_id):
+    """Admin: Update a client agent"""
+    if current_user.id != 1:  # Admin only
+        return jsonify({'error': 'Unauthorized - Admin access required'}), 403
+
+    try:
+        data = request.get_json()
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Build update query dynamically based on provided fields
+        update_fields = []
+        update_values = []
+
+        if 'name' in data:
+            update_fields.append('name = ?')
+            update_values.append(data['name'])
+        if 'description' in data:
+            update_fields.append('description = ?')
+            update_values.append(data['description'])
+        if 'emoji' in data:
+            update_fields.append('emoji = ?')
+            update_values.append(data['emoji'])
+        if 'primary_outcome' in data:
+            update_fields.append('primary_outcome = ?')
+            update_values.append(data['primary_outcome'])
+        if 'core_responsibilities' in data:
+            update_fields.append('core_responsibilities = ?')
+            update_values.append(json.dumps(data['core_responsibilities']))
+        if 'behaviour_rules' in data:
+            update_fields.append('behaviour_rules = ?')
+            update_values.append(data['behaviour_rules'])
+        if 'boundaries' in data:
+            update_fields.append('boundaries = ?')
+            update_values.append(data['boundaries'])
+        if 'personalisation' in data:
+            update_fields.append('personalisation = ?')
+            update_values.append(json.dumps(data['personalisation']))
+        if 'system_prompt' in data:
+            update_fields.append('system_prompt = ?')
+            update_values.append(data['system_prompt'])
+        if 'priority_level' in data:
+            update_fields.append('priority_level = ?')
+            update_values.append(data['priority_level'])
+        if 'is_active' in data:
+            update_fields.append('is_active = ?')
+            update_values.append(data['is_active'])
+
+        update_fields.append('updated_at = CURRENT_TIMESTAMP')
+
+        if not update_fields:
+            return jsonify({'error': 'No fields to update'}), 400
+
+        update_values.append(agent_id)
+
+        query = f"UPDATE client_agents SET {', '.join(update_fields)} WHERE id = ?"
+        cursor.execute(query, update_values)
+
+        conn.commit()
+        rows_updated = cursor.rowcount
+        conn.close()
+
+        if rows_updated > 0:
+            print(f"✅ Admin {current_user.id} updated client agent {agent_id}")
+            return jsonify({'success': True, 'message': 'Client agent updated successfully'}), 200
+        else:
+            return jsonify({'error': 'Client agent not found'}), 404
+
+    except Exception as e:
+        print(f"❌ Error updating client agent: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/client-agents/<int:agent_id>/assign', methods=['POST'])
+@login_required
+def admin_assign_client_agent(agent_id):
+    """Admin: Reassign a client agent to a different user"""
+    if current_user.id != 1:  # Admin only
+        return jsonify({'error': 'Unauthorized - Admin access required'}), 403
+
+    try:
+        data = request.get_json()
+
+        if 'user_id' not in data:
+            return jsonify({'error': 'Missing user_id'}), 400
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Update assignment
+        cursor.execute("""
+            UPDATE client_agents
+            SET assigned_to_user_id = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (data['user_id'], agent_id))
+
+        conn.commit()
+        rows_updated = cursor.rowcount
+        conn.close()
+
+        if rows_updated > 0:
+            print(f"✅ Admin {current_user.id} reassigned client agent {agent_id} to user {data['user_id']}")
+            return jsonify({'success': True, 'message': 'Client agent reassigned successfully'}), 200
+        else:
+            return jsonify({'error': 'Client agent not found'}), 404
+
+    except Exception as e:
+        print(f"❌ Error reassigning client agent: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/client-agents/<int:agent_id>', methods=['DELETE'])
+@login_required
+def admin_delete_client_agent(agent_id):
+    """Admin: Delete a client agent (or deactivate)"""
+    if current_user.id != 1:  # Admin only
+        return jsonify({'error': 'Unauthorized - Admin access required'}), 403
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Soft delete by setting is_active = 0
+        cursor.execute("""
+            UPDATE client_agents
+            SET is_active = 0, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (agent_id,))
+
+        conn.commit()
+        rows_updated = cursor.rowcount
+        conn.close()
+
+        if rows_updated > 0:
+            print(f"✅ Admin {current_user.id} deactivated client agent {agent_id}")
+            return jsonify({'success': True, 'message': 'Client agent deactivated successfully'}), 200
+        else:
+            return jsonify({'error': 'Client agent not found'}), 404
+
+    except Exception as e:
+        print(f"❌ Error deactivating client agent: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/client-agents', methods=['GET'])
+@login_required
+def admin_get_all_client_agents():
+    """Admin: Get all client agents for management"""
+    if current_user.id != 1:  # Admin only
+        return jsonify({'error': 'Unauthorized - Admin access required'}), 403
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Get all client agents with user info
+        cursor.execute("""
+            SELECT ca.id, ca.name, ca.description, ca.emoji, ca.assigned_to_user_id,
+                   ca.primary_outcome, ca.priority_level, ca.is_active, ca.created_at,
+                   u.username, u.email
+            FROM client_agents ca
+            LEFT JOIN users u ON ca.assigned_to_user_id = u.id
+            ORDER BY ca.priority_level DESC, ca.name
+        """)
+
+        agents = []
+        for row in cursor.fetchall():
+            agents.append({
+                'id': row[0],
+                'name': row[1],
+                'description': row[2],
+                'emoji': row[3],
+                'assigned_to_user_id': row[4],
+                'primary_outcome': row[5],
+                'priority_level': row[6],
+                'is_active': row[7],
+                'created_at': row[8],
+                'assigned_to_username': row[9],
+                'assigned_to_email': row[10]
+            })
+
+        conn.close()
+        return jsonify({'agents': agents}), 200
+
+    except Exception as e:
+        print(f"❌ Error getting all client agents: {str(e)}")
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
