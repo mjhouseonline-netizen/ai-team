@@ -70,6 +70,34 @@ STRIPE_STARTER_PRICE_ID = os.environ.get('STRIPE_STARTER_PRICE_ID')
 STRIPE_PRO_PRICE_ID = os.environ.get('STRIPE_PRO_PRICE_ID')
 STRIPE_ENTERPRISE_PRICE_ID = os.environ.get('STRIPE_ENTERPRISE_PRICE_ID', 'price_1SaVi1Fj4r8OeJwWeMQuODE5')  # $99/month Enterprise tier
 
+# ============================================
+# AGENT TYPES CONFIGURATION
+# ============================================
+# The platform has 4 distinct agent types - NEVER merge or confuse these
+
+# Agent Type 1: PRIMARY AGENTS (Hardcoded - not in database)
+PRIMARY_AGENTS = [
+    'Ember',    # Creative Visionary - Ideas and innovation
+    'Luna',     # Research Specialist - Deep knowledge
+    'Nova',     # Technical Architect - System design
+    'Echo',     # Communication Expert - Clarity and persuasion
+    'Sage',     # Strategy Advisor - Planning and direction
+    'Pixel',    # Visual Designer - UI/UX and aesthetics
+    'Atlas'     # Data Analyst - Numbers and insights
+]
+
+# Agent Type 2: CUSTOM AGENTS
+# Table: custom_agents
+# User-created, user-controlled, stored in database
+
+# Agent Type 3: GLOBAL AGENTS
+# Table: global_agents, user_global_agents (assignment tracking)
+# Admin-controlled, assigned to specific users
+
+# Agent Type 4: STAND ALONE CLIENT AGENTS
+# Table: client_agents
+# Premium paid deliverables, admin-only, private to one client
+
 # File upload configuration
 UPLOAD_FOLDER = 'uploads'
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
@@ -631,7 +659,51 @@ def is_model_blocked_for_user(user_id, model):
 # ============================================
 
 def init_database():
-    """Initialize users database"""
+    """
+    Initialize database with all tables
+
+    ============================================
+    AI TEAM PLATFORM - AGENT TYPES (4 TYPES)
+    ============================================
+
+    The platform has FOUR distinct agent types. These must NEVER be merged or confused:
+
+    1) PRIMARY AGENTS
+       - The 7 core system agents (Ember, Luna, Nova, Echo, Sage, Pixel, Atlas)
+       - Always present for all users
+       - Hardcoded in application logic
+       - NOT configurable or sold
+       - NOT stored in database tables
+       - Users cannot create, modify, or delete them
+
+    2) CUSTOM AGENTS
+       - Created by users for themselves
+       - User-controlled (full CRUD permissions)
+       - Stored in: custom_agents table
+       - Can be shared publicly via share_code
+       - Free feature available to all users
+
+    3) GLOBAL AGENTS
+       - Admin-controlled utility agents
+       - Created and managed by admin ONLY
+       - Stored in: global_agents table
+       - Assignment tracking: user_global_agents table
+       - Disabled by default for users
+       - Admin assigns to specific users (admin can assign to themselves)
+       - Users can view/use but NOT create/modify/delete
+
+    4) STAND ALONE CLIENT AGENTS
+       - Premium paid deliverables
+       - Admin-created ONLY
+       - Private to ONE specific client workspace
+       - Single-purpose with strict boundaries
+       - Stored in: client_agents table
+       - Takes priority over all other agent types
+       - Users can view/use their assigned agents but NOT create/modify/delete
+       - Primary monetization layer
+
+    ============================================
+    """
     conn = get_db_connection()
     cursor = conn.cursor()
     
@@ -814,7 +886,10 @@ def init_database():
         )
     """)
     
-    # Add custom_agents table for user-created agents
+    # ============================================
+    # AGENT TYPE 2: CUSTOM AGENTS
+    # ============================================
+    # User-created agents - users have full control
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS custom_agents (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -864,10 +939,11 @@ def init_database():
             print(f"⚠️  Could not add template_variables column: {e}")
 
     # ============================================
-    # GLOBAL AGENTS (ADMIN-MANAGED TEMPLATES)
+    # AGENT TYPE 3: GLOBAL AGENTS
     # ============================================
-
-    # Global agents - admin creates these and assigns to users
+    # Admin-controlled utility agents
+    # Admin creates and assigns to users (admin can assign to themselves)
+    # Disabled by default - requires explicit assignment
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS global_agents (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -901,11 +977,13 @@ def init_database():
     """)
 
     # ============================================
-    # STAND ALONE CLIENT AGENTS TABLE
+    # AGENT TYPE 4: STAND ALONE CLIENT AGENTS
     # ============================================
-    # Stand Alone Client Agents are premium, single-purpose agents created for ONE specific client
-    # Primary paid deliverable - admin-only creation and assignment
-    # NOT public - private to assigned client workspace only
+    # Premium paid deliverables
+    # Single-purpose agents created for ONE specific client
+    # Admin-only creation and assignment
+    # Private to assigned client workspace only
+    # Takes priority over all other agent types
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS client_agents (
             id INTEGER PRIMARY KEY AUTOINCREMENT,

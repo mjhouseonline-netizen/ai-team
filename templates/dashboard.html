@@ -3426,6 +3426,43 @@
     </div>
 
     <script>
+        // ============================================
+        // AI TEAM PLATFORM - AGENT TYPES (4 TYPES)
+        // ============================================
+        // The platform has FOUR distinct agent types. These must NEVER be merged or confused:
+        //
+        // 1) PRIMARY AGENTS
+        //    - The 7 core system agents (Ember, Luna, Nova, Echo, Sage, Pixel, Atlas)
+        //    - Always present for all users
+        //    - Hardcoded in templates
+        //    - NOT configurable or sold
+        //    - Displayed in fixed agent buttons
+        //
+        // 2) CUSTOM AGENTS
+        //    - Created by users for themselves
+        //    - User-controlled (full CRUD permissions)
+        //    - Loaded via /api/custom-agents
+        //    - Can be shared publicly via share_code
+        //    - Free feature available to all users
+        //
+        // 3) GLOBAL AGENTS
+        //    - Admin-controlled utility agents
+        //    - Loaded via /api/global-agents
+        //    - Disabled by default for users
+        //    - Admin assigns to specific users (admin can assign to themselves)
+        //    - Users can view/use but NOT create/modify/delete
+        //
+        // 4) STAND ALONE CLIENT AGENTS
+        //    - Premium paid deliverables
+        //    - Admin-created ONLY
+        //    - Loaded via /api/client-agents
+        //    - Private to ONE specific client workspace
+        //    - Single-purpose with strict boundaries
+        //    - Takes priority over all other agent types
+        //    - Users can view/use their assigned agents but NOT create/modify/delete
+        //    - Displayed FIRST in sidebar with premium styling
+        // ============================================
+
         // Global variables
         let imageMode = false;
         let recognition = null;
