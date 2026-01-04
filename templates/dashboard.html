@@ -2836,7 +2836,13 @@
                 </div>
             </div>
             {% else %}
-            <!-- Regular Mode: Show global agents and custom agents -->
+            <!-- Regular Mode: Show client agents, global agents and custom agents -->
+            <!-- Client Agents (Premium) - Shows FIRST with priority -->
+            <div class="section-title" id="clientAgentsTitle" style="display: none; cursor: pointer; user-select: none;" onclick="toggleClientAgents()">
+                💎 Stand Alone Client Agents <span id="clientAgentsToggle" style="float: right; font-size: 10px;">▶</span>
+            </div>
+            <div id="clientAgentsList" style="display: none;"></div>
+
             <div class="section-title" id="globalAgentsTitle" style="display: none; cursor: pointer; user-select: none;" onclick="toggleGlobalAgents()">
                 My Agents <span id="globalAgentsToggle" style="float: right; font-size: 10px;">▶</span>
             </div>
@@ -3420,6 +3426,43 @@
     </div>
 
     <script>
+        // ============================================
+        // AI TEAM PLATFORM - AGENT TYPES (4 TYPES)
+        // ============================================
+        // The platform has FOUR distinct agent types. These must NEVER be merged or confused:
+        //
+        // 1) PRIMARY AGENTS
+        //    - The 7 core system agents (Ember, Luna, Nova, Echo, Sage, Pixel, Atlas)
+        //    - Always present for all users
+        //    - Hardcoded in templates
+        //    - NOT configurable or sold
+        //    - Displayed in fixed agent buttons
+        //
+        // 2) CUSTOM AGENTS
+        //    - Created by users for themselves
+        //    - User-controlled (full CRUD permissions)
+        //    - Loaded via /api/custom-agents
+        //    - Can be shared publicly via share_code
+        //    - Free feature available to all users
+        //
+        // 3) GLOBAL AGENTS
+        //    - Admin-controlled utility agents
+        //    - Loaded via /api/global-agents
+        //    - Disabled by default for users
+        //    - Admin assigns to specific users (admin can assign to themselves)
+        //    - Users can view/use but NOT create/modify/delete
+        //
+        // 4) STAND ALONE CLIENT AGENTS
+        //    - Premium paid deliverables
+        //    - Admin-created ONLY
+        //    - Loaded via /api/client-agents
+        //    - Private to ONE specific client workspace
+        //    - Single-purpose with strict boundaries
+        //    - Takes priority over all other agent types
+        //    - Users can view/use their assigned agents but NOT create/modify/delete
+        //    - Displayed FIRST in sidebar with premium styling
+        // ============================================
+
         // Global variables
         let imageMode = false;
         let recognition = null;
@@ -3517,6 +3560,21 @@
         function toggleGlobalAgents() {
             const section = document.getElementById('globalAgentsList');
             const toggle = document.getElementById('globalAgentsToggle');
+
+            if (section && toggle) {
+                if (section.style.display === 'none') {
+                    section.style.display = 'block';
+                    toggle.textContent = '▼';
+                } else {
+                    section.style.display = 'none';
+                    toggle.textContent = '▶';
+                }
+            }
+        }
+
+        function toggleClientAgents() {
+            const section = document.getElementById('clientAgentsList');
+            const toggle = document.getElementById('clientAgentsToggle');
 
             if (section && toggle) {
                 if (section.style.display === 'none') {
@@ -4969,9 +5027,10 @@
         // Load conversations on page load
         document.addEventListener('DOMContentLoaded', function() {
             loadConversations();
-            loadGlobalAgents();  // Load global agents on page load
-            loadCustomAgents();  // Load custom agents on page load
-            loadUsageStats();     // Load usage statistics
+            loadClientAgents();      // Load Stand Alone Client Agents on page load (PREMIUM - appears first)
+            loadGlobalAgents();      // Load global agents on page load
+            loadCustomAgents();      // Load custom agents on page load
+            loadUsageStats();        // Load usage statistics
 
             // Ensure all dropdowns are closed on page load
             closeAllDropdowns();
@@ -5298,6 +5357,106 @@
             event.currentTarget.classList.add('active');
 
             console.log('Selected global agent:', agentName);
+        }
+
+        // ============================================
+        // STAND ALONE CLIENT AGENTS LOADING (PREMIUM)
+        // ============================================
+
+        function loadClientAgents() {
+            fetch('/api/client-agents')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.agents && data.agents.length > 0) {
+                        displayClientAgents(data.agents);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading client agents:', error);
+                });
+        }
+
+        function displayClientAgents(agents) {
+            const container = document.getElementById('clientAgentsList');
+            const title = document.getElementById('clientAgentsTitle');
+
+            if (!container) return;
+
+            // Show the section title
+            if (title) {
+                title.style.display = 'block';
+            }
+
+            // Clear existing content
+            container.innerHTML = '';
+
+            // Add each client agent (sorted by priority already from backend)
+            agents.forEach(agent => {
+                const agentDiv = document.createElement('div');
+                agentDiv.className = 'agent-item custom-agent-item';
+                agentDiv.onclick = (e) => {
+                    e.stopPropagation();
+                    selectClientAgent(e, agent.id, agent.name, agent.emoji || '💎', agent.description, agent.primary_outcome);
+                };
+
+                // Premium gold gradient for client agents
+                agentDiv.innerHTML = `
+                    <div class="agent-avatar" style="background: linear-gradient(135deg, #FFD700, #FFA500);">
+                        ${agent.emoji || '💎'}
+                    </div>
+                    <div class="agent-info">
+                        <div class="agent-name">${agent.name}</div>
+                        <div class="agent-role">${agent.description || agent.primary_outcome || 'Client Agent'}</div>
+                    </div>
+                    <div class="priority-badge" style="position: absolute; top: 8px; right: 8px; background: rgba(255, 215, 0, 0.2); color: #FFD700; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600;">
+                        ★ ${agent.priority_level || 1}
+                    </div>
+                `;
+
+                container.appendChild(agentDiv);
+            });
+        }
+
+        function selectClientAgent(event, agentId, agentName, emoji, description, primaryOutcome) {
+            event.preventDefault();
+
+            // Close all dropdowns when selecting a client agent
+            closeAllDropdowns();
+
+            // Update current agent display
+            const agentDisplay = document.getElementById('currentAgentName');
+            if (agentDisplay) {
+                agentDisplay.textContent = agentName;
+            }
+
+            // Update current agent emoji
+            const agentEmoji = document.querySelector('.current-agent-emoji');
+            if (agentEmoji) {
+                agentEmoji.textContent = emoji;
+            }
+
+            // Store selected agent info
+            window.selectedClientAgent = {
+                id: agentId,
+                name: agentName,
+                emoji: emoji,
+                description: description,
+                primaryOutcome: primaryOutcome,
+                isClient: true,
+                isPremium: true
+            };
+
+            // Clear other agent selections
+            window.selectedGlobalAgent = null;
+            window.selectedCustomAgent = null;
+
+            // Visual feedback
+            document.querySelectorAll('.agent-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+
+            console.log('Selected Stand Alone Client Agent (PREMIUM):', agentName, '- Primary Outcome:', primaryOutcome);
         }
 
         function showCustomAgentShare(event, agentName, shareUrl) {
