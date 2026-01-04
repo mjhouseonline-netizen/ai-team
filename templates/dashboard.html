@@ -2839,7 +2839,7 @@
             <!-- Regular Mode: Show client agents, global agents and custom agents -->
             <!-- Client Agents (Premium) - Shows FIRST with priority -->
             <div class="section-title" id="clientAgentsTitle" style="display: none; cursor: pointer; user-select: none;" onclick="toggleClientAgents()">
-                💎 Client Agents <span id="clientAgentsToggle" style="float: right; font-size: 10px;">▶</span>
+                💎 Stand Alone Client Agents <span id="clientAgentsToggle" style="float: right; font-size: 10px;">▶</span>
             </div>
             <div id="clientAgentsList" style="display: none;"></div>
 
@@ -2852,11 +2852,6 @@
                 Custom Agents <span id="customAgentsToggle" style="float: right; font-size: 10px;">▶</span>
             </div>
             <div id="customAgentsList" style="display: none;"></div>
-
-            <div class="section-title" id="standaloneAgentsTitle" style="display: none; cursor: pointer; user-select: none;" onclick="toggleStandaloneAgents()">
-                🌐 Standalone Agents <span id="standaloneAgentsToggle" style="float: right; font-size: 10px;">▶</span>
-            </div>
-            <div id="standaloneAgentsList" style="display: none;"></div>
             {% endif %}
 
             {% if not is_guest %}
@@ -3528,21 +3523,6 @@
         function toggleGlobalAgents() {
             const section = document.getElementById('globalAgentsList');
             const toggle = document.getElementById('globalAgentsToggle');
-
-            if (section && toggle) {
-                if (section.style.display === 'none') {
-                    section.style.display = 'block';
-                    toggle.textContent = '▼';
-                } else {
-                    section.style.display = 'none';
-                    toggle.textContent = '▶';
-                }
-            }
-        }
-
-        function toggleStandaloneAgents() {
-            const section = document.getElementById('standaloneAgentsList');
-            const toggle = document.getElementById('standaloneAgentsToggle');
 
             if (section && toggle) {
                 if (section.style.display === 'none') {
@@ -5010,10 +4990,9 @@
         // Load conversations on page load
         document.addEventListener('DOMContentLoaded', function() {
             loadConversations();
-            loadClientAgents();      // Load client agents on page load (PREMIUM - appears first)
+            loadClientAgents();      // Load Stand Alone Client Agents on page load (PREMIUM - appears first)
             loadGlobalAgents();      // Load global agents on page load
             loadCustomAgents();      // Load custom agents on page load
-            loadStandaloneAgents();  // Load standalone agents on page load
             loadUsageStats();        // Load usage statistics
 
             // Ensure all dropdowns are closed on page load
@@ -5344,105 +5323,7 @@
         }
 
         // ============================================
-        // STANDALONE AGENTS LOADING
-        // ============================================
-
-        function loadStandaloneAgents() {
-            fetch('/api/standalone-agents')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.agents && data.agents.length > 0) {
-                        displayStandaloneAgents(data.agents);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading standalone agents:', error);
-                });
-        }
-
-        function displayStandaloneAgents(agents) {
-            const container = document.getElementById('standaloneAgentsList');
-            const title = document.getElementById('standaloneAgentsTitle');
-
-            if (!container) return;
-
-            // Show the section title
-            if (title) {
-                title.style.display = 'block';
-            }
-
-            // Clear existing content
-            container.innerHTML = '';
-
-            // Add each standalone agent
-            agents.forEach(agent => {
-                const agentDiv = document.createElement('div');
-                agentDiv.className = 'agent-item custom-agent-item';
-                agentDiv.onclick = (e) => {
-                    // Don't trigger if clicking dropdown or its contents
-                    if (!e.target.closest('.agent-actions-dropdown') &&
-                        !e.target.closest('.agent-menu-btn')) {
-                        e.stopPropagation();
-                        selectStandaloneAgent(e, agent.id, agent.name, agent.emoji || '🤖', agent.description);
-                    }
-                };
-
-                agentDiv.innerHTML = `
-                    <div class="agent-avatar" style="background: linear-gradient(135deg, #0EA5E9, #06B6D4);">
-                        ${agent.emoji || '🤖'}
-                    </div>
-                    <div class="agent-info">
-                        <div class="agent-name">${agent.name}</div>
-                        <div class="agent-role">${agent.description || 'Standalone Agent'}</div>
-                    </div>
-                `;
-
-                container.appendChild(agentDiv);
-            });
-        }
-
-        function selectStandaloneAgent(event, agentId, agentName, emoji, description) {
-            event.preventDefault();
-
-            // Close all dropdowns when selecting a standalone agent
-            closeAllDropdowns();
-
-            // Update current agent display
-            const agentDisplay = document.getElementById('currentAgentName');
-            if (agentDisplay) {
-                agentDisplay.textContent = agentName;
-            }
-
-            // Update current agent emoji
-            const agentEmoji = document.querySelector('.current-agent-emoji');
-            if (agentEmoji) {
-                agentEmoji.textContent = emoji;
-            }
-
-            // Store selected agent info
-            window.selectedStandaloneAgent = {
-                id: agentId,
-                name: agentName,
-                emoji: emoji,
-                description: description,
-                isStandalone: true
-            };
-
-            // Clear other agent selections
-            window.selectedGlobalAgent = null;
-            window.selectedCustomAgent = null;
-
-            // Visual feedback
-            document.querySelectorAll('.agent-item').forEach(item => {
-                item.classList.remove('active');
-            });
-            event.currentTarget.classList.add('active');
-
-            console.log('Selected standalone agent:', agentName);
-        }
-
-        // ============================================
-        // CLIENT AGENTS LOADING (PREMIUM)
+        // STAND ALONE CLIENT AGENTS LOADING (PREMIUM)
         // ============================================
 
         function loadClientAgents() {
@@ -5531,7 +5412,6 @@
             // Clear other agent selections
             window.selectedGlobalAgent = null;
             window.selectedCustomAgent = null;
-            window.selectedStandaloneAgent = null;
 
             // Visual feedback
             document.querySelectorAll('.agent-item').forEach(item => {
@@ -5539,7 +5419,7 @@
             });
             event.currentTarget.classList.add('active');
 
-            console.log('Selected client agent (PREMIUM):', agentName, '- Primary Outcome:', primaryOutcome);
+            console.log('Selected Stand Alone Client Agent (PREMIUM):', agentName, '- Primary Outcome:', primaryOutcome);
         }
 
         function showCustomAgentShare(event, agentName, shareUrl) {

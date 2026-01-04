@@ -901,32 +901,11 @@ def init_database():
     """)
 
     # ============================================
-    # STANDALONE AGENTS TABLE
+    # STAND ALONE CLIENT AGENTS TABLE
     # ============================================
-    # Standalone agents are public agents available to all users
-    # Similar to global agents but don't require individual assignment
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS standalone_agents (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            description TEXT,
-            emoji TEXT DEFAULT '🤖',
-            category TEXT DEFAULT 'general',
-            system_prompt TEXT NOT NULL,
-            template_variables TEXT DEFAULT NULL,
-            is_active BOOLEAN DEFAULT 1,
-            created_by INTEGER,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (created_by) REFERENCES users (id)
-        )
-    """)
-
-    # ============================================
-    # CLIENT AGENTS TABLE (STAND ALONE CLIENT AGENTS)
-    # ============================================
-    # Client agents are premium, single-purpose agents created for ONE specific client
+    # Stand Alone Client Agents are premium, single-purpose agents created for ONE specific client
     # Primary paid deliverable - admin-only creation and assignment
+    # NOT public - private to assigned client workspace only
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS client_agents (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -9853,61 +9832,13 @@ def unassign_global_agent(agent_id):
         return jsonify({'error': str(e)}), 500
 
 # ============================================
-# STANDALONE AGENTS ENDPOINTS
-# ============================================
-
-@app.route('/api/standalone-agents', methods=['GET'])
-@login_required
-def get_standalone_agents():
-    """Get all active standalone agents (available to all users)"""
-    try:
-        print(f"🔍 DEBUG /api/standalone-agents: current_user.id = {current_user.id}")
-
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        # Get all active standalone agents
-        cursor.execute("""
-            SELECT id, name, description, emoji, category,
-                   system_prompt, template_variables, created_at
-            FROM standalone_agents
-            WHERE is_active = 1
-            ORDER BY name
-        """)
-
-        agents = []
-        for row in cursor.fetchall():
-            agents.append({
-                'id': row[0],
-                'name': row[1],
-                'description': row[2],
-                'emoji': row[3],
-                'category': row[4],
-                'system_prompt': row[5],
-                'template_variables': json.loads(row[6]) if row[6] else None,
-                'created_at': row[7],
-                'type': 'standalone'  # Mark as standalone agent
-            })
-
-        print(f"🔍 DEBUG /api/standalone-agents: Returning {len(agents)} agents")
-
-        conn.close()
-        return jsonify({'agents': agents}), 200
-
-    except Exception as e:
-        print(f"❌ Error getting standalone agents: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
-
-# ============================================
-# CLIENT AGENTS ENDPOINTS (STAND ALONE CLIENT AGENTS)
+# STAND ALONE CLIENT AGENTS ENDPOINTS
 # ============================================
 
 @app.route('/api/client-agents', methods=['GET'])
 @login_required
 def get_client_agents():
-    """Get all active client agents assigned to current user"""
+    """Get all active Stand Alone Client Agents assigned to current user"""
     try:
         print(f"🔍 DEBUG /api/client-agents: current_user.id = {current_user.id}")
 
