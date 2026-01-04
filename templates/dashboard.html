@@ -684,6 +684,31 @@
             color: var(--text-secondary);
         }
 
+        .new-chat-btn {
+            background: linear-gradient(135deg, #10a37f, #0d8c6f);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 8px rgba(16, 163, 127, 0.2);
+        }
+
+        .new-chat-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(16, 163, 127, 0.3);
+        }
+
+        .new-chat-btn:active {
+            transform: translateY(0);
+        }
+
         .header-btn {
             background: none;
             border: 1px solid var(--border);
@@ -1768,6 +1793,12 @@
                 font-size: 11px;
                 padding: 4px 8px;
                 white-space: nowrap;
+            }
+
+            .new-chat-btn {
+                font-size: 12px;
+                padding: 6px 12px;
+                gap: 4px;
             }
 
             .menu-btn {
@@ -3084,6 +3115,11 @@
 
             <div class="header-right">
 
+                <!-- New Chat Button -->
+                <button class="new-chat-btn" onclick="startNewChat()" title="Start a fresh conversation">
+                    ✏️ New Chat
+                </button>
+
                 <!-- History Dropdown Menu -->
                 <div class="history-dropdown" id="historyDropdownMenu">
                     <div style="padding: 20px; text-align: center; color: #6b7280;">
@@ -3168,7 +3204,7 @@
         <div class="dropdown-menu" id="dropdownMenu">
             <a href="/pricing">⭐ Upgrade Plan</a>
             <a href="#" onclick="openAgentLibrary(); return false;">📚 Agent Library</a>
-            <a href="#" onclick="viewHistory(); return false;">📜 Chat History</a>
+            <a href="#" onclick="toggleHistoryDropdown(); return false;">📜 Chat History</a>
             <a href="#" onclick="clearAllChat(); return false;">🗑️ Clear Chats</a>
             {% if current_user.id == 1 %}
             <a href="/admin" id="adminLink">⚙️ Admin</a>
@@ -3767,30 +3803,43 @@
             // Pattern 1: "switch to [agent]"
             const switchPattern = /(?:switch|change)\s+to\s+(\w+(?:\s+\w+)*)/i;
             let match = message.match(switchPattern);
-            if (match) targetAgent = match[1];
+            if (match) {
+                targetAgent = match[1];
+                console.log('🎯 Pattern 1 matched (switch/change to):', targetAgent);
+            }
 
             // Pattern 2: "talk to [agent]", "speak to [agent]", "chat with [agent]"
             if (!targetAgent) {
                 const talkPattern = /(?:talk|speak|chat)\s+(?:to|with)\s+(\w+(?:\s+\w+)*)/i;
                 match = message.match(talkPattern);
-                if (match) targetAgent = match[1];
+                if (match) {
+                    targetAgent = match[1];
+                    console.log('🎯 Pattern 2 matched (talk/speak/chat):', targetAgent);
+                }
             }
 
             // Pattern 3: "I want [agent]", "get me [agent]"
             if (!targetAgent) {
                 const wantPattern = /(?:i\s+want|get\s+me|bring\s+me)\s+(\w+(?:\s+\w+)*)/i;
                 match = message.match(wantPattern);
-                if (match) targetAgent = match[1];
+                if (match) {
+                    targetAgent = match[1];
+                    console.log('🎯 Pattern 3 matched (want/get me):', targetAgent);
+                }
             }
 
             // Pattern 4: "hi [agent]", "hello [agent]", "hey [agent]" (only if it's the main part of message)
             if (!targetAgent && message.trim().split(' ').length <= 3) {
                 const greetPattern = /^(?:hi|hello|hey)\s+(\w+(?:\s+\w+)*)$/i;
                 match = message.match(greetPattern);
-                if (match) targetAgent = match[1];
+                if (match) {
+                    targetAgent = match[1];
+                    console.log('🎯 Pattern 4 matched (greeting):', targetAgent);
+                }
             }
 
             if (targetAgent && uploadedFiles.length === 0) {
+                console.log('🔀 Agent switching triggered for:', targetAgent);
                 // Try to switch to the agent
                 const success = switchToAgent(targetAgent);
                 if (success) {
@@ -3799,6 +3848,7 @@
                     return; // Don't send the message, just switch
                 }
                 // If agent not found, continue to send as regular message
+                console.log('⚠️ Agent not found, sending as regular message');
             }
 
             // Disable send button
@@ -4053,22 +4103,35 @@
         }
 
         function switchToAgent(agentName) {
+            console.log('🔄 Attempting to switch to agent:', agentName);
+
             // Find and click the agent in the sidebar (case-insensitive)
             const agentItems = document.querySelectorAll('.agent-item');
+            console.log('📋 Found', agentItems.length, 'agent items');
+
             let found = false;
 
             agentItems.forEach(item => {
                 const nameElement = item.querySelector('.agent-name');
                 if (nameElement) {
                     const itemName = nameElement.textContent.trim();
+                    console.log('  Checking agent:', itemName);
+
                     // Case-insensitive partial match
                     if (itemName.toLowerCase().includes(agentName.toLowerCase())) {
+                        console.log('  ✅ Match found! Clicking:', itemName);
                         item.click();
                         displaySystemMessage(`✅ Switched to ${itemName}`);
                         found = true;
+                        return; // Exit forEach early
                     }
                 }
             });
+
+            if (!found) {
+                console.log('❌ No agent found matching:', agentName);
+                displaySystemMessage(`❌ Agent "${agentName}" not found. Try: Luna, Mila, Sage, Ember, Sol, Nova, or Theo`);
+            }
 
             return found;
         }
@@ -4754,27 +4817,36 @@
             // Clear chat container
             const chatContainer = document.getElementById('chatContainer');
             chatContainer.innerHTML = '';
-            
+
             // Reset conversation ID
             currentConversationId = null;
-            
+
             // Show welcome message
             const currentAgent = getCurrentAgent();
+            const agentIcon = getAgentIcon(currentAgent);
             const welcomeMsg = document.createElement('div');
             welcomeMsg.className = 'welcome';
             welcomeMsg.innerHTML = `
-                <h2>Hi! I'm ${currentAgent} ${getAgentIcon(currentAgent)}</h2>
-                <p>I'm ready to help you. What can I do for you today?</p>
+                <h2>Hi! I'm ${currentAgent} ${agentIcon}</h2>
+                <p>I'm ready for a fresh conversation. What can I do for you today?</p>
             `;
             chatContainer.appendChild(welcomeMsg);
-            
-            // Close dropdown
-            toggleHistoryDropdown();
-            
+
+            // Close dropdown if open
+            const historyDropdown = document.getElementById('historyDropdownMenu');
+            if (historyDropdown && historyDropdown.classList.contains('active')) {
+                toggleHistoryDropdown();
+            }
+
             // Update dropdown
             updateHistoryDropdown();
-            
-            showNotification('Started new chat');
+
+            // Show notification
+            showNotification(`✨ New chat started with ${currentAgent}`);
+
+            // Focus on input
+            const input = document.getElementById('messageInput');
+            if (input) input.focus();
         }
 
         // Delete conversation
