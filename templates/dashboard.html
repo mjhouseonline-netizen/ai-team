@@ -613,6 +613,7 @@
             left: calc(100% + 10px);
             right: auto;
             width: 220px;
+            z-index: 1000;
         }
 
         .settings-section {
@@ -3966,8 +3967,18 @@
             const container = document.getElementById('chatContainer');
             const messageDiv = document.createElement('div');
             messageDiv.className = 'message assistant-message';
-            messageDiv.innerHTML = '<div class="message-content">' + message + '</div>';
-            
+
+            // Get current agent emoji from session storage or use default
+            const agentEmoji = sessionStorage.getItem('currentAgentEmoji') || '🌙';
+
+            // Build message with proper wrapper structure (avatar on left)
+            let content = '<div class="message-wrapper">';
+            content += '<div class="avatar">' + agentEmoji + '</div>';
+            content += '<div class="message-content">' + message + '</div>';
+            content += '</div>';
+
+            messageDiv.innerHTML = content;
+
             container.appendChild(messageDiv);
             container.scrollTop = container.scrollHeight;
         }
