@@ -327,11 +327,29 @@
         <div class="promo-section">
             <h2>🎟️ Have a Promo Code?</h2>
             <p>Redeem your promo code to unlock special discounts and benefits</p>
+
+            <!-- FREE4LIFE Code Information -->
+            <div style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 20px; border-radius: 15px; margin: 20px 0; text-align: left;">
+                <h3 style="margin: 0 0 15px 0; font-size: 20px;">✨ FREE4LIFE Code Benefits:</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                    <div>✅ Unlimited messages (no daily limit)</div>
+                    <div>✅ Access to free AI models</div>
+                    <div>✅ All 7 primary agents</div>
+                    <div>✅ 3 custom agents</div>
+                    <div>✅ Full chat history</div>
+                    <div>✅ File uploads</div>
+                </div>
+                <div style="background: rgba(255, 255, 255, 0.2); padding: 15px; border-radius: 10px; margin-top: 15px;">
+                    <p style="margin: 0 0 10px 0; font-weight: 600;">⚠️ Note: Premium models (Claude, GPT) require a paid subscription</p>
+                    <p style="margin: 0; font-size: 14px; opacity: 0.9;">Upgrade to Starter ($19/mo) for Claude & GPT access</p>
+                </div>
+            </div>
+
             <div class="promo-input-group">
                 <input type="text"
                        id="promoCodeInput"
                        class="promo-input"
-                       placeholder="Enter promo code (e.g., LAUNCH2024)"
+                       placeholder="Enter promo code (e.g., FREE4LIFE-XXXX)"
                        maxlength="50">
                 <button onclick="redeemPromoCode()" class="promo-button" id="redeemButton">
                     Redeem Code
@@ -450,6 +468,143 @@
                 {% endif %}
             </div>
 
+        </div>
+
+        <!-- Model Comparison Table -->
+        <div style="background: rgba(255, 255, 255, 0.95); border-radius: 25px; padding: 40px; margin: 40px 0;">
+            <h2 style="text-align: center; color: #10a37f; margin-bottom: 30px; font-size: 2em;">🤖 AI Models by Plan</h2>
+
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                    <thead>
+                        <tr style="background: linear-gradient(135deg, #10a37f, #0d8c6f); color: white;">
+                            <th style="padding: 15px; border-radius: 10px 0 0 0;">AI Model</th>
+                            <th style="padding: 15px; text-align: center;">Free</th>
+                            <th style="padding: 15px; text-align: center;">FREE4LIFE</th>
+                            <th style="padding: 15px; text-align: center;">Starter</th>
+                            <th style="padding: 15px; text-align: center;">Pro</th>
+                            <th style="padding: 15px; text-align: center; border-radius: 0 10px 0 0;">Enterprise</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Free Models -->
+                        <tr style="background: #f8f9fa;">
+                            <td colspan="6" style="padding: 12px 15px; font-weight: 600; color: #10a37f;">
+                                ✅ Free Models (Available on All Plans)
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 12px 15px; border-bottom: 1px solid #e0e0e0;">Gemini 2.0 Flash</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">✅</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">✅</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">✅</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">✅</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">✅</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 12px 15px; border-bottom: 1px solid #e0e0e0;">Gemini 1.5 Pro</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">✅</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">✅</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">✅</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">✅</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">✅</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 12px 15px; border-bottom: 1px solid #e0e0e0;">Llama 3.3 70B</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">✅</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">✅</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">✅</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">✅</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">✅</td>
+                        </tr>
+
+                        <!-- Starter Models -->
+                        <tr style="background: #f8f9fa;">
+                            <td colspan="6" style="padding: 12px 15px; font-weight: 600; color: #10a37f;">
+                                🔒 Premium Models (Starter+)
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 12px 15px; border-bottom: 1px solid #e0e0e0;"><strong>Claude Sonnet 4.5</strong></td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">❌</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">❌</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">✅</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">✅</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">✅</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 12px 15px; border-bottom: 1px solid #e0e0e0;"><strong>GPT-4o</strong></td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">❌</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">❌</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">✅</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">✅</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">✅</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 12px 15px; border-bottom: 1px solid #e0e0e0;">Grok 2 & Grok 2 Vision</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">❌</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">❌</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">✅</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">✅</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">✅</td>
+                        </tr>
+
+                        <!-- Pro Models -->
+                        <tr style="background: #f8f9fa;">
+                            <td colspan="6" style="padding: 12px 15px; font-weight: 600; color: #10a37f;">
+                                ⭐ Pro Models
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 12px 15px; border-bottom: 1px solid #e0e0e0;">Claude Haiku 4.5</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">❌</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">❌</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">❌</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">✅</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">✅</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 12px 15px; border-bottom: 1px solid #e0e0e0;">DeepSeek V3 & DeepSeek R1</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">❌</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">❌</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">❌</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">✅</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">✅</td>
+                        </tr>
+
+                        <!-- Enterprise Models -->
+                        <tr style="background: #f8f9fa;">
+                            <td colspan="6" style="padding: 12px 15px; font-weight: 600; color: #10a37f;">
+                                💎 Pro/Enterprise Only
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 12px 15px; border-bottom: 1px solid #e0e0e0;">Claude Opus 4</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">❌</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">❌</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">❌</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">✅</td>
+                            <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">✅</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 12px 15px;">GPT-4 Turbo</td>
+                            <td style="padding: 12px 15px; text-align: center;">❌</td>
+                            <td style="padding: 12px 15px; text-align: center;">❌</td>
+                            <td style="padding: 12px 15px; text-align: center;">❌</td>
+                            <td style="padding: 12px 15px; text-align: center;">✅</td>
+                            <td style="padding: 12px 15px; text-align: center;">✅</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #fff3cd, #ffeaa7); border-radius: 15px; border-left: 5px solid #f39c12;">
+                <p style="margin: 0; color: #856404; font-weight: 600;">💡 Pro Tip:</p>
+                <p style="margin: 10px 0 0 0; color: #856404;">
+                    FREE4LIFE users can access unlimited messages with free models. Want Claude or GPT?
+                    <a href="#" style="color: #10a37f; font-weight: 600; text-decoration: underline;">Upgrade to Starter</a> for just $19/mo!
+                </p>
+            </div>
         </div>
 
         <!-- Comparison Note -->

@@ -310,7 +310,7 @@ async function sendMessage() {
         
         const data = await response.json();
         removeTyping(typingId);
-        
+
         if (response.ok) {
             if (imageMode && data.image_url) {
                 addMessage('Here\'s your generated image!', 'assistant', data.image_url);
@@ -320,7 +320,24 @@ async function sendMessage() {
             }
             loadStats();
         } else {
-            addMessage(`Error: ${data.error || 'Failed to get response'}`, 'assistant');
+            // Check if upgrade is required (403 Forbidden with upgrade_required flag)
+            if (response.status === 403 && data.upgrade_required) {
+                // Show upgrade modal instead of error message
+                const modelName = getModelName(data.blocked_model || selectedModel);
+                const requiredTier = data.required_tier || 'a paid plan';
+                const currentTier = data.current_tier || 'free';
+
+                // Call the modal function (defined in dashboard.html)
+                if (typeof showUpgradeModal === 'function') {
+                    showUpgradeModal(modelName, requiredTier, currentTier);
+                } else {
+                    // Fallback to error message if modal function not available
+                    addMessage(`⚠️ Upgrade Required: ${data.error}\n\n💡 Click here to upgrade: /pricing`, 'assistant');
+                }
+            } else {
+                // Show regular error message
+                addMessage(`Error: ${data.error || 'Failed to get response'}`, 'assistant');
+            }
         }
     } catch (error) {
         removeTyping(typingId);
