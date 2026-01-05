@@ -7202,6 +7202,20 @@ def chat():
                 print(f"❌ File exists: {os.path.exists(DB_PATH)}")
                 return jsonify({'error': f'Database connection error: {str(e)}'}), 500
 
+            # CRITICAL: Check for Stand Alone Client Agents FIRST (highest priority)
+            # Client agents take priority over all other agent types per architecture
+            if agent in ['Luna', 'Ember']:  # Only auto-assign if using default
+                cursor.execute("""
+                    SELECT name FROM client_agents
+                    WHERE assigned_to_user_id = ? AND is_active = 1
+                    ORDER BY priority_level DESC
+                    LIMIT 1
+                """, (current_user.id,))
+                client_agent = cursor.fetchone()
+                if client_agent:
+                    agent = client_agent[0]
+                    print(f"✅ Auto-selected client agent '{agent}' for user {current_user.id}")
+
             cursor.execute("""
                 SELECT subscription_tier, messages_today, last_message_reset
                 FROM users
@@ -7378,17 +7392,47 @@ def chat():
             agent = suggested_agent  # Switch to the better agent
             was_auto_routed = True
 
-        # Get agent personality - check built-in agents first, then custom agents
+        # Get agent personality - check Stand Alone Client Agents FIRST (highest priority),
+        # then built-in agents, then custom agents, then global agents
         system_prompt = None
 
-        if agent in AGENT_PERSONALITIES:
+        # PRIORITY 1: Check for Stand Alone Client Agents (highest priority)
+        if not is_guest:
+            cursor.execute("""
+                SELECT system_prompt, name, description, emoji
+                FROM client_agents
+                WHERE assigned_to_user_id = ? AND name = ? AND is_active = 1
+            """, (current_user.id, agent))
+
+            client_agent = cursor.fetchone()
+            if client_agent:
+                base_prompt, agent_name, description, emoji = client_agent
+                system_prompt = f"""You are {agent_name}. Your role and personality:
+
+{base_prompt}
+
+CRITICAL FORMATTING RULES:
+- Write in natural, conversational paragraphs
+- Do NOT use asterisks (**), hashtags (##), dashes (---), or bullet points (•)
+- Do NOT use markdown formatting of any kind
+- Ask only ONE question per response (if you need to ask questions)
+- Write like you're talking to someone, not writing a document
+- Keep responses clear and focused
+- When introducing yourself, say "I'm {agent_name}" (not Luna or any other name)
+
+Remember: You are {agent_name}, a premium Stand Alone Client Agent. Natural conversation only. No formatting."""
+                print(f"✅ Using client agent '{agent_name}' for user {current_user.id}")
+
+        # PRIORITY 2: Check built-in agents
+        if not system_prompt and agent in AGENT_PERSONALITIES:
             # Built-in agent with team coordination enabled
             agent_info = AGENT_PERSONALITIES[agent]
             base_system_prompt = agent_info['system_prompt']
             coordination_context = get_agent_coordination_context()
             system_prompt = f"{base_system_prompt}\n\n{coordination_context}"
-        else:
-            # Check for custom agent
+
+        # PRIORITY 3: Check for custom agent
+        if not system_prompt:
             if is_guest:
                 # Guests can access any public custom agent by name
                 cursor.execute("""
@@ -7420,67 +7464,68 @@ CRITICAL FORMATTING RULES:
 - When introducing yourself, say "I'm {agent}" (not Luna or any other name)
 
 Remember: You are {agent}. Natural conversation only. No formatting."""
-            else:
-                # Check for global agent
-                if not is_guest:
-                    cursor.execute("""
-                        SELECT ga.system_prompt, ga.integrations
-                        FROM global_agents ga
-                        INNER JOIN user_global_agents uga ON ga.id = uga.global_agent_id
-                        WHERE uga.user_id = ? AND ga.name = ? AND ga.is_active = 1
-                    """, (current_user.id, agent))
 
-                    global_agent = cursor.fetchone()
-                    if global_agent:
-                        base_prompt = global_agent[0]
-                        integrations_json = global_agent[1]
+        # PRIORITY 4: Check for global agent
+        if not system_prompt:
+            if not is_guest:
+                cursor.execute("""
+                    SELECT ga.system_prompt, ga.integrations
+                    FROM global_agents ga
+                    INNER JOIN user_global_agents uga ON ga.id = uga.global_agent_id
+                    WHERE uga.user_id = ? AND ga.name = ? AND ga.is_active = 1
+                """, (current_user.id, agent))
 
-                        # Check if agent has integrations enabled
-                        integration_context = ""
-                        if integrations_json:
-                            try:
-                                needed_categories = json.loads(integrations_json)
+                global_agent = cursor.fetchone()
+                if global_agent:
+                    base_prompt = global_agent[0]
+                    integrations_json = global_agent[1]
 
-                                # Get user's connected OAuth services
-                                cursor.execute("""
-                                    SELECT service, service_email, is_active
-                                    FROM user_integrations
-                                    WHERE user_id = ? AND is_active = 1
-                                """, (current_user.id,))
+                    # Check if agent has integrations enabled
+                    integration_context = ""
+                    if integrations_json:
+                        try:
+                            needed_categories = json.loads(integrations_json)
 
-                                connected_services = {}
-                                for row in cursor.fetchall():
-                                    service, email, is_active = row
-                                    connected_services[service] = email
+                            # Get user's connected OAuth services
+                            cursor.execute("""
+                                SELECT service, service_email, is_active
+                                FROM user_integrations
+                                WHERE user_id = ? AND is_active = 1
+                            """, (current_user.id,))
 
-                                # Map categories to services and check connections
-                                available_integrations = []
-                                missing_integrations = []
+                            connected_services = {}
+                            for row in cursor.fetchall():
+                                service, email, is_active = row
+                                connected_services[service] = email
 
-                                for category in needed_categories:
-                                    if category in AVAILABLE_INTEGRATIONS:
-                                        cat_info = AVAILABLE_INTEGRATIONS[category]
-                                        for service in cat_info['services']:
-                                            if service in connected_services:
-                                                available_integrations.append({
-                                                    'service': service,
-                                                    'name': OAUTH_CONFIG[service]['name'],
-                                                    'email': connected_services[service],
-                                                    'icon': OAUTH_CONFIG[service]['icon']
-                                                })
-                                            else:
-                                                missing_integrations.append({
-                                                    'service': service,
-                                                    'name': OAUTH_CONFIG[service]['name']
-                                                })
+                            # Map categories to services and check connections
+                            available_integrations = []
+                            missing_integrations = []
 
-                                # Add integration context to system prompt
-                                if available_integrations:
-                                    integration_list = "\n".join([
-                                        f"- {integ['icon']} {integ['name']} ({integ['email']})"
-                                        for integ in available_integrations
-                                    ])
-                                    integration_context = f"""
+                            for category in needed_categories:
+                                if category in AVAILABLE_INTEGRATIONS:
+                                    cat_info = AVAILABLE_INTEGRATIONS[category]
+                                    for service in cat_info['services']:
+                                        if service in connected_services:
+                                            available_integrations.append({
+                                                'service': service,
+                                                'name': OAUTH_CONFIG[service]['name'],
+                                                'email': connected_services[service],
+                                                'icon': OAUTH_CONFIG[service]['icon']
+                                            })
+                                        else:
+                                            missing_integrations.append({
+                                                'service': service,
+                                                'name': OAUTH_CONFIG[service]['name']
+                                            })
+
+                            # Add integration context to system prompt
+                            if available_integrations:
+                                integration_list = "\n".join([
+                                    f"- {integ['icon']} {integ['name']} ({integ['email']})"
+                                    for integ in available_integrations
+                                ])
+                                integration_context = f"""
 
 CONNECTED INTEGRATIONS:
 You have access to the following connected services:
@@ -7494,20 +7539,20 @@ You can reference these integrations in your responses. For example:
 Note: While you can reference these services, actual API calls are not yet implemented.
 The user has authorized these connections."""
 
-                                if missing_integrations:
-                                    missing_list = ", ".join([m['name'] for m in missing_integrations])
-                                    integration_context += f"""
+                            if missing_integrations:
+                                missing_list = ", ".join([m['name'] for m in missing_integrations])
+                                integration_context += f"""
 
 DISCONNECTED INTEGRATIONS:
 The following integrations are configured but not connected: {missing_list}
 If the user asks about these, suggest they connect them via the Integrations page."""
 
-                            except Exception as e:
-                                print(f"Error loading integrations for agent: {e}")
-                                integration_context = ""
+                        except Exception as e:
+                            print(f"Error loading integrations for agent: {e}")
+                            integration_context = ""
 
-                        # Wrap global agent prompt with formatting rules and integrations
-                        system_prompt = f"""You are {agent}. Your role and personality:
+                    # Wrap global agent prompt with formatting rules and integrations
+                    system_prompt = f"""You are {agent}. Your role and personality:
 
 {base_prompt}
 {integration_context}
@@ -7522,13 +7567,13 @@ CRITICAL FORMATTING RULES:
 - When introducing yourself, say "I'm {agent}" (not Luna or any other name)
 
 Remember: You are {agent}. Natural conversation only. No formatting."""
-                    else:
-                        conn.close()
-                        return jsonify({'error': f'Agent "{agent}" not found'}), 400
-                else:
-                    conn.close()
-                    return jsonify({'error': f'Agent "{agent}" not found'}), 400
-        
+
+        # Final check: If no agent was found in any category, return error
+        if not system_prompt:
+            if not is_guest:
+                conn.close()
+            return jsonify({'error': f'Agent "{agent}" not found'}), 400
+
         # Get conversation history (last 10 messages for context - optimized for speed)
         # Guests don't have history (not logged in)
         if is_guest:
