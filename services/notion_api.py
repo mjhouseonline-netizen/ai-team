@@ -3,14 +3,17 @@
 
 import requests
 import sqlite3
+import os
 from typing import Optional, Dict, List
 
 NOTION_API_VERSION = "2022-06-28"
 NOTION_API_BASE = "https://api.notion.com/v1"
 
 def get_db_connection():
-    """Get connection to users database"""
-    conn = sqlite3.connect('users.db')
+    """Get connection to main database"""
+    # Use ai_team.db as the main consolidated database
+    db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'ai_team.db')
+    conn = sqlite3.connect(db_path, check_same_thread=False, timeout=10.0)
     conn.row_factory = sqlite3.Row
     return conn
 
