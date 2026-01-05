@@ -8,7 +8,7 @@ import sys
 import secrets
 import string
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask, request, jsonify, session, redirect, url_for, render_template, send_from_directory, flash
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_cors import CORS
@@ -23,6 +23,9 @@ from openai import OpenAI
 import google.generativeai as genai
 from dotenv import load_dotenv
 from agent_collaboration import detect_agent_mentions, suggest_agent_transfer
+from functools import wraps
+from collections import defaultdict
+import time
 
 # Load environment variables from .env file
 load_dotenv()
@@ -44,6 +47,53 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', os.urandom(24).hex())
 app.config['ANTHROPIC_API_KEY'] = os.environ.get('ANTHROPIC_API_KEY')
 app.config['OPENAI_API_KEY'] = os.environ.get('OPENAI_API_KEY')
 app.config['GOOGLE_AI_API_KEY'] = os.environ.get('GOOGLE_AI_API_KEY')
+
+# ============================================
+# RATE LIMITING
+# ============================================
+# Simple in-memory rate limiting (per IP address)
+rate_limit_storage = defaultdict(list)
+
+def rate_limit(max_requests=60, window_seconds=60):
+    """
+    Rate limiting decorator
+    Args:
+        max_requests: Maximum number of requests allowed
+        window_seconds: Time window in seconds
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # Get client IP
+            client_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+            if client_ip:
+                client_ip = client_ip.split(',')[0].strip()
+            else:
+                client_ip = request.remote_addr
+
+            # Create unique key for this endpoint and IP
+            key = f"{f.__name__}:{client_ip}"
+            now = time.time()
+
+            # Clean old requests outside the window
+            rate_limit_storage[key] = [
+                req_time for req_time in rate_limit_storage[key]
+                if now - req_time < window_seconds
+            ]
+
+            # Check if limit exceeded
+            if len(rate_limit_storage[key]) >= max_requests:
+                return jsonify({
+                    'error': 'Rate limit exceeded',
+                    'message': f'Too many requests. Please try again in {window_seconds} seconds.'
+                }), 429
+
+            # Add current request
+            rate_limit_storage[key].append(now)
+
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
 
 # Initialize OpenAI client with proper error handling
 try:
@@ -261,11 +311,12 @@ def get_db_connection():
 # ============================================
 
 class User:
-    def __init__(self, id, username, email, subscription_tier='free'):
+    def __init__(self, id, username, email, subscription_tier='free', display_name=None):
         self.id = id
         self.username = username
         self.email = email
         self.subscription_tier = subscription_tier
+        self.display_name = display_name
     
     def is_authenticated(self):
         return True
@@ -283,12 +334,12 @@ class User:
 def load_user(user_id):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, username, email, subscription_tier FROM users WHERE id = ?", (user_id,))
+    cursor.execute("SELECT id, username, email, subscription_tier, display_name FROM users WHERE id = ?", (user_id,))
     result = cursor.fetchone()
     conn.close()
-    
+
     if result:
-        return User(id=result[0], username=result[1], email=result[2], subscription_tier=result[3])
+        return User(id=result[0], username=result[1], email=result[2], subscription_tier=result[3], display_name=result[4])
     return None
 
 # ============================================
@@ -857,7 +908,16 @@ def init_database():
             print("✅ Added google_ai_api_key column")
         except sqlite3.OperationalError as e:
             print(f"Warning: {e}")
-    
+
+    # Migration: Add display_name column for user profile
+    if 'display_name' not in existing_columns:
+        try:
+            print("Adding display_name column...")
+            cursor.execute("ALTER TABLE users ADD COLUMN display_name TEXT")
+            print("✅ Added display_name column")
+        except sqlite3.OperationalError as e:
+            print(f"Warning: {e}")
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS chat_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2392,6 +2452,7 @@ def logout():
 # ============================================
 
 @app.route('/api/signup', methods=['POST'])
+@rate_limit(max_requests=5, window_seconds=300)  # 5 signups per 5 minutes
 def api_signup():
     """Register new user"""
     try:
@@ -2437,6 +2498,7 @@ def api_signup():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/login', methods=['POST'])
+@rate_limit(max_requests=10, window_seconds=300)  # 10 login attempts per 5 minutes
 def api_login():
     """Login user - accepts either username OR email"""
     try:
@@ -7096,6 +7158,7 @@ def call_ai_with_image(model_key, system_prompt, history, message, image_path):
         return f"I can see you've sent an image, but I encountered an error processing it: {str(e)}"
 
 @app.route('/api/chat', methods=['POST'])
+@rate_limit(max_requests=100, window_seconds=60)  # 100 messages per minute
 def chat():
     """Send message to AI agent with conversation history, multi-model support, and file uploads"""
     # Allow both logged-in users and guests (for custom agents)
@@ -8215,35 +8278,35 @@ def update_profile():
     """Update user profile"""
     try:
         data = request.json
-        new_username = data.get('username')
-        new_email = data.get('email')
-        
-        if not new_username or not new_email:
-            return jsonify({'error': 'Username and email required'}), 400
-        
+        display_name = data.get('name')
+
+        if not display_name:
+            return jsonify({'error': 'Display name required'}), 400
+
         conn = get_db_connection()
         cursor = conn.cursor()
-        
+
         try:
             cursor.execute(
-                "UPDATE users SET username = ?, email = ? WHERE id = ?",
-                (new_username, new_email, current_user.id)
+                "UPDATE users SET display_name = ? WHERE id = ?",
+                (display_name, current_user.id)
             )
             conn.commit()
             conn.close()
-            
+
             return jsonify({'success': True}), 200
-            
-        except sqlite3.IntegrityError:
+
+        except Exception as e:
             conn.close()
-            return jsonify({'error': 'Username or email already exists'}), 400
-            
+            return jsonify({'error': str(e)}), 400
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/change-password', methods=['POST'])
 @login_required
+@rate_limit(max_requests=5, window_seconds=300)  # 5 password changes per 5 minutes
 def change_password():
     """Change user password"""
     try:
@@ -8907,6 +8970,7 @@ def redeem_promo_code(code, user_id):
 
 @app.route('/api/redeem-promo-code', methods=['POST'])
 @login_required
+@rate_limit(max_requests=10, window_seconds=60)  # 10 promo code attempts per minute
 def api_redeem_promo_code():
     """Redeem a promo code"""
     try:
@@ -9281,6 +9345,7 @@ def get_custom_agents():
 @app.route('/api/custom-agents', methods=['POST'])
 @app.route('/api/custom-agent/create', methods=['POST'])  # Alias for frontend compatibility
 @login_required
+@rate_limit(max_requests=20, window_seconds=60)  # 20 custom agent creations per minute
 def create_custom_agent():
     """Create a new custom agent"""
 

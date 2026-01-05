@@ -1448,12 +1448,30 @@
             animation: pulse 2s ease-in-out infinite;
         }
 
+        .voice-conversation-btn.recording {
+            background: #ef4444;
+            border-color: #dc2626;
+            color: white;
+            animation: recordingPulse 1s ease-in-out infinite;
+        }
+
         @keyframes pulse {
             0%, 100% {
                 box-shadow: 0 0 0 0 rgba(16, 163, 127, 0.4);
             }
             50% {
                 box-shadow: 0 0 0 8px rgba(16, 163, 127, 0);
+            }
+        }
+
+        @keyframes recordingPulse {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+                transform: scale(1);
+            }
+            50% {
+                box-shadow: 0 0 0 12px rgba(239, 68, 68, 0);
+                transform: scale(1.1);
             }
         }
 
@@ -4319,16 +4337,22 @@
                 alert('❌ Voice input is not supported in your browser. Please use Chrome, Edge, or Safari.');
                 return;
             }
-            
+
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognition = new SpeechRecognition();
             recognition.continuous = false;
             recognition.interimResults = false;
             recognition.lang = 'en-US';
-            
+
             // Show visual indicator
             showVoiceStatus('🎤 Listening... Speak now!');
             isRecording = true;
+
+            // Add recording class to voice button
+            const voiceBtn = document.getElementById('voiceConversationBtn');
+            if (voiceBtn) {
+                voiceBtn.classList.add('recording');
+            }
             
             recognition.onresult = function(event) {
                 const transcript = event.results[0][0].transcript;
@@ -4384,6 +4408,12 @@
             }
             hideVoiceStatus();
             isRecording = false;
+
+            // Remove recording class from voice button
+            const voiceBtn = document.getElementById('voiceConversationBtn');
+            if (voiceBtn) {
+                voiceBtn.classList.remove('recording');
+            }
         }
 
         function showVoiceStatus(message) {
