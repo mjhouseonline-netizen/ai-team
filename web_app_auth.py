@@ -757,6 +757,25 @@ def init_database():
 
     ============================================
     """
+    # ============================================
+    # SAFETY: Create backup before any migrations
+    # ============================================
+    try:
+        import shutil
+        from datetime import datetime
+
+        # Only backup if database exists and has data
+        if os.path.exists(DB_PATH) and os.path.getsize(DB_PATH) > 0:
+            backup_dir = 'migration_backups'
+            os.makedirs(backup_dir, exist_ok=True)
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            backup_path = os.path.join(backup_dir, f'pre_migration_{timestamp}.db')
+            shutil.copy2(DB_PATH, backup_path)
+            print(f"🔒 SAFETY: Created pre-migration backup: {backup_path}")
+    except Exception as e:
+        print(f"⚠️  Warning: Could not create backup: {e}")
+        # Continue anyway - don't block startup
+
     conn = get_db_connection()
     cursor = conn.cursor()
     
