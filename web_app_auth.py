@@ -371,13 +371,15 @@ SUBSCRIPTION_TIERS = {
         'custom_agents_limit': 3,
         'api_access': False,  # NO API access for promo users
         'features': [
-            'Unlimited messages',
-            'All 7 AI agents',
+            'Unlimited messages (no daily limit)',
+            'Access to free AI models (Gemini, Llama)',
+            'All 7 primary agents',
             '3 custom agents',
             'Full chat history',
             'File upload & analysis',
             'Notion integration',
-            'Priority support'
+            '⚠️ Premium models (Claude, GPT) require paid subscription',
+            'Upgrade to Starter ($19/mo) for Claude & GPT access'
         ]
     },
     'starter': {
