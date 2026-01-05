@@ -11160,7 +11160,8 @@ def create_website_file():
         
         # Sanitize filename
         filename = secure_filename(filename)
-        if not filename.endswith('.html'):
+        # Support both .html and .txt files
+        if not (filename.endswith('.html') or filename.endswith('.txt')):
             filename += '.html'
         
         # Create unique filename with timestamp
