@@ -368,7 +368,7 @@
 
             <!-- Usage Chart -->
             <div class="chart-card">
-                <div class="chart-title">Message Usage (Last 7 Days)</div>
+                <div class="chart-title">Agent Usage Statistics</div>
                 <canvas id="usageChart" height="80"></canvas>
             </div>
 
@@ -401,27 +401,30 @@
         // Load stats
         async function loadStats() {
             try {
-                const response = await fetch('/api/admin-stats', { credentials: 'include' });
+                const response = await fetch('/api/admin/analytics', { credentials: 'include' });
                 const data = await response.json();
-                
+
                 document.getElementById('totalUsers').textContent = data.total_users || 0;
                 document.getElementById('messagesToday').textContent = data.messages_today || 0;
-                document.getElementById('activeSubscriptions').textContent = data.active_subscriptions || 0;
-                document.getElementById('customAgents').textContent = data.custom_agents || 0;
-                
-                // Load chart
-                if (data.usage_data) {
+                document.getElementById('activeSubscriptions').textContent = data.paid_users || 0;
+                document.getElementById('customAgents').textContent = data.total_custom_agents || 0;
+
+                // Load chart with agent usage data
+                if (data.agent_usage) {
                     const ctx = document.getElementById('usageChart').getContext('2d');
+                    const agentNames = Object.keys(data.agent_usage);
+                    const agentCounts = Object.values(data.agent_usage);
+
                     new Chart(ctx, {
-                        type: 'line',
+                        type: 'bar',
                         data: {
-                            labels: data.usage_data.labels,
+                            labels: agentNames,
                             datasets: [{
-                                label: 'Messages',
-                                data: data.usage_data.values,
+                                label: 'Messages per Agent',
+                                data: agentCounts,
+                                backgroundColor: 'rgba(16, 163, 127, 0.6)',
                                 borderColor: '#10a37f',
-                                backgroundColor: 'rgba(16, 163, 127, 0.1)',
-                                tension: 0.4
+                                borderWidth: 2
                             }]
                         },
                         options: {
@@ -431,25 +434,31 @@
                                 legend: {
                                     display: false
                                 }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
                             }
                         }
                     });
                 }
-                
+
                 // Load activity table
                 if (data.recent_activity) {
                     const tbody = document.getElementById('activityTable');
                     tbody.innerHTML = data.recent_activity.map(user => `
                         <tr>
                             <td>${user.email}</td>
-                            <td>${user.messages}</td>
-                            <td>${user.plan}</td>
-                            <td>${new Date(user.last_active).toLocaleDateString()}</td>
+                            <td>${user.total_messages}</td>
+                            <td>${user.subscription_tier}</td>
+                            <td>${user.last_active !== 'Never' ? new Date(user.last_active).toLocaleString() : 'Never'}</td>
                         </tr>
                     `).join('');
                 }
             } catch (error) {
                 console.error('Error loading stats:', error);
+                document.getElementById('activityTable').innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px; color: red;">Error loading analytics data</td></tr>';
             }
         }
 
