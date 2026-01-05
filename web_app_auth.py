@@ -7205,16 +7205,21 @@ def chat():
             # CRITICAL: Check for Stand Alone Client Agents FIRST (highest priority)
             # Client agents take priority over all other agent types per architecture
             if agent in ['Luna', 'Ember']:  # Only auto-assign if using default
-                cursor.execute("""
-                    SELECT name FROM client_agents
-                    WHERE assigned_to_user_id = ? AND is_active = 1
-                    ORDER BY priority_level DESC
-                    LIMIT 1
-                """, (current_user.id,))
-                client_agent = cursor.fetchone()
-                if client_agent:
-                    agent = client_agent[0]
-                    print(f"✅ Auto-selected client agent '{agent}' for user {current_user.id}")
+                try:
+                    cursor.execute("""
+                        SELECT name FROM client_agents
+                        WHERE assigned_to_user_id = ? AND is_active = 1
+                        ORDER BY priority_level DESC
+                        LIMIT 1
+                    """, (current_user.id,))
+                    client_agent = cursor.fetchone()
+                    if client_agent:
+                        agent = client_agent[0]
+                        print(f"✅ Auto-selected client agent '{agent}' for user {current_user.id}")
+                except Exception as e:
+                    # If client_agents table doesn't exist or query fails, continue with default agent
+                    print(f"⚠️ Client agent query failed (continuing with {agent}): {e}")
+                    pass
 
             cursor.execute("""
                 SELECT subscription_tier, messages_today, last_message_reset
