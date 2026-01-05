@@ -5970,6 +5970,9 @@
                             <button class="message-action-btn" onclick="copyMessage('${messageId}')" title="Copy">
                                 📋 Copy
                             </button>
+                            <button class="message-action-btn" onclick="downloadMessage('${messageId}')" title="Download">
+                                💾 Download
+                            </button>
                             <button class="message-action-btn" onclick="regenerateResponse()" title="Regenerate">
                                 🔄 Regenerate
                             </button>
@@ -6038,6 +6041,42 @@
             btn.style.color = '#ef4444';
             btn.textContent = '👎✓';
             showNotification('📝 Thanks for your feedback. We\'ll improve!');
+        }
+
+        async function downloadMessage(messageId) {
+            try {
+                const messageDiv = document.getElementById(messageId);
+                const messageContent = messageDiv.querySelector('.message-content');
+                const text = messageContent.innerText || messageContent.textContent;
+
+                // Show loading notification
+                showNotification('💾 Preparing download...');
+
+                // Create the file via API
+                const response = await fetch('/api/create-website-file', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        filename: 'agent_response.txt',
+                        code: text
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    // Open download URL in new window
+                    window.open(result.download_url, '_blank');
+                    showNotification('✅ Download started!');
+                } else {
+                    throw new Error(result.error || 'Failed to create download');
+                }
+            } catch (error) {
+                console.error('Download failed:', error);
+                showNotification('❌ Failed to download message');
+            }
         }
 
         function formatAssistantMessage(message) {
