@@ -11,6 +11,24 @@ let currentAgentRole = 'Research Analyst';
 let voiceMode = false;
 let uploadedFile = null;
 let speechSynthesis = window.speechSynthesis;
+async function uploadSingleFile(file) {
+    const fd = new FormData();
+    fd.append('file', file); // REQUIRED name for your /api/upload backend
+
+    const res = await fetch('/api/upload', {
+        method: 'POST',
+        credentials: 'include',
+        body: fd
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Upload failed');
+    }
+
+    return data.filepath;
+}
 
 const agentGradients = {
     'Luna': 'linear-gradient(135deg, #667eea, #764ba2)',
@@ -325,33 +343,31 @@ async function sendMessage() {
             return;
         }
 
-        // Chat mode: use multipart FormData so binary files (docx/images) upload correctly
-        const formData = new FormData();
-        formData.append('message', message || 'Please analyze these file(s)');
-        formData.append('agent', currentAgent);
-        formData.append('model', selectedModel);
+        // Chat mode: upload files first, then send JSON with filepaths
+        const filepaths = [];
 
-        let count = 0;
         if (filesToSend.length > 0) {
-            filesToSend.forEach((file) => {
-                if (file instanceof File) {
-                    formData.append(`file_${count}`, file);
-                    count += 1;
+            for (const f of filesToSend) {
+                if (f instanceof File) {
+                    const fp = await uploadSingleFile(f);
+                    filepaths.push(fp);
                 }
-            });
+            }
         } else if (singleFile) {
-            formData.append('file_0', singleFile);
-            count = 1;
-        }
-
-        if (count > 0) {
-            formData.append('file_count', String(count));
+            const fp = await uploadSingleFile(singleFile);
+            filepaths.push(fp);
         }
 
         const response = await fetch('/api/chat', {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: formData
+            body: JSON.stringify({
+                message: message || 'Please analyze the uploaded file(s)',
+                agent: currentAgent,
+                model: selectedModel,
+                filepaths: filepaths
+            })
         });
 
         const data = await response.json();
@@ -359,7 +375,12 @@ async function sendMessage() {
 
         if (response.ok) {
             const modelBadge = data.model_used ? getModelName(data.model_used) : '';
-            addMessage(data.response || data.message || '(No response)', 'assistant', null, modelBadge);
+            addMessage(
+                data.response || data.message || '(No response)',
+                'assistant',
+                null,
+                modelBadge
+            );
             loadStats();
         } else {
             if (response.status === 403 && data.upgrade_required) {
@@ -370,18 +391,18 @@ async function sendMessage() {
                 if (typeof showUpgradeModal === 'function') {
                     showUpgradeModal(modelName, requiredTier, currentTier);
                 } else {
-                    addMessage(`Upgrade Required: ${data.error || 'Please upgrade to use this model.'}`, 'assistant');
+                    addMessage(
+                        `Upgrade Required: ${data.error || 'Please upgrade to use this model.'}`,
+                        'assistant'
+                    );
                 }
             } else {
-                addMessage(`Error: ${data.error || 'Failed to get response'}`, 'assistant');
+                addMessage(
+                    `Error: ${data.error || 'Failed to get response'}`,
+                    'assistant'
+                );
             }
         }
-
-    } catch (error) {
-        removeTyping(typingId);
-        console.error('Send message error:', error);
-        addMessage('Error: Failed to connect to server', 'assistant');
-    }
 
     sendBtn.disabled = false;
     sendBtn.textContent = 'Send';
