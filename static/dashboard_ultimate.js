@@ -404,21 +404,27 @@ async function sendMessage() {
             }
         }
 
-    sendBtn.disabled = false;
-    sendBtn.textContent = 'Send';
+    } catch (error) {
+        removeTyping(typingId);
+        console.error('Send message error:', error);
+        addMessage('Error: Failed to connect to server', 'assistant');
+    } finally {
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Send';
 
-    // Clear files via dashboard.html helper if available
-    if (typeof removeFile === 'function') {
-        removeFile();
-    } else {
-        // Fallback
-        uploadedFile = null;
-        if (typeof uploadedFiles !== 'undefined') {
-            uploadedFiles.length = 0;
+        // Clear files via dashboard.html helper if available
+        if (typeof removeFile === 'function') {
+            removeFile();
+        } else {
+            // Fallback
+            uploadedFile = null;
+            if (typeof uploadedFiles !== 'undefined') {
+                uploadedFiles.length = 0;
+            }
         }
-    }
 
-    if (imageMode) toggleImageMode();
+        if (imageMode) toggleImageMode();
+    }
 }
 
 // ================================================
