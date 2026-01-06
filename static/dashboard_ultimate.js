@@ -133,10 +133,8 @@ function handleKeyPress(event) {
     }
 }
 
-function autoResize(textarea) {
-    textarea.style.height = 'auto';
-    textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
-}
+// autoResize is defined in dashboard.html. (disabled in dashboard_ultimate.js)
+
 
 function toggleImageMode() {
     imageMode = !imageMode;
@@ -164,11 +162,8 @@ function toggleImageMode() {
 // FILE HANDLING
 // ================================================
 
-function setupFileInput() {
-    // File input is handled by the HTML's own implementation
-    // This function is kept for compatibility but doesn't override the HTML handler
-    console.log('✅ File input handler initialized');
-}
+// setupFileInput is defined in dashboard.html. (disabled in dashboard_ultimate.js)
+
 
 // Note: removeFile() is defined in dashboard.html
 // Do not override it here to avoid conflicts
@@ -237,114 +232,95 @@ function speakText(text) {
 // SEND MESSAGE
 // ================================================
 
-// ================================================
-// SEND MESSAGE
-// ================================================
-
 async function sendMessage() {
     const input = document.getElementById('messageInput');
     const message = input.value.trim();
-
-    // Use the multi-file system defined in dashboard.html (global scope)
-    const filesToSend = (typeof uploadedFiles !== 'undefined' && Array.isArray(uploadedFiles)) ? uploadedFiles : [];
-
-    if (!message && filesToSend.length === 0) return;
-
+    
+    if (!message && !uploadedFile) return;
+    
     const sendBtn = document.getElementById('sendBtn');
     sendBtn.disabled = true;
     sendBtn.textContent = 'Sending...';
-
+    
     let displayMessage = message;
-    if (filesToSend.length > 0) {
-        const names = filesToSend.map(f => f.name).join(', ');
-        displayMessage = `📎 ${names}\n${message}`;
+    if (uploadedFile) {
+        displayMessage = `📎 ${uploadedFile.original_filename}\n${message}`;
     }
-
+    
     addMessage(displayMessage || '📎 File uploaded', 'user');
     input.value = '';
     input.style.height = 'auto';
-
+    
     const typingId = showTyping();
-
+    
     try {
         const selectedModel = document.getElementById('modelSelect').value;
-
-        // Image mode remains JSON
+        let endpoint = '/api/chat';
+        let requestBody = {
+            message: message || 'Please analyze this file',
+            agent: currentAgent,
+            model: selectedModel,
+            file: uploadedFile
+        };
+        
         if (imageMode) {
-            const response = await fetch('/api/generate-image-free', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({
-                    prompt: message,
-                    agent: currentAgent
-                })
-            });
-
-            const data = await response.json();
-            removeTyping(typingId);
-
-            if (response.ok && data.image_url) {
-                addMessage('Here\'s your generated image!', 'assistant', data.image_url);
-            } else {
-                addMessage(`Error: ${data.error || 'Failed to generate image'}`, 'assistant');
-            }
-
-            sendBtn.disabled = false;
-            sendBtn.textContent = 'Send';
-            toggleImageMode();
-            return;
+            endpoint = '/api/generate-image-free';
+            requestBody = {
+                prompt: message,
+                agent: currentAgent
+            };
         }
-
-        // Send as FormData so the server can receive request.files
-        const formData = new FormData();
-        formData.append('message', message || 'Please analyze these file(s)');
-        formData.append('agent', currentAgent);
-        formData.append('model', selectedModel);
-
-        if (filesToSend.length > 0) {
-            filesToSend.forEach((file, index) => {
-                formData.append(`file_${index}`, file);
-            });
-            formData.append('file_count', String(filesToSend.length));
-        }
-
-        const response = await fetch('/api/chat', {
+        
+        const response = await fetch(endpoint, {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: formData
+            body: JSON.stringify(requestBody)
         });
-
+        
         const data = await response.json();
         removeTyping(typingId);
 
         if (response.ok) {
-            const modelBadge = data.model_used ? getModelName(data.model_used) : '';
-            addMessage(data.response, 'assistant', null, modelBadge);
+            if (imageMode && data.image_url) {
+                addMessage('Here\'s your generated image!', 'assistant', data.image_url);
+            } else {
+                const modelBadge = data.model_used ? getModelName(data.model_used) : '';
+                addMessage(data.response, 'assistant', null, modelBadge);
+            }
             loadStats();
         } else {
-            addMessage(`Error: ${data.error || 'Failed to get response'}`, 'assistant');
+            // Check if upgrade is required (403 Forbidden with upgrade_required flag)
+            if (response.status === 403 && data.upgrade_required) {
+                // Show upgrade modal instead of error message
+                const modelName = getModelName(data.blocked_model || selectedModel);
+                const requiredTier = data.required_tier || 'a paid plan';
+                const currentTier = data.current_tier || 'free';
+
+                // Call the modal function (defined in dashboard.html)
+                if (typeof showUpgradeModal === 'function') {
+                    showUpgradeModal(modelName, requiredTier, currentTier);
+                } else {
+                    // Fallback to error message if modal function not available
+                    addMessage(`⚠️ Upgrade Required: ${data.error}\n\n💡 Click here to upgrade: /pricing`, 'assistant');
+                }
+            } else {
+                // Show regular error message
+                addMessage(`Error: ${data.error || 'Failed to get response'}`, 'assistant');
+            }
         }
     } catch (error) {
         removeTyping(typingId);
         console.error('Send message error:', error);
         addMessage('Error: Failed to connect to server', 'assistant');
     }
-
+    
     sendBtn.disabled = false;
     sendBtn.textContent = 'Send';
-
+    
     if (imageMode) toggleImageMode();
+    // removeFile handled in dashboard.html
 
-    // Clear files using the dashboard.html function if available
-    if (typeof removeFile === 'function') {
-        removeFile();
-    } else {
-        // Fallback: clear array if it exists
-        if (typeof uploadedFiles !== 'undefined' && Array.isArray(uploadedFiles)) {
-            uploadedFiles.length = 0;
-        }
-    }
 }
 
 // ================================================
@@ -389,12 +365,11 @@ function addMessage(text, type, imageUrl = null, modelBadge = '') {
         `;
     } else {
         const voiceBtn = type === 'assistant' ? `<button class="voice-btn" onclick="speakText(\`${text.replace(/`/g, '\\`').replace(/"/g, '&quot;')}\`)">🔊 Listen</button>` : '';
-        const docxBtn = type === 'assistant' ? `<button class="voice-btn" style="margin-left:8px" onclick="downloadDocx(\`${text.replace(/`/g, '\\`').replace(/"/g, '&quot;')}\`, 'ai_team_response')">DOCX</button>` : '';
         messageDiv.innerHTML = `
             <div class="avatar" style="${type === 'assistant' ? 'background: ' + (agentGradients[currentAgent] || 'linear-gradient(135deg, #667eea, #764ba2)') : 'background: #5436da'}">${avatar}</div>
             <div class="message-content">
                 ${escapeHtml(text)}${badge}
-                ${voiceBtn}${docxBtn}
+                ${voiceBtn}
             </div>
         `;
     }
@@ -470,40 +445,6 @@ function closeFloatingPreview() {
 function minimizePreview() {
     // Could implement minimize functionality
     closeFloatingPreview();
-}
-
-
-// ================================================
-// DOCX DOWNLOAD
-// ================================================
-
-async function downloadDocx(content, suggestedName = 'document') {
-    try {
-        const res = await fetch('/api/generate-docx', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({
-                content: content || '',
-                filename: suggestedName
-            })
-        });
-
-        const data = await res.json();
-        if (!res.ok) {
-            alert(data.error || 'Failed to generate DOCX');
-            return;
-        }
-
-        if (data.download_url) {
-            window.location.href = data.download_url;
-        } else {
-            alert('No download URL returned');
-        }
-    } catch (e) {
-        console.error('DOCX download error:', e);
-        alert('Failed to generate DOCX');
-    }
 }
 
 // ================================================

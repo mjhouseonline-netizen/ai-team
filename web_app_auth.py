@@ -7314,91 +7314,6 @@ def call_ai_with_image(model_key, system_prompt, history, message, image_path):
         # Fallback: describe that an image was sent
         return f"I can see you've sent an image, but I encountered an error processing it: {str(e)}"
 
-
-# ============================================
-# DOCUMENT GENERATION API (DOCX)
-# ============================================
-
-def _get_owner_id_for_request():
-    """Return a stable owner id for authenticated users and guests."""
-    try:
-        if current_user and getattr(current_user, 'is_authenticated', False):
-            return str(current_user.id)
-    except Exception:
-        pass
-
-    if 'guest_id' not in session:
-        session['guest_id'] = secrets.token_hex(8)
-    return f"guest_{session['guest_id']}"
-
-# Use Render persistent disk when available
-GENERATED_FILES_ROOT = os.environ.get('GENERATED_FILES_ROOT') or ('/data/generated' if os.path.exists('/data') else os.path.join(os.getcwd(), 'generated'))
-
-@app.route('/api/generate-docx', methods=['POST'])
-def generate_docx():
-    """Generate a Word document (.docx) from provided text content."""
-    try:
-        data = request.get_json(silent=True) or {}
-        content = (data.get('content') or '').strip()
-        filename = (data.get('filename') or 'document').strip()
-
-        if not content:
-            return jsonify({'error': 'No content provided'}), 400
-
-        # Basic filename hardening
-        filename = re.sub(r'[^a-zA-Z0-9._-]+', '_', filename)[:80].strip('._-') or 'document'
-        if not filename.lower().endswith('.docx'):
-            filename = f"{filename}.docx"
-
-        try:
-            from docx import Document
-        except Exception as e:
-            return jsonify({'error': f'python-docx is not available: {str(e)}'}), 500
-
-        owner_id = _get_owner_id_for_request()
-        out_dir = os.path.join(GENERATED_FILES_ROOT, 'docx', owner_id)
-        os.makedirs(out_dir, exist_ok=True)
-
-        # Ensure unique filename
-        ts = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
-        unique_name = f"{filename[:-5]}_{ts}.docx"
-        out_path = os.path.join(out_dir, unique_name)
-
-        doc = Document()
-        # Preserve paragraphs in a simple way
-        for line in content.split('\n'):
-            doc.add_paragraph(line)
-        doc.save(out_path)
-
-        return jsonify({
-            'success': True,
-            'filename': unique_name,
-            'download_url': f"/downloads/{owner_id}/{unique_name}"
-        }), 200
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/downloads/<owner_id>/<path:filename>', methods=['GET'])
-def download_generated_file(owner_id, filename):
-    """Serve generated files back to the user (only for the same owner)."""
-    try:
-        current_owner = _get_owner_id_for_request()
-        if owner_id != current_owner:
-            return jsonify({'error': 'Unauthorized'}), 403
-
-        # Only allow .docx for now
-        if not filename.lower().endswith('.docx'):
-            return jsonify({'error': 'Unsupported file type'}), 400
-
-        safe_name = os.path.basename(filename)
-        out_dir = os.path.join(GENERATED_FILES_ROOT, 'docx', owner_id)
-        return send_from_directory(out_dir, safe_name, as_attachment=True)
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
 @app.route('/api/chat', methods=['POST'])
 @rate_limit(max_requests=100, window_seconds=60)  # 100 messages per minute
 def chat():
@@ -7492,6 +7407,26 @@ def chat():
                 filepath = os.path.join(user_folder, unique_name)
 
                 fs.save(filepath)
+
+                # If the saved file is unexpectedly empty, try rewinding the stream and writing manually.
+                try:
+                    saved_size = os.path.getsize(filepath)
+                except Exception:
+                    saved_size = -1
+
+                if saved_size == 0:
+                    try:
+                        fs.stream.seek(0)
+                        data = fs.read()
+                        if data:
+                            with open(filepath, 'wb') as out_f:
+                                out_f.write(data)
+                            saved_size = os.path.getsize(filepath)
+                            print(f"⚠️ Rewrote empty upload from stream: {unique_name} ({saved_size} bytes)")
+                        else:
+                            print(f"❌ Upload stream empty for {unique_name}; client likely sent 0 bytes")
+                    except Exception as e:
+                        print(f"❌ Failed to recover empty upload {unique_name}: {e}")
 
                 filepaths.append(filepath)
                 attached_files.append({
