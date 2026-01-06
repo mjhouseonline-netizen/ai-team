@@ -7686,7 +7686,10 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
 
             # Process all uploaded files
             file_contents = []
+            print(f"🔍 Processing {len(uploaded_files)} uploaded file(s)")
             for uploaded_file in uploaded_files:
+                print(f"📎 File: {uploaded_file.filename}")
+
                 # Save the uploaded file
                 filename = secure_filename(uploaded_file.filename)
                 user_folder = os.path.join(UPLOAD_FOLDER, str(current_user.id))
@@ -7696,6 +7699,7 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
                 uploaded_file.save(filepath)
 
                 file_extension = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+                print(f"   Extension: {file_extension}, Size: {os.path.getsize(filepath)} bytes")
 
                 file_data = {
                     'filename': filename,
@@ -7728,10 +7732,17 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
             # Add file contents to message
             if file_contents:
                 files_text = "\n\n---\n\n".join(file_contents)
+                print(f"✅ Adding file info to message. File contents preview:")
+                print(f"   {files_text[:300]}...")
                 if message:
                     message = f"{message}\n\n{files_text}"
+                    print(f"✅ Combined message with user text and files (total: {len(message)} chars)")
                 else:
                     message = files_text
+                    print(f"✅ Message is only file info (no user text)")
+            else:
+                print(f"⚠️  WARNING: No file_contents extracted from {len(uploaded_files)} uploaded file(s)!")
+                print(f"   This means files were uploaded but not processed correctly")
 
             # Keep backward compatibility for single file
             file_info = files_info[0] if files_info else None
