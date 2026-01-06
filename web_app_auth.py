@@ -2490,6 +2490,15 @@ def index():
     """Homepage"""
     return render_template('index.html')
 
+@app.route('/api/version')
+def version_check():
+    """Public endpoint to verify deployment version"""
+    return jsonify({
+        'version': 'v2024-01-06-route-fix',
+        'status': 'Route conflict fixed - /api/chat should work now',
+        'timestamp': '2024-01-06T00:00:00Z'
+    })
+
 @app.route('/about')
 def about():
     """About page"""
@@ -6860,6 +6869,8 @@ def upload_file():
 def diagnose_file_libs():
     """Diagnostic endpoint to check if file processing libraries are installed"""
     diagnosis = {
+        'version': 'v2024-01-06-fix-duplicate-route',
+        'last_updated': '2024-01-06 - Fixed duplicate /api/chat route bug',
         'libraries': {},
         'upload_folders': {},
         'environment': {}
