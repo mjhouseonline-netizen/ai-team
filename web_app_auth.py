@@ -11146,6 +11146,34 @@ def global_agent_chat():
         data = request.json
         share_code = data.get('share_code')
         message = data.get('message')
+# ---- FILE ATTACHMENT HANDLING (ADD THIS) ----
+attached_file = data.get('file')
+filepaths = data.get('filepaths', [])
+attached_files = data.get('files', [])
+
+collected_paths = []
+
+# file can be a string path OR a dict with filepath
+if isinstance(attached_file, dict):
+    fp = attached_file.get('filepath')
+    if isinstance(fp, str) and fp.strip():
+        collected_paths.append(fp)
+elif isinstance(attached_file, str) and attached_file.strip():
+    collected_paths.append(attached_file)
+
+# filepaths: ["uploads/<user_id>/..."]
+if isinstance(filepaths, list):
+    collected_paths.extend(
+        [p for p in filepaths if isinstance(p, str) and p.strip()]
+    )
+
+# files: [{"filepath": "..."}]
+if isinstance(attached_files, list):
+    for f in attached_files:
+        if isinstance(f, dict):
+            fp = f.get('filepath')
+            if isinstance(fp, str) and fp.strip():
+                collected_paths.append(fp)
 
         if not share_code or not message:
             return jsonify({'error': 'Missing required fields'}), 400
