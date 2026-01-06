@@ -4012,9 +4012,18 @@
                 // Show thinking indicator
                 thinkingInterval = displayThinkingIndicator();
 
-                // Clear input and file
+                // Clear input text only (DO NOT clear files yet)
+                // Display user message immediately with files
+                displayUserMessage(
+                    message,
+                    uploadedFiles.length > 0 ? uploadedFiles : null
+                );
+
+                // Show thinking indicator
+                thinkingInterval = displayThinkingIndicator();
+
+                // Clear input text ONLY (do NOT clear files yet)
                 input.value = '';
-                removeFile();
                 autoResize(input);
 
                 // 1) Upload files first using /api/upload (one file at a time)
@@ -4046,7 +4055,7 @@
                     credentials: 'include',
                     body: JSON.stringify({
                         message: message || 'Please analyze the uploaded file(s)',
-                        agent: getCurrentAgent(), // or currentAgent if that’s what you use
+                        agent: getCurrentAgent(),
                         model: model,
                         filepaths: filepaths
                     })
@@ -4056,6 +4065,9 @@
 
                 // Remove thinking indicator before showing response
                 removeThinkingIndicator(thinkingInterval);
+
+                // NOW it is safe to clear files
+                removeFile();
 
                 if (data.success) {
                     // Check if agent was auto-routed
