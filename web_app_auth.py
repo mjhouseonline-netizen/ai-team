@@ -11204,7 +11204,7 @@ def global_agent_chat():
         # ---------- FILE CONTENT INJECTION ----------
         file_context_blocks = []
 
-        upload_root = app.config.get('UPLOAD_FOLDER', 'uploads')
+        upload_root = UPLOAD_FOLDER
         upload_root_real = os.path.realpath(upload_root)
 
         for fp in collected_paths:
