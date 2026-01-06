@@ -15,7 +15,8 @@ IS_RENDER = os.environ.get('RENDER') == 'true' or os.environ.get('RENDER_SERVICE
 
 # Database files to backup
 if IS_RENDER:
-    DB_FILES = ['/tmp/ai_team.db']  # On Render, database is in /tmp
+    # UPDATED: Database is now in /data (persistent) instead of /tmp (ephemeral)
+    DB_FILES = ['/data/ai_team.db']
     BACKUP_DIR = '/data/auto_backups'  # Save backups to persistent storage
 else:
     DB_FILES = ['ai_team.db', 'users.db', 'ai_team_platform.db']
@@ -43,13 +44,14 @@ def create_backup():
         print(f"✅ Backup created: {backup_path}")
         cleanup_old_backups()
 
-        # On Render, also sync /tmp database to /data for persistence
-        if IS_RENDER and os.path.exists('/tmp/ai_team.db'):
+        # Database is already in /data (persistent), no sync needed anymore!
+        # Legacy /tmp to /data migration (if old db exists)
+        if IS_RENDER and os.path.exists('/tmp/ai_team.db') and not os.path.exists('/data/ai_team.db'):
             try:
                 shutil.copy2('/tmp/ai_team.db', '/data/ai_team.db')
-                print(f"✅ Synced database to persistent storage: /data/ai_team.db")
+                print(f"✅ Migrated legacy database from /tmp to /data")
             except Exception as e:
-                print(f"⚠️  Failed to sync to /data: {e}")
+                print(f"⚠️  Migration failed: {e}")
     else:
         print("⚠️  No database files found to backup")
         # Remove empty backup directory
