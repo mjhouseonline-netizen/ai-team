@@ -237,93 +237,111 @@ function speakText(text) {
 // SEND MESSAGE
 // ================================================
 
+// ================================================
+// SEND MESSAGE (FIXED: SUPPORTS REAL FILE UPLOADS)
+// ================================================
 async function sendMessage() {
     const input = document.getElementById('messageInput');
     const message = input.value.trim();
-    
-    if (!message && !uploadedFile) return;
-    
+
+    // IMPORTANT:
+    // uploadedFiles is defined in dashboard.html as a global (let uploadedFiles = [])
+    // We reuse it here so files actually upload.
+    const filesToSend = (typeof uploadedFiles !== 'undefined') ? uploadedFiles : [];
+
+    if (!message && filesToSend.length === 0) return;
+
     const sendBtn = document.getElementById('sendBtn');
     sendBtn.disabled = true;
     sendBtn.textContent = 'Sending...';
-    
+
+    // Display user message immediately
     let displayMessage = message;
-    if (uploadedFile) {
-        displayMessage = `📎 ${uploadedFile.original_filename}\n${message}`;
+    if (filesToSend.length > 0) {
+        const names = filesToSend.map(f => f.name).join(', ');
+        displayMessage = `📎 ${names}\n${message}`;
     }
-    
     addMessage(displayMessage || '📎 File uploaded', 'user');
+
     input.value = '';
     input.style.height = 'auto';
-    
+
     const typingId = showTyping();
-    
+
     try {
         const selectedModel = document.getElementById('modelSelect').value;
-        let endpoint = '/api/chat';
-        let requestBody = {
-            message: message || 'Please analyze this file',
-            agent: currentAgent,
-            model: selectedModel,
-            file: uploadedFile
-        };
-        
+
+        // If image mode, keep your existing JSON flow (no file upload needed)
         if (imageMode) {
-            endpoint = '/api/generate-image-free';
-            requestBody = {
-                prompt: message,
-                agent: currentAgent
-            };
+            const response = await fetch('/api/generate-image-free', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ prompt: message, agent: currentAgent })
+            });
+
+            const data = await response.json();
+            removeTyping(typingId);
+
+            if (response.ok && data.image_url) {
+                addMessage("Here's your generated image!", 'assistant', data.image_url);
+            } else {
+                addMessage(`Error: ${data.error || 'Failed to generate image'}`, 'assistant');
+            }
+
+            sendBtn.disabled = false;
+            sendBtn.textContent = 'Send';
+            toggleImageMode();
+            return;
         }
-        
-        const response = await fetch(endpoint, {
+
+        // REAL FILE UPLOAD FLOW (multipart/form-data)
+        const formData = new FormData();
+        formData.append('message', message || 'Please analyze these file(s)');
+        formData.append('agent', currentAgent);
+        formData.append('model', selectedModel);
+
+        if (filesToSend.length > 0) {
+            filesToSend.forEach((file, index) => {
+                formData.append(`file_${index}`, file);
+            });
+            formData.append('file_count', String(filesToSend.length));
+        }
+
+        const response = await fetch('/api/chat', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify(requestBody)
+            body: formData
         });
-        
+
         const data = await response.json();
         removeTyping(typingId);
 
         if (response.ok) {
-            if (imageMode && data.image_url) {
-                addMessage('Here\'s your generated image!', 'assistant', data.image_url);
-            } else {
-                const modelBadge = data.model_used ? getModelName(data.model_used) : '';
-                addMessage(data.response, 'assistant', null, modelBadge);
-            }
+            const modelBadge = data.model_used ? getModelName(data.model_used) : '';
+            addMessage(data.response || data.message || '(No response)', 'assistant', null, modelBadge);
             loadStats();
         } else {
-            // Check if upgrade is required (403 Forbidden with upgrade_required flag)
-            if (response.status === 403 && data.upgrade_required) {
-                // Show upgrade modal instead of error message
-                const modelName = getModelName(data.blocked_model || selectedModel);
-                const requiredTier = data.required_tier || 'a paid plan';
-                const currentTier = data.current_tier || 'free';
-
-                // Call the modal function (defined in dashboard.html)
-                if (typeof showUpgradeModal === 'function') {
-                    showUpgradeModal(modelName, requiredTier, currentTier);
-                } else {
-                    // Fallback to error message if modal function not available
-                    addMessage(`⚠️ Upgrade Required: ${data.error}\n\n💡 Click here to upgrade: /pricing`, 'assistant');
-                }
-            } else {
-                // Show regular error message
-                addMessage(`Error: ${data.error || 'Failed to get response'}`, 'assistant');
-            }
+            addMessage(`Error: ${data.error || data.message || 'Failed to get response'}`, 'assistant');
         }
+
     } catch (error) {
         removeTyping(typingId);
         console.error('Send message error:', error);
         addMessage('Error: Failed to connect to server', 'assistant');
     }
-    
+
     sendBtn.disabled = false;
     sendBtn.textContent = 'Send';
-    
+
+    // Clear files using the dashboard.html function if it exists
+    if (typeof removeFile === 'function') {
+        removeFile(); // clears uploadedFiles + UI preview in dashboard.html
+    }
+
     if (imageMode) toggleImageMode();
+}
+
     if (uploadedFile) removeFile();
 }
 
