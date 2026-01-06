@@ -7715,19 +7715,62 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
                         with open(filepath, 'r', encoding='utf-8') as f:
                             file_content = f.read()[:10000]  # Limit to 10k chars per file
                         file_contents.append(f"File: {filename}\nContent:\n{file_content}")
+                        print(f"   ✅ Read text file content ({len(file_content)} chars)")
                     except Exception as e:
-                        print(f"Error reading file {filename}: {e}")
+                        print(f"   ❌ Error reading file {filename}: {e}")
                         file_contents.append(f"File: {filename} (could not read content)")
+
                 elif file_extension in ['pdf']:
-                    # For PDFs, indicate file was uploaded but content extraction not yet supported
-                    file_contents.append(f"File: {filename} (PDF - {os.path.getsize(filepath)} bytes)\nNote: PDF content extraction coming soon. For now, I can see you've uploaded this file.")
+                    # For PDFs, extract text content
+                    try:
+                        from PyPDF2 import PdfReader
+                        reader = PdfReader(filepath)
+                        pdf_text = ""
+                        for page in reader.pages[:10]:  # Limit to first 10 pages
+                            pdf_text += page.extract_text() + "\n"
+                        pdf_text = pdf_text[:10000]  # Limit to 10k chars
+                        file_contents.append(f"File: {filename} (PDF)\nContent:\n{pdf_text}")
+                        print(f"   ✅ Extracted PDF content ({len(pdf_text)} chars from {len(reader.pages)} pages)")
+                    except Exception as e:
+                        print(f"   ❌ PDF extraction failed: {e}")
+                        file_contents.append(f"File: {filename} (PDF - {os.path.getsize(filepath)} bytes)\n[PDF content extraction failed. Please ensure file is not corrupted.]")
+
                 elif file_extension in ['docx', 'doc']:
-                    file_contents.append(f"File: {filename} (Word document - {os.path.getsize(filepath)} bytes)\nNote: Word document content extraction coming soon. For now, I can see you've uploaded this file.")
+                    # For Word docs, extract text content
+                    try:
+                        from docx import Document
+                        doc = Document(filepath)
+                        doc_text = "\n".join([paragraph.text for paragraph in doc.paragraphs])
+                        doc_text = doc_text[:10000]  # Limit to 10k chars
+                        file_contents.append(f"File: {filename} (Word Document)\nContent:\n{doc_text}")
+                        print(f"   ✅ Extracted Word document content ({len(doc_text)} chars)")
+                    except Exception as e:
+                        print(f"   ❌ Word document extraction failed: {e}")
+                        file_contents.append(f"File: {filename} (Word document - {os.path.getsize(filepath)} bytes)\n[Document content extraction failed. File may be in older .doc format.]")
+
                 elif file_extension in ['xlsx', 'xls']:
-                    file_contents.append(f"File: {filename} (Excel spreadsheet - {os.path.getsize(filepath)} bytes)\nNote: Excel content extraction coming soon. For now, I can see you've uploaded this file.")
+                    # For Excel files, extract data
+                    try:
+                        from openpyxl import load_workbook
+                        wb = load_workbook(filepath, data_only=True)
+                        excel_text = ""
+                        for sheet_name in wb.sheetnames[:3]:  # Limit to first 3 sheets
+                            sheet = wb[sheet_name]
+                            excel_text += f"\n=== Sheet: {sheet_name} ===\n"
+                            for row in list(sheet.rows)[:50]:  # Limit to first 50 rows per sheet
+                                row_data = [str(cell.value) if cell.value is not None else "" for cell in row]
+                                excel_text += " | ".join(row_data) + "\n"
+                        excel_text = excel_text[:10000]  # Limit to 10k chars
+                        file_contents.append(f"File: {filename} (Excel Spreadsheet)\nContent:\n{excel_text}")
+                        print(f"   ✅ Extracted Excel content ({len(excel_text)} chars)")
+                    except Exception as e:
+                        print(f"   ❌ Excel extraction failed: {e}")
+                        file_contents.append(f"File: {filename} (Excel spreadsheet - {os.path.getsize(filepath)} bytes)\n[Spreadsheet content extraction failed.]")
+
                 elif file_extension not in ['png', 'jpg', 'jpeg', 'gif', 'webp']:
                     # For other file types that aren't images
-                    file_contents.append(f"File: {filename} ({file_extension.upper()} file - {os.path.getsize(filepath)} bytes)\nNote: I can see you've uploaded this file, but I cannot read its contents yet.")
+                    file_contents.append(f"File: {filename} ({file_extension.upper()} file - {os.path.getsize(filepath)} bytes)\n[This file type is not yet supported for content extraction.]")
+                    print(f"   ⚠️ Unsupported file type: {file_extension}")
 
             # Add file contents to message
             if file_contents:
