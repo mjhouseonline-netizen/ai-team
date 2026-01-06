@@ -10,8 +10,17 @@ import shutil
 from datetime import datetime
 import time
 
-DB_FILES = ['ai_team.db', 'users.db', 'ai_team_platform.db']
-BACKUP_DIR = 'auto_backups'
+# Detect if we're on Render
+IS_RENDER = os.environ.get('RENDER') == 'true' or os.environ.get('RENDER_SERVICE_NAME') is not None
+
+# Database files to backup
+if IS_RENDER:
+    DB_FILES = ['/tmp/ai_team.db']  # On Render, database is in /tmp
+    BACKUP_DIR = '/data/auto_backups'  # Save backups to persistent storage
+else:
+    DB_FILES = ['ai_team.db', 'users.db', 'ai_team_platform.db']
+    BACKUP_DIR = 'auto_backups'
+
 MAX_BACKUPS = 24  # Keep last 24 backups (1 day if running hourly)
 
 def create_backup():
@@ -33,10 +42,21 @@ def create_backup():
     if backed_up:
         print(f"✅ Backup created: {backup_path}")
         cleanup_old_backups()
+
+        # On Render, also sync /tmp database to /data for persistence
+        if IS_RENDER and os.path.exists('/tmp/ai_team.db'):
+            try:
+                shutil.copy2('/tmp/ai_team.db', '/data/ai_team.db')
+                print(f"✅ Synced database to persistent storage: /data/ai_team.db")
+            except Exception as e:
+                print(f"⚠️  Failed to sync to /data: {e}")
     else:
         print("⚠️  No database files found to backup")
         # Remove empty backup directory
-        os.rmdir(backup_path)
+        try:
+            os.rmdir(backup_path)
+        except:
+            pass
 
     return backed_up
 
