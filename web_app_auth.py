@@ -11146,37 +11146,35 @@ def global_agent_chat():
         data = request.json
         share_code = data.get('share_code')
         message = data.get('message')
-# ---- FILE ATTACHMENT HANDLING (ADD THIS) ----
-attached_file = data.get('file')
-filepaths = data.get('filepaths', [])
-attached_files = data.get('files', [])
 
-collected_paths = []
+               # ---------- FILE ATTACHMENT COLLECTION ----------
+        attached_file = data.get('file')
+        filepaths = data.get('filepaths', [])
+        attached_files = data.get('files', [])
 
-# file can be a string path OR a dict with filepath
-if isinstance(attached_file, dict):
-    fp = attached_file.get('filepath')
-    if isinstance(fp, str) and fp.strip():
-        collected_paths.append(fp)
-elif isinstance(attached_file, str) and attached_file.strip():
-    collected_paths.append(attached_file)
+        collected_paths = []
 
-# filepaths: ["uploads/<user_id>/..."]
-if isinstance(filepaths, list):
-    collected_paths.extend(
-        [p for p in filepaths if isinstance(p, str) and p.strip()]
-    )
-
-# files: [{"filepath": "..."}]
-if isinstance(attached_files, list):
-    for f in attached_files:
-        if isinstance(f, dict):
-            fp = f.get('filepath')
+        if isinstance(attached_file, dict):
+            fp = attached_file.get('filepath')
             if isinstance(fp, str) and fp.strip():
                 collected_paths.append(fp)
+        elif isinstance(attached_file, str) and attached_file.strip():
+            collected_paths.append(attached_file)
+
+        if isinstance(filepaths, list):
+            for p in filepaths:
+                if isinstance(p, str) and p.strip():
+                    collected_paths.append(p)
+
+        if isinstance(attached_files, list):
+            for f in attached_files:
+                if isinstance(f, dict):
+                    fp = f.get('filepath')
+                    if isinstance(fp, str) and fp.strip():
+                        collected_paths.append(fp)
 
         if not share_code or not message:
-            return jsonify({'error': 'Missing required fields'}), 400
+        return jsonify({'error': 'Missing required fields'}), 400
 
         # Get global agent by share_code
         conn = get_db_connection()
@@ -11203,39 +11201,35 @@ if isinstance(attached_files, list):
         import google.generativeai as genai
         genai.configure(api_key=app.config.get('GOOGLE_AI_API_KEY'))
         model = genai.GenerativeModel('gemini-2.0-flash-exp')
-# ---- READ FILE CONTENTS AND INJECT INTO MESSAGE ----
-file_context_blocks = []
+        # ---------- FILE CONTENT INJECTION ----------
+        file_context_blocks = []
 
-user_folder = os.path.join(UPLOAD_FOLDER, str(current_user.id))
-user_folder_real = os.path.realpath(user_folder)
+        upload_root = app.config.get('UPLOAD_FOLDER', 'uploads')
+        upload_root_real = os.path.realpath(upload_root)
 
-def is_safe_user_file(path):
-    try:
-        rp = os.path.realpath(path)
-        return rp.startswith(user_folder_real) and os.path.exists(rp)
-    except Exception:
-        return False
+        for fp in collected_paths:
+            try:
+                rp = os.path.realpath(fp)
+                if rp.startswith(upload_root_real) and os.path.exists(rp):
+                    with open(rp, 'r', encoding='utf-8', errors='ignore') as f:
+                        text = f.read()
 
-for fp in collected_paths:
-    if is_safe_user_file(fp):
-        try:
-            with open(fp, 'r', encoding='utf-8', errors='ignore') as f:
-                text = f.read()
-        except Exception as e:
-            text = f"[Error reading file: {e}]"
+                    file_context_blocks.append(
+                        f"\n\n[FILE: {os.path.basename(rp)}]\n{text}\n"
+                    )
+            except Exception as e:
+                file_context_blocks.append(
+                    f"\n\n[FILE ERROR: {fp}]\n{e}\n"
+                )
 
-        file_context_blocks.append(
-            f"\n\n[FILE: {os.path.basename(fp)}]\n{text}\n"
-        )
-
-if file_context_blocks:
-    message = (
-        "The user uploaded the following file(s). "
-        "You must read and use their contents when responding.\n"
-        + "".join(file_context_blocks)
-        + "\n\nUser message:\n"
-        + (message or "")
-    )
+        if file_context_blocks:
+            message = (
+                "The user uploaded the following file(s). "
+                "You must read and use their contents when responding.\n"
+                + "".join(file_context_blocks)
+                + "\n\nUser message:\n"
+                + (message or "")
+            )
 
         full_prompt = f"{system_prompt}\n\nUser: {message}"
         response = model.generate_content(full_prompt)
