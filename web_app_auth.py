@@ -7873,15 +7873,25 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
                 files_text = "\n\n---\n\n".join(file_contents)
                 print(f"✅ Adding file info to message. File contents preview:")
                 print(f"   {files_text[:300]}...")
+
+                # DEBUG: Add visible marker so agent knows file was processed
+                debug_marker = f"\n\n[SYSTEM: {len(uploaded_files)} file(s) processed and content extracted. Total content: {len(files_text)} characters]\n\n"
+
                 if message:
-                    message = f"{message}\n\n{files_text}"
+                    message = f"{message}{debug_marker}{files_text}"
                     print(f"✅ Combined message with user text and files (total: {len(message)} chars)")
                 else:
-                    message = files_text
+                    message = debug_marker + files_text
                     print(f"✅ Message is only file info (no user text)")
             else:
                 print(f"⚠️  WARNING: No file_contents extracted from {len(uploaded_files)} uploaded file(s)!")
                 print(f"   This means files were uploaded but not processed correctly")
+                # Add visible error to message so agent can tell user
+                error_message = f"\n\n[SYSTEM ERROR: {len(uploaded_files)} file(s) were uploaded but content extraction FAILED. No file content was processed. This is a server-side issue - libraries may not be installed.]\n\n"
+                if message:
+                    message = f"{message}{error_message}"
+                else:
+                    message = error_message
 
             # Keep backward compatibility for single file
             file_info = files_info[0] if files_info else None
