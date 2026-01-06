@@ -11203,6 +11203,39 @@ if isinstance(attached_files, list):
         import google.generativeai as genai
         genai.configure(api_key=app.config.get('GOOGLE_AI_API_KEY'))
         model = genai.GenerativeModel('gemini-2.0-flash-exp')
+# ---- READ FILE CONTENTS AND INJECT INTO MESSAGE ----
+file_context_blocks = []
+
+user_folder = os.path.join(UPLOAD_FOLDER, str(current_user.id))
+user_folder_real = os.path.realpath(user_folder)
+
+def is_safe_user_file(path):
+    try:
+        rp = os.path.realpath(path)
+        return rp.startswith(user_folder_real) and os.path.exists(rp)
+    except Exception:
+        return False
+
+for fp in collected_paths:
+    if is_safe_user_file(fp):
+        try:
+            with open(fp, 'r', encoding='utf-8', errors='ignore') as f:
+                text = f.read()
+        except Exception as e:
+            text = f"[Error reading file: {e}]"
+
+        file_context_blocks.append(
+            f"\n\n[FILE: {os.path.basename(fp)}]\n{text}\n"
+        )
+
+if file_context_blocks:
+    message = (
+        "The user uploaded the following file(s). "
+        "You must read and use their contents when responding.\n"
+        + "".join(file_context_blocks)
+        + "\n\nUser message:\n"
+        + (message or "")
+    )
 
         full_prompt = f"{system_prompt}\n\nUser: {message}"
         response = model.generate_content(full_prompt)
