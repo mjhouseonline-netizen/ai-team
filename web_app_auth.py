@@ -6855,6 +6855,90 @@ def upload_file():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/diagnose-file-libs', methods=['GET'])
+@login_required
+def diagnose_file_libs():
+    """Diagnostic endpoint to check if file processing libraries are installed"""
+    diagnosis = {
+        'libraries': {},
+        'upload_folders': {},
+        'environment': {}
+    }
+
+    # Check PyPDF2
+    try:
+        import PyPDF2
+        diagnosis['libraries']['PyPDF2'] = {
+            'installed': True,
+            'version': getattr(PyPDF2, '__version__', 'unknown')
+        }
+    except ImportError as e:
+        diagnosis['libraries']['PyPDF2'] = {
+            'installed': False,
+            'error': str(e)
+        }
+
+    # Check python-docx
+    try:
+        import docx
+        diagnosis['libraries']['python-docx'] = {
+            'installed': True,
+            'version': getattr(docx, '__version__', 'unknown')
+        }
+    except ImportError as e:
+        diagnosis['libraries']['python-docx'] = {
+            'installed': False,
+            'error': str(e)
+        }
+
+    # Check openpyxl
+    try:
+        import openpyxl
+        diagnosis['libraries']['openpyxl'] = {
+            'installed': True,
+            'version': getattr(openpyxl, '__version__', 'unknown')
+        }
+    except ImportError as e:
+        diagnosis['libraries']['openpyxl'] = {
+            'installed': False,
+            'error': str(e)
+        }
+
+    # Check reportlab
+    try:
+        import reportlab
+        diagnosis['libraries']['reportlab'] = {
+            'installed': True,
+            'version': getattr(reportlab, 'Version', 'unknown')
+        }
+    except ImportError as e:
+        diagnosis['libraries']['reportlab'] = {
+            'installed': False,
+            'error': str(e)
+        }
+
+    # Check upload folders
+    diagnosis['upload_folders']['UPLOAD_FOLDER'] = {
+        'path': UPLOAD_FOLDER,
+        'exists': os.path.exists(UPLOAD_FOLDER),
+        'writable': os.access(UPLOAD_FOLDER, os.W_OK) if os.path.exists(UPLOAD_FOLDER) else False
+    }
+
+    # Check output folder for created files
+    output_dir = '/mnt/user-data/outputs'
+    diagnosis['upload_folders']['OUTPUT_FOLDER'] = {
+        'path': output_dir,
+        'exists': os.path.exists(output_dir),
+        'writable': os.access(output_dir, os.W_OK) if os.path.exists(output_dir) else False
+    }
+
+    # Environment info
+    diagnosis['environment']['IS_RENDER'] = IS_RENDER
+    diagnosis['environment']['DB_PATH'] = DB_PATH
+    diagnosis['environment']['python_version'] = os.sys.version
+
+    return jsonify(diagnosis), 200
+
 # ============================================
 # CONVERSATION HISTORY & MULTI-MODEL ROUTING
 # ============================================
