@@ -11330,8 +11330,8 @@ def create_website_file():
             f.write(code)
         
         # Create download URL
-        download_url = f"/download-website/{unique_filename}"
-        
+        download_url = f"/download-file/{unique_filename}"
+
         print(f"✅ Created website file: {unique_filename} for user {current_user.id}")
         
         return jsonify({
@@ -11344,6 +11344,281 @@ def create_website_file():
     except Exception as e:
         print(f"❌ Error creating website file: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+# ============================================
+# FILE CREATION ROUTES (PDF, DOCX, ZIP, XLSX)
+# ============================================
+
+@app.route('/api/create-pdf', methods=['POST'])
+@login_required
+def create_pdf():
+    """Create a downloadable PDF file"""
+    try:
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+
+        data = request.json
+        filename = data.get('filename', 'document.pdf')
+        content = data.get('content', '')
+        title = data.get('title', 'Document')
+
+        if not content:
+            return jsonify({'error': 'No content provided'}), 400
+
+        # Sanitize filename
+        filename = secure_filename(filename)
+        if not filename.endswith('.pdf'):
+            filename += '.pdf'
+
+        # Create unique filename
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        unique_filename = f"{current_user.id}_{timestamp}_{filename}"
+
+        # Ensure output directory exists
+        output_dir = '/mnt/user-data/outputs'
+        os.makedirs(output_dir, exist_ok=True)
+        output_path = os.path.join(output_dir, unique_filename)
+
+        # Create PDF
+        doc = SimpleDocTemplate(output_path, pagesize=letter)
+        styles = getSampleStyleSheet()
+        story = []
+
+        # Add title
+        if title:
+            story.append(Paragraph(title, styles['Title']))
+            story.append(Spacer(1, 12))
+
+        # Add content (split by paragraphs)
+        for paragraph in content.split('\n'):
+            if paragraph.strip():
+                story.append(Paragraph(paragraph, styles['Normal']))
+                story.append(Spacer(1, 6))
+
+        doc.build(story)
+
+        download_url = f"/download-file/{unique_filename}"
+
+        print(f"✅ Created PDF: {unique_filename} for user {current_user.id}")
+
+        return jsonify({
+            'success': True,
+            'filename': filename,
+            'download_url': download_url,
+            'message': 'PDF created successfully!'
+        }), 201
+
+    except Exception as e:
+        print(f"❌ Error creating PDF: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/create-docx', methods=['POST'])
+@login_required
+def create_docx():
+    """Create a downloadable Word document"""
+    try:
+        from docx import Document
+        from docx.shared import Pt
+
+        data = request.json
+        filename = data.get('filename', 'document.docx')
+        content = data.get('content', '')
+        title = data.get('title', '')
+
+        if not content:
+            return jsonify({'error': 'No content provided'}), 400
+
+        # Sanitize filename
+        filename = secure_filename(filename)
+        if not filename.endswith('.docx'):
+            filename += '.docx'
+
+        # Create unique filename
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        unique_filename = f"{current_user.id}_{timestamp}_{filename}"
+
+        # Ensure output directory exists
+        output_dir = '/mnt/user-data/outputs'
+        os.makedirs(output_dir, exist_ok=True)
+        output_path = os.path.join(output_dir, unique_filename)
+
+        # Create Word document
+        doc = Document()
+
+        # Add title if provided
+        if title:
+            heading = doc.add_heading(title, 0)
+            heading.runs[0].font.size = Pt(16)
+
+        # Add content (split by paragraphs)
+        for paragraph in content.split('\n'):
+            if paragraph.strip():
+                p = doc.add_paragraph(paragraph)
+                p.style.font.size = Pt(11)
+
+        doc.save(output_path)
+
+        download_url = f"/download-file/{unique_filename}"
+
+        print(f"✅ Created DOCX: {unique_filename} for user {current_user.id}")
+
+        return jsonify({
+            'success': True,
+            'filename': filename,
+            'download_url': download_url,
+            'message': 'Word document created successfully!'
+        }), 201
+
+    except Exception as e:
+        print(f"❌ Error creating DOCX: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/create-xlsx', methods=['POST'])
+@login_required
+def create_xlsx():
+    """Create a downloadable Excel spreadsheet"""
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, Alignment
+
+        data = request.json
+        filename = data.get('filename', 'spreadsheet.xlsx')
+        sheets = data.get('sheets', [])  # Array of {name, data: [[row1], [row2]]}
+
+        if not sheets:
+            return jsonify({'error': 'No sheet data provided'}), 400
+
+        # Sanitize filename
+        filename = secure_filename(filename)
+        if not filename.endswith('.xlsx'):
+            filename += '.xlsx'
+
+        # Create unique filename
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        unique_filename = f"{current_user.id}_{timestamp}_{filename}"
+
+        # Ensure output directory exists
+        output_dir = '/mnt/user-data/outputs'
+        os.makedirs(output_dir, exist_ok=True)
+        output_path = os.path.join(output_dir, unique_filename)
+
+        # Create workbook
+        wb = Workbook()
+        wb.remove(wb.active)  # Remove default sheet
+
+        for sheet_info in sheets:
+            sheet_name = sheet_info.get('name', 'Sheet1')
+            sheet_data = sheet_info.get('data', [])
+
+            ws = wb.create_sheet(title=sheet_name)
+
+            # Add data
+            for row_idx, row_data in enumerate(sheet_data, 1):
+                for col_idx, cell_value in enumerate(row_data, 1):
+                    cell = ws.cell(row=row_idx, column=col_idx, value=cell_value)
+                    # Bold first row (headers)
+                    if row_idx == 1:
+                        cell.font = Font(bold=True)
+                        cell.alignment = Alignment(horizontal='center')
+
+        wb.save(output_path)
+
+        download_url = f"/download-file/{unique_filename}"
+
+        print(f"✅ Created XLSX: {unique_filename} for user {current_user.id}")
+
+        return jsonify({
+            'success': True,
+            'filename': filename,
+            'download_url': download_url,
+            'message': 'Excel spreadsheet created successfully!'
+        }), 201
+
+    except Exception as e:
+        print(f"❌ Error creating XLSX: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/create-zip', methods=['POST'])
+@login_required
+def create_zip():
+    """Create a downloadable ZIP archive"""
+    try:
+        import zipfile
+
+        data = request.json
+        filename = data.get('filename', 'archive.zip')
+        files = data.get('files', [])  # Array of {name, content}
+
+        if not files:
+            return jsonify({'error': 'No files provided'}), 400
+
+        # Sanitize filename
+        filename = secure_filename(filename)
+        if not filename.endswith('.zip'):
+            filename += '.zip'
+
+        # Create unique filename
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        unique_filename = f"{current_user.id}_{timestamp}_{filename}"
+
+        # Ensure output directory exists
+        output_dir = '/mnt/user-data/outputs'
+        os.makedirs(output_dir, exist_ok=True)
+        output_path = os.path.join(output_dir, unique_filename)
+
+        # Create ZIP file
+        with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for file_info in files:
+                file_name = file_info.get('name', 'file.txt')
+                file_content = file_info.get('content', '')
+
+                # Add file to ZIP
+                zipf.writestr(file_name, file_content)
+
+        download_url = f"/download-file/{unique_filename}"
+
+        print(f"✅ Created ZIP: {unique_filename} ({len(files)} files) for user {current_user.id}")
+
+        return jsonify({
+            'success': True,
+            'filename': filename,
+            'download_url': download_url,
+            'file_count': len(files),
+            'message': f'ZIP archive created with {len(files)} files!'
+        }), 201
+
+    except Exception as e:
+        print(f"❌ Error creating ZIP: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/download-file/<filename>')
+@login_required
+def download_file(filename):
+    """Universal file download endpoint"""
+    try:
+        # Verify user owns this file
+        if not filename.startswith(f"{current_user.id}_"):
+            return "Unauthorized", 403
+
+        file_path = os.path.join('/mnt/user-data/outputs', filename)
+
+        if not os.path.exists(file_path):
+            return "File not found", 404
+
+        # Get original filename (remove user ID and timestamp)
+        original_filename = '_'.join(filename.split('_')[2:])
+
+        return send_from_directory(
+            '/mnt/user-data/outputs',
+            filename,
+            as_attachment=True,
+            download_name=original_filename
+        )
+
+    except Exception as e:
+        print(f"❌ Error downloading file: {str(e)}")
+        return "Error downloading file", 500
 
 @app.route('/download-website/<filename>')
 @login_required
