@@ -238,16 +238,15 @@ function speakText(text) {
 // ================================================
 
 // ================================================
-// SEND MESSAGE (FIXED: SUPPORTS REAL FILE UPLOADS)
+// SEND MESSAGE
 // ================================================
+
 async function sendMessage() {
     const input = document.getElementById('messageInput');
     const message = input.value.trim();
 
-    // IMPORTANT:
-    // uploadedFiles is defined in dashboard.html as a global (let uploadedFiles = [])
-    // We reuse it here so files actually upload.
-    const filesToSend = (typeof uploadedFiles !== 'undefined') ? uploadedFiles : [];
+    // Use the multi-file system defined in dashboard.html (global scope)
+    const filesToSend = (typeof uploadedFiles !== 'undefined' && Array.isArray(uploadedFiles)) ? uploadedFiles : [];
 
     if (!message && filesToSend.length === 0) return;
 
@@ -255,14 +254,13 @@ async function sendMessage() {
     sendBtn.disabled = true;
     sendBtn.textContent = 'Sending...';
 
-    // Display user message immediately
     let displayMessage = message;
     if (filesToSend.length > 0) {
         const names = filesToSend.map(f => f.name).join(', ');
         displayMessage = `📎 ${names}\n${message}`;
     }
-    addMessage(displayMessage || '📎 File uploaded', 'user');
 
+    addMessage(displayMessage || '📎 File uploaded', 'user');
     input.value = '';
     input.style.height = 'auto';
 
@@ -271,20 +269,23 @@ async function sendMessage() {
     try {
         const selectedModel = document.getElementById('modelSelect').value;
 
-        // If image mode, keep your existing JSON flow (no file upload needed)
+        // Image mode remains JSON
         if (imageMode) {
             const response = await fetch('/api/generate-image-free', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ prompt: message, agent: currentAgent })
+                body: JSON.stringify({
+                    prompt: message,
+                    agent: currentAgent
+                })
             });
 
             const data = await response.json();
             removeTyping(typingId);
 
             if (response.ok && data.image_url) {
-                addMessage("Here's your generated image!", 'assistant', data.image_url);
+                addMessage('Here\'s your generated image!', 'assistant', data.image_url);
             } else {
                 addMessage(`Error: ${data.error || 'Failed to generate image'}`, 'assistant');
             }
@@ -295,7 +296,7 @@ async function sendMessage() {
             return;
         }
 
-        // REAL FILE UPLOAD FLOW (multipart/form-data)
+        // Send as FormData so the server can receive request.files
         const formData = new FormData();
         formData.append('message', message || 'Please analyze these file(s)');
         formData.append('agent', currentAgent);
@@ -319,12 +320,11 @@ async function sendMessage() {
 
         if (response.ok) {
             const modelBadge = data.model_used ? getModelName(data.model_used) : '';
-            addMessage(data.response || data.message || '(No response)', 'assistant', null, modelBadge);
+            addMessage(data.response, 'assistant', null, modelBadge);
             loadStats();
         } else {
-            addMessage(`Error: ${data.error || data.message || 'Failed to get response'}`, 'assistant');
+            addMessage(`Error: ${data.error || 'Failed to get response'}`, 'assistant');
         }
-
     } catch (error) {
         removeTyping(typingId);
         console.error('Send message error:', error);
@@ -334,15 +334,17 @@ async function sendMessage() {
     sendBtn.disabled = false;
     sendBtn.textContent = 'Send';
 
-    // Clear files using the dashboard.html function if it exists
-    if (typeof removeFile === 'function') {
-        removeFile(); // clears uploadedFiles + UI preview in dashboard.html
-    }
-
     if (imageMode) toggleImageMode();
-}
 
-    if (uploadedFile) removeFile();
+    // Clear files using the dashboard.html function if available
+    if (typeof removeFile === 'function') {
+        removeFile();
+    } else {
+        // Fallback: clear array if it exists
+        if (typeof uploadedFiles !== 'undefined' && Array.isArray(uploadedFiles)) {
+            uploadedFiles.length = 0;
+        }
+    }
 }
 
 // ================================================
@@ -387,11 +389,12 @@ function addMessage(text, type, imageUrl = null, modelBadge = '') {
         `;
     } else {
         const voiceBtn = type === 'assistant' ? `<button class="voice-btn" onclick="speakText(\`${text.replace(/`/g, '\\`').replace(/"/g, '&quot;')}\`)">🔊 Listen</button>` : '';
+        const docxBtn = type === 'assistant' ? `<button class="voice-btn" style="margin-left:8px" onclick="downloadDocx(\`${text.replace(/`/g, '\\`').replace(/"/g, '&quot;')}\`, 'ai_team_response')">DOCX</button>` : '';
         messageDiv.innerHTML = `
             <div class="avatar" style="${type === 'assistant' ? 'background: ' + (agentGradients[currentAgent] || 'linear-gradient(135deg, #667eea, #764ba2)') : 'background: #5436da'}">${avatar}</div>
             <div class="message-content">
                 ${escapeHtml(text)}${badge}
-                ${voiceBtn}
+                ${voiceBtn}${docxBtn}
             </div>
         `;
     }
@@ -467,6 +470,40 @@ function closeFloatingPreview() {
 function minimizePreview() {
     // Could implement minimize functionality
     closeFloatingPreview();
+}
+
+
+// ================================================
+// DOCX DOWNLOAD
+// ================================================
+
+async function downloadDocx(content, suggestedName = 'document') {
+    try {
+        const res = await fetch('/api/generate-docx', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                content: content || '',
+                filename: suggestedName
+            })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            alert(data.error || 'Failed to generate DOCX');
+            return;
+        }
+
+        if (data.download_url) {
+            window.location.href = data.download_url;
+        } else {
+            alert('No download URL returned');
+        }
+    } catch (e) {
+        console.error('DOCX download error:', e);
+        alert('Failed to generate DOCX');
+    }
 }
 
 // ================================================

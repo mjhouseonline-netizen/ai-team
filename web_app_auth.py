@@ -149,16 +149,7 @@ PRIMARY_AGENTS = [
 # Premium paid deliverables, admin-only, private to one client
 
 # File upload configuration
-# IMPORTANT:
-# - Local dev: store uploads inside the project folder
-# - Render: the app directory is not writable; use /data (persistent) for uploads
-IS_RENDER = globals().get('IS_RENDER') if 'IS_RENDER' in globals() else (os.environ.get('RENDER') == 'true' or os.environ.get('RENDER_SERVICE_NAME') is not None)
-
-if IS_RENDER:
-    UPLOAD_FOLDER = '/data/uploads'
-else:
-    UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
-
+UPLOAD_FOLDER = 'uploads'
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 ALLOWED_EXTENSIONS = {
     # Images
@@ -174,7 +165,6 @@ app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
 
 # Create upload folder if it doesn't exist
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
 
 # Enable CORS
 CORS(app, supports_credentials=True, origins=['*'])
@@ -6792,64 +6782,6 @@ def allowed_file(filename):
     """Check if file extension is allowed"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def extract_text_from_file(filepath: str) -> str:
-    """Best-effort text extraction for common upload types.
-
-    Notes:
-    - Images are not OCR'd (returns a short placeholder).
-    - PDFs are not parsed here (returns a short placeholder) to avoid heavy deps.
-    - For Office files, uses python-docx and openpyxl when available.
-    """
-    ext = os.path.splitext(filepath)[1].lower().lstrip('.')
-
-    # Plain text formats
-    if ext in ['txt', 'md', 'csv']:
-        with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
-            return f.read()
-
-    # Images (no OCR)
-    if ext in ['png', 'jpg', 'jpeg', 'gif', 'webp']:
-        size = os.path.getsize(filepath)
-        return f"[Image file received: {os.path.basename(filepath)} ({size} bytes). Image text is not extracted server-side.]"
-
-    # Word documents
-    if ext in ['docx']:
-        try:
-            from docx import Document
-            doc = Document(filepath)
-            parts = []
-            for p in doc.paragraphs:
-                if p.text:
-                    parts.append(p.text)
-            return "\n".join(parts)[:10000]
-        except Exception as e:
-            return f"[DOCX received but could not extract text: {e}]"
-
-    # Excel spreadsheets
-    if ext in ['xlsx', 'xls']:
-        try:
-            from openpyxl import load_workbook
-            wb = load_workbook(filepath, data_only=True)
-            out = []
-            for sheet_name in wb.sheetnames[:3]:
-                sheet = wb[sheet_name]
-                out.append(f"=== Sheet: {sheet_name} ===")
-                rows = list(sheet.rows)[:50]
-                for row in rows:
-                    row_data = [str(cell.value) if cell.value is not None else "" for cell in row]
-                    out.append(" | ".join(row_data))
-            return "\n".join(out)[:10000]
-        except Exception as e:
-            return f"[XLSX received but could not extract text: {e}]"
-
-    # PDF and other formats
-    if ext == 'pdf':
-        size = os.path.getsize(filepath)
-        return f"[PDF file received: {os.path.basename(filepath)} ({size} bytes). PDF text extraction is not enabled server-side.]"
-
-    size = os.path.getsize(filepath)
-    return f"[File received: {os.path.basename(filepath)} ({size} bytes). Text extraction not supported for .{ext}.]"
-
 def encode_file_to_base64(filepath):
     """Encode file to base64 for Claude API"""
     with open(filepath, 'rb') as f:
@@ -7382,6 +7314,91 @@ def call_ai_with_image(model_key, system_prompt, history, message, image_path):
         # Fallback: describe that an image was sent
         return f"I can see you've sent an image, but I encountered an error processing it: {str(e)}"
 
+
+# ============================================
+# DOCUMENT GENERATION API (DOCX)
+# ============================================
+
+def _get_owner_id_for_request():
+    """Return a stable owner id for authenticated users and guests."""
+    try:
+        if current_user and getattr(current_user, 'is_authenticated', False):
+            return str(current_user.id)
+    except Exception:
+        pass
+
+    if 'guest_id' not in session:
+        session['guest_id'] = secrets.token_hex(8)
+    return f"guest_{session['guest_id']}"
+
+# Use Render persistent disk when available
+GENERATED_FILES_ROOT = os.environ.get('GENERATED_FILES_ROOT') or ('/data/generated' if os.path.exists('/data') else os.path.join(os.getcwd(), 'generated'))
+
+@app.route('/api/generate-docx', methods=['POST'])
+def generate_docx():
+    """Generate a Word document (.docx) from provided text content."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = (data.get('content') or '').strip()
+        filename = (data.get('filename') or 'document').strip()
+
+        if not content:
+            return jsonify({'error': 'No content provided'}), 400
+
+        # Basic filename hardening
+        filename = re.sub(r'[^a-zA-Z0-9._-]+', '_', filename)[:80].strip('._-') or 'document'
+        if not filename.lower().endswith('.docx'):
+            filename = f"{filename}.docx"
+
+        try:
+            from docx import Document
+        except Exception as e:
+            return jsonify({'error': f'python-docx is not available: {str(e)}'}), 500
+
+        owner_id = _get_owner_id_for_request()
+        out_dir = os.path.join(GENERATED_FILES_ROOT, 'docx', owner_id)
+        os.makedirs(out_dir, exist_ok=True)
+
+        # Ensure unique filename
+        ts = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+        unique_name = f"{filename[:-5]}_{ts}.docx"
+        out_path = os.path.join(out_dir, unique_name)
+
+        doc = Document()
+        # Preserve paragraphs in a simple way
+        for line in content.split('\n'):
+            doc.add_paragraph(line)
+        doc.save(out_path)
+
+        return jsonify({
+            'success': True,
+            'filename': unique_name,
+            'download_url': f"/downloads/{owner_id}/{unique_name}"
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/downloads/<owner_id>/<path:filename>', methods=['GET'])
+def download_generated_file(owner_id, filename):
+    """Serve generated files back to the user (only for the same owner)."""
+    try:
+        current_owner = _get_owner_id_for_request()
+        if owner_id != current_owner:
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        # Only allow .docx for now
+        if not filename.lower().endswith('.docx'):
+            return jsonify({'error': 'Unsupported file type'}), 400
+
+        safe_name = os.path.basename(filename)
+        out_dir = os.path.join(GENERATED_FILES_ROOT, 'docx', owner_id)
+        return send_from_directory(out_dir, safe_name, as_attachment=True)
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/chat', methods=['POST'])
 @rate_limit(max_requests=100, window_seconds=60)  # 100 messages per minute
 def chat():
@@ -7512,28 +7529,16 @@ def chat():
 
         for fp in collected_paths:
             try:
-                candidate = fp
-
-                # If client sends relative paths, resolve them under UPLOAD_FOLDER
-                if isinstance(candidate, str):
-                    c = candidate.strip()
-
-                    # Accept legacy values like "uploads/<user_id>/file.ext"
-                    if c.startswith('uploads/'):
-                        c = c.split('/', 1)[1]
-
-                    if not os.path.isabs(c):
-                        c = os.path.join(UPLOAD_FOLDER, c.lstrip('/'))
-
-                    candidate = c
-
-                rp = os.path.realpath(candidate)
-
+                rp = os.path.realpath(fp)
                 if rp.startswith(upload_root_real) and os.path.exists(rp):
-                    extracted = extract_text_from_file(rp)
-                    file_context_blocks.append(f"\n\n[FILE: {os.path.basename(rp)}]\n{extracted}\n")
+                    with open(rp, 'r', encoding='utf-8', errors='ignore') as f:
+                        text = f.read()
+                    file_context_blocks.append(
+                        f"\n\n[FILE: {os.path.basename(rp)}]\n{text}\n"
+                    )
             except Exception as e:
                 file_context_blocks.append(f"\n\n[FILE ERROR: {fp}]\n{e}\n")
+
         if file_context_blocks:
             message = (
                 "The user uploaded the following file(s). You must read and use their contents.\n"
