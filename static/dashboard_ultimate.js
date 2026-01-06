@@ -26,10 +26,43 @@ const agentGradients = {
 // INITIALIZATION
 // ================================================
 
+
+// ================================================
+// FILE INPUT COMPATIBILITY
+// ================================================
+// Some builds handle file selection in dashboard.html. If setupFileInput isn't defined there,
+// we provide a safe stub here to avoid runtime crashes.
+function setupFileInput() {
+    // If dashboard.html already wired a global uploadedFiles array, we don't need to do anything.
+    if (typeof uploadedFiles !== 'undefined') {
+        console.log('✅ File input handler available (dashboard.html)');
+        return;
+    }
+
+    // Fallback: wire up a basic file input if it exists.
+    const fileInput = document.getElementById('fileInput');
+    if (!fileInput) {
+        console.warn('⚠️ No #fileInput element found; file uploads may be unavailable.');
+        return;
+    }
+
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+
+        // Store a real File object so FormData can upload bytes correctly.
+        uploadedFile = { file, original_filename: file.name, size: file.size, type: file.type };
+        console.log('✅ File selected:', uploadedFile.original_filename, uploadedFile.size, 'bytes');
+    });
+
+    console.log('✅ File input handler initialized (dashboard_ultimate.js fallback)');
+}
+
+
 document.addEventListener('DOMContentLoaded', function() {
     loadStats();
     checkAdminStatus();
-    setupFileInput();
+    if (typeof setupFileInput === 'function') { setupFileInput(); }
     initVoiceRecognition();
     loadCustomAgents();
     setupMobileToggle();
@@ -235,92 +268,136 @@ function speakText(text) {
 async function sendMessage() {
     const input = document.getElementById('messageInput');
     const message = input.value.trim();
-    
-    if (!message && !uploadedFile) return;
-    
+
+    // Prefer the dashboard.html global multi-file array if present
+    const filesToSend = (typeof uploadedFiles !== 'undefined') ? uploadedFiles : [];
+
+    // Fallback single-file object (if dashboard.html handler isn't present)
+    const singleFile = (uploadedFile && uploadedFile.file instanceof File) ? uploadedFile.file : null;
+
+    if (!message && filesToSend.length === 0 && !singleFile) return;
+
     const sendBtn = document.getElementById('sendBtn');
     sendBtn.disabled = true;
     sendBtn.textContent = 'Sending...';
-    
+
+    // Display user message immediately
     let displayMessage = message;
-    if (uploadedFile) {
-        displayMessage = `📎 ${uploadedFile.original_filename}\n${message}`;
+    const displayNames = [];
+
+    if (filesToSend.length > 0) displayNames.push(...filesToSend.map(f => f.name));
+    if (singleFile && displayNames.length === 0) displayNames.push(singleFile.name);
+
+    if (displayNames.length > 0) {
+        displayMessage = `📎 ${displayNames.join(', ')}\n${message}`;
     }
-    
+
     addMessage(displayMessage || '📎 File uploaded', 'user');
     input.value = '';
     input.style.height = 'auto';
-    
+
     const typingId = showTyping();
-    
+
     try {
         const selectedModel = document.getElementById('modelSelect').value;
-        let endpoint = '/api/chat';
-        let requestBody = {
-            message: message || 'Please analyze this file',
-            agent: currentAgent,
-            model: selectedModel,
-            file: uploadedFile
-        };
-        
+
+        // Image mode uses JSON (no file upload required for generation)
         if (imageMode) {
-            endpoint = '/api/generate-image-free';
-            requestBody = {
-                prompt: message,
-                agent: currentAgent
-            };
+            const response = await fetch('/api/generate-image-free', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ prompt: message, agent: currentAgent })
+            });
+
+            const data = await response.json();
+            removeTyping(typingId);
+
+            if (response.ok && data.image_url) {
+                addMessage("Here's your generated image!", 'assistant', data.image_url);
+            } else {
+                addMessage(`Error: ${data.error || 'Failed to generate image'}`, 'assistant');
+            }
+
+            sendBtn.disabled = false;
+            sendBtn.textContent = 'Send';
+            toggleImageMode();
+            return;
         }
-        
-        const response = await fetch(endpoint, {
+
+        // Chat mode: use multipart FormData so binary files (docx/images) upload correctly
+        const formData = new FormData();
+        formData.append('message', message || 'Please analyze these file(s)');
+        formData.append('agent', currentAgent);
+        formData.append('model', selectedModel);
+
+        let count = 0;
+        if (filesToSend.length > 0) {
+            filesToSend.forEach((file) => {
+                if (file instanceof File) {
+                    formData.append(`file_${count}`, file);
+                    count += 1;
+                }
+            });
+        } else if (singleFile) {
+            formData.append('file_0', singleFile);
+            count = 1;
+        }
+
+        if (count > 0) {
+            formData.append('file_count', String(count));
+        }
+
+        const response = await fetch('/api/chat', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify(requestBody)
+            body: formData
         });
-        
+
         const data = await response.json();
         removeTyping(typingId);
 
         if (response.ok) {
-            if (imageMode && data.image_url) {
-                addMessage('Here\'s your generated image!', 'assistant', data.image_url);
-            } else {
-                const modelBadge = data.model_used ? getModelName(data.model_used) : '';
-                addMessage(data.response, 'assistant', null, modelBadge);
-            }
+            const modelBadge = data.model_used ? getModelName(data.model_used) : '';
+            addMessage(data.response || data.message || '(No response)', 'assistant', null, modelBadge);
             loadStats();
         } else {
-            // Check if upgrade is required (403 Forbidden with upgrade_required flag)
             if (response.status === 403 && data.upgrade_required) {
-                // Show upgrade modal instead of error message
                 const modelName = getModelName(data.blocked_model || selectedModel);
                 const requiredTier = data.required_tier || 'a paid plan';
                 const currentTier = data.current_tier || 'free';
 
-                // Call the modal function (defined in dashboard.html)
                 if (typeof showUpgradeModal === 'function') {
                     showUpgradeModal(modelName, requiredTier, currentTier);
                 } else {
-                    // Fallback to error message if modal function not available
-                    addMessage(`⚠️ Upgrade Required: ${data.error}\n\n💡 Click here to upgrade: /pricing`, 'assistant');
+                    addMessage(`Upgrade Required: ${data.error || 'Please upgrade to use this model.'}`, 'assistant');
                 }
             } else {
-                // Show regular error message
                 addMessage(`Error: ${data.error || 'Failed to get response'}`, 'assistant');
             }
         }
+
     } catch (error) {
         removeTyping(typingId);
         console.error('Send message error:', error);
         addMessage('Error: Failed to connect to server', 'assistant');
     }
-    
+
     sendBtn.disabled = false;
     sendBtn.textContent = 'Send';
-    
-    if (imageMode) toggleImageMode();
-    // removeFile handled in dashboard.html
 
+    // Clear files via dashboard.html helper if available
+    if (typeof removeFile === 'function') {
+        removeFile();
+    } else {
+        // Fallback
+        uploadedFile = null;
+        if (typeof uploadedFiles !== 'undefined') {
+            uploadedFiles.length = 0;
+        }
+    }
+
+    if (imageMode) toggleImageMode();
 }
 
 // ================================================
@@ -363,16 +440,33 @@ function addMessage(text, type, imageUrl = null, modelBadge = '') {
                 </div>
             </div>
         `;
-    } else {
-        const voiceBtn = type === 'assistant' ? `<button class="voice-btn" onclick="speakText(\`${text.replace(/`/g, '\\`').replace(/"/g, '&quot;')}\`)">🔊 Listen</button>` : '';
-        messageDiv.innerHTML = `
-            <div class="avatar" style="${type === 'assistant' ? 'background: ' + (agentGradients[currentAgent] || 'linear-gradient(135deg, #667eea, #764ba2)') : 'background: #5436da'}">${avatar}</div>
-            <div class="message-content">
-                ${escapeHtml(text)}${badge}
-                ${voiceBtn}
+   } else {
+    const safeText = text.replace(/`/g, '\\`').replace(/"/g, '&quot;');
+
+    const voiceBtn = type === 'assistant'
+        ? `<button class="voice-btn" onclick="speakText(\`${safeText}\`)">🔊 Listen</button>`
+        : '';
+
+    const actionBtns = type === 'assistant'
+        ? `
+            <div class="message-actions">
+                <button class="action-btn" onclick="copyToClipboard(\`${safeText}\`)">📋 Copy</button>
+                <button class="action-btn" onclick="downloadText(\`${safeText}\`)">⬇️ Download</button>
             </div>
-        `;
-    }
+        `
+        : '';
+
+    messageDiv.innerHTML = `
+        <div class="avatar" style="${type === 'assistant'
+            ? 'background: ' + (agentGradients[currentAgent] || 'linear-gradient(135deg, #667eea, #764ba2)')
+            : 'background: #5436da'}">${avatar}</div>
+        <div class="message-content">
+            ${escapeHtml(text)}${badge}
+            ${voiceBtn}
+            ${actionBtns}
+        </div>
+    `;
+}
     
     container.appendChild(messageDiv);
     container.scrollTop = container.scrollHeight;
@@ -1053,6 +1147,18 @@ async function downloadFromUrl(url) {
         a.download = 'download_' + Date.now() + '.png';
         a.click();
     }
+}
+
+function downloadText(text) {
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'response_' + Date.now() + '.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
 
 function copyToClipboard(text) {
