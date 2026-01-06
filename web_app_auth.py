@@ -11230,7 +11230,8 @@ def global_agent_chat():
                 + "\n\nUser message:\n"
                 + (message or "")
             )
-
+            
+        print("DEBUG collected_paths:", collected_paths)
         full_prompt = f"{system_prompt}\n\nUser: {message}"
         response = model.generate_content(full_prompt)
         ai_response = response.text
