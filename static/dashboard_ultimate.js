@@ -168,26 +168,39 @@ function setupFileInput() {
     document.getElementById('fileInput').addEventListener('change', async function(e) {
         const file = e.target.files[0];
         if (!file) return;
-        
+
         const formData = new FormData();
         formData.append('file', file);
-        
+
         try {
             const response = await fetch('/api/upload-file', {
                 method: 'POST',
                 credentials: 'include',
                 body: formData
             });
-            
+
+            if (!response.ok) {
+                throw new Error(`Upload failed: ${response.statusText}`);
+            }
+
             const data = await response.json();
-            
+
             if (data.filename) {
                 uploadedFile = data;
                 document.getElementById('fileName').textContent = `📎 ${file.name}`;
                 document.getElementById('filePreview').classList.add('active');
+                // Success feedback
+                console.log('✅ File uploaded successfully');
+            } else if (data.error) {
+                throw new Error(data.error);
+            } else {
+                throw new Error('Upload failed: No filename returned');
             }
         } catch (error) {
             console.error('Upload error:', error);
+            alert('❌ Upload failed: ' + error.message);
+            // Clear the file input on error
+            e.target.value = '';
         }
     });
 }
@@ -1049,11 +1062,39 @@ function escapeHtml(text) {
     return div.innerHTML.replace(/\n/g, '<br>');
 }
 
-function downloadFromUrl(url) {
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'download_' + Date.now() + '.png';
-    a.click();
+async function downloadFromUrl(url) {
+    try {
+        // Fetch the file to handle cross-origin resources
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Failed to fetch file');
+
+        // Convert to blob
+        const blob = await response.blob();
+
+        // Create object URL and download
+        const objectUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = objectUrl;
+
+        // Try to extract filename from URL or use default
+        const urlPath = new URL(url).pathname;
+        const filename = urlPath.split('/').pop() || 'download_' + Date.now() + '.png';
+        a.download = filename;
+
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        // Clean up object URL
+        URL.revokeObjectURL(objectUrl);
+    } catch (error) {
+        console.error('Download failed:', error);
+        // Fallback to direct download for same-origin resources
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'download_' + Date.now() + '.png';
+        a.click();
+    }
 }
 
 function copyToClipboard(text) {
