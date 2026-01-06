@@ -12077,10 +12077,10 @@ def require_api_key(f):
     return decorated_function
 
 # Chat API Endpoint
-@app.route('/api/chat', methods=['POST'])
+@app.route('/api/external/chat', methods=['POST'])
 @require_api_key
 def api_chat():
-    """Send a message to an AI agent via API"""
+    """Send a message to an AI agent via API (for external integrations)"""
     try:
         data = request.get_json()
         
