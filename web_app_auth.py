@@ -11143,7 +11143,7 @@ def view_shared_global_agent(share_code):
 def global_agent_chat():
     """Chat with a shared global agent (no login required)"""
     try:
-               data = request.json
+        data = request.json
         share_code = data.get('share_code') or 'global'
         message = data.get('message')
 
