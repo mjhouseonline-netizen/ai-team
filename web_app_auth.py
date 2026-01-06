@@ -11143,11 +11143,11 @@ def view_shared_global_agent(share_code):
 def global_agent_chat():
     """Chat with a shared global agent (no login required)"""
     try:
-        data = request.json
-        share_code = data.get('share_code')
+               data = request.json
+        share_code = data.get('share_code') or 'global'
         message = data.get('message')
 
-               # ---------- FILE ATTACHMENT COLLECTION ----------
+        # ---------- FILE ATTACHMENT COLLECTION ----------
         attached_file = data.get('file')
         filepaths = data.get('filepaths', [])
         attached_files = data.get('files', [])
@@ -11173,8 +11173,8 @@ def global_agent_chat():
                     if isinstance(fp, str) and fp.strip():
                         collected_paths.append(fp)
 
-        if not share_code or not message:
-        return jsonify({'error': 'Missing required fields'}), 400
+        if not message:
+            return jsonify({'error': 'Missing required fields'}), 400
 
         # Get global agent by share_code
         conn = get_db_connection()
