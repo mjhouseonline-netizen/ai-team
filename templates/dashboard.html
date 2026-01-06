@@ -608,11 +608,9 @@
         }
 
         .settings-menu-sidebar .settings-dropdown {
-            position: absolute;
-            top: 0;
-            left: calc(100% + 10px);
-            right: auto;
+            /* Position will be set dynamically by JavaScript */
             width: 220px;
+            z-index: 9999;
         }
 
         .settings-section {
@@ -684,6 +682,31 @@
             font-size: 12px;
             font-weight: 500;
             color: var(--text-secondary);
+        }
+
+        .new-chat-btn {
+            background: linear-gradient(135deg, #10a37f, #0d8c6f);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 8px rgba(16, 163, 127, 0.2);
+        }
+
+        .new-chat-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(16, 163, 127, 0.3);
+        }
+
+        .new-chat-btn:active {
+            transform: translateY(0);
         }
 
         .header-btn {
@@ -1425,12 +1448,30 @@
             animation: pulse 2s ease-in-out infinite;
         }
 
+        .voice-conversation-btn.recording {
+            background: #ef4444;
+            border-color: #dc2626;
+            color: white;
+            animation: recordingPulse 1s ease-in-out infinite;
+        }
+
         @keyframes pulse {
             0%, 100% {
                 box-shadow: 0 0 0 0 rgba(16, 163, 127, 0.4);
             }
             50% {
                 box-shadow: 0 0 0 8px rgba(16, 163, 127, 0);
+            }
+        }
+
+        @keyframes recordingPulse {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+                transform: scale(1);
+            }
+            50% {
+                box-shadow: 0 0 0 12px rgba(239, 68, 68, 0);
+                transform: scale(1.1);
             }
         }
 
@@ -1770,6 +1811,12 @@
                 font-size: 11px;
                 padding: 4px 8px;
                 white-space: nowrap;
+            }
+
+            .new-chat-btn {
+                font-size: 12px;
+                padding: 6px 12px;
+                gap: 4px;
             }
 
             .menu-btn {
@@ -2807,18 +2854,31 @@
                 </div>
             </div>
             {% else %}
-            <!-- Regular Mode: Show global agents and custom agents -->
-            <div class="section-title" id="globalAgentsTitle" style="display: none;">My Agents</div>
-            <div id="globalAgentsList"></div>
+            <!-- Regular Mode: Show client agents, global agents and custom agents -->
+            <!-- Client Agents (Premium) - Shows FIRST with priority -->
+            <div class="section-title" id="clientAgentsTitle" style="display: none; cursor: pointer; user-select: none;" onclick="toggleClientAgents()">
+                💎 Stand Alone Client Agents <span id="clientAgentsToggle" style="float: right; font-size: 10px;">▶</span>
+            </div>
+            <div id="clientAgentsList" style="display: none;"></div>
 
-            <div class="section-title" id="customAgentsTitle" style="display: none;">Custom Agents</div>
-            <div id="customAgentsList"></div>
+            <div class="section-title" id="globalAgentsTitle" style="display: none; cursor: pointer; user-select: none;" onclick="toggleGlobalAgents()">
+                My Agents <span id="globalAgentsToggle" style="float: right; font-size: 10px;">▶</span>
+            </div>
+            <div id="globalAgentsList" style="display: none;"></div>
+
+            <div class="section-title" id="customAgentsTitle" style="display: none; cursor: pointer; user-select: none;" onclick="toggleCustomAgents()">
+                Custom Agents <span id="customAgentsToggle" style="float: right; font-size: 10px;">▶</span>
+            </div>
+            <div id="customAgentsList" style="display: none;"></div>
             {% endif %}
 
             {% if not is_guest %}
             <!-- Settings & Tools - Hidden for guests -->
-            <div class="section-title" style="margin-top: 20px;">Settings & Tools</div>
+            <div class="section-title" style="margin-top: 20px; cursor: pointer; user-select: none;" onclick="toggleSettingsTools()">
+                ⚙️ Settings & Tools <span id="settingsToolsToggle" style="float: right; font-size: 10px;">▶</span>
+            </div>
 
+            <div class="settings-tools-section" id="settingsToolsSection" style="display: none;">
             <a href="/integrations" class="agent-item" style="text-decoration: none; color: white;">
                 <div class="agent-avatar" style="background: linear-gradient(135deg, #11998e, #38ef7d);">🔌</div>
                 <div class="agent-info">
@@ -2882,6 +2942,14 @@
                 </div>
             </div>
 
+            <a href="#" onclick="openChangePasswordModal(); return false;" class="agent-item" style="text-decoration: none; color: white;">
+                <div class="agent-avatar" style="background: linear-gradient(135deg, #f59e0b, #d97706);">🔐</div>
+                <div class="agent-info">
+                    <div class="agent-name">Change Password</div>
+                    <div class="agent-role">Update your password</div>
+                </div>
+            </a>
+
             <a href="/promo-codes" class="agent-item" id="promoSidebarLink" style="{% if current_user.id != 1 %}display: none;{% endif %} text-decoration: none; color: white;">
                 <div class="agent-avatar" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">🎫</div>
                 <div class="agent-info">
@@ -2923,6 +2991,7 @@
                     <div class="agent-role">Guides & Tutorials</div>
                 </div>
             </a>
+            </div>
             {% endif %}
             <!-- End Settings & Tools -->
 
@@ -3040,104 +3109,48 @@
                     <span class="model-label">Model:</span>
                     <select id="modelSelect" class="model-select">
                         <!-- Free Tier: Gemini + Llama 3.3 70B -->
-                        <optgroup label="🆓 Free Tier">
-                            <option value="gemini-2.0-flash" selected data-tier="free">Gemini 2.0 Flash</option>
-                            <option value="gemini-1.5-pro" data-tier="free">Gemini 1.5 Pro</option>
-                            <option value="llama-3.3-70b" data-tier="free">Llama 3.3 70B</option>
+                        <optgroup label="✅ Available on Your Plan">
+                            <option value="gemini-2.0-flash" selected data-tier="free">Gemini 2.0 Flash (FREE)</option>
+                            <option value="gemini-1.5-pro" data-tier="free">Gemini 1.5 Pro (FREE)</option>
+                            <option value="llama-3.3-70b" data-tier="free">Llama 3.3 70B (FREE)</option>
                         </optgroup>
 
                         <!-- Starter Tier: $2-3 models -->
-                        <optgroup label="💼 Starter ($19/mo)">
-                            <option value="grok-2" data-tier="starter">Grok 2</option>
-                            <option value="grok-2-vision" data-tier="starter">Grok 2 Vision</option>
-                            <option value="mistral-large" data-tier="starter">Mistral Large</option>
-                            <option value="gpt-4o" data-tier="starter">GPT-4o</option>
-                            <option value="llama-3.1-405b" data-tier="starter">Llama 3.1 405B</option>
-                            <option value="perplexity-sonar-pro" data-tier="starter">Perplexity Pro</option>
-                            <option value="claude-sonnet-4.5" data-tier="starter">Claude Sonnet 4.5</option>
+                        <optgroup label="🔒 Upgrade to Unlock - Starter ($19/mo)">
+                            <option value="claude-sonnet-4.5" data-tier="starter">🔒 Claude Sonnet 4.5</option>
+                            <option value="gpt-4o" data-tier="starter">🔒 GPT-4o</option>
+                            <option value="grok-2" data-tier="starter">🔒 Grok 2</option>
+                            <option value="grok-2-vision" data-tier="starter">🔒 Grok 2 Vision</option>
+                            <option value="mistral-large" data-tier="starter">🔒 Mistral Large</option>
+                            <option value="llama-3.1-405b" data-tier="starter">🔒 Llama 3.1 405B</option>
+                            <option value="perplexity-sonar-pro" data-tier="starter">🔒 Perplexity Pro</option>
                         </optgroup>
 
                         <!-- Pro Tier: Everything else under $6 -->
-                        <optgroup label="⭐ Pro ($49/mo)">
-                            <option value="mistral-small" data-tier="pro">Mistral Small</option>
-                            <option value="deepseek-v3" data-tier="pro">DeepSeek V3</option>
-                            <option value="gpt-4o-mini" data-tier="pro">GPT-4o Mini</option>
-                            <option value="deepseek-r1" data-tier="pro">DeepSeek R1</option>
-                            <option value="claude-haiku-4.5" data-tier="pro">Claude Haiku 4.5</option>
-                            <option value="perplexity-sonar" data-tier="pro">Perplexity Sonar</option>
+                        <optgroup label="🔒 Upgrade to Unlock - Pro ($49/mo)">
+                            <option value="mistral-small" data-tier="pro">🔒 Mistral Small</option>
+                            <option value="deepseek-v3" data-tier="pro">🔒 DeepSeek V3</option>
+                            <option value="gpt-4o-mini" data-tier="pro">🔒 GPT-4o Mini</option>
+                            <option value="deepseek-r1" data-tier="pro">🔒 DeepSeek R1</option>
+                            <option value="claude-haiku-4.5" data-tier="pro">🔒 Claude Haiku 4.5</option>
+                            <option value="perplexity-sonar" data-tier="pro">🔒 Perplexity Sonar</option>
                         </optgroup>
 
                         <!-- Enterprise Only: $6+ models -->
-                        <optgroup label="💎 Pro/Enterprise Only">
-                            <option value="claude-opus-4" data-tier="enterprise">Claude Opus 4</option>
-                            <option value="gpt-4-turbo" data-tier="enterprise">GPT-4 Turbo</option>
+                        <optgroup label="🔒 Upgrade to Unlock - Pro/Enterprise">
+                            <option value="claude-opus-4" data-tier="enterprise">🔒 Claude Opus 4</option>
+                            <option value="gpt-4-turbo" data-tier="enterprise">🔒 GPT-4 Turbo</option>
                         </optgroup>
                     </select>
                 </div>
             </div>
 
             <div class="header-right">
-                <!-- Compact Settings Dropdown -->
-                <div class="settings-menu">
-                    <button class="settings-btn" onclick="toggleSettingsMenu(event)" title="Settings">
-                        ⚙️
-                    </button>
 
-                    <div class="settings-dropdown" id="settingsDropdown">
-                        <div class="settings-section">
-                            <div class="settings-label">Model</div>
-                            <select id="modelSelectMobile" class="model-select-compact">
-                                <!-- Free Tier: Gemini + Llama 3.3 70B -->
-                                <optgroup label="🆓 Free Tier">
-                                    <option value="gemini-2.0-flash" selected data-tier="free">Gemini 2.0 Flash</option>
-                                    <option value="gemini-1.5-pro" data-tier="free">Gemini 1.5 Pro</option>
-                                    <option value="llama-3.3-70b" data-tier="free">Llama 3.3 70B</option>
-                                </optgroup>
-
-                                <!-- Starter Tier: $2-3 models -->
-                                <optgroup label="💼 Starter ($19/mo)">
-                                    <option value="grok-2" data-tier="starter">Grok 2</option>
-                                    <option value="grok-2-vision" data-tier="starter">Grok 2 Vision</option>
-                                    <option value="mistral-large" data-tier="starter">Mistral Large</option>
-                                    <option value="gpt-4o" data-tier="starter">GPT-4o</option>
-                                    <option value="llama-3.1-405b" data-tier="starter">Llama 3.1 405B</option>
-                                    <option value="perplexity-sonar-pro" data-tier="starter">Perplexity Pro</option>
-                                    <option value="claude-sonnet-4.5" data-tier="starter">Claude Sonnet 4.5</option>
-                                </optgroup>
-
-                                <!-- Pro Tier: Everything else under $6 -->
-                                <optgroup label="⭐ Pro ($49/mo)">
-                                    <option value="mistral-small" data-tier="pro">Mistral Small</option>
-                                    <option value="deepseek-v3" data-tier="pro">DeepSeek V3</option>
-                                    <option value="gpt-4o-mini" data-tier="pro">GPT-4o Mini</option>
-                                    <option value="deepseek-r1" data-tier="pro">DeepSeek R1</option>
-                                    <option value="claude-haiku-4.5" data-tier="pro">Claude Haiku 4.5</option>
-                                    <option value="perplexity-sonar" data-tier="pro">Perplexity Sonar</option>
-                                </optgroup>
-
-                                <!-- Enterprise Only: $6+ models -->
-                                <optgroup label="💎 Pro/Enterprise Only">
-                                    <option value="claude-opus-4" data-tier="enterprise">Claude Opus 4</option>
-                                    <option value="gpt-4-turbo" data-tier="enterprise">GPT-4 Turbo</option>
-                                </optgroup>
-                            </select>
-                        </div>
-
-                        <div class="settings-divider"></div>
-
-                        <button class="settings-item" onclick="openPromptBuilder(); closeSettingsMenu();">
-                            <span>🎯</span> Prompt Builder
-                        </button>
-
-                        <button class="settings-item" onclick="toggleHistoryDropdown(); closeSettingsMenu();">
-                            <span>📜</span> History
-                        </button>
-
-                        <button class="settings-item" onclick="window.location.href='/integrations'; closeSettingsMenu();">
-                            <span>🔧</span> Integrations
-                        </button>
-                    </div>
-                </div>
+                <!-- New Chat Button -->
+                <button class="new-chat-btn" onclick="startNewChat()" title="Start a fresh conversation">
+                    ✏️ New Chat
+                </button>
 
                 <!-- History Dropdown Menu -->
                 <div class="history-dropdown" id="historyDropdownMenu">
@@ -3223,7 +3236,7 @@
         <div class="dropdown-menu" id="dropdownMenu">
             <a href="/pricing">⭐ Upgrade Plan</a>
             <a href="#" onclick="openAgentLibrary(); return false;">📚 Agent Library</a>
-            <a href="#" onclick="viewHistory(); return false;">📜 Chat History</a>
+            <a href="#" onclick="toggleHistoryDropdown(); return false;">📜 Chat History</a>
             <a href="#" onclick="clearAllChat(); return false;">🗑️ Clear Chats</a>
             {% if current_user.id == 1 %}
             <a href="/admin" id="adminLink">⚙️ Admin</a>
@@ -3354,6 +3367,32 @@
         </div>
     </div>
 
+    <!-- Change Password Modal -->
+    <div class="modal" id="changePasswordModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeChangePasswordModal()">✕</button>
+            <h2 class="modal-title">🔐 Change Password</h2>
+            <form id="changePasswordForm" onsubmit="changePassword(event)">
+                <div class="form-group">
+                    <label class="form-label">Current Password</label>
+                    <input type="password" id="currentPassword" class="form-input" required placeholder="Enter current password">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">New Password</label>
+                    <input type="password" id="newPassword" class="form-input" required placeholder="Enter new password" minlength="6">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Confirm New Password</label>
+                    <input type="password" id="confirmPassword" class="form-input" required placeholder="Confirm new password" minlength="6">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Change Password</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeChangePasswordModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Prompt Builder Modal -->
     <div class="modal" id="promptBuilderModal">
         <div class="modal-content">
@@ -3405,6 +3444,43 @@
     </div>
 
     <script>
+        // ============================================
+        // AI TEAM PLATFORM - AGENT TYPES (4 TYPES)
+        // ============================================
+        // The platform has FOUR distinct agent types. These must NEVER be merged or confused:
+        //
+        // 1) PRIMARY AGENTS
+        //    - The 7 core system agents (Ember, Luna, Nova, Echo, Sage, Pixel, Atlas)
+        //    - Always present for all users
+        //    - Hardcoded in templates
+        //    - NOT configurable or sold
+        //    - Displayed in fixed agent buttons
+        //
+        // 2) CUSTOM AGENTS
+        //    - Created by users for themselves
+        //    - User-controlled (full CRUD permissions)
+        //    - Loaded via /api/custom-agents
+        //    - Can be shared publicly via share_code
+        //    - Free feature available to all users
+        //
+        // 3) GLOBAL AGENTS
+        //    - Admin-controlled utility agents
+        //    - Loaded via /api/global-agents
+        //    - Disabled by default for users
+        //    - Admin assigns to specific users (admin can assign to themselves)
+        //    - Users can view/use but NOT create/modify/delete
+        //
+        // 4) STAND ALONE CLIENT AGENTS
+        //    - Premium paid deliverables
+        //    - Admin-created ONLY
+        //    - Loaded via /api/client-agents
+        //    - Private to ONE specific client workspace
+        //    - Single-purpose with strict boundaries
+        //    - Takes priority over all other agent types
+        //    - Users can view/use their assigned agents but NOT create/modify/delete
+        //    - Displayed FIRST in sidebar with premium styling
+        // ============================================
+
         // Global variables
         let imageMode = false;
         let recognition = null;
@@ -3457,6 +3533,66 @@
         function toggleShareableLinks() {
             const section = document.getElementById('shareLinksSection');
             const toggle = document.getElementById('shareLinksToggle');
+
+            if (section && toggle) {
+                if (section.style.display === 'none') {
+                    section.style.display = 'block';
+                    toggle.textContent = '▼';
+                } else {
+                    section.style.display = 'none';
+                    toggle.textContent = '▶';
+                }
+            }
+        }
+
+        function toggleSettingsTools() {
+            const section = document.getElementById('settingsToolsSection');
+            const toggle = document.getElementById('settingsToolsToggle');
+
+            if (section && toggle) {
+                if (section.style.display === 'none') {
+                    section.style.display = 'block';
+                    toggle.textContent = '▼';
+                } else {
+                    section.style.display = 'none';
+                    toggle.textContent = '▶';
+                }
+            }
+        }
+
+        function toggleCustomAgents() {
+            const section = document.getElementById('customAgentsList');
+            const toggle = document.getElementById('customAgentsToggle');
+
+            if (section && toggle) {
+                if (section.style.display === 'none') {
+                    section.style.display = 'block';
+                    toggle.textContent = '▼';
+                } else {
+                    section.style.display = 'none';
+                    toggle.textContent = '▶';
+                }
+            }
+        }
+
+        function toggleGlobalAgents() {
+            const section = document.getElementById('globalAgentsList');
+            const toggle = document.getElementById('globalAgentsToggle');
+
+            if (section && toggle) {
+                if (section.style.display === 'none') {
+                    section.style.display = 'block';
+                    toggle.textContent = '▼';
+                } else {
+                    section.style.display = 'none';
+                    toggle.textContent = '▶';
+                }
+            }
+        }
+
+        function toggleClientAgents() {
+            const section = document.getElementById('clientAgentsList');
+            const toggle = document.getElementById('clientAgentsToggle');
 
             if (section && toggle) {
                 if (section.style.display === 'none') {
@@ -3558,6 +3694,16 @@
 
             if (clickedElement && clickedElement.classList.contains('settings-menu-sidebar')) {
                 dropdownId = 'settingsDropdownSidebar';
+
+                // Position the sidebar dropdown relative to the clicked button
+                const button = clickedElement.querySelector('.agent-item');
+                const dropdown = document.getElementById(dropdownId);
+                if (button && dropdown) {
+                    const rect = button.getBoundingClientRect();
+                    dropdown.style.position = 'fixed';
+                    dropdown.style.top = rect.top + 'px';
+                    dropdown.style.left = (rect.right + 10) + 'px';
+                }
             }
 
             // Close all other dropdowns first
@@ -3780,11 +3926,49 @@
                 return;
             }
 
-            // Check if user wants to switch agents
-            const switchPattern = /switch\s+to\s+(\w+(?:\s+\w+)*)/i;
-            const switchMatch = message.match(switchPattern);
-            if (switchMatch && uploadedFiles.length === 0) {
-                const targetAgent = switchMatch[1];
+            // Check if user wants to switch agents - support multiple patterns
+            let targetAgent = null;
+
+            // Pattern 1: "switch to [agent]"
+            const switchPattern = /(?:switch|change)\s+to\s+(\w+(?:\s+\w+)*)/i;
+            let match = message.match(switchPattern);
+            if (match) {
+                targetAgent = match[1];
+                console.log('🎯 Pattern 1 matched (switch/change to):', targetAgent);
+            }
+
+            // Pattern 2: "talk to [agent]", "speak to [agent]", "chat with [agent]"
+            if (!targetAgent) {
+                const talkPattern = /(?:talk|speak|chat)\s+(?:to|with)\s+(\w+(?:\s+\w+)*)/i;
+                match = message.match(talkPattern);
+                if (match) {
+                    targetAgent = match[1];
+                    console.log('🎯 Pattern 2 matched (talk/speak/chat):', targetAgent);
+                }
+            }
+
+            // Pattern 3: "I want [agent]", "get me [agent]"
+            if (!targetAgent) {
+                const wantPattern = /(?:i\s+want|get\s+me|bring\s+me)\s+(\w+(?:\s+\w+)*)/i;
+                match = message.match(wantPattern);
+                if (match) {
+                    targetAgent = match[1];
+                    console.log('🎯 Pattern 3 matched (want/get me):', targetAgent);
+                }
+            }
+
+            // Pattern 4: "hi [agent]", "hello [agent]", "hey [agent]" (only if it's the main part of message)
+            if (!targetAgent && message.trim().split(' ').length <= 3) {
+                const greetPattern = /^(?:hi|hello|hey)\s+(\w+(?:\s+\w+)*)$/i;
+                match = message.match(greetPattern);
+                if (match) {
+                    targetAgent = match[1];
+                    console.log('🎯 Pattern 4 matched (greeting):', targetAgent);
+                }
+            }
+
+            if (targetAgent && uploadedFiles.length === 0) {
+                console.log('🔀 Agent switching triggered for:', targetAgent);
                 // Try to switch to the agent
                 const success = switchToAgent(targetAgent);
                 if (success) {
@@ -3793,6 +3977,7 @@
                     return; // Don't send the message, just switch
                 }
                 // If agent not found, continue to send as regular message
+                console.log('⚠️ Agent not found, sending as regular message');
             }
 
             // Disable send button
@@ -3993,8 +4178,18 @@
             const container = document.getElementById('chatContainer');
             const messageDiv = document.createElement('div');
             messageDiv.className = 'message assistant-message';
-            messageDiv.innerHTML = '<div class="message-content">' + message + '</div>';
-            
+
+            // Get current agent emoji from session storage or use default
+            const agentEmoji = sessionStorage.getItem('currentAgentEmoji') || '🌙';
+
+            // Build message with proper wrapper structure (avatar on left)
+            let content = '<div class="message-wrapper">';
+            content += '<div class="avatar">' + agentEmoji + '</div>';
+            content += '<div class="message-content">' + message + '</div>';
+            content += '</div>';
+
+            messageDiv.innerHTML = content;
+
             container.appendChild(messageDiv);
             container.scrollTop = container.scrollHeight;
         }
@@ -4037,22 +4232,35 @@
         }
 
         function switchToAgent(agentName) {
+            console.log('🔄 Attempting to switch to agent:', agentName);
+
             // Find and click the agent in the sidebar (case-insensitive)
             const agentItems = document.querySelectorAll('.agent-item');
+            console.log('📋 Found', agentItems.length, 'agent items');
+
             let found = false;
 
             agentItems.forEach(item => {
                 const nameElement = item.querySelector('.agent-name');
                 if (nameElement) {
                     const itemName = nameElement.textContent.trim();
+                    console.log('  Checking agent:', itemName);
+
                     // Case-insensitive partial match
                     if (itemName.toLowerCase().includes(agentName.toLowerCase())) {
+                        console.log('  ✅ Match found! Clicking:', itemName);
                         item.click();
                         displaySystemMessage(`✅ Switched to ${itemName}`);
                         found = true;
+                        return; // Exit forEach early
                     }
                 }
             });
+
+            if (!found) {
+                console.log('❌ No agent found matching:', agentName);
+                displaySystemMessage(`❌ Agent "${agentName}" not found. Try: Luna, Mila, Sage, Ember, Sol, Nova, or Theo`);
+            }
 
             return found;
         }
@@ -4129,16 +4337,22 @@
                 alert('❌ Voice input is not supported in your browser. Please use Chrome, Edge, or Safari.');
                 return;
             }
-            
+
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognition = new SpeechRecognition();
             recognition.continuous = false;
             recognition.interimResults = false;
             recognition.lang = 'en-US';
-            
+
             // Show visual indicator
             showVoiceStatus('🎤 Listening... Speak now!');
             isRecording = true;
+
+            // Add recording class to voice button
+            const voiceBtn = document.getElementById('voiceConversationBtn');
+            if (voiceBtn) {
+                voiceBtn.classList.add('recording');
+            }
             
             recognition.onresult = function(event) {
                 const transcript = event.results[0][0].transcript;
@@ -4194,6 +4408,12 @@
             }
             hideVoiceStatus();
             isRecording = false;
+
+            // Remove recording class from voice button
+            const voiceBtn = document.getElementById('voiceConversationBtn');
+            if (voiceBtn) {
+                voiceBtn.classList.remove('recording');
+            }
         }
 
         function showVoiceStatus(message) {
@@ -4738,27 +4958,36 @@
             // Clear chat container
             const chatContainer = document.getElementById('chatContainer');
             chatContainer.innerHTML = '';
-            
+
             // Reset conversation ID
             currentConversationId = null;
-            
+
             // Show welcome message
             const currentAgent = getCurrentAgent();
+            const agentIcon = getAgentIcon(currentAgent);
             const welcomeMsg = document.createElement('div');
             welcomeMsg.className = 'welcome';
             welcomeMsg.innerHTML = `
-                <h2>Hi! I'm ${currentAgent} ${getAgentIcon(currentAgent)}</h2>
-                <p>I'm ready to help you. What can I do for you today?</p>
+                <h2>Hi! I'm ${currentAgent} ${agentIcon}</h2>
+                <p>I'm ready for a fresh conversation. What can I do for you today?</p>
             `;
             chatContainer.appendChild(welcomeMsg);
-            
-            // Close dropdown
-            toggleHistoryDropdown();
-            
+
+            // Close dropdown if open
+            const historyDropdown = document.getElementById('historyDropdownMenu');
+            if (historyDropdown && historyDropdown.classList.contains('active')) {
+                toggleHistoryDropdown();
+            }
+
             // Update dropdown
             updateHistoryDropdown();
-            
-            showNotification('Started new chat');
+
+            // Show notification
+            showNotification(`✨ New chat started with ${currentAgent}`);
+
+            // Focus on input
+            const input = document.getElementById('messageInput');
+            if (input) input.focus();
         }
 
         // Delete conversation
@@ -4828,9 +5057,10 @@
         // Load conversations on page load
         document.addEventListener('DOMContentLoaded', function() {
             loadConversations();
-            loadGlobalAgents();  // Load global agents on page load
-            loadCustomAgents();  // Load custom agents on page load
-            loadUsageStats();     // Load usage statistics
+            loadClientAgents();      // Load Stand Alone Client Agents on page load (PREMIUM - appears first)
+            loadGlobalAgents();      // Load global agents on page load
+            loadCustomAgents();      // Load custom agents on page load
+            loadUsageStats();        // Load usage statistics
 
             // Ensure all dropdowns are closed on page load
             closeAllDropdowns();
@@ -4935,6 +5165,28 @@
         // CUSTOM AGENTS LOADING
         // ============================================
 
+        // Helper function to escape HTML and prevent XSS
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return String(unsafe)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Helper function to escape for use in onclick attributes
+        function escapeForAttr(unsafe) {
+            if (!unsafe) return '';
+            return String(unsafe)
+                .replace(/\\/g, '\\\\')
+                .replace(/'/g, "\\'")
+                .replace(/"/g, '\\"')
+                .replace(/\n/g, '\\n')
+                .replace(/\r/g, '\\r');
+        }
+
         function loadCustomAgents() {
             fetch('/api/custom-agents')
                 .then(response => response.json())
@@ -4961,7 +5213,13 @@
             
             // Clear existing content
             container.innerHTML = '';
-            
+
+            // Debug: Log what we received
+            console.log('📋 Loading custom agents:', agents.length);
+            agents.forEach(agent => {
+                console.log(`   - ${agent.name}: share_url = ${agent.share_url ? 'YES (' + agent.share_url + ')' : 'NO'}`);
+            });
+
             // Add each custom agent
             agents.forEach(agent => {
                 const agentDiv = document.createElement('div');
@@ -4980,9 +5238,9 @@
                     ? `<img src="${agent.icon_image}" alt="${agent.name}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`
                     : agent.emoji || '🤖';
 
-                // Build dropdown menu
+                // Build dropdown menu with proper escaping
                 const shareOption = agent.share_url ? `
-                    <div class="dropdown-item" onclick="showCustomAgentShare(event, '${agent.name}', '${agent.share_url}')">
+                    <div class="dropdown-item" onclick="showCustomAgentShare(event, '${escapeForAttr(agent.name)}', '${escapeForAttr(agent.share_url)}')">
                         <span class="dropdown-icon">🔗</span>
                         <span>Share Agent</span>
                     </div>
@@ -5157,6 +5415,106 @@
             event.currentTarget.classList.add('active');
 
             console.log('Selected global agent:', agentName);
+        }
+
+        // ============================================
+        // STAND ALONE CLIENT AGENTS LOADING (PREMIUM)
+        // ============================================
+
+        function loadClientAgents() {
+            fetch('/api/client-agents')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.agents && data.agents.length > 0) {
+                        displayClientAgents(data.agents);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading client agents:', error);
+                });
+        }
+
+        function displayClientAgents(agents) {
+            const container = document.getElementById('clientAgentsList');
+            const title = document.getElementById('clientAgentsTitle');
+
+            if (!container) return;
+
+            // Show the section title
+            if (title) {
+                title.style.display = 'block';
+            }
+
+            // Clear existing content
+            container.innerHTML = '';
+
+            // Add each client agent (sorted by priority already from backend)
+            agents.forEach(agent => {
+                const agentDiv = document.createElement('div');
+                agentDiv.className = 'agent-item custom-agent-item';
+                agentDiv.onclick = (e) => {
+                    e.stopPropagation();
+                    selectClientAgent(e, agent.id, agent.name, agent.emoji || '💎', agent.description, agent.primary_outcome);
+                };
+
+                // Premium gold gradient for client agents
+                agentDiv.innerHTML = `
+                    <div class="agent-avatar" style="background: linear-gradient(135deg, #FFD700, #FFA500);">
+                        ${agent.emoji || '💎'}
+                    </div>
+                    <div class="agent-info">
+                        <div class="agent-name">${agent.name}</div>
+                        <div class="agent-role">${agent.description || agent.primary_outcome || 'Client Agent'}</div>
+                    </div>
+                    <div class="priority-badge" style="position: absolute; top: 8px; right: 8px; background: rgba(255, 215, 0, 0.2); color: #FFD700; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600;">
+                        ★ ${agent.priority_level || 1}
+                    </div>
+                `;
+
+                container.appendChild(agentDiv);
+            });
+        }
+
+        function selectClientAgent(event, agentId, agentName, emoji, description, primaryOutcome) {
+            event.preventDefault();
+
+            // Close all dropdowns when selecting a client agent
+            closeAllDropdowns();
+
+            // Update current agent display
+            const agentDisplay = document.getElementById('currentAgentName');
+            if (agentDisplay) {
+                agentDisplay.textContent = agentName;
+            }
+
+            // Update current agent emoji
+            const agentEmoji = document.querySelector('.current-agent-emoji');
+            if (agentEmoji) {
+                agentEmoji.textContent = emoji;
+            }
+
+            // Store selected agent info
+            window.selectedClientAgent = {
+                id: agentId,
+                name: agentName,
+                emoji: emoji,
+                description: description,
+                primaryOutcome: primaryOutcome,
+                isClient: true,
+                isPremium: true
+            };
+
+            // Clear other agent selections
+            window.selectedGlobalAgent = null;
+            window.selectedCustomAgent = null;
+
+            // Visual feedback
+            document.querySelectorAll('.agent-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+
+            console.log('Selected Stand Alone Client Agent (PREMIUM):', agentName, '- Primary Outcome:', primaryOutcome);
         }
 
         function showCustomAgentShare(event, agentName, shareUrl) {
@@ -5640,6 +5998,9 @@
                             <button class="message-action-btn" onclick="copyMessage('${messageId}')" title="Copy">
                                 📋 Copy
                             </button>
+                            <button class="message-action-btn" onclick="downloadMessage('${messageId}')" title="Download">
+                                💾 Download
+                            </button>
                             <button class="message-action-btn" onclick="regenerateResponse()" title="Regenerate">
                                 🔄 Regenerate
                             </button>
@@ -5708,6 +6069,42 @@
             btn.style.color = '#ef4444';
             btn.textContent = '👎✓';
             showNotification('📝 Thanks for your feedback. We\'ll improve!');
+        }
+
+        async function downloadMessage(messageId) {
+            try {
+                const messageDiv = document.getElementById(messageId);
+                const messageContent = messageDiv.querySelector('.message-content');
+                const text = messageContent.innerText || messageContent.textContent;
+
+                // Show loading notification
+                showNotification('💾 Preparing download...');
+
+                // Create the file via API
+                const response = await fetch('/api/create-website-file', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        filename: 'agent_response.txt',
+                        code: text
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    // Open download URL in new window
+                    window.open(result.download_url, '_blank');
+                    showNotification('✅ Download started!');
+                } else {
+                    throw new Error(result.error || 'Failed to create download');
+                }
+            } catch (error) {
+                console.error('Download failed:', error);
+                showNotification('❌ Failed to download message');
+            }
         }
 
         function formatAssistantMessage(message) {
@@ -6163,6 +6560,66 @@ Please provide your response following these guidelines.`;
         }
 
         // Custom Agent Selection Function
+
+        // ============================================
+        // CHANGE PASSWORD MODAL FUNCTIONS
+        // ============================================
+
+        function openChangePasswordModal() {
+            document.getElementById('changePasswordModal').style.display = 'flex';
+        }
+
+        function closeChangePasswordModal() {
+            document.getElementById('changePasswordModal').style.display = 'none';
+            document.getElementById('changePasswordForm').reset();
+        }
+
+        async function changePassword(event) {
+            event.preventDefault();
+
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            // Validate passwords match
+            if (newPassword !== confirmPassword) {
+                showNotification('❌ New passwords do not match');
+                return;
+            }
+
+            // Validate password length
+            if (newPassword.length < 6) {
+                showNotification('❌ Password must be at least 6 characters');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/change-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        currentPassword: currentPassword,
+                        newPassword: newPassword
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showNotification('✅ Password changed successfully!');
+                    closeChangePasswordModal();
+                } else {
+                    showNotification('❌ ' + (data.error || 'Failed to change password'));
+                }
+            } catch (error) {
+                console.error('Error changing password:', error);
+                showNotification('❌ Network error. Please try again.');
+            }
+        }
+
         console.log('✅ Chat History module loaded!');
     </script>
 
@@ -6403,6 +6860,47 @@ Please provide your response following these guidelines.`;
         <span style="font-size: 24px;">💬</span>
     </button>
 
+    <!-- Upsell Modal for Premium Models -->
+    <div id="upgradeModal" class="upgrade-modal" style="display: none;">
+        <div class="upgrade-modal-content">
+            <button class="upgrade-modal-close" onclick="closeUpgradeModal()">×</button>
+            <div class="upgrade-modal-icon">🔒</div>
+            <h2 class="upgrade-modal-title">Upgrade Required</h2>
+            <p class="upgrade-modal-subtitle" id="upgradeModalSubtitle">This model requires a paid subscription</p>
+
+            <div class="upgrade-modal-tier-info" id="upgradeModalTierInfo">
+                <div class="upgrade-tier-badge">FREE4LIFE Tier</div>
+                <p style="margin: 15px 0; color: #666; line-height: 1.6;">
+                    You're currently on the <strong>FREE4LIFE</strong> tier which includes:<br>
+                    ✅ Unlimited messages (no daily limit)<br>
+                    ✅ Free AI models (Gemini, Llama)<br>
+                    ✅ All 7 primary agents<br>
+                    ✅ 3 custom agents
+                </p>
+                <div class="upgrade-divider"></div>
+                <p style="margin: 15px 0; color: #10a37f; font-weight: 600;">
+                    Want access to Claude and GPT?
+                </p>
+                <p style="margin: 15px 0; color: #666; line-height: 1.6;">
+                    Upgrade to <strong>Starter</strong> for just <strong>$19/mo</strong>:<br>
+                    🚀 Claude Sonnet 4.5<br>
+                    🚀 GPT-4o<br>
+                    🚀 Grok 2<br>
+                    🚀 60 messages/day
+                </p>
+            </div>
+
+            <div class="upgrade-modal-actions">
+                <button class="upgrade-btn-primary" onclick="window.location.href='/pricing'">
+                    Upgrade Now
+                </button>
+                <button class="upgrade-btn-secondary" onclick="closeUpgradeModal()">
+                    Maybe Later
+                </button>
+            </div>
+        </div>
+    </div>
+
     <style>
         #supportChatButton {
             position: fixed;
@@ -6551,6 +7049,165 @@ Please provide your response following these guidelines.`;
                 right: 20px;
             }
         }
+
+        /* Upgrade Modal Styles */
+        .upgrade-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .upgrade-modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.3s ease-out;
+            text-align: center;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .upgrade-modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 30px;
+            color: #999;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .upgrade-modal-close:hover {
+            color: #333;
+        }
+
+        .upgrade-modal-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+
+        .upgrade-modal-title {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .upgrade-modal-subtitle {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 25px;
+        }
+
+        .upgrade-modal-tier-info {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 25px 0;
+            text-align: left;
+        }
+
+        .upgrade-tier-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .upgrade-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #ddd, transparent);
+            margin: 20px 0;
+        }
+
+        .upgrade-modal-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        .upgrade-btn-primary {
+            flex: 1;
+            background: linear-gradient(135deg, #10a37f, #0d8c6f);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upgrade-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(16, 163, 127, 0.4);
+        }
+
+        .upgrade-btn-secondary {
+            flex: 1;
+            background: white;
+            color: #666;
+            border: 2px solid #e0e0e0;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upgrade-btn-secondary:hover {
+            background: #f8f9fa;
+            border-color: #ccc;
+        }
+
+        @media (max-width: 600px) {
+            .upgrade-modal-content {
+                padding: 30px 20px;
+            }
+
+            .upgrade-modal-actions {
+                flex-direction: column;
+            }
+
+            .upgrade-btn-primary, .upgrade-btn-secondary {
+                width: 100%;
+            }
+        }
     </style>
 
     <script>
@@ -6658,6 +7315,49 @@ Please provide your response following these guidelines.`;
                 addSupportMessage('system', '❌ Error sending message. Please try again.');
             }
         }
+
+        // ================================================
+        // UPGRADE MODAL FUNCTIONS
+        // ================================================
+
+        function showUpgradeModal(modelName, requiredTier, currentTier) {
+            const modal = document.getElementById('upgradeModal');
+            const subtitle = document.getElementById('upgradeModalSubtitle');
+
+            // Update subtitle with model name
+            if (modelName) {
+                subtitle.textContent = `${modelName} requires ${requiredTier}`;
+            }
+
+            // Show modal
+            modal.style.display = 'flex';
+
+            // Prevent body scroll
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeUpgradeModal() {
+            const modal = document.getElementById('upgradeModal');
+            modal.style.display = 'none';
+
+            // Re-enable body scroll
+            document.body.style.overflow = 'auto';
+        }
+
+        // Close modal on ESC key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeUpgradeModal();
+            }
+        });
+
+        // Close modal on background click
+        document.addEventListener('click', function(event) {
+            const modal = document.getElementById('upgradeModal');
+            if (event.target === modal) {
+                closeUpgradeModal();
+            }
+        });
     </script>
 </body>
 </html>

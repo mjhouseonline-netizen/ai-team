@@ -12,12 +12,13 @@ import base64
 
 notion_bp = Blueprint('notion', __name__)
 
+# Import database connection function
+from web_app_auth import get_db_connection
+
 # Notion OAuth Configuration
 NOTION_CLIENT_ID = os.environ.get('NOTION_CLIENT_ID')
 NOTION_CLIENT_SECRET = os.environ.get('NOTION_CLIENT_SECRET')
 NOTION_REDIRECT_URI = os.environ.get('NOTION_REDIRECT_URI', 'https://ai-team.skillsoul.store/notion-callback')
-
-DB_PATH = 'users.db'
 
 @notion_bp.route('/notion/auth')
 @login_required
@@ -216,7 +217,7 @@ def notion_callback():
         workspace_name = token_data.get('workspace_name')
         
         # Store token in database
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         # Create integrations table if it doesn't exist
@@ -355,7 +356,7 @@ def notion_callback():
 def notion_status():
     """Check if user has Notion connected"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute('''
             SELECT workspace_name FROM integrations 
@@ -381,7 +382,7 @@ def notion_status():
 def notion_disconnect():
     """Disconnect Notion integration"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute('''
             DELETE FROM integrations 

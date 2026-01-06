@@ -165,38 +165,13 @@ function toggleImageMode() {
 // ================================================
 
 function setupFileInput() {
-    document.getElementById('fileInput').addEventListener('change', async function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        const formData = new FormData();
-        formData.append('file', file);
-        
-        try {
-            const response = await fetch('/api/upload-file', {
-                method: 'POST',
-                credentials: 'include',
-                body: formData
-            });
-            
-            const data = await response.json();
-            
-            if (data.filename) {
-                uploadedFile = data;
-                document.getElementById('fileName').textContent = `📎 ${file.name}`;
-                document.getElementById('filePreview').classList.add('active');
-            }
-        } catch (error) {
-            console.error('Upload error:', error);
-        }
-    });
+    // File input is handled by the HTML's own implementation
+    // This function is kept for compatibility but doesn't override the HTML handler
+    console.log('✅ File input handler initialized');
 }
 
-function removeFile() {
-    uploadedFile = null;
-    document.getElementById('filePreview').classList.remove('active');
-    document.getElementById('fileInput').value = '';
-}
+// Note: removeFile() is defined in dashboard.html
+// Do not override it here to avoid conflicts
 
 // ================================================
 // VOICE RECOGNITION
@@ -310,7 +285,7 @@ async function sendMessage() {
         
         const data = await response.json();
         removeTyping(typingId);
-        
+
         if (response.ok) {
             if (imageMode && data.image_url) {
                 addMessage('Here\'s your generated image!', 'assistant', data.image_url);
@@ -320,7 +295,24 @@ async function sendMessage() {
             }
             loadStats();
         } else {
-            addMessage(`Error: ${data.error || 'Failed to get response'}`, 'assistant');
+            // Check if upgrade is required (403 Forbidden with upgrade_required flag)
+            if (response.status === 403 && data.upgrade_required) {
+                // Show upgrade modal instead of error message
+                const modelName = getModelName(data.blocked_model || selectedModel);
+                const requiredTier = data.required_tier || 'a paid plan';
+                const currentTier = data.current_tier || 'free';
+
+                // Call the modal function (defined in dashboard.html)
+                if (typeof showUpgradeModal === 'function') {
+                    showUpgradeModal(modelName, requiredTier, currentTier);
+                } else {
+                    // Fallback to error message if modal function not available
+                    addMessage(`⚠️ Upgrade Required: ${data.error}\n\n💡 Click here to upgrade: /pricing`, 'assistant');
+                }
+            } else {
+                // Show regular error message
+                addMessage(`Error: ${data.error || 'Failed to get response'}`, 'assistant');
+            }
         }
     } catch (error) {
         removeTyping(typingId);
@@ -1032,11 +1024,39 @@ function escapeHtml(text) {
     return div.innerHTML.replace(/\n/g, '<br>');
 }
 
-function downloadFromUrl(url) {
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'download_' + Date.now() + '.png';
-    a.click();
+async function downloadFromUrl(url) {
+    try {
+        // Fetch the file to handle cross-origin resources
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Failed to fetch file');
+
+        // Convert to blob
+        const blob = await response.blob();
+
+        // Create object URL and download
+        const objectUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = objectUrl;
+
+        // Try to extract filename from URL or use default
+        const urlPath = new URL(url).pathname;
+        const filename = urlPath.split('/').pop() || 'download_' + Date.now() + '.png';
+        a.download = filename;
+
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        // Clean up object URL
+        URL.revokeObjectURL(objectUrl);
+    } catch (error) {
+        console.error('Download failed:', error);
+        // Fallback to direct download for same-origin resources
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'download_' + Date.now() + '.png';
+        a.click();
+    }
 }
 
 function copyToClipboard(text) {

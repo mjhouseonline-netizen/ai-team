@@ -8,7 +8,7 @@ import sys
 import secrets
 import string
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask, request, jsonify, session, redirect, url_for, render_template, send_from_directory, flash
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_cors import CORS
@@ -23,6 +23,9 @@ from openai import OpenAI
 import google.generativeai as genai
 from dotenv import load_dotenv
 from agent_collaboration import detect_agent_mentions, suggest_agent_transfer
+from functools import wraps
+from collections import defaultdict
+import time
 
 # Load environment variables from .env file
 load_dotenv()
@@ -44,6 +47,53 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', os.urandom(24).hex())
 app.config['ANTHROPIC_API_KEY'] = os.environ.get('ANTHROPIC_API_KEY')
 app.config['OPENAI_API_KEY'] = os.environ.get('OPENAI_API_KEY')
 app.config['GOOGLE_AI_API_KEY'] = os.environ.get('GOOGLE_AI_API_KEY')
+
+# ============================================
+# RATE LIMITING
+# ============================================
+# Simple in-memory rate limiting (per IP address)
+rate_limit_storage = defaultdict(list)
+
+def rate_limit(max_requests=60, window_seconds=60):
+    """
+    Rate limiting decorator
+    Args:
+        max_requests: Maximum number of requests allowed
+        window_seconds: Time window in seconds
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # Get client IP
+            client_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+            if client_ip:
+                client_ip = client_ip.split(',')[0].strip()
+            else:
+                client_ip = request.remote_addr
+
+            # Create unique key for this endpoint and IP
+            key = f"{f.__name__}:{client_ip}"
+            now = time.time()
+
+            # Clean old requests outside the window
+            rate_limit_storage[key] = [
+                req_time for req_time in rate_limit_storage[key]
+                if now - req_time < window_seconds
+            ]
+
+            # Check if limit exceeded
+            if len(rate_limit_storage[key]) >= max_requests:
+                return jsonify({
+                    'error': 'Rate limit exceeded',
+                    'message': f'Too many requests. Please try again in {window_seconds} seconds.'
+                }), 429
+
+            # Add current request
+            rate_limit_storage[key].append(now)
+
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
 
 # Initialize OpenAI client with proper error handling
 try:
@@ -69,6 +119,34 @@ STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET')
 STRIPE_STARTER_PRICE_ID = os.environ.get('STRIPE_STARTER_PRICE_ID')
 STRIPE_PRO_PRICE_ID = os.environ.get('STRIPE_PRO_PRICE_ID')
 STRIPE_ENTERPRISE_PRICE_ID = os.environ.get('STRIPE_ENTERPRISE_PRICE_ID', 'price_1SaVi1Fj4r8OeJwWeMQuODE5')  # $99/month Enterprise tier
+
+# ============================================
+# AGENT TYPES CONFIGURATION
+# ============================================
+# The platform has 4 distinct agent types - NEVER merge or confuse these
+
+# Agent Type 1: PRIMARY AGENTS (Hardcoded - not in database)
+PRIMARY_AGENTS = [
+    'Ember',    # Creative Visionary - Ideas and innovation
+    'Luna',     # Research Specialist - Deep knowledge
+    'Nova',     # Technical Architect - System design
+    'Echo',     # Communication Expert - Clarity and persuasion
+    'Sage',     # Strategy Advisor - Planning and direction
+    'Pixel',    # Visual Designer - UI/UX and aesthetics
+    'Atlas'     # Data Analyst - Numbers and insights
+]
+
+# Agent Type 2: CUSTOM AGENTS
+# Table: custom_agents
+# User-created, user-controlled, stored in database
+
+# Agent Type 3: GLOBAL AGENTS
+# Table: global_agents, user_global_agents (assignment tracking)
+# Admin-controlled, assigned to specific users
+
+# Agent Type 4: STAND ALONE CLIENT AGENTS
+# Table: client_agents
+# Premium paid deliverables, admin-only, private to one client
 
 # File upload configuration
 UPLOAD_FOLDER = 'uploads'
@@ -119,32 +197,74 @@ else:
 import os
 import shutil
 
-# IMPORTANT: On Render, /data exists but causes "unable to open database file" errors
-# in Gunicorn worker processes due to permission issues. We use local ai_team.db instead,
-# which works reliably across all processes.
+# IMPORTANT: On Render, the application directory is not writable.
+# Use /tmp for database storage which is always writable.
+# /tmp is ephemeral but we can copy from /data on startup if it exists.
 
-DB_PATH = 'ai_team.db'
+# Detect if we're on Render (production) - Render sets RENDER environment variable
+IS_RENDER = os.environ.get('RENDER') == 'true' or os.environ.get('RENDER_SERVICE_NAME') is not None
 
-# If local database doesn't exist but /data/ai_team.db does, copy it
-if not os.path.exists(DB_PATH) and os.path.exists('/data/ai_team.db'):
+if IS_RENDER:
+    # CRITICAL FIX: Use /data (persistent) instead of /tmp (ephemeral)
+    # /tmp gets wiped on every Render restart, causing data loss!
+    # /data is persistent across restarts
+    DB_PATH = '/data/ai_team.db'
+    print(f"🔍 Render environment detected - using PERSISTENT storage: {DB_PATH}")
+
+    # Ensure /data directory exists
+    os.makedirs('/data', exist_ok=True)
+
+    # Legacy migration: If database is still in /tmp, move it to /data
+    tmp_db = '/tmp/ai_team.db'
+    if os.path.exists(tmp_db) and not os.path.exists(DB_PATH):
+        try:
+            print(f"📋 Migrating database from /tmp to /data...")
+            shutil.copy(tmp_db, DB_PATH)
+            print(f"✅ Database migrated to persistent storage: {DB_PATH}")
+        except Exception as e:
+            print(f"⚠️  Migration failed: {e}")
+else:
+    # Local development: use local file
+    DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ai_team.db')
+    print(f"🔍 Local development - database path: {DB_PATH}")
+
+# Ensure /data is writable (Render check)
+if IS_RENDER:
     try:
-        print(f"📋 Copying database from /data to local directory...")
-        shutil.copy('/data/ai_team.db', DB_PATH)
-        print(f"✅ Database copied from /data/ai_team.db to {DB_PATH}")
+        test_file = '/data/test_write.txt'
+        with open(test_file, 'w') as f:
+            f.write('test')
+        os.remove(test_file)
+        print(f"✅ /data directory is writable")
     except Exception as e:
-        print(f"⚠️  Failed to copy database from /data: {e}")
-        print(f"⚠️  Will use fresh database")
+        print(f"❌ /data is NOT writable: {e}")
+        print(f"   This is critical - application may fail")
 
-print(f"✅ Using local database: {DB_PATH}")
-
-# Ensure database exists by checking for it
-if not os.path.exists(DB_PATH):
-    print(f"⚠️  Database file not found at {DB_PATH}, will be created on first use")
+# Check if database file exists
+if os.path.exists(DB_PATH):
+    print(f"✅ Database file exists: {DB_PATH}")
+    # Check if it's readable/writable
+    if os.access(DB_PATH, os.R_OK):
+        print(f"✅ Database is readable")
+    else:
+        print(f"❌ Database is NOT readable")
+    if os.access(DB_PATH, os.W_OK):
+        print(f"✅ Database is writable")
+    else:
+        print(f"❌ Database is NOT writable")
+else:
+    print(f"⚠️  Database will be created at: {DB_PATH}")
 
 # Helper function for database connection
 def get_db_connection():
     """Get SQLite database connection with proper error handling"""
     try:
+        # Ensure directory exists
+        db_dir = os.path.dirname(DB_PATH)
+        if db_dir and not os.path.exists(db_dir):
+            os.makedirs(db_dir, exist_ok=True)
+            print(f"📁 Created directory: {db_dir}")
+
         # Try to connect with check_same_thread=False for better compatibility
         conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=10.0)
         # Enable foreign keys
@@ -161,38 +281,80 @@ def get_db_connection():
         db_dir = os.path.dirname(DB_PATH) if os.path.dirname(DB_PATH) else '.'
         print(f"❌ Directory: {db_dir}")
         print(f"❌ Directory exists: {os.path.exists(db_dir)}")
-        print(f"❌ Directory writable: {os.access(db_dir, os.W_OK)}")
+        if os.path.exists(db_dir):
+            print(f"❌ Directory writable: {os.access(db_dir, os.W_OK)}")
 
         if os.path.exists(DB_PATH):
             print(f"❌ File readable: {os.access(DB_PATH, os.R_OK)}")
             print(f"❌ File writable: {os.access(DB_PATH, os.W_OK)}")
-            print(f"❌ File permissions: {oct(os.stat(DB_PATH).st_mode)[-3:]}")
-
-        # If it's a permission error and we're using /data, try to fall back
-        if 'unable to open database file' in error_msg and DB_PATH.startswith('/data'):
-            print(f"⚠️  Attempting fallback to local database...")
             try:
-                fallback_path = 'ai_team.db'
+                print(f"❌ File permissions: {oct(os.stat(DB_PATH).st_mode)[-3:]}")
+            except:
+                pass
+
+        # If connection failed, try creating a new database in temp directory as last resort
+        if 'unable to open database file' in error_msg:
+            print(f"⚠️  Attempting to create database in /tmp as fallback...")
+            try:
+                import tempfile
+                fallback_path = os.path.join(tempfile.gettempdir(), 'ai_team.db')
+                print(f"⚠️  Fallback path: {fallback_path}")
                 conn = sqlite3.connect(fallback_path, check_same_thread=False, timeout=10.0)
                 conn.execute('PRAGMA foreign_keys = ON')
                 conn.execute('PRAGMA journal_mode=WAL')
                 print(f"✅ Fallback successful: using {fallback_path}")
+                # Update global DB_PATH to use fallback
+                globals()['DB_PATH'] = fallback_path
                 return conn
             except Exception as fallback_error:
                 print(f"❌ Fallback also failed: {fallback_error}")
 
         raise
 
+def sync_database_to_persistent_storage():
+    """
+    LEGACY FUNCTION - No longer needed since we use /data directly now
+    Database is already in /data (persistent storage), no sync required
+    Kept for backward compatibility with existing code that calls this
+    """
+    if not IS_RENDER:
+        return
+
+    # Database is already in /data, create a timestamped backup instead
+    try:
+        if os.path.exists(DB_PATH) and os.path.getsize(DB_PATH) > 0:
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            backup_dir = '/data/backups'
+            os.makedirs(backup_dir, exist_ok=True)
+
+            backup_path = os.path.join(backup_dir, f'backup_{timestamp}.db')
+            shutil.copy2(DB_PATH, backup_path)
+            print(f"✅ Created backup: {backup_path}")
+
+            # Clean up old backups (keep last 24)
+            backups = sorted([f for f in os.listdir(backup_dir) if f.startswith('backup_')])
+            for old_backup in backups[:-24]:
+                old_path = os.path.join(backup_dir, old_backup)
+                os.remove(old_path)
+                print(f"🗑️  Removed old backup: {old_backup}")
+
+        else:
+            print(f"⚠️  No database to sync (DB_PATH: {DB_PATH})")
+
+    except Exception as e:
+        print(f"⚠️  Database sync failed: {e}")
+
 # ============================================
 # USER MODEL
 # ============================================
 
 class User:
-    def __init__(self, id, username, email, subscription_tier='free'):
+    def __init__(self, id, username, email, subscription_tier='free', display_name=None):
         self.id = id
         self.username = username
         self.email = email
         self.subscription_tier = subscription_tier
+        self.display_name = display_name
     
     def is_authenticated(self):
         return True
@@ -208,14 +370,14 @@ class User:
 
 @login_manager.user_loader
 def load_user(user_id):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, username, email, subscription_tier FROM users WHERE id = ?", (user_id,))
+    cursor.execute("SELECT id, username, email, subscription_tier, display_name FROM users WHERE id = ?", (user_id,))
     result = cursor.fetchone()
     conn.close()
-    
+
     if result:
-        return User(id=result[0], username=result[1], email=result[2], subscription_tier=result[3])
+        return User(id=result[0], username=result[1], email=result[2], subscription_tier=result[3], display_name=result[4])
     return None
 
 # ============================================
@@ -247,13 +409,15 @@ SUBSCRIPTION_TIERS = {
         'custom_agents_limit': 3,
         'api_access': False,  # NO API access for promo users
         'features': [
-            'Unlimited messages',
-            'All 7 AI agents',
+            'Unlimited messages (no daily limit)',
+            'Access to free AI models (Gemini, Llama)',
+            'All 7 primary agents',
             '3 custom agents',
             'Full chat history',
             'File upload & analysis',
             'Notion integration',
-            'Priority support'
+            '⚠️ Premium models (Claude, GPT) require paid subscription',
+            'Upgrade to Starter ($19/mo) for Claude & GPT access'
         ]
     },
     'starter': {
@@ -422,7 +586,7 @@ def has_api_access(subscription_tier):
 def track_message_cost(user_id, model, cost, agent_name=None):
     """Track the cost of a single message"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Insert cost record
@@ -449,7 +613,7 @@ def track_message_cost(user_id, model, cost, agent_name=None):
 def get_user_daily_cost(user_id):
     """Get user's cost for today"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("SELECT daily_cost FROM users WHERE id = ?", (user_id,))
@@ -465,7 +629,7 @@ def reset_daily_costs():
     """Reset all users' daily costs (run at midnight UTC)"""
     try:
         from datetime import datetime
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Reset daily costs and unblock expensive models
@@ -494,7 +658,7 @@ def check_cost_threshold(user_id, tier):
     try:
         daily_cost = get_user_daily_cost(user_id)
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Get custom thresholds if set, otherwise use tier defaults
@@ -569,7 +733,7 @@ def is_model_blocked_for_user(user_id, model):
         if model not in EXPENSIVE_MODELS:
             return False
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("SELECT expensive_models_blocked FROM users WHERE id = ?", (user_id,))
@@ -586,8 +750,76 @@ def is_model_blocked_for_user(user_id, model):
 # ============================================
 
 def init_database():
-    """Initialize users database"""
-    conn = sqlite3.connect(DB_PATH)
+    """
+    Initialize database with all tables
+
+    ============================================
+    AI TEAM PLATFORM - AGENT TYPES (4 TYPES)
+    ============================================
+
+    The platform has FOUR distinct agent types. These must NEVER be merged or confused:
+
+    1) PRIMARY AGENTS
+       - The 7 core system agents (Ember, Luna, Nova, Echo, Sage, Pixel, Atlas)
+       - Always present for all users
+       - Hardcoded in application logic
+       - NOT configurable or sold
+       - NOT stored in database tables
+       - Users cannot create, modify, or delete them
+
+    2) CUSTOM AGENTS
+       - Created by users for themselves
+       - User-controlled (full CRUD permissions)
+       - Stored in: custom_agents table
+       - Can be shared publicly via share_code
+       - Free feature available to all users
+
+    3) GLOBAL AGENTS
+       - Admin-controlled utility agents
+       - Created and managed by admin ONLY
+       - Stored in: global_agents table
+       - Assignment tracking: user_global_agents table
+       - Disabled by default for users
+       - Admin assigns to specific users (admin can assign to themselves)
+       - Users can view/use but NOT create/modify/delete
+
+    4) STAND ALONE CLIENT AGENTS
+       - Premium paid deliverables
+       - Admin-created ONLY
+       - Private to ONE specific client workspace
+       - Single-purpose with strict boundaries
+       - Stored in: client_agents table
+       - Takes priority over all other agent types
+       - Users can view/use their assigned agents but NOT create/modify/delete
+       - Primary monetization layer
+
+    ============================================
+    """
+    # ============================================
+    # SAFETY: Create backup before any migrations
+    # ============================================
+    try:
+        import shutil
+        from datetime import datetime
+
+        # Only backup if database exists and has data
+        if os.path.exists(DB_PATH) and os.path.getsize(DB_PATH) > 0:
+            # On Render, save backups to /data for persistence across restarts
+            if IS_RENDER:
+                backup_dir = '/data/migration_backups'
+            else:
+                backup_dir = 'migration_backups'
+
+            os.makedirs(backup_dir, exist_ok=True)
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            backup_path = os.path.join(backup_dir, f'pre_migration_{timestamp}.db')
+            shutil.copy2(DB_PATH, backup_path)
+            print(f"🔒 SAFETY: Created pre-migration backup: {backup_path}")
+    except Exception as e:
+        print(f"⚠️  Warning: Could not create backup: {e}")
+        # Continue anyway - don't block startup
+
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -610,7 +842,73 @@ def init_database():
     cursor.execute("PRAGMA table_info(users)")
     existing_columns = [col[1] for col in cursor.fetchall()]
     print(f"Database columns check: {existing_columns}")
-    
+
+    # CRITICAL: Handle old 'password' column (should be 'password_hash')
+    if 'password' in existing_columns and 'password_hash' not in existing_columns:
+        print("⚠️  Old 'password' column found, renaming to 'password_hash'...")
+        # SQLite doesn't support RENAME COLUMN in old versions, so we need to create new column and copy
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN password_hash TEXT")
+            cursor.execute("UPDATE users SET password_hash = password WHERE password_hash IS NULL")
+            print("✅ Migrated data from 'password' to 'password_hash'")
+            # Note: We can't drop the old column easily in SQLite, but password_hash now has the data
+        except Exception as e:
+            print(f"⚠️  Migration note: {e}")
+
+    # CRITICAL: Migration for password_hash column (must exist for authentication)
+    if 'password_hash' not in existing_columns:
+        try:
+            print("⚠️  CRITICAL: password_hash column missing! Adding it now...")
+            cursor.execute("ALTER TABLE users ADD COLUMN password_hash TEXT NOT NULL DEFAULT ''")
+            # If old 'password' column exists, copy data over
+            if 'password' in existing_columns:
+                cursor.execute("UPDATE users SET password_hash = password WHERE password_hash = ''")
+                print("✅ Copied passwords from old 'password' column")
+            print("✅ Added password_hash column")
+        except sqlite3.OperationalError as e:
+            print(f"❌ Error adding password_hash: {e}")
+            # DO NOT DROP THE TABLE - This would delete all users!
+            # The table already exists with proper schema from CREATE TABLE IF NOT EXISTS above
+            print("⚠️  Migration failed, but table exists with proper schema - continuing safely")
+            # Log the error but don't destroy user data
+            pass
+
+    # Migration: Add is_active column if it doesn't exist
+    if 'is_active' not in existing_columns:
+        try:
+            print("Adding is_active column...")
+            cursor.execute("ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT 1")
+            print("✅ Added is_active column")
+        except sqlite3.OperationalError as e:
+            print(f"Warning: {e}")
+
+    # Migration: Add created_at column if it doesn't exist
+    if 'created_at' not in existing_columns:
+        try:
+            print("Adding created_at column...")
+            cursor.execute("ALTER TABLE users ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+            print("✅ Added created_at column")
+        except sqlite3.OperationalError as e:
+            print(f"Warning: {e}")
+
+    # Migration: Add messages_today column if it doesn't exist
+    if 'messages_today' not in existing_columns:
+        try:
+            print("Adding messages_today column...")
+            cursor.execute("ALTER TABLE users ADD COLUMN messages_today INTEGER DEFAULT 0")
+            print("✅ Added messages_today column")
+        except sqlite3.OperationalError as e:
+            print(f"Warning: {e}")
+
+    # Migration: Add subscription_tier column if it doesn't exist
+    if 'subscription_tier' not in existing_columns:
+        try:
+            print("Adding subscription_tier column...")
+            cursor.execute("ALTER TABLE users ADD COLUMN subscription_tier TEXT DEFAULT 'free'")
+            print("✅ Added subscription_tier column")
+        except sqlite3.OperationalError as e:
+            print(f"Warning: {e}")
+
     # Migration: Add Stripe columns if they don't exist
     if 'stripe_customer_id' not in existing_columns:
         try:
@@ -660,7 +958,16 @@ def init_database():
             print("✅ Added google_ai_api_key column")
         except sqlite3.OperationalError as e:
             print(f"Warning: {e}")
-    
+
+    # Migration: Add display_name column for user profile
+    if 'display_name' not in existing_columns:
+        try:
+            print("Adding display_name column...")
+            cursor.execute("ALTER TABLE users ADD COLUMN display_name TEXT")
+            print("✅ Added display_name column")
+        except sqlite3.OperationalError as e:
+            print(f"Warning: {e}")
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS chat_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -689,7 +996,10 @@ def init_database():
         )
     """)
     
-    # Add custom_agents table for user-created agents
+    # ============================================
+    # AGENT TYPE 2: CUSTOM AGENTS
+    # ============================================
+    # User-created agents - users have full control
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS custom_agents (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -739,10 +1049,11 @@ def init_database():
             print(f"⚠️  Could not add template_variables column: {e}")
 
     # ============================================
-    # GLOBAL AGENTS (ADMIN-MANAGED TEMPLATES)
+    # AGENT TYPE 3: GLOBAL AGENTS
     # ============================================
-
-    # Global agents - admin creates these and assigns to users
+    # Admin-controlled utility agents
+    # Admin creates and assigns to users (admin can assign to themselves)
+    # Disabled by default - requires explicit assignment
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS global_agents (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -772,6 +1083,37 @@ def init_database():
             FOREIGN KEY (global_agent_id) REFERENCES global_agents (id),
             FOREIGN KEY (assigned_by) REFERENCES users (id),
             UNIQUE(user_id, global_agent_id)
+        )
+    """)
+
+    # ============================================
+    # AGENT TYPE 4: STAND ALONE CLIENT AGENTS
+    # ============================================
+    # Premium paid deliverables
+    # Single-purpose agents created for ONE specific client
+    # Admin-only creation and assignment
+    # Private to assigned client workspace only
+    # Takes priority over all other agent types
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS client_agents (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT,
+            emoji TEXT DEFAULT '💎',
+            assigned_to_user_id INTEGER NOT NULL,
+            primary_outcome TEXT NOT NULL,
+            core_responsibilities TEXT,
+            behaviour_rules TEXT,
+            boundaries TEXT,
+            personalisation TEXT,
+            system_prompt TEXT NOT NULL,
+            priority_level INTEGER DEFAULT 1,
+            is_active BOOLEAN DEFAULT 1,
+            created_by INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (assigned_to_user_id) REFERENCES users (id),
+            FOREIGN KEY (created_by) REFERENCES users (id)
         )
     """)
 
@@ -958,7 +1300,7 @@ def init_database():
 
 def init_promo_codes_table():
     """Initialize promo codes table"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     # Create promo_codes table
@@ -1328,7 +1670,7 @@ PRIORITY RULE: You must defer to Stand Alone Client Agents when a task clearly b
 def initialize_default_global_agents():
     """Create default global agents in the database if they don't exist"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         for agent in DEFAULT_GLOBAL_AGENTS:
@@ -1381,6 +1723,9 @@ try:
     init_promo_codes_table()
     initialize_default_global_agents()
 
+    # Sync database to persistent storage after initialization (Render)
+    sync_database_to_persistent_storage()
+
     # Ensure admin user exists
     try:
         conn = get_db_connection()
@@ -1388,11 +1733,13 @@ try:
 
         # Check if admin user exists
         cursor.execute("SELECT id FROM users WHERE email = ?", ('bubblesfox@gmail.com',))
-        if not cursor.fetchone():
+        existing_user = cursor.fetchone()
+
+        from werkzeug.security import generate_password_hash
+        password_hash = generate_password_hash('admin123')  # CHANGE THIS PASSWORD!
+
+        if not existing_user:
             print("⚠️  Admin user not found, creating default admin account...")
-            # Create admin user with default password (you should change this!)
-            from werkzeug.security import generate_password_hash
-            password_hash = generate_password_hash('admin123')  # CHANGE THIS PASSWORD!
 
             cursor.execute("""
                 INSERT INTO users (username, email, password_hash, subscription_tier, stripe_customer_id)
@@ -1416,13 +1763,42 @@ try:
             print(f"✅ Admin user created: bubblesfox@gmail.com (password: admin123)")
             print("⚠️  IMPORTANT: Change the admin password immediately!")
         else:
-            print("✅ Admin user exists")
+            # Admin user exists - reset password to admin123 for recovery
+            admin_id = existing_user[0]
+            print(f"✅ Admin user exists (ID: {admin_id})")
+            print("🔑 Resetting admin password to: admin123")
+
+            cursor.execute("""
+                UPDATE users SET password_hash = ?, subscription_tier = 'enterprise'
+                WHERE id = ?
+            """, (password_hash, admin_id))
+            conn.commit()
+
+            print("✅ Admin password reset to: admin123")
+            print("⚠️  IMPORTANT: Change the admin password immediately after login!")
 
         conn.close()
     except Exception as e:
         print(f"⚠️  Error checking/creating admin user: {e}")
 
     print("✅ Database initialization completed successfully")
+
+    # Start periodic database sync in background thread (Render only)
+    if IS_RENDER:
+        import threading
+        def periodic_sync():
+            while True:
+                time.sleep(3600)  # Sync every hour
+                try:
+                    print("⏰ Running scheduled database sync...")
+                    sync_database_to_persistent_storage()
+                except Exception as sync_error:
+                    print(f"⚠️  Scheduled sync failed: {sync_error}")
+
+        sync_thread = threading.Thread(target=periodic_sync, daemon=True)
+        sync_thread.start()
+        print("✅ Started periodic database sync (every 1 hour)")
+
 except Exception as e:
     print(f"⚠️  Database initialization error: {str(e)}")
     import traceback
@@ -1438,7 +1814,7 @@ def admin_usage():
     """Admin dashboard for cost monitoring and analytics"""
     # Check if user is admin (you can add admin check here)
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Today's costs
@@ -1570,7 +1946,7 @@ def set_user_budget():
         if not user_id:
             return jsonify({'error': 'user_id required'}), 400
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Update custom thresholds
@@ -1606,7 +1982,7 @@ def reset_user_budget():
         if not user_id:
             return jsonify({'error': 'user_id required'}), 400
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Reset to NULL (use tier defaults)
@@ -1636,7 +2012,7 @@ def reset_user_budget():
 def admin_cost_trends():
     """Get historical cost trend data for charts"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Daily costs for last 30 days
@@ -1703,7 +2079,7 @@ def admin_cost_trends():
 def check_agents():
     """Check all custom agents and their share codes"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         # First check what columns exist
@@ -1802,7 +2178,7 @@ def check_agents():
 def force_add_columns():
     """Force add missing columns to custom_agents table"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         # Check current columns
@@ -1871,8 +2247,11 @@ def emergency_database_init():
         init_promo_codes_table()
         initialize_default_global_agents()
 
+        # Sync database to persistent storage (Render)
+        sync_database_to_persistent_storage()
+
         # Check if custom_agents table exists and has correct columns
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         cursor.execute("PRAGMA table_info(custom_agents)")
@@ -1921,7 +2300,7 @@ def emergency_database_init():
 def create_default_agent(user_id):
     """Create default custom agent for user - visit /admin/create-default-agent/1"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         # Check if user exists
@@ -2036,7 +2415,7 @@ STYLE RULES:
 def migrate_starter_agents():
     """Migrate old starter agents from custom_agents to global_agents system"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Step 1: Delete old starter agents from custom_agents table
@@ -2146,6 +2525,7 @@ def logout():
 # ============================================
 
 @app.route('/api/signup', methods=['POST'])
+@rate_limit(max_requests=5, window_seconds=300)  # 5 signups per 5 minutes
 def api_signup():
     """Register new user"""
     try:
@@ -2161,7 +2541,7 @@ def api_signup():
         password_hash = generate_password_hash(password)
         
         # Create user
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         try:
@@ -2191,6 +2571,7 @@ def api_signup():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/login', methods=['POST'])
+@rate_limit(max_requests=10, window_seconds=300)  # 10 login attempts per 5 minutes
 def api_login():
     """Login user - accepts either username OR email"""
     try:
@@ -2203,7 +2584,7 @@ def api_login():
             return jsonify({'error': 'Username/email and password required'}), 400
         
         # Get user by EITHER username OR email
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute(
             "SELECT id, username, email, password_hash, subscription_tier FROM users WHERE (email = ? OR username = ?) AND is_active = 1",
@@ -2451,7 +2832,7 @@ def agent_link(agent_name):
 def test_custom_link(share_code):
     """Test if a share code exists in database"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         # Check what share_codes exist
@@ -2516,7 +2897,7 @@ def custom_agent_link(share_code):
     print(f"📁 Using database: {DB_PATH}")
     
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         # Check which columns exist
@@ -2936,7 +3317,7 @@ def embed_chat():
             return jsonify({'error': 'Missing required fields'}), 400
 
         # Get custom agent by share_code
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -2984,7 +3365,7 @@ CRITICAL FORMATTING RULES:
 def get_embed_code(agent_id):
     """Get embed code for a custom agent"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Verify ownership
@@ -3070,7 +3451,7 @@ def connect_social_platform(platform):
         if not access_token:
             return jsonify({'error': 'Access token required'}), 400
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Create social_accounts table if not exists
@@ -3115,7 +3496,7 @@ def connect_social_platform(platform):
 def get_social_accounts():
     """Get all connected social media accounts"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -3160,7 +3541,7 @@ def draft_social_post():
             system_prompt = agent_info['system_prompt']
         else:
             # Custom agent
-            conn = sqlite3.connect(DB_PATH)
+            conn = get_db_connection()
             cursor = conn.cursor()
             cursor.execute("""
                 SELECT system_prompt FROM custom_agents
@@ -3205,7 +3586,7 @@ Draft the post:"""
         drafted_post = response.text
 
         # Save draft for approval
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Create social_posts table
@@ -3254,7 +3635,7 @@ def approve_social_post(post_id):
         action = data.get('action', 'post_now')  # 'post_now' or 'schedule'
         scheduled_time = data.get('scheduled_at')
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Get post
@@ -3324,7 +3705,7 @@ def approve_social_post(post_id):
 def get_social_posts():
     """Get all social posts (drafts, scheduled, posted)"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -3719,7 +4100,7 @@ INTEGRATIONS_CONFIG = {
 def get_integrations():
     """Get all available integrations and user's connected status"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Create integrations table if not exists
@@ -3818,7 +4199,7 @@ def connect_integration():
                 'missing': missing_creds
             }), 400
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Store integration credentials
@@ -3850,7 +4231,7 @@ def connect_integration():
 def disconnect_integration(integration_key):
     """Disconnect an integration"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -3874,7 +4255,7 @@ def disconnect_integration(integration_key):
 def toggle_integration(integration_key):
     """Toggle integration active status"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -3915,7 +4296,7 @@ def execute_integration_action(integration_key):
             return jsonify({'error': 'Invalid integration'}), 400
 
         # Get user's credentials for this integration
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -4153,7 +4534,7 @@ def execute_ai_integration():
         integration_key = intent['integration']
 
         # Check if user has this integration connected
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -4203,7 +4584,7 @@ def receive_webhook(integration_key):
         payload = request.json or request.form.to_dict()
         headers = dict(request.headers)
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Create webhook_events table if not exists
@@ -4270,7 +4651,7 @@ def process_webhook_event(integration_key, payload, event_id):
                     print(f"Slack mention: {text}")
 
         # Mark as processed
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("UPDATE webhook_events SET processed = 1 WHERE id = ?", (event_id,))
         conn.commit()
@@ -4284,7 +4665,7 @@ def process_webhook_event(integration_key, payload, event_id):
 def get_webhook_events():
     """Get recent webhook events for user"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -4378,7 +4759,7 @@ def get_integration_templates():
     """Get all available integration templates"""
     try:
         # Get user's connected integrations
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -4421,7 +4802,7 @@ def enable_integration_template(template_id):
             return jsonify({'error': 'Template not found'}), 404
 
         # Store enabled template
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -4462,7 +4843,7 @@ def enable_integration_template(template_id):
 def get_integration_analytics():
     """Get usage analytics for integrations"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Create analytics table if not exists
@@ -4535,7 +4916,7 @@ def get_integration_analytics():
 def log_integration_usage(user_id, integration_key, action, success, error_message=None):
     """Log integration usage for analytics"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -4656,7 +5037,7 @@ AVAILABLE_INTEGRATIONS = {
 def get_user_integrations():
     """Get user's OAuth integration connections"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Get all user's connected integrations
@@ -4735,7 +5116,7 @@ def connect_oauth_integration(service):
         state = secrets.token_urlsafe(32)
 
         # Store state in session
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -4787,7 +5168,7 @@ def oauth_callback(service):
             return "<html><body><h2>Invalid callback</h2><p>Missing code or state</p></body></html>", 400
 
         # Verify state and get user_id
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -4850,7 +5231,7 @@ def oauth_callback(service):
 def disconnect_oauth_integration(service):
     """Disconnect an OAuth integration"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -4881,7 +5262,7 @@ def disconnect_oauth_integration(service):
 def get_user_oauth_token(user_id, service):
     """Get OAuth access token for a service"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -5021,7 +5402,7 @@ def get_available_integration_actions(user_id):
     Returns a dictionary of available actions organized by category
     """
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -5096,7 +5477,7 @@ def start_oauth_flow(integration_key):
         state = secrets.token_urlsafe(32)
 
         # Store state in session
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -5138,7 +5519,7 @@ def oauth_callback_legacy():
             return "OAuth failed: Missing code or state", 400
 
         # Verify state and get integration
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -5187,7 +5568,7 @@ def pricing():
 def create_portal_session():
     """Create a Stripe Customer Portal session for subscription management"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Get user's Stripe customer ID
@@ -5285,7 +5666,7 @@ def get_user_promo_discount(user_id):
         dict with discount_type, discount_value, promo_code or None
     """
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -5336,7 +5717,7 @@ def create_checkout_session():
             return jsonify({'error': f'Invalid price ID: {price_id}'}), 400
 
         # Get or create Stripe customer
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT stripe_customer_id FROM users WHERE id = ?", (current_user.id,))
         result = cursor.fetchone()
@@ -5542,7 +5923,7 @@ def handle_checkout_session_completed(session):
         customer_id = session['customer']
         subscription_id = session['subscription']
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Clear promo discount after successful payment (one-time use)
@@ -5572,7 +5953,7 @@ def handle_subscription_updated(subscription):
         customer_id = subscription['customer']
         status = subscription['status']
         
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         if status == 'active':
@@ -5598,7 +5979,7 @@ def handle_subscription_deleted(subscription):
     try:
         customer_id = subscription['customer']
         
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         cursor.execute("""
@@ -5733,6 +6114,14 @@ def admin_global_agents_manager():
     if current_user.id != 1:
         return redirect(url_for('dashboard'))
     return render_template('admin_global_agents.html', user=current_user)
+
+@app.route('/admin/client-agents-manager')
+@login_required
+def admin_client_agents_manager():
+    """Admin Stand Alone Client Agents management page (admin only)"""
+    if current_user.id != 1:
+        return redirect(url_for('dashboard'))
+    return render_template('admin_client_agents.html', user=current_user)
 
 @app.route('/admin/support-messages')
 @login_required
@@ -6472,7 +6861,7 @@ def upload_file():
 
 def get_conversation_history(user_id, agent_name, limit=10):
     """Get recent conversation history for context (default 10 for speed)"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -6842,6 +7231,7 @@ def call_ai_with_image(model_key, system_prompt, history, message, image_path):
         return f"I can see you've sent an image, but I encountered an error processing it: {str(e)}"
 
 @app.route('/api/chat', methods=['POST'])
+@rate_limit(max_requests=100, window_seconds=60)  # 100 messages per minute
 def chat():
     """Send message to AI agent with conversation history, multi-model support, and file uploads"""
     # Allow both logged-in users and guests (for custom agents)
@@ -6896,6 +7286,25 @@ def chat():
                 print(f"❌ DB_PATH: {DB_PATH}")
                 print(f"❌ File exists: {os.path.exists(DB_PATH)}")
                 return jsonify({'error': f'Database connection error: {str(e)}'}), 500
+
+            # CRITICAL: Check for Stand Alone Client Agents FIRST (highest priority)
+            # Client agents take priority over all other agent types per architecture
+            if agent in ['Luna', 'Ember']:  # Only auto-assign if using default
+                try:
+                    cursor.execute("""
+                        SELECT name FROM client_agents
+                        WHERE assigned_to_user_id = ? AND is_active = 1
+                        ORDER BY priority_level DESC
+                        LIMIT 1
+                    """, (current_user.id,))
+                    client_agent = cursor.fetchone()
+                    if client_agent:
+                        agent = client_agent[0]
+                        print(f"✅ Auto-selected client agent '{agent}' for user {current_user.id}")
+                except Exception as e:
+                    # If client_agents table doesn't exist or query fails, continue with default agent
+                    print(f"⚠️ Client agent query failed (continuing with {agent}): {e}")
+                    pass
 
             cursor.execute("""
                 SELECT subscription_tier, messages_today, last_message_reset
@@ -7073,17 +7482,47 @@ def chat():
             agent = suggested_agent  # Switch to the better agent
             was_auto_routed = True
 
-        # Get agent personality - check built-in agents first, then custom agents
+        # Get agent personality - check Stand Alone Client Agents FIRST (highest priority),
+        # then built-in agents, then custom agents, then global agents
         system_prompt = None
 
-        if agent in AGENT_PERSONALITIES:
+        # PRIORITY 1: Check for Stand Alone Client Agents (highest priority)
+        if not is_guest:
+            cursor.execute("""
+                SELECT system_prompt, name, description, emoji
+                FROM client_agents
+                WHERE assigned_to_user_id = ? AND name = ? AND is_active = 1
+            """, (current_user.id, agent))
+
+            client_agent = cursor.fetchone()
+            if client_agent:
+                base_prompt, agent_name, description, emoji = client_agent
+                system_prompt = f"""You are {agent_name}. Your role and personality:
+
+{base_prompt}
+
+CRITICAL FORMATTING RULES:
+- Write in natural, conversational paragraphs
+- Do NOT use asterisks (**), hashtags (##), dashes (---), or bullet points (•)
+- Do NOT use markdown formatting of any kind
+- Ask only ONE question per response (if you need to ask questions)
+- Write like you're talking to someone, not writing a document
+- Keep responses clear and focused
+- When introducing yourself, say "I'm {agent_name}" (not Luna or any other name)
+
+Remember: You are {agent_name}, a premium Stand Alone Client Agent. Natural conversation only. No formatting."""
+                print(f"✅ Using client agent '{agent_name}' for user {current_user.id}")
+
+        # PRIORITY 2: Check built-in agents
+        if not system_prompt and agent in AGENT_PERSONALITIES:
             # Built-in agent with team coordination enabled
             agent_info = AGENT_PERSONALITIES[agent]
             base_system_prompt = agent_info['system_prompt']
             coordination_context = get_agent_coordination_context()
             system_prompt = f"{base_system_prompt}\n\n{coordination_context}"
-        else:
-            # Check for custom agent
+
+        # PRIORITY 3: Check for custom agent
+        if not system_prompt:
             if is_guest:
                 # Guests can access any public custom agent by name
                 cursor.execute("""
@@ -7115,67 +7554,68 @@ CRITICAL FORMATTING RULES:
 - When introducing yourself, say "I'm {agent}" (not Luna or any other name)
 
 Remember: You are {agent}. Natural conversation only. No formatting."""
-            else:
-                # Check for global agent
-                if not is_guest:
-                    cursor.execute("""
-                        SELECT ga.system_prompt, ga.integrations
-                        FROM global_agents ga
-                        INNER JOIN user_global_agents uga ON ga.id = uga.global_agent_id
-                        WHERE uga.user_id = ? AND ga.name = ? AND ga.is_active = 1
-                    """, (current_user.id, agent))
 
-                    global_agent = cursor.fetchone()
-                    if global_agent:
-                        base_prompt = global_agent[0]
-                        integrations_json = global_agent[1]
+        # PRIORITY 4: Check for global agent
+        if not system_prompt:
+            if not is_guest:
+                cursor.execute("""
+                    SELECT ga.system_prompt, ga.integrations
+                    FROM global_agents ga
+                    INNER JOIN user_global_agents uga ON ga.id = uga.global_agent_id
+                    WHERE uga.user_id = ? AND ga.name = ? AND ga.is_active = 1
+                """, (current_user.id, agent))
 
-                        # Check if agent has integrations enabled
-                        integration_context = ""
-                        if integrations_json:
-                            try:
-                                needed_categories = json.loads(integrations_json)
+                global_agent = cursor.fetchone()
+                if global_agent:
+                    base_prompt = global_agent[0]
+                    integrations_json = global_agent[1]
 
-                                # Get user's connected OAuth services
-                                cursor.execute("""
-                                    SELECT service, service_email, is_active
-                                    FROM user_integrations
-                                    WHERE user_id = ? AND is_active = 1
-                                """, (current_user.id,))
+                    # Check if agent has integrations enabled
+                    integration_context = ""
+                    if integrations_json:
+                        try:
+                            needed_categories = json.loads(integrations_json)
 
-                                connected_services = {}
-                                for row in cursor.fetchall():
-                                    service, email, is_active = row
-                                    connected_services[service] = email
+                            # Get user's connected OAuth services
+                            cursor.execute("""
+                                SELECT service, service_email, is_active
+                                FROM user_integrations
+                                WHERE user_id = ? AND is_active = 1
+                            """, (current_user.id,))
 
-                                # Map categories to services and check connections
-                                available_integrations = []
-                                missing_integrations = []
+                            connected_services = {}
+                            for row in cursor.fetchall():
+                                service, email, is_active = row
+                                connected_services[service] = email
 
-                                for category in needed_categories:
-                                    if category in AVAILABLE_INTEGRATIONS:
-                                        cat_info = AVAILABLE_INTEGRATIONS[category]
-                                        for service in cat_info['services']:
-                                            if service in connected_services:
-                                                available_integrations.append({
-                                                    'service': service,
-                                                    'name': OAUTH_CONFIG[service]['name'],
-                                                    'email': connected_services[service],
-                                                    'icon': OAUTH_CONFIG[service]['icon']
-                                                })
-                                            else:
-                                                missing_integrations.append({
-                                                    'service': service,
-                                                    'name': OAUTH_CONFIG[service]['name']
-                                                })
+                            # Map categories to services and check connections
+                            available_integrations = []
+                            missing_integrations = []
 
-                                # Add integration context to system prompt
-                                if available_integrations:
-                                    integration_list = "\n".join([
-                                        f"- {integ['icon']} {integ['name']} ({integ['email']})"
-                                        for integ in available_integrations
-                                    ])
-                                    integration_context = f"""
+                            for category in needed_categories:
+                                if category in AVAILABLE_INTEGRATIONS:
+                                    cat_info = AVAILABLE_INTEGRATIONS[category]
+                                    for service in cat_info['services']:
+                                        if service in connected_services:
+                                            available_integrations.append({
+                                                'service': service,
+                                                'name': OAUTH_CONFIG[service]['name'],
+                                                'email': connected_services[service],
+                                                'icon': OAUTH_CONFIG[service]['icon']
+                                            })
+                                        else:
+                                            missing_integrations.append({
+                                                'service': service,
+                                                'name': OAUTH_CONFIG[service]['name']
+                                            })
+
+                            # Add integration context to system prompt
+                            if available_integrations:
+                                integration_list = "\n".join([
+                                    f"- {integ['icon']} {integ['name']} ({integ['email']})"
+                                    for integ in available_integrations
+                                ])
+                                integration_context = f"""
 
 CONNECTED INTEGRATIONS:
 You have access to the following connected services:
@@ -7189,20 +7629,20 @@ You can reference these integrations in your responses. For example:
 Note: While you can reference these services, actual API calls are not yet implemented.
 The user has authorized these connections."""
 
-                                if missing_integrations:
-                                    missing_list = ", ".join([m['name'] for m in missing_integrations])
-                                    integration_context += f"""
+                            if missing_integrations:
+                                missing_list = ", ".join([m['name'] for m in missing_integrations])
+                                integration_context += f"""
 
 DISCONNECTED INTEGRATIONS:
 The following integrations are configured but not connected: {missing_list}
 If the user asks about these, suggest they connect them via the Integrations page."""
 
-                            except Exception as e:
-                                print(f"Error loading integrations for agent: {e}")
-                                integration_context = ""
+                        except Exception as e:
+                            print(f"Error loading integrations for agent: {e}")
+                            integration_context = ""
 
-                        # Wrap global agent prompt with formatting rules and integrations
-                        system_prompt = f"""You are {agent}. Your role and personality:
+                    # Wrap global agent prompt with formatting rules and integrations
+                    system_prompt = f"""You are {agent}. Your role and personality:
 
 {base_prompt}
 {integration_context}
@@ -7217,13 +7657,13 @@ CRITICAL FORMATTING RULES:
 - When introducing yourself, say "I'm {agent}" (not Luna or any other name)
 
 Remember: You are {agent}. Natural conversation only. No formatting."""
-                    else:
-                        conn.close()
-                        return jsonify({'error': f'Agent "{agent}" not found'}), 400
-                else:
-                    conn.close()
-                    return jsonify({'error': f'Agent "{agent}" not found'}), 400
-        
+
+        # Final check: If no agent was found in any category, return error
+        if not system_prompt:
+            if not is_guest:
+                conn.close()
+            return jsonify({'error': f'Agent "{agent}" not found'}), 400
+
         # Get conversation history (last 10 messages for context - optimized for speed)
         # Guests don't have history (not logged in)
         if is_guest:
@@ -7246,7 +7686,10 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
 
             # Process all uploaded files
             file_contents = []
+            print(f"🔍 Processing {len(uploaded_files)} uploaded file(s)")
             for uploaded_file in uploaded_files:
+                print(f"📎 File: {uploaded_file.filename}")
+
                 # Save the uploaded file
                 filename = secure_filename(uploaded_file.filename)
                 user_folder = os.path.join(UPLOAD_FOLDER, str(current_user.id))
@@ -7256,6 +7699,7 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
                 uploaded_file.save(filepath)
 
                 file_extension = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+                print(f"   Extension: {file_extension}, Size: {os.path.getsize(filepath)} bytes")
 
                 file_data = {
                     'filename': filename,
@@ -7265,22 +7709,83 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
                 files_info.append(file_data)
 
                 # For text files, read content
-                if file_extension in ['txt', 'md', 'csv', 'json', 'py', 'js', 'html', 'css', 'xml']:
+                text_extensions = ['txt', 'md', 'csv', 'json', 'py', 'js', 'html', 'css', 'xml', 'yaml', 'yml', 'ini', 'cfg', 'log', 'sql']
+                if file_extension in text_extensions:
                     try:
                         with open(filepath, 'r', encoding='utf-8') as f:
                             file_content = f.read()[:10000]  # Limit to 10k chars per file
                         file_contents.append(f"File: {filename}\nContent:\n{file_content}")
+                        print(f"   ✅ Read text file content ({len(file_content)} chars)")
                     except Exception as e:
-                        print(f"Error reading file {filename}: {e}")
+                        print(f"   ❌ Error reading file {filename}: {e}")
                         file_contents.append(f"File: {filename} (could not read content)")
+
+                elif file_extension in ['pdf']:
+                    # For PDFs, extract text content
+                    try:
+                        from PyPDF2 import PdfReader
+                        reader = PdfReader(filepath)
+                        pdf_text = ""
+                        for page in reader.pages[:10]:  # Limit to first 10 pages
+                            pdf_text += page.extract_text() + "\n"
+                        pdf_text = pdf_text[:10000]  # Limit to 10k chars
+                        file_contents.append(f"File: {filename} (PDF)\nContent:\n{pdf_text}")
+                        print(f"   ✅ Extracted PDF content ({len(pdf_text)} chars from {len(reader.pages)} pages)")
+                    except Exception as e:
+                        print(f"   ❌ PDF extraction failed: {e}")
+                        file_contents.append(f"File: {filename} (PDF - {os.path.getsize(filepath)} bytes)\n[PDF content extraction failed. Please ensure file is not corrupted.]")
+
+                elif file_extension in ['docx', 'doc']:
+                    # For Word docs, extract text content
+                    try:
+                        from docx import Document
+                        doc = Document(filepath)
+                        doc_text = "\n".join([paragraph.text for paragraph in doc.paragraphs])
+                        doc_text = doc_text[:10000]  # Limit to 10k chars
+                        file_contents.append(f"File: {filename} (Word Document)\nContent:\n{doc_text}")
+                        print(f"   ✅ Extracted Word document content ({len(doc_text)} chars)")
+                    except Exception as e:
+                        print(f"   ❌ Word document extraction failed: {e}")
+                        file_contents.append(f"File: {filename} (Word document - {os.path.getsize(filepath)} bytes)\n[Document content extraction failed. File may be in older .doc format.]")
+
+                elif file_extension in ['xlsx', 'xls']:
+                    # For Excel files, extract data
+                    try:
+                        from openpyxl import load_workbook
+                        wb = load_workbook(filepath, data_only=True)
+                        excel_text = ""
+                        for sheet_name in wb.sheetnames[:3]:  # Limit to first 3 sheets
+                            sheet = wb[sheet_name]
+                            excel_text += f"\n=== Sheet: {sheet_name} ===\n"
+                            for row in list(sheet.rows)[:50]:  # Limit to first 50 rows per sheet
+                                row_data = [str(cell.value) if cell.value is not None else "" for cell in row]
+                                excel_text += " | ".join(row_data) + "\n"
+                        excel_text = excel_text[:10000]  # Limit to 10k chars
+                        file_contents.append(f"File: {filename} (Excel Spreadsheet)\nContent:\n{excel_text}")
+                        print(f"   ✅ Extracted Excel content ({len(excel_text)} chars)")
+                    except Exception as e:
+                        print(f"   ❌ Excel extraction failed: {e}")
+                        file_contents.append(f"File: {filename} (Excel spreadsheet - {os.path.getsize(filepath)} bytes)\n[Spreadsheet content extraction failed.]")
+
+                elif file_extension not in ['png', 'jpg', 'jpeg', 'gif', 'webp']:
+                    # For other file types that aren't images
+                    file_contents.append(f"File: {filename} ({file_extension.upper()} file - {os.path.getsize(filepath)} bytes)\n[This file type is not yet supported for content extraction.]")
+                    print(f"   ⚠️ Unsupported file type: {file_extension}")
 
             # Add file contents to message
             if file_contents:
                 files_text = "\n\n---\n\n".join(file_contents)
+                print(f"✅ Adding file info to message. File contents preview:")
+                print(f"   {files_text[:300]}...")
                 if message:
                     message = f"{message}\n\n{files_text}"
+                    print(f"✅ Combined message with user text and files (total: {len(message)} chars)")
                 else:
                     message = files_text
+                    print(f"✅ Message is only file info (no user text)")
+            else:
+                print(f"⚠️  WARNING: No file_contents extracted from {len(uploaded_files)} uploaded file(s)!")
+                print(f"   This means files were uploaded but not processed correctly")
 
             # Keep backward compatibility for single file
             file_info = files_info[0] if files_info else None
@@ -7442,7 +7947,7 @@ def generate_image_free():
             return jsonify({'error': 'No prompt provided'}), 400
         
         # Check user's message limit
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         cursor.execute("""
@@ -7528,7 +8033,7 @@ def clear_chat_history():
         data = request.json or {}
         agent = data.get('agent', 'all')
         
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         if agent == 'all':
@@ -7565,7 +8070,7 @@ def generate_image():
             }), 202
         
         # Check user's message limit
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         cursor.execute("""
@@ -7644,7 +8149,7 @@ def generate_image():
 def get_history():
     """Get chat history"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
             SELECT agent_name, message, response, timestamp 
@@ -7681,7 +8186,7 @@ def get_history():
 def get_conversations():
     """Get all conversation sessions for current user"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Include inactive conversations to show all history
@@ -7720,7 +8225,7 @@ def get_conversations():
 def get_conversation(conv_id):
     """Get specific conversation with all messages"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # First check if conversation exists at all (including inactive ones)
@@ -7794,7 +8299,7 @@ def create_conversation():
         agent_name = data.get('agent', 'Luna')
         title = data.get('title', 'New conversation')
         
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         cursor.execute("""
@@ -7822,7 +8327,7 @@ def create_conversation():
 def delete_conversation(conv_id):
     """Delete a conversation (soft delete)"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         # Verify ownership
@@ -7961,35 +8466,35 @@ def update_profile():
     """Update user profile"""
     try:
         data = request.json
-        new_username = data.get('username')
-        new_email = data.get('email')
-        
-        if not new_username or not new_email:
-            return jsonify({'error': 'Username and email required'}), 400
-        
-        conn = sqlite3.connect(DB_PATH)
+        display_name = data.get('name')
+
+        if not display_name:
+            return jsonify({'error': 'Display name required'}), 400
+
+        conn = get_db_connection()
         cursor = conn.cursor()
-        
+
         try:
             cursor.execute(
-                "UPDATE users SET username = ?, email = ? WHERE id = ?",
-                (new_username, new_email, current_user.id)
+                "UPDATE users SET display_name = ? WHERE id = ?",
+                (display_name, current_user.id)
             )
             conn.commit()
             conn.close()
-            
+
             return jsonify({'success': True}), 200
-            
-        except sqlite3.IntegrityError:
+
+        except Exception as e:
             conn.close()
-            return jsonify({'error': 'Username or email already exists'}), 400
-            
+            return jsonify({'error': str(e)}), 400
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/change-password', methods=['POST'])
 @login_required
+@rate_limit(max_requests=5, window_seconds=300)  # 5 password changes per 5 minutes
 def change_password():
     """Change user password"""
     try:
@@ -8001,7 +8506,7 @@ def change_password():
             return jsonify({'error': 'Current and new password required'}), 400
         
         # Get current password hash
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT password_hash FROM users WHERE id = ?", (current_user.id,))
         result = cursor.fetchone()
@@ -8038,7 +8543,7 @@ def change_password():
 def get_user_stats():
     """Get current user's usage statistics"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         cursor.execute("""
@@ -8156,7 +8661,7 @@ def health():
 
 def init_api_keys_table():
     """Initialize API keys table for automation"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -8188,7 +8693,7 @@ def generate_api_key():
 
 def get_user_api_key(user_id):
     """Get user's API key"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT api_key FROM api_keys WHERE user_id = ? AND is_active = 1", (user_id,))
     result = cursor.fetchone()
@@ -8198,7 +8703,7 @@ def get_user_api_key(user_id):
 def create_user_api_key(user_id, name="Default API Key"):
     """Create a new API key for user"""
     api_key = generate_api_key()
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     # Deactivate old keys
@@ -8216,7 +8721,7 @@ def create_user_api_key(user_id, name="Default API Key"):
 
 def validate_api_key(api_key):
     """Validate API key and return user_id"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
         SELECT user_id FROM api_keys 
@@ -8242,7 +8747,7 @@ def validate_api_key(api_key):
 
 def init_api_usage_table():
     """Initialize API usage tracking table"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -8264,7 +8769,7 @@ init_api_usage_table()
 
 def log_api_request(user_id, endpoint, method, status_code=200):
     """Log API request"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
         INSERT INTO api_usage (user_id, endpoint, method, status_code)
@@ -8275,7 +8780,7 @@ def log_api_request(user_id, endpoint, method, status_code=200):
 
 def get_api_usage_stats(user_id):
     """Get API usage statistics for user"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     # Total requests
@@ -8301,7 +8806,7 @@ def get_api_usage_stats(user_id):
 
 def init_custom_agents_table():
     """Initialize custom agents table"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -8330,7 +8835,7 @@ init_custom_agents_table()
 
 def create_master_code():
     """Create master code for Amanda (if it doesn't exist)"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     try:
@@ -8353,7 +8858,7 @@ create_master_code()
 
 def create_api_key(user_id, name="Default"):
     """Create an API key for a user"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     api_key = generate_api_key()
@@ -8372,7 +8877,7 @@ def create_api_key(user_id, name="Default"):
 
 def get_user_api_keys(user_id):
     """Get all API keys for a user"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -8400,7 +8905,7 @@ def get_user_api_keys(user_id):
 
 def verify_api_key(api_key):
     """Verify an API key and return user_id"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -8426,7 +8931,7 @@ def verify_api_key(api_key):
 
 def delete_api_key(user_id, key_id):
     """Delete an API key"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -8459,7 +8964,7 @@ def create_promo_codes(tier, count, prefix="", discount_type="tier", discount_va
         trial_days: Number of days for free trial (for trial codes)
         max_uses: Maximum number of uses per code (-1 for unlimited, 0 for single-use, positive number for limited uses)
     """
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     codes = []
@@ -8489,7 +8994,7 @@ def create_promo_codes(tier, count, prefix="", discount_type="tier", discount_va
 
 def validate_promo_code(code):
     """Check if promo code is valid and available"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -8548,7 +9053,7 @@ def redeem_promo_code(code, user_id):
     discount_value = result.get('discount_value')
     trial_days = result.get('trial_days')
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
@@ -8653,6 +9158,7 @@ def redeem_promo_code(code, user_id):
 
 @app.route('/api/redeem-promo-code', methods=['POST'])
 @login_required
+@rate_limit(max_requests=10, window_seconds=60)  # 10 promo code attempts per minute
 def api_redeem_promo_code():
     """Redeem a promo code"""
     try:
@@ -8747,7 +9253,7 @@ def apply_promo_upgrade():
             return jsonify({'error': f'This code is for {result["tier"]} plan, not {plan}'}), 400
         
         # Update user subscription in SQLite database
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         # Update user's subscription tier
@@ -8881,7 +9387,7 @@ def admin_list_promo_codes():
         return jsonify({'error': 'Unauthorized'}), 403
     
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         print("Loading promo codes...")
@@ -8930,7 +9436,7 @@ def admin_list_promo_codes():
 def get_custom_agents():
     """Get all custom agents for current user"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         # Check which columns exist
@@ -9027,6 +9533,7 @@ def get_custom_agents():
 @app.route('/api/custom-agents', methods=['POST'])
 @app.route('/api/custom-agent/create', methods=['POST'])  # Alias for frontend compatibility
 @login_required
+@rate_limit(max_requests=20, window_seconds=60)  # 20 custom agent creations per minute
 def create_custom_agent():
     """Create a new custom agent"""
 
@@ -9037,7 +9544,7 @@ def create_custom_agent():
         custom_agents_limit = tier_info.get('custom_agents_limit', 1)
 
         # Count user's existing custom agents
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT COUNT(*) FROM custom_agents WHERE user_id = ?", (current_user.id,))
         current_count = cursor.fetchone()[0]
@@ -9086,7 +9593,7 @@ def create_custom_agent():
         if not instructions:
             return jsonify({'error': 'Instructions are required'}), 400
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # First check if columns exist, add if needed
@@ -9187,7 +9694,7 @@ def update_custom_agent(agent_id):
             data = request.form
             icon_file = request.files.get('icon_image')
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Verify ownership
@@ -9285,7 +9792,7 @@ def update_custom_agent(agent_id):
 def delete_custom_agent(agent_id):
     """Delete a custom agent"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         # Verify ownership
@@ -9318,7 +9825,7 @@ def delete_custom_agent(agent_id):
 def view_custom_agent(agent_id):
     """View a custom agent page (shareable link)"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         cursor.execute("""
@@ -9353,7 +9860,7 @@ def view_custom_agent(agent_id):
 def get_custom_agent(agent_id):
     """Get details for a specific custom agent"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -9392,7 +9899,7 @@ def get_custom_agent(agent_id):
 def share_custom_agent(agent_id):
     """Generate or regenerate a share code for an agent"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Verify ownership
@@ -9440,7 +9947,7 @@ def share_custom_agent(agent_id):
 def unshare_custom_agent(agent_id):
     """Remove share code and make agent private"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Verify ownership
@@ -9478,7 +9985,7 @@ def unshare_custom_agent(agent_id):
 def get_shared_agent(share_code):
     """Get public agent details by share code (no login required)"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -9529,7 +10036,7 @@ def clone_shared_agent(share_code):
         tier_info = SUBSCRIPTION_TIERS.get(tier, SUBSCRIPTION_TIERS['free'])
         custom_agents_limit = tier_info.get('custom_agents_limit', 1)
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Count user's existing custom agents
@@ -9596,7 +10103,7 @@ def get_global_agents():
         # DEBUG: Log current user info
         print(f"🔍 DEBUG /api/global-agents: current_user.id = {current_user.id}, email = {getattr(current_user, 'email', 'N/A')}")
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Get all active global agents assigned to this user (DISTINCT to prevent duplicates)
@@ -9641,7 +10148,7 @@ def get_global_agents():
 def unassign_global_agent(agent_id):
     """Unassign a global agent from current user"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Delete the assignment
@@ -9663,6 +10170,307 @@ def unassign_global_agent(agent_id):
         print(f"❌ Error unassigning global agent: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+# ============================================
+# STAND ALONE CLIENT AGENTS ENDPOINTS
+# ============================================
+
+@app.route('/api/client-agents', methods=['GET'])
+@login_required
+def get_client_agents():
+    """Get all active Stand Alone Client Agents assigned to current user"""
+    try:
+        print(f"🔍 DEBUG /api/client-agents: current_user.id = {current_user.id}")
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Get all active client agents assigned to this user
+        cursor.execute("""
+            SELECT id, name, description, emoji, assigned_to_user_id,
+                   primary_outcome, core_responsibilities, behaviour_rules,
+                   boundaries, personalisation, system_prompt, priority_level,
+                   created_at
+            FROM client_agents
+            WHERE assigned_to_user_id = ? AND is_active = 1
+            ORDER BY priority_level DESC, name
+        """, (current_user.id,))
+
+        agents = []
+        for row in cursor.fetchall():
+            agents.append({
+                'id': row[0],
+                'name': row[1],
+                'description': row[2],
+                'emoji': row[3],
+                'assigned_to_user_id': row[4],
+                'primary_outcome': row[5],
+                'core_responsibilities': json.loads(row[6]) if row[6] else [],
+                'behaviour_rules': row[7],
+                'boundaries': row[8],
+                'personalisation': json.loads(row[9]) if row[9] else {},
+                'system_prompt': row[10],
+                'priority_level': row[11],
+                'created_at': row[12],
+                'type': 'client'  # Mark as client agent
+            })
+
+        print(f"🔍 DEBUG /api/client-agents: Returning {len(agents)} agents for user {current_user.id}")
+
+        conn.close()
+        return jsonify({'agents': agents}), 200
+
+    except Exception as e:
+        print(f"❌ Error getting client agents: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/client-agents', methods=['POST'])
+@login_required
+def admin_create_client_agent():
+    """Admin: Create a new client agent"""
+    if current_user.id != 1:  # Admin only
+        return jsonify({'error': 'Unauthorized - Admin access required'}), 403
+
+    try:
+        data = request.get_json()
+
+        # Validate required fields
+        required_fields = ['name', 'primary_outcome', 'assigned_to_user_id', 'system_prompt']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Insert new client agent
+        cursor.execute("""
+            INSERT INTO client_agents (
+                name, description, emoji, assigned_to_user_id, primary_outcome,
+                core_responsibilities, behaviour_rules, boundaries, personalisation,
+                system_prompt, priority_level, created_by
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            data['name'],
+            data.get('description', ''),
+            data.get('emoji', '💎'),
+            data['assigned_to_user_id'],
+            data['primary_outcome'],
+            json.dumps(data.get('core_responsibilities', [])),
+            data.get('behaviour_rules', ''),
+            data.get('boundaries', ''),
+            json.dumps(data.get('personalisation', {})),
+            data['system_prompt'],
+            data.get('priority_level', 1),
+            current_user.id
+        ))
+
+        conn.commit()
+        agent_id = cursor.lastrowid
+        conn.close()
+
+        print(f"✅ Admin {current_user.id} created client agent {agent_id}: {data['name']} for user {data['assigned_to_user_id']}")
+        return jsonify({'success': True, 'agent_id': agent_id, 'message': 'Client agent created successfully'}), 201
+
+    except Exception as e:
+        print(f"❌ Error creating client agent: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/client-agents/<int:agent_id>', methods=['PUT'])
+@login_required
+def admin_update_client_agent(agent_id):
+    """Admin: Update a client agent"""
+    if current_user.id != 1:  # Admin only
+        return jsonify({'error': 'Unauthorized - Admin access required'}), 403
+
+    try:
+        data = request.get_json()
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Build update query dynamically based on provided fields
+        update_fields = []
+        update_values = []
+
+        if 'name' in data:
+            update_fields.append('name = ?')
+            update_values.append(data['name'])
+        if 'description' in data:
+            update_fields.append('description = ?')
+            update_values.append(data['description'])
+        if 'emoji' in data:
+            update_fields.append('emoji = ?')
+            update_values.append(data['emoji'])
+        if 'primary_outcome' in data:
+            update_fields.append('primary_outcome = ?')
+            update_values.append(data['primary_outcome'])
+        if 'core_responsibilities' in data:
+            update_fields.append('core_responsibilities = ?')
+            update_values.append(json.dumps(data['core_responsibilities']))
+        if 'behaviour_rules' in data:
+            update_fields.append('behaviour_rules = ?')
+            update_values.append(data['behaviour_rules'])
+        if 'boundaries' in data:
+            update_fields.append('boundaries = ?')
+            update_values.append(data['boundaries'])
+        if 'personalisation' in data:
+            update_fields.append('personalisation = ?')
+            update_values.append(json.dumps(data['personalisation']))
+        if 'system_prompt' in data:
+            update_fields.append('system_prompt = ?')
+            update_values.append(data['system_prompt'])
+        if 'priority_level' in data:
+            update_fields.append('priority_level = ?')
+            update_values.append(data['priority_level'])
+        if 'is_active' in data:
+            update_fields.append('is_active = ?')
+            update_values.append(data['is_active'])
+
+        update_fields.append('updated_at = CURRENT_TIMESTAMP')
+
+        if not update_fields:
+            return jsonify({'error': 'No fields to update'}), 400
+
+        update_values.append(agent_id)
+
+        query = f"UPDATE client_agents SET {', '.join(update_fields)} WHERE id = ?"
+        cursor.execute(query, update_values)
+
+        conn.commit()
+        rows_updated = cursor.rowcount
+        conn.close()
+
+        if rows_updated > 0:
+            print(f"✅ Admin {current_user.id} updated client agent {agent_id}")
+            return jsonify({'success': True, 'message': 'Client agent updated successfully'}), 200
+        else:
+            return jsonify({'error': 'Client agent not found'}), 404
+
+    except Exception as e:
+        print(f"❌ Error updating client agent: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/client-agents/<int:agent_id>/assign', methods=['POST'])
+@login_required
+def admin_assign_client_agent(agent_id):
+    """Admin: Reassign a client agent to a different user"""
+    if current_user.id != 1:  # Admin only
+        return jsonify({'error': 'Unauthorized - Admin access required'}), 403
+
+    try:
+        data = request.get_json()
+
+        if 'user_id' not in data:
+            return jsonify({'error': 'Missing user_id'}), 400
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Update assignment
+        cursor.execute("""
+            UPDATE client_agents
+            SET assigned_to_user_id = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (data['user_id'], agent_id))
+
+        conn.commit()
+        rows_updated = cursor.rowcount
+        conn.close()
+
+        if rows_updated > 0:
+            print(f"✅ Admin {current_user.id} reassigned client agent {agent_id} to user {data['user_id']}")
+            return jsonify({'success': True, 'message': 'Client agent reassigned successfully'}), 200
+        else:
+            return jsonify({'error': 'Client agent not found'}), 404
+
+    except Exception as e:
+        print(f"❌ Error reassigning client agent: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/client-agents/<int:agent_id>', methods=['DELETE'])
+@login_required
+def admin_delete_client_agent(agent_id):
+    """Admin: Delete a client agent (or deactivate)"""
+    if current_user.id != 1:  # Admin only
+        return jsonify({'error': 'Unauthorized - Admin access required'}), 403
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Soft delete by setting is_active = 0
+        cursor.execute("""
+            UPDATE client_agents
+            SET is_active = 0, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (agent_id,))
+
+        conn.commit()
+        rows_updated = cursor.rowcount
+        conn.close()
+
+        if rows_updated > 0:
+            print(f"✅ Admin {current_user.id} deactivated client agent {agent_id}")
+            return jsonify({'success': True, 'message': 'Client agent deactivated successfully'}), 200
+        else:
+            return jsonify({'error': 'Client agent not found'}), 404
+
+    except Exception as e:
+        print(f"❌ Error deactivating client agent: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/client-agents', methods=['GET'])
+@login_required
+def admin_get_all_client_agents():
+    """Admin: Get all client agents for management"""
+    if current_user.id != 1:  # Admin only
+        return jsonify({'error': 'Unauthorized - Admin access required'}), 403
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Get all client agents with user info
+        cursor.execute("""
+            SELECT ca.id, ca.name, ca.description, ca.emoji, ca.assigned_to_user_id,
+                   ca.primary_outcome, ca.priority_level, ca.is_active, ca.created_at,
+                   u.username, u.email
+            FROM client_agents ca
+            LEFT JOIN users u ON ca.assigned_to_user_id = u.id
+            ORDER BY ca.priority_level DESC, ca.name
+        """)
+
+        agents = []
+        for row in cursor.fetchall():
+            agents.append({
+                'id': row[0],
+                'name': row[1],
+                'description': row[2],
+                'emoji': row[3],
+                'assigned_to_user_id': row[4],
+                'primary_outcome': row[5],
+                'priority_level': row[6],
+                'is_active': row[7],
+                'created_at': row[8],
+                'assigned_to_username': row[9],
+                'assigned_to_email': row[10]
+            })
+
+        conn.close()
+        return jsonify({'agents': agents}), 200
+
+    except Exception as e:
+        print(f"❌ Error getting all client agents: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/admin/users', methods=['GET'])
 @login_required
 def admin_get_all_users():
@@ -9671,7 +10479,7 @@ def admin_get_all_users():
         return jsonify({'error': 'Unauthorized'}), 403
 
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -9706,7 +10514,7 @@ def admin_get_all_global_agents():
         return jsonify({'error': 'Unauthorized'}), 403
 
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -9773,7 +10581,7 @@ def admin_create_global_agent():
         if isinstance(integrations, list):
             integrations = json.dumps(integrations)
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -9807,7 +10615,7 @@ def admin_update_global_agent(agent_id):
     try:
         data = request.get_json()
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Build update query dynamically
@@ -9869,7 +10677,7 @@ def admin_delete_global_agent(agent_id):
         return jsonify({'error': 'Unauthorized'}), 403
 
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Delete user assignments first
@@ -9904,7 +10712,7 @@ def admin_assign_global_agent(agent_id):
         if not user_ids:
             return jsonify({'error': 'user_ids required'}), 400
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         assigned_count = 0
@@ -9946,7 +10754,7 @@ def admin_unassign_global_agent(agent_id):
         if not user_ids:
             return jsonify({'error': 'user_ids required'}), 400
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         for user_id in user_ids:
@@ -9977,7 +10785,7 @@ def share_global_agent(agent_id):
         return jsonify({'error': 'Unauthorized'}), 403
 
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Get agent details
@@ -10036,7 +10844,7 @@ def unshare_global_agent(agent_id):
         return jsonify({'error': 'Unauthorized'}), 403
 
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -10062,7 +10870,7 @@ def unshare_global_agent(agent_id):
 def view_shared_global_agent(share_code):
     """Public page to chat with a shared global agent (no login required)"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -10106,7 +10914,7 @@ def global_agent_chat():
             return jsonify({'error': 'Missing required fields'}), 400
 
         # Get global agent by share_code
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -10175,7 +10983,7 @@ def render_agent_template_api(agent_id):
         data = request.get_json()
         variables = data.get('variables', {})
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Get agent (check ownership)
@@ -10215,7 +11023,7 @@ def render_agent_template_api(agent_id):
 def view_shared_agent_page(share_code):
     """Web page to view and clone a shared agent"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -10507,7 +11315,8 @@ def create_website_file():
         
         # Sanitize filename
         filename = secure_filename(filename)
-        if not filename.endswith('.html'):
+        # Support both .html and .txt files
+        if not (filename.endswith('.html') or filename.endswith('.txt')):
             filename += '.html'
         
         # Create unique filename with timestamp
@@ -10570,7 +11379,7 @@ def download_website(filename):
 
 def check_message_limit(user_id):
     """Check if user has reached their daily message limit"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -10617,7 +11426,7 @@ def check_message_limit(user_id):
 
 def increment_message_count(user_id):
     """Increment user's daily message count"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -10634,7 +11443,7 @@ def increment_message_count(user_id):
 
 def init_webhooks_table():
     """Initialize webhooks table for Make.com integration"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -10660,7 +11469,7 @@ def trigger_webhook(user_id, event_type, data):
     try:
         import requests as webhook_requests
         
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         cursor.execute("""
@@ -10701,7 +11510,7 @@ def trigger_webhook(user_id, event_type, data):
 
 def init_support_messages_table():
     """Create support messages table for user help requests"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -10740,7 +11549,7 @@ def get_api_key():
         print(f"DEBUG: get-api-key called for user {current_user.id}")
         
         # Check if api_keys table exists
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='api_keys'")
         table_exists = cursor.fetchone()
@@ -10749,7 +11558,7 @@ def get_api_key():
             print("DEBUG: api_keys table doesn't exist, creating...")
             conn.close()
             init_api_keys_table()
-            conn = sqlite3.connect(DB_PATH)
+            conn = get_db_connection()
             cursor = conn.cursor()
         
         # Try to get existing key
@@ -10790,13 +11599,13 @@ def regenerate_api_key():
         print(f"DEBUG: Regenerating API key for user {current_user.id}")
         
         # Ensure table exists
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='api_keys'")
         if not cursor.fetchone():
             conn.close()
             init_api_keys_table()
-            conn = sqlite3.connect(DB_PATH)
+            conn = get_db_connection()
             cursor = conn.cursor()
         
         # Deactivate old keys
@@ -10891,7 +11700,7 @@ def api_chat():
         
         # Check daily message limit
         user_id = request.api_user_id
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         cursor.execute("SELECT subscription_tier FROM users WHERE id = ?", (user_id,))
@@ -10983,7 +11792,7 @@ def api_chat():
         ai_response = response.content[0].text
         
         # Save to chat history
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO chat_history (user_id, agent, message, response)
@@ -11120,7 +11929,7 @@ def api_usage():
     """Get current API usage and quota"""
     user_id = request.api_user_id
     
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     # Get user subscription tier
@@ -11168,7 +11977,7 @@ def api_usage():
 def get_webhooks():
     """Get all webhooks for current user"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         cursor.execute("""
@@ -11231,7 +12040,7 @@ def create_webhook():
     if event_type not in valid_events:
         return jsonify({'error': f'event_type must be one of: {", ".join(valid_events)}'}), 400
     
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -11253,7 +12062,7 @@ def create_webhook():
 @login_required
 def delete_webhook(webhook_id):
     """Delete a webhook"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     # Check ownership
@@ -11277,7 +12086,7 @@ def delete_webhook(webhook_id):
 @login_required
 def toggle_webhook(webhook_id):
     """Toggle webhook active status"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     # Check ownership
@@ -11382,7 +12191,7 @@ def support_send_message():
             user_name = data.get('name', 'Guest')
 
         # Save to database
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -11419,7 +12228,7 @@ def get_support_messages():
             user_id = None
             admin_mode = True
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
 
@@ -11460,7 +12269,7 @@ def resolve_support_message(message_id):
         data = request.get_json()
         admin_notes = data.get('notes', '')
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""

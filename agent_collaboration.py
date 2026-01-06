@@ -13,19 +13,17 @@ def detect_agent_mentions(message, user_id):
     Returns list of mentioned agents
     """
     import re
-    import sqlite3
-
-    DB_PATH = '/home/user/ai-team/ai_team.db'
+    from web_app_auth import get_db_connection
 
     # Core agents
     core_agents = ['Luna', 'Mila', 'Sage', 'Ember', 'Sol', 'Nova', 'Theo']
 
     # Get custom and global agents for this user
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     # Custom agents
-    cursor.execute("SELECT name FROM custom_agents WHERE user_id = ? AND is_active = 1", (user_id,))
+    cursor.execute("SELECT name FROM custom_agents WHERE user_id = ?", (user_id,))
     custom_agents = [row[0] for row in cursor.fetchall()]
 
     # Global agents

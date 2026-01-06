@@ -314,7 +314,7 @@
 
             <div class="form-group">
                 <label>Display Name (Optional)</label>
-                <input type="text" id="displayName" placeholder="How should we address you?">
+                <input type="text" id="displayName" placeholder="How should we address you?" value="{{ current_user.display_name or '' }}">
             </div>
 
             <button class="btn" onclick="saveProfile()">Save Changes</button>
@@ -381,6 +381,64 @@
 
             <div style="margin-top: 20px;">
                 <button class="btn" onclick="savePreferences()">Save Preferences</button>
+            </div>
+        </div>
+
+        <!-- Voice Settings -->
+        <div class="section">
+            <h2>🎙️ Voice Settings</h2>
+
+            <div class="form-group">
+                <label>Voice Recognition Language</label>
+                <select id="voiceLanguage" class="form-control">
+                    <option value="en-US">English (US)</option>
+                    <option value="en-GB">English (UK)</option>
+                    <option value="es-ES">Spanish (Spain)</option>
+                    <option value="fr-FR">French (France)</option>
+                    <option value="de-DE">German (Germany)</option>
+                    <option value="it-IT">Italian (Italy)</option>
+                    <option value="pt-BR">Portuguese (Brazil)</option>
+                    <option value="ja-JP">Japanese</option>
+                    <option value="ko-KR">Korean</option>
+                    <option value="zh-CN">Chinese (Simplified)</option>
+                </select>
+            </div>
+
+            <div class="setting-item">
+                <div>
+                    <strong>Auto-send on Voice Input</strong>
+                    <p>Automatically send message after voice recognition completes</p>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="voiceAutoSend">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="setting-item">
+                <div>
+                    <strong>Voice Feedback Sound</strong>
+                    <p>Play a sound when voice recording starts and stops</p>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="voiceFeedbackSound" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="setting-item">
+                <div>
+                    <strong>Continuous Voice Recognition</strong>
+                    <p>Keep listening after each voice input (experimental)</p>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="voiceContinuous">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <button class="btn" onclick="saveVoiceSettings()">Save Voice Settings</button>
             </div>
         </div>
 
@@ -549,6 +607,36 @@
         document.getElementById('promoCode').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 redeemPromo();
+            }
+        });
+
+        function saveVoiceSettings() {
+            const voiceSettings = {
+                language: document.getElementById('voiceLanguage').value,
+                autoSend: document.getElementById('voiceAutoSend').checked,
+                feedbackSound: document.getElementById('voiceFeedbackSound').checked,
+                continuous: document.getElementById('voiceContinuous').checked
+            };
+
+            // Save to localStorage
+            localStorage.setItem('voiceSettings', JSON.stringify(voiceSettings));
+
+            alert('✅ Voice settings saved!');
+        }
+
+        // Load voice settings on page load
+        window.addEventListener('DOMContentLoaded', function() {
+            const savedSettings = localStorage.getItem('voiceSettings');
+            if (savedSettings) {
+                try {
+                    const settings = JSON.parse(savedSettings);
+                    document.getElementById('voiceLanguage').value = settings.language || 'en-US';
+                    document.getElementById('voiceAutoSend').checked = settings.autoSend || false;
+                    document.getElementById('voiceFeedbackSound').checked = settings.feedbackSound !== false;
+                    document.getElementById('voiceContinuous').checked = settings.continuous || false;
+                } catch (e) {
+                    console.error('Error loading voice settings:', e);
+                }
             }
         });
     </script>
