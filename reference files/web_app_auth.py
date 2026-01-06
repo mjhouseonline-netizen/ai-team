@@ -149,16 +149,7 @@ PRIMARY_AGENTS = [
 # Premium paid deliverables, admin-only, private to one client
 
 # File upload configuration
-# IMPORTANT:
-# - Local dev: store uploads inside the project folder
-# - Render: the app directory is not writable; use /data (persistent) for uploads
-IS_RENDER = globals().get('IS_RENDER') if 'IS_RENDER' in globals() else (os.environ.get('RENDER') == 'true' or os.environ.get('RENDER_SERVICE_NAME') is not None)
-
-if IS_RENDER:
-    UPLOAD_FOLDER = '/data/uploads'
-else:
-    UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
-
+UPLOAD_FOLDER = 'uploads'
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 ALLOWED_EXTENSIONS = {
     # Images
@@ -174,7 +165,6 @@ app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
 
 # Create upload folder if it doesn't exist
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
 
 # Enable CORS
 CORS(app, supports_credentials=True, origins=['*'])
@@ -6792,64 +6782,6 @@ def allowed_file(filename):
     """Check if file extension is allowed"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def extract_text_from_file(filepath: str) -> str:
-    """Best-effort text extraction for common upload types.
-
-    Notes:
-    - Images are not OCR'd (returns a short placeholder).
-    - PDFs are not parsed here (returns a short placeholder) to avoid heavy deps.
-    - For Office files, uses python-docx and openpyxl when available.
-    """
-    ext = os.path.splitext(filepath)[1].lower().lstrip('.')
-
-    # Plain text formats
-    if ext in ['txt', 'md', 'csv']:
-        with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
-            return f.read()
-
-    # Images (no OCR)
-    if ext in ['png', 'jpg', 'jpeg', 'gif', 'webp']:
-        size = os.path.getsize(filepath)
-        return f"[Image file received: {os.path.basename(filepath)} ({size} bytes). Image text is not extracted server-side.]"
-
-    # Word documents
-    if ext in ['docx']:
-        try:
-            from docx import Document
-            doc = Document(filepath)
-            parts = []
-            for p in doc.paragraphs:
-                if p.text:
-                    parts.append(p.text)
-            return "\n".join(parts)[:10000]
-        except Exception as e:
-            return f"[DOCX received but could not extract text: {e}]"
-
-    # Excel spreadsheets
-    if ext in ['xlsx', 'xls']:
-        try:
-            from openpyxl import load_workbook
-            wb = load_workbook(filepath, data_only=True)
-            out = []
-            for sheet_name in wb.sheetnames[:3]:
-                sheet = wb[sheet_name]
-                out.append(f"=== Sheet: {sheet_name} ===")
-                rows = list(sheet.rows)[:50]
-                for row in rows:
-                    row_data = [str(cell.value) if cell.value is not None else "" for cell in row]
-                    out.append(" | ".join(row_data))
-            return "\n".join(out)[:10000]
-        except Exception as e:
-            return f"[XLSX received but could not extract text: {e}]"
-
-    # PDF and other formats
-    if ext == 'pdf':
-        size = os.path.getsize(filepath)
-        return f"[PDF file received: {os.path.basename(filepath)} ({size} bytes). PDF text extraction is not enabled server-side.]"
-
-    size = os.path.getsize(filepath)
-    return f"[File received: {os.path.basename(filepath)} ({size} bytes). Text extraction not supported for .{ext}.]"
-
 def encode_file_to_base64(filepath):
     """Encode file to base64 for Claude API"""
     with open(filepath, 'rb') as f:
@@ -7512,28 +7444,16 @@ def chat():
 
         for fp in collected_paths:
             try:
-                candidate = fp
-
-                # If client sends relative paths, resolve them under UPLOAD_FOLDER
-                if isinstance(candidate, str):
-                    c = candidate.strip()
-
-                    # Accept legacy values like "uploads/<user_id>/file.ext"
-                    if c.startswith('uploads/'):
-                        c = c.split('/', 1)[1]
-
-                    if not os.path.isabs(c):
-                        c = os.path.join(UPLOAD_FOLDER, c.lstrip('/'))
-
-                    candidate = c
-
-                rp = os.path.realpath(candidate)
-
+                rp = os.path.realpath(fp)
                 if rp.startswith(upload_root_real) and os.path.exists(rp):
-                    extracted = extract_text_from_file(rp)
-                    file_context_blocks.append(f"\n\n[FILE: {os.path.basename(rp)}]\n{extracted}\n")
+                    with open(rp, 'r', encoding='utf-8', errors='ignore') as f:
+                        text = f.read()
+                    file_context_blocks.append(
+                        f"\n\n[FILE: {os.path.basename(rp)}]\n{text}\n"
+                    )
             except Exception as e:
                 file_context_blocks.append(f"\n\n[FILE ERROR: {fp}]\n{e}\n")
+
         if file_context_blocks:
             message = (
                 "The user uploaded the following file(s). You must read and use their contents.\n"
