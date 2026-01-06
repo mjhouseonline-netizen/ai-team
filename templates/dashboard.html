@@ -5165,6 +5165,28 @@
         // CUSTOM AGENTS LOADING
         // ============================================
 
+        // Helper function to escape HTML and prevent XSS
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return String(unsafe)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Helper function to escape for use in onclick attributes
+        function escapeForAttr(unsafe) {
+            if (!unsafe) return '';
+            return String(unsafe)
+                .replace(/\\/g, '\\\\')
+                .replace(/'/g, "\\'")
+                .replace(/"/g, '\\"')
+                .replace(/\n/g, '\\n')
+                .replace(/\r/g, '\\r');
+        }
+
         function loadCustomAgents() {
             fetch('/api/custom-agents')
                 .then(response => response.json())
@@ -5191,7 +5213,13 @@
             
             // Clear existing content
             container.innerHTML = '';
-            
+
+            // Debug: Log what we received
+            console.log('📋 Loading custom agents:', agents.length);
+            agents.forEach(agent => {
+                console.log(`   - ${agent.name}: share_url = ${agent.share_url ? 'YES (' + agent.share_url + ')' : 'NO'}`);
+            });
+
             // Add each custom agent
             agents.forEach(agent => {
                 const agentDiv = document.createElement('div');
@@ -5210,9 +5238,9 @@
                     ? `<img src="${agent.icon_image}" alt="${agent.name}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`
                     : agent.emoji || '🤖';
 
-                // Build dropdown menu
+                // Build dropdown menu with proper escaping
                 const shareOption = agent.share_url ? `
-                    <div class="dropdown-item" onclick="showCustomAgentShare(event, '${agent.name}', '${agent.share_url}')">
+                    <div class="dropdown-item" onclick="showCustomAgentShare(event, '${escapeForAttr(agent.name)}', '${escapeForAttr(agent.share_url)}')">
                         <span class="dropdown-icon">🔗</span>
                         <span>Share Agent</span>
                     </div>

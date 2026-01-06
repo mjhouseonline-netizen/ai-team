@@ -165,50 +165,15 @@ function toggleImageMode() {
 // ================================================
 
 function setupFileInput() {
-    document.getElementById('fileInput').addEventListener('change', async function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const formData = new FormData();
-        formData.append('file', file);
-
-        try {
-            const response = await fetch('/api/upload', {
-                method: 'POST',
-                credentials: 'include',
-                body: formData
-            });
-
-            if (!response.ok) {
-                throw new Error(`Upload failed: ${response.statusText}`);
-            }
-
-            const data = await response.json();
-
-            if (data.filename) {
-                uploadedFile = data;
-                document.getElementById('fileName').textContent = `📎 ${file.name}`;
-                document.getElementById('filePreview').classList.add('active');
-                // Success feedback
-                console.log('✅ File uploaded successfully');
-            } else if (data.error) {
-                throw new Error(data.error);
-            } else {
-                throw new Error('Upload failed: No filename returned');
-            }
-        } catch (error) {
-            console.error('Upload error:', error);
-            alert('❌ Upload failed: ' + error.message);
-            // Clear the file input on error
-            e.target.value = '';
-        }
-    });
+    // File input is handled by the HTML's own implementation
+    // This function is kept for compatibility but doesn't override the HTML handler
+    console.log('File input handler initialized - using HTML implementation');
 }
 
-function removeFile() {
-    uploadedFile = null;
-    document.getElementById('filePreview').classList.remove('active');
-    document.getElementById('fileInput').value = '';
+function removeFile(index) {
+    // This function is called from the HTML's file preview system
+    // The implementation is in dashboard.html
+    console.log('Remove file called with index:', index);
 }
 
 // ================================================
