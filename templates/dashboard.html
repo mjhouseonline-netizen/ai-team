@@ -4017,10 +4017,39 @@
                 removeFile();
                 autoResize(input);
 
-                // Send to backend
+                // 1) Upload files first using /api/upload (one file at a time)
+                const filepaths = [];
+
+                for (const file of uploadedFiles) {
+                    const uploadFd = new FormData();
+                    uploadFd.append('file', file); // must be 'file' to match backend
+
+                    const uploadRes = await fetch('/api/upload', {
+                        method: 'POST',
+                        credentials: 'include',
+                        body: uploadFd
+                    });
+
+                    const uploadJson = await uploadRes.json();
+
+                    if (!uploadRes.ok || !uploadJson.success) {
+                        throw new Error(uploadJson.error || 'Upload failed');
+                    }
+
+                    filepaths.push(uploadJson.filepath);
+                }
+
+                // 2) Send chat request as JSON with filepaths
                 const response = await fetch('/api/chat', {
                     method: 'POST',
-                    body: formData
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        message: message || 'Please analyze the uploaded file(s)',
+                        agent: getCurrentAgent(), // or currentAgent if that’s what you use
+                        model: model,
+                        filepaths: filepaths
+                    })
                 });
 
                 const data = await response.json();
