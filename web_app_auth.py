@@ -205,34 +205,39 @@ import shutil
 IS_RENDER = os.environ.get('RENDER') == 'true' or os.environ.get('RENDER_SERVICE_NAME') is not None
 
 if IS_RENDER:
-    # On Render: use /tmp which is always writable
-    DB_PATH = '/tmp/ai_team.db'
-    print(f"🔍 Render environment detected - using /tmp database: {DB_PATH}")
+    # CRITICAL FIX: Use /data (persistent) instead of /tmp (ephemeral)
+    # /tmp gets wiped on every Render restart, causing data loss!
+    # /data is persistent across restarts
+    DB_PATH = '/data/ai_team.db'
+    print(f"🔍 Render environment detected - using PERSISTENT storage: {DB_PATH}")
 
-    # Try to copy from /data if it exists and /tmp doesn't have it yet
-    if not os.path.exists(DB_PATH) and os.path.exists('/data/ai_team.db'):
+    # Ensure /data directory exists
+    os.makedirs('/data', exist_ok=True)
+
+    # Legacy migration: If database is still in /tmp, move it to /data
+    tmp_db = '/tmp/ai_team.db'
+    if os.path.exists(tmp_db) and not os.path.exists(DB_PATH):
         try:
-            print(f"📋 Copying database from /data to /tmp...")
-            shutil.copy('/data/ai_team.db', DB_PATH)
-            print(f"✅ Database copied from /data to {DB_PATH}")
+            print(f"📋 Migrating database from /tmp to /data...")
+            shutil.copy(tmp_db, DB_PATH)
+            print(f"✅ Database migrated to persistent storage: {DB_PATH}")
         except Exception as e:
-            print(f"⚠️  Failed to copy from /data: {e}")
-            print(f"   Will create fresh database in /tmp")
+            print(f"⚠️  Migration failed: {e}")
 else:
     # Local development: use local file
     DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ai_team.db')
     print(f"🔍 Local development - database path: {DB_PATH}")
 
-# Ensure /tmp is writable (Render check)
+# Ensure /data is writable (Render check)
 if IS_RENDER:
     try:
-        test_file = '/tmp/test_write.txt'
+        test_file = '/data/test_write.txt'
         with open(test_file, 'w') as f:
             f.write('test')
         os.remove(test_file)
-        print(f"✅ /tmp directory is writable")
+        print(f"✅ /data directory is writable")
     except Exception as e:
-        print(f"❌ /tmp is NOT writable: {e}")
+        print(f"❌ /data is NOT writable: {e}")
         print(f"   This is critical - application may fail")
 
 # Check if database file exists
@@ -308,25 +313,16 @@ def get_db_connection():
 
 def sync_database_to_persistent_storage():
     """
-    Sync database from /tmp to /data for persistence across Render restarts
-    This should be called periodically to prevent data loss
+    LEGACY FUNCTION - No longer needed since we use /data directly now
+    Database is already in /data (persistent storage), no sync required
+    Kept for backward compatibility with existing code that calls this
     """
     if not IS_RENDER:
-        return  # Only needed on Render
+        return
 
+    # Database is already in /data, create a timestamped backup instead
     try:
-        data_db_path = '/data/ai_team.db'
-
-        # Only sync if /tmp database exists and has data
         if os.path.exists(DB_PATH) and os.path.getsize(DB_PATH) > 0:
-            # Ensure /data directory exists
-            os.makedirs('/data', exist_ok=True)
-
-            # Copy database to /data
-            shutil.copy2(DB_PATH, data_db_path)
-            print(f"✅ Synced database to persistent storage: {data_db_path}")
-
-            # Also create a timestamped backup
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             backup_dir = '/data/backups'
             os.makedirs(backup_dir, exist_ok=True)
