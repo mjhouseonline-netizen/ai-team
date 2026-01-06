@@ -7320,6 +7320,9 @@ def chat():
     """Send message to AI agent with conversation history, multi-model support, and file uploads"""
     # Allow both logged-in users and guests (for custom agents)
     try:
+        # Defaults for optional attachment metadata (used by some clients)
+        filepaths = []
+        attached_files = []
         # Handle both JSON and FormData (for file uploads)
         if request.is_json:
             # JSON request (old format)
@@ -7328,6 +7331,11 @@ def chat():
             agent = data.get('agent', 'Ember')
             model_key = data.get('model', 'gemini-2.0-flash')  # Default to Gemini (free)
             attached_file = data.get('file')
+            # Support newer clients that send a list of uploaded file paths (from /api/upload)
+            # Expected: {"filepaths": ["uploads/<user_id>/..."], ...}
+            filepaths = data.get('filepaths') or []
+            # Also support {"files": [{"filepath": "...", "original_filename": "..."}]}
+            attached_files = data.get('files') or []
             uploaded_file = None
             uploaded_files = []
         else:
@@ -7911,21 +7919,125 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
             # Keep backward compatibility for single file
             file_info = files_info[0] if files_info else None
         
-        # Handle file attachments (JSON format - old system)
-        elif attached_file and 'filepath' in attached_file:
-            filepath = attached_file['filepath']
-            if os.path.exists(filepath):
-                filename = attached_file.get('original_filename', 'file')
-                # For text files, include content in message
-                if filename.endswith(('.txt', '.md', '.csv', '.json', '.py', '.js', '.html', '.css')):
-                    try:
-                        with open(filepath, 'r', encoding='utf-8') as f:
-                            file_content = f.read()[:10000]  # Limit to 10k chars
-                        message = f"{message}\n\nFile: {filename}\nContent:\n{file_content}"
-                    except:
-                        pass  # If file reading fails, just use original message
-        
+        # Handle file attachments provided as file paths (typically returned from /api/upload)
+        # Supports clients that upload first via /api/upload and then pass filepaths into /api/chat.
+        elif (attached_file and 'filepath' in attached_file) or filepaths or attached_files:
+            try:
+                collected_paths = []
+
+                # Single attached_file (legacy)
+                if isinstance(attached_file, dict):
+                    fp = attached_file.get('filepath')
+                    if isinstance(fp, str) and fp.strip():
+                        collected_paths.append(fp)
+
+                # filepaths: ["uploads/<user_id>/..."]
+                if isinstance(filepaths, list):
+                    collected_paths.extend([p for p in filepaths if isinstance(p, str) and p.strip()])
+
+                # files: [{"filepath": "..."}]
+                if isinstance(attached_files, list):
+                    for f in attached_files:
+                        if isinstance(f, dict):
+                            fp = f.get('filepath')
+                            if isinstance(fp, str) and fp.strip():
+                                collected_paths.append(fp)
+
+                # De-duplicate while preserving order
+                seen = set()
+                collected_paths = [p for p in collected_paths if not (p in seen or seen.add(p))]
+
+                if collected_paths:
+                    # Restrict access to this user's upload folder when authenticated
+                    user_folder_real = None
+                    if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated:
+                        user_folder_real = os.path.realpath(os.path.join(UPLOAD_FOLDER, str(current_user.id)))
+
+                    def _path_allowed(path: str) -> bool:
+                        try:
+                            real_path = os.path.realpath(path)
+                            if not os.path.exists(real_path):
+                                return False
+                            if user_folder_real:
+                                return real_path.startswith(user_folder_real)
+                            # If not authenticated, do not allow arbitrary file reads
+                            return False
+                        except Exception:
+                            return False
+
+                    file_contents = []
+                    for filepath in collected_paths:
+                        if not _path_allowed(filepath):
+                            file_contents.append(f"File: {os.path.basename(filepath)}\n[Access denied or file not found]")
+                            continue
+
+                        filename = os.path.basename(filepath)
+                        file_extension = os.path.splitext(filename)[1].lower().lstrip('.')
+
+                        text_extensions = ['txt', 'md', 'csv', 'json', 'py', 'js', 'html', 'css', 'xml', 'yaml', 'yml', 'ini', 'cfg', 'log', 'sql']
+                        if file_extension in text_extensions:
+                            try:
+                                with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+                                    file_content = f.read()[:10000]
+                                file_contents.append(f"File: {filename}\nContent:\n{file_content}")
+                            except Exception as e:
+                                file_contents.append(f"File: {filename}\n[Could not read content. Error: {e}]")
+
+                        elif file_extension == 'pdf':
+                            try:
+                                from PyPDF2 import PdfReader
+                                reader = PdfReader(filepath)
+                                pdf_text = []
+                                for page in reader.pages:
+                                    pdf_text.append(page.extract_text() or "")
+                                pdf_text = "\n".join(pdf_text)[:10000]
+                                file_contents.append(f"File: {filename} (PDF)\nContent:\n{pdf_text}")
+                            except Exception as e:
+                                file_contents.append(f"File: {filename} (PDF)\n[PDF content extraction failed. Error: {e}]")
+
+                        elif file_extension in ['docx', 'doc']:
+                            try:
+                                from docx import Document
+                                doc = Document(filepath)
+                                doc_text = "\n".join([p.text for p in doc.paragraphs])[:10000]
+                                file_contents.append(f"File: {filename} (Word Document)\nContent:\n{doc_text}")
+                            except Exception as e:
+                                file_contents.append(f"File: {filename} (Word Document)\n[Word content extraction failed. Error: {e}]")
+
+                        elif file_extension in ['xlsx', 'xls']:
+                            try:
+                                import openpyxl
+                                wb = openpyxl.load_workbook(filepath, data_only=True)
+                                lines = []
+                                for ws in wb.worksheets:
+                                    lines.append(f"[Sheet: {ws.title}]")
+                                    for row in ws.iter_rows(values_only=True):
+                                        row_vals = [str(cell) if cell is not None else "" for cell in row]
+                                        lines.append(",".join(row_vals))
+                                sheet_text = "\n".join(lines)[:10000]
+                                file_contents.append(f"File: {filename} (Spreadsheet)\nContent:\n{sheet_text}")
+                            except Exception as e:
+                                file_contents.append(f"File: {filename} (Spreadsheet)\n[Spreadsheet extraction failed. Error: {e}]")
+
+                        else:
+                            try:
+                                size = os.path.getsize(filepath)
+                            except Exception:
+                                size = "unknown"
+                            file_contents.append(f"File: {filename} ({file_extension.upper()} - {size} bytes)\n[This file type is not yet supported for content extraction.]")
+
+                    if file_contents:
+                        files_text = "\n\n---\n\n".join(file_contents)
+                        debug_marker = f"\n\n[SYSTEM: {len(file_contents)} uploaded file(s) attached via filepaths. Total content: {len(files_text)} characters]\n\n"
+                        if message:
+                            message = f"{message}{debug_marker}{files_text}"
+                        else:
+                            message = f"{debug_marker}{files_text}"
+            except Exception:
+                pass
+
         # Route to selected model with conversation history
+
         # For images, we need special handling
         if file_info and file_info['extension'] in ['png', 'jpg', 'jpeg', 'gif', 'webp']:
             # Image file - use vision models
