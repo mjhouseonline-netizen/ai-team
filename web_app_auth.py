@@ -7815,9 +7815,13 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
                         pdf_text = pdf_text[:10000]  # Limit to 10k chars
                         file_contents.append(f"File: {filename} (PDF)\nContent:\n{pdf_text}")
                         print(f"   ✅ Extracted PDF content ({len(pdf_text)} chars from {len(reader.pages)} pages)")
+                    except ImportError as e:
+                        error_msg = f"⚠️ LIBRARY MISSING: PyPDF2 is not installed. Error: {e}"
+                        print(f"   ❌ {error_msg}")
+                        file_contents.append(f"File: {filename} (PDF - {os.path.getsize(filepath)} bytes)\n\n{error_msg}\n\nThe server needs to install PyPDF2 library. Tell the user to check requirements.txt and trigger a fresh deployment on Render.")
                     except Exception as e:
                         print(f"   ❌ PDF extraction failed: {e}")
-                        file_contents.append(f"File: {filename} (PDF - {os.path.getsize(filepath)} bytes)\n[PDF content extraction failed. Please ensure file is not corrupted.]")
+                        file_contents.append(f"File: {filename} (PDF - {os.path.getsize(filepath)} bytes)\n[PDF content extraction failed. Error: {e}]")
 
                 elif file_extension in ['docx', 'doc']:
                     # For Word docs, extract text content
@@ -7828,9 +7832,13 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
                         doc_text = doc_text[:10000]  # Limit to 10k chars
                         file_contents.append(f"File: {filename} (Word Document)\nContent:\n{doc_text}")
                         print(f"   ✅ Extracted Word document content ({len(doc_text)} chars)")
+                    except ImportError as e:
+                        error_msg = f"⚠️ LIBRARY MISSING: python-docx is not installed. Error: {e}"
+                        print(f"   ❌ {error_msg}")
+                        file_contents.append(f"File: {filename} (Word document - {os.path.getsize(filepath)} bytes)\n\n{error_msg}\n\nThe server needs to install python-docx library. Tell the user to check requirements.txt and redeploy.")
                     except Exception as e:
                         print(f"   ❌ Word document extraction failed: {e}")
-                        file_contents.append(f"File: {filename} (Word document - {os.path.getsize(filepath)} bytes)\n[Document content extraction failed. File may be in older .doc format.]")
+                        file_contents.append(f"File: {filename} (Word document - {os.path.getsize(filepath)} bytes)\n[Document content extraction failed. Error: {e}]")
 
                 elif file_extension in ['xlsx', 'xls']:
                     # For Excel files, extract data
@@ -7847,9 +7855,13 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
                         excel_text = excel_text[:10000]  # Limit to 10k chars
                         file_contents.append(f"File: {filename} (Excel Spreadsheet)\nContent:\n{excel_text}")
                         print(f"   ✅ Extracted Excel content ({len(excel_text)} chars)")
+                    except ImportError as e:
+                        error_msg = f"⚠️ LIBRARY MISSING: openpyxl is not installed. Error: {e}"
+                        print(f"   ❌ {error_msg}")
+                        file_contents.append(f"File: {filename} (Excel spreadsheet - {os.path.getsize(filepath)} bytes)\n\n{error_msg}\n\nThe server needs to install openpyxl library. Tell the user to check requirements.txt and trigger a fresh deployment on Render.")
                     except Exception as e:
                         print(f"   ❌ Excel extraction failed: {e}")
-                        file_contents.append(f"File: {filename} (Excel spreadsheet - {os.path.getsize(filepath)} bytes)\n[Spreadsheet content extraction failed.]")
+                        file_contents.append(f"File: {filename} (Excel spreadsheet - {os.path.getsize(filepath)} bytes)\n[Spreadsheet content extraction failed. Error: {e}]")
 
                 elif file_extension not in ['png', 'jpg', 'jpeg', 'gif', 'webp']:
                     # For other file types that aren't images
