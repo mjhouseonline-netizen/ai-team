@@ -7705,7 +7705,8 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
                 files_info.append(file_data)
 
                 # For text files, read content
-                if file_extension in ['txt', 'md', 'csv', 'json', 'py', 'js', 'html', 'css', 'xml']:
+                text_extensions = ['txt', 'md', 'csv', 'json', 'py', 'js', 'html', 'css', 'xml', 'yaml', 'yml', 'ini', 'cfg', 'log', 'sql']
+                if file_extension in text_extensions:
                     try:
                         with open(filepath, 'r', encoding='utf-8') as f:
                             file_content = f.read()[:10000]  # Limit to 10k chars per file
@@ -7713,6 +7714,16 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
                     except Exception as e:
                         print(f"Error reading file {filename}: {e}")
                         file_contents.append(f"File: {filename} (could not read content)")
+                elif file_extension in ['pdf']:
+                    # For PDFs, indicate file was uploaded but content extraction not yet supported
+                    file_contents.append(f"File: {filename} (PDF - {os.path.getsize(filepath)} bytes)\nNote: PDF content extraction coming soon. For now, I can see you've uploaded this file.")
+                elif file_extension in ['docx', 'doc']:
+                    file_contents.append(f"File: {filename} (Word document - {os.path.getsize(filepath)} bytes)\nNote: Word document content extraction coming soon. For now, I can see you've uploaded this file.")
+                elif file_extension in ['xlsx', 'xls']:
+                    file_contents.append(f"File: {filename} (Excel spreadsheet - {os.path.getsize(filepath)} bytes)\nNote: Excel content extraction coming soon. For now, I can see you've uploaded this file.")
+                elif file_extension not in ['png', 'jpg', 'jpeg', 'gif', 'webp']:
+                    # For other file types that aren't images
+                    file_contents.append(f"File: {filename} ({file_extension.upper()} file - {os.path.getsize(filepath)} bytes)\nNote: I can see you've uploaded this file, but I cannot read its contents yet.")
 
             # Add file contents to message
             if file_contents:

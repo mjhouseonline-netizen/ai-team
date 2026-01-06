@@ -167,14 +167,11 @@ function toggleImageMode() {
 function setupFileInput() {
     // File input is handled by the HTML's own implementation
     // This function is kept for compatibility but doesn't override the HTML handler
-    console.log('File input handler initialized - using HTML implementation');
+    console.log('✅ File input handler initialized');
 }
 
-function removeFile(index) {
-    // This function is called from the HTML's file preview system
-    // The implementation is in dashboard.html
-    console.log('Remove file called with index:', index);
-}
+// Note: removeFile() is defined in dashboard.html
+// Do not override it here to avoid conflicts
 
 // ================================================
 // VOICE RECOGNITION
