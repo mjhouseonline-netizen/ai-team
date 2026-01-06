@@ -7376,9 +7376,93 @@ def chat():
             elif file_count:
                 debug_info = f"[DEBUG: file_count={file_count} but no files found in request.files. Keys: {list(request.files.keys())}] "
                 message = debug_info + (message if message else "")
+        # ---------- SAVE UPLOADED FILES TO DISK (FormData) ----------
+        # Ensure these exist even for FormData
+        filepaths = filepaths if isinstance(filepaths, list) else []
+        attached_files = attached_files if isinstance(attached_files, list) else []
+
+        if uploaded_files:
+            # Use user id if logged in, otherwise create a stable guest id in session
+            if current_user.is_authenticated:
+                owner_id = str(current_user.id)
+            else:
+                if 'guest_id' not in session:
+                    session['guest_id'] = secrets.token_hex(8)
+                owner_id = f"guest_{session['guest_id']}"
+
+            user_folder = os.path.join(UPLOAD_FOLDER, owner_id)
+            os.makedirs(user_folder, exist_ok=True)
+
+            for fs in uploaded_files:
+                if not fs or not fs.filename:
+                    continue
+
+                if not allowed_file(fs.filename):
+                    # Skip disallowed types
+                    continue
+
+                original_name = secure_filename(fs.filename)
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                unique_name = f"{timestamp}_{secrets.token_hex(4)}_{original_name}"
+                filepath = os.path.join(user_folder, unique_name)
+
+                fs.save(filepath)
+
+                filepaths.append(filepath)
+                attached_files.append({
+                    'filepath': filepath,
+                    'original_filename': original_name
+                })
 
         if not message and not uploaded_files:
             return jsonify({'error': 'Message or file required'}), 400
+        # ---------- FILE CONTENT INJECTION INTO MESSAGE ----------
+        collected_paths = []
+
+        # Keep any JSON-supplied file info
+        if isinstance(filepaths, list):
+            for p in filepaths:
+                if isinstance(p, str) and p.strip():
+                    collected_paths.append(p)
+
+        if isinstance(attached_files, list):
+            for f in attached_files:
+                if isinstance(f, dict):
+                    fp = f.get('filepath')
+                    if isinstance(fp, str) and fp.strip():
+                        collected_paths.append(fp)
+
+        if isinstance(attached_file, dict):
+            fp = attached_file.get('filepath')
+            if isinstance(fp, str) and fp.strip():
+                collected_paths.append(fp)
+        elif isinstance(attached_file, str) and attached_file.strip():
+            collected_paths.append(attached_file)
+
+        file_context_blocks = []
+        upload_root_real = os.path.realpath(UPLOAD_FOLDER)
+
+        for fp in collected_paths:
+            try:
+                rp = os.path.realpath(fp)
+                if rp.startswith(upload_root_real) and os.path.exists(rp):
+                    with open(rp, 'r', encoding='utf-8', errors='ignore') as f:
+                        text = f.read()
+                    file_context_blocks.append(
+                        f"\n\n[FILE: {os.path.basename(rp)}]\n{text}\n"
+                    )
+            except Exception as e:
+                file_context_blocks.append(f"\n\n[FILE ERROR: {fp}]\n{e}\n")
+
+        if file_context_blocks:
+            message = (
+                "The user uploaded the following file(s). You must read and use their contents.\n"
+                + "".join(file_context_blocks)
+                + "\n\nUser message:\n"
+                + (message or "")
+            )
+
+        print("DEBUG injected files:", len(file_context_blocks))
 
         # Check if user is authenticated or guest
         is_guest = not current_user.is_authenticated
