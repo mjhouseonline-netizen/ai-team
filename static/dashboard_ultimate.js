@@ -173,7 +173,7 @@ function setupFileInput() {
         formData.append('file', file);
 
         try {
-            const response = await fetch('/api/upload-file', {
+            const response = await fetch('/api/upload', {
                 method: 'POST',
                 credentials: 'include',
                 body: formData

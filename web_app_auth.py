@@ -306,6 +306,48 @@ def get_db_connection():
 
         raise
 
+def sync_database_to_persistent_storage():
+    """
+    Sync database from /tmp to /data for persistence across Render restarts
+    This should be called periodically to prevent data loss
+    """
+    if not IS_RENDER:
+        return  # Only needed on Render
+
+    try:
+        data_db_path = '/data/ai_team.db'
+
+        # Only sync if /tmp database exists and has data
+        if os.path.exists(DB_PATH) and os.path.getsize(DB_PATH) > 0:
+            # Ensure /data directory exists
+            os.makedirs('/data', exist_ok=True)
+
+            # Copy database to /data
+            shutil.copy2(DB_PATH, data_db_path)
+            print(f"✅ Synced database to persistent storage: {data_db_path}")
+
+            # Also create a timestamped backup
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            backup_dir = '/data/backups'
+            os.makedirs(backup_dir, exist_ok=True)
+
+            backup_path = os.path.join(backup_dir, f'backup_{timestamp}.db')
+            shutil.copy2(DB_PATH, backup_path)
+            print(f"✅ Created backup: {backup_path}")
+
+            # Clean up old backups (keep last 24)
+            backups = sorted([f for f in os.listdir(backup_dir) if f.startswith('backup_')])
+            for old_backup in backups[:-24]:
+                old_path = os.path.join(backup_dir, old_backup)
+                os.remove(old_path)
+                print(f"🗑️  Removed old backup: {old_backup}")
+
+        else:
+            print(f"⚠️  No database to sync (DB_PATH: {DB_PATH})")
+
+    except Exception as e:
+        print(f"⚠️  Database sync failed: {e}")
+
 # ============================================
 # USER MODEL
 # ============================================
@@ -766,7 +808,12 @@ def init_database():
 
         # Only backup if database exists and has data
         if os.path.exists(DB_PATH) and os.path.getsize(DB_PATH) > 0:
-            backup_dir = 'migration_backups'
+            # On Render, save backups to /data for persistence across restarts
+            if IS_RENDER:
+                backup_dir = '/data/migration_backups'
+            else:
+                backup_dir = 'migration_backups'
+
             os.makedirs(backup_dir, exist_ok=True)
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             backup_path = os.path.join(backup_dir, f'pre_migration_{timestamp}.db')
@@ -1680,6 +1727,9 @@ try:
     init_promo_codes_table()
     initialize_default_global_agents()
 
+    # Sync database to persistent storage after initialization (Render)
+    sync_database_to_persistent_storage()
+
     # Ensure admin user exists
     try:
         conn = get_db_connection()
@@ -1736,6 +1786,23 @@ try:
         print(f"⚠️  Error checking/creating admin user: {e}")
 
     print("✅ Database initialization completed successfully")
+
+    # Start periodic database sync in background thread (Render only)
+    if IS_RENDER:
+        import threading
+        def periodic_sync():
+            while True:
+                time.sleep(3600)  # Sync every hour
+                try:
+                    print("⏰ Running scheduled database sync...")
+                    sync_database_to_persistent_storage()
+                except Exception as sync_error:
+                    print(f"⚠️  Scheduled sync failed: {sync_error}")
+
+        sync_thread = threading.Thread(target=periodic_sync, daemon=True)
+        sync_thread.start()
+        print("✅ Started periodic database sync (every 1 hour)")
+
 except Exception as e:
     print(f"⚠️  Database initialization error: {str(e)}")
     import traceback
@@ -2183,6 +2250,9 @@ def emergency_database_init():
         init_database()
         init_promo_codes_table()
         initialize_default_global_agents()
+
+        # Sync database to persistent storage (Render)
+        sync_database_to_persistent_storage()
 
         # Check if custom_agents table exists and has correct columns
         conn = get_db_connection()
