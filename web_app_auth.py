@@ -7341,18 +7341,33 @@ def chat():
             file_count = request.form.get('file_count', 0)
             uploaded_files = []
 
+            print(f"📋 FormData received - file_count: {file_count}, request.files keys: {list(request.files.keys())}")
+
             if file_count:
                 file_count = int(file_count)
                 for i in range(file_count):
                     file_key = f'file_{i}'
                     if file_key in request.files:
                         uploaded_files.append(request.files[file_key])
+                        print(f"   ✅ Found {file_key}: {request.files[file_key].filename}")
+                    else:
+                        print(f"   ❌ {file_key} not in request.files")
 
             # Legacy single file support
             if 'file' in request.files and not uploaded_files:
                 uploaded_files = [request.files['file']]
+                print(f"   ✅ Found legacy 'file': {request.files['file'].filename}")
 
             uploaded_file = uploaded_files[0] if uploaded_files else None
+            print(f"📊 Total uploaded_files: {len(uploaded_files)}")
+
+            # DEBUG: Add visible message if files were detected
+            if uploaded_files:
+                debug_info = f"[DEBUG: Backend received {len(uploaded_files)} file(s): {', '.join([f.filename for f in uploaded_files])}] "
+                message = debug_info + (message if message else "")
+            elif file_count:
+                debug_info = f"[DEBUG: file_count={file_count} but no files found in request.files. Keys: {list(request.files.keys())}] "
+                message = debug_info + (message if message else "")
 
         if not message and not uploaded_files:
             return jsonify({'error': 'Message or file required'}), 400
