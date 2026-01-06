@@ -7462,17 +7462,46 @@ def chat():
         file_context_blocks = []
         upload_root_real = os.path.realpath(UPLOAD_FOLDER)
 
+        from docx import Document
+
+        def extract_file_text(path: str) -> str:
+            ext = os.path.splitext(path)[1].lower()
+
+            # Plain text
+            if ext == '.txt':
+                with open(path, 'r', encoding='utf-8', errors='ignore') as f:
+                    return f.read()
+
+            # Word documents
+            if ext == '.docx':
+                doc = Document(path)
+                return "\n".join(
+                    p.text for p in doc.paragraphs if p.text.strip()
+                )
+
+            # Unsupported types
+            return f"[Unsupported file type: {ext}]"
+
         for fp in collected_paths:
             try:
                 rp = os.path.realpath(fp)
+
                 if rp.startswith(upload_root_real) and os.path.exists(rp):
-                    with open(rp, 'r', encoding='utf-8', errors='ignore') as f:
-                        text = f.read()
+                    extracted_text = extract_file_text(rp)
+
                     file_context_blocks.append(
-                        f"\n\n[FILE: {os.path.basename(rp)}]\n{text}\n"
+                        f"\n\n[FILE: {os.path.basename(rp)}]\n{extracted_text}\n"
                     )
+                else:
+                    file_context_blocks.append(
+                        f"\n\n[FILE ERROR: {fp}]\nFile not found or outside upload directory\n"
+                    )
+
             except Exception as e:
-                file_context_blocks.append(f"\n\n[FILE ERROR: {fp}]\n{e}\n")
+                file_context_blocks.append(
+                    f"\n\n[FILE ERROR: {fp}]\n{e}\n"
+                )
+
 
         if file_context_blocks:
             message = (
