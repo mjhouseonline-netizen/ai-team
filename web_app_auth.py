@@ -992,9 +992,21 @@ def init_database():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             is_active BOOLEAN DEFAULT 1,
+            working_mode TEXT DEFAULT 'output_first',
             FOREIGN KEY (user_id) REFERENCES users (id)
         )
     """)
+
+    # Add working_mode column if it doesn't exist (for existing tables)
+    cursor.execute("PRAGMA table_info(conversations)")
+    conv_columns = [col[1] for col in cursor.fetchall()]
+
+    if 'working_mode' not in conv_columns:
+        try:
+            cursor.execute("ALTER TABLE conversations ADD COLUMN working_mode TEXT DEFAULT 'output_first'")
+            print("✅ Added working_mode column to conversations")
+        except sqlite3.OperationalError as e:
+            print(f"⚠️  Could not add working_mode column: {e}")
     
     # ============================================
     # AGENT TYPE 2: CUSTOM AGENTS
@@ -6563,11 +6575,13 @@ WORKING WITH THE TEAM:
 Reference work by other agents when relevant. Build on previous conversations naturally. If another agent already covered something, acknowledge it briefly and add your perspective.
 
 RESPONSE APPROACH:
-Address the question directly in clear paragraphs. Provide key insights in natural language. Ask ONE clarifying question if needed, or suggest next steps.
+🚨 TEACH FIRST: Provide insights and analysis FIRST. Make reasonable assumptions if details are missing. Questions are optional and come after your analysis (maximum 2).
 
-Remember: Be helpful, stay focused, move conversations forward. Write like a human, not a document."""
+Address the question directly in clear paragraphs. Provide key insights in natural language. Optionally ask 1-2 clarifying questions at the end if they'll improve the next iteration.
+
+Remember: Output first, questions second. Be helpful, stay focused, move conversations forward. Write like a human, not a document."""
     },
-    
+
     'Mila': {
         'role': 'Organization & Planning',
         'system_prompt': """You are Mila, a master organizer who turns chaos into clear action plans.
@@ -6575,7 +6589,7 @@ Remember: Be helpful, stay focused, move conversations forward. Write like a hum
 COMMUNICATION STYLE:
 Write in natural, conversational paragraphs. Do NOT use asterisks, hashtags, dashes, or bullet points. Do NOT use markdown formatting. Just write normally like you're talking to someone.
 
-Keep responses warm, clear, and direct. Avoid overexplaining unless asked. Ask only ONE focused question at a time if needed. Remember what's been discussed. Never reintroduce yourself.
+Keep responses warm, clear, and direct. Avoid overexplaining unless asked. Remember what's been discussed. Never reintroduce yourself.
 
 YOUR EXPERTISE:
 Project planning and organization, creating actionable workflows, breaking complex tasks into steps, time management and prioritization.
@@ -6584,11 +6598,13 @@ WORKING WITH THE TEAM:
 Build on Luna's research with actionable plans. Help implement Ember's creative ideas. Coordinate with Sol on project timelines.
 
 RESPONSE APPROACH:
-Acknowledge the task clearly in natural language. Provide organized action steps in clear paragraphs. Suggest priorities or ask ONE clarifying question if needed.
+🚨 TEACH FIRST: Provide an action plan or organized steps FIRST. Make reasonable assumptions if details are missing. Questions are optional and come after your plan (maximum 2).
 
-Remember: Stay practical, create clarity, drive action. Write like a human, not a checklist."""
+Acknowledge the task clearly in natural language. Provide organized action steps in clear paragraphs. Optionally ask 1-2 clarifying questions at the end to refine priorities.
+
+Remember: Plan first, ask second. Stay practical, create clarity, drive action. Write like a human, not a checklist."""
     },
-    
+
     'Sage': {
         'role': 'Writing & Content',
         'system_prompt': """You are Sage, a skilled wordsmith who crafts clear, compelling content.
@@ -6596,7 +6612,7 @@ Remember: Stay practical, create clarity, drive action. Write like a human, not 
 COMMUNICATION STYLE:
 Write in natural, conversational paragraphs. Do NOT use asterisks, hashtags, dashes, or bullet points. Do NOT use markdown formatting. Just write normally like you're talking to someone.
 
-Keep responses warm, clear, and direct. Get to the writing quickly. Ask only ONE focused question at a time if needed. Structure content for readability using natural paragraphs. Remember the user's voice and style preferences. Skip reintroductions.
+Keep responses warm, clear, and direct. Get to the writing quickly. Structure content for readability using natural paragraphs. Remember the user's voice and style preferences. Skip reintroductions.
 
 YOUR EXPERTISE:
 Writing compelling copy, editing and refining text, adapting tone and style, making complex ideas accessible.
@@ -6605,9 +6621,11 @@ WORKING WITH THE TEAM:
 Polish Ember's creative concepts into polished copy. Turn Luna's research into readable content. Help Mila communicate plans clearly.
 
 RESPONSE APPROACH:
-Address the writing need directly. Provide the content or edit in clear paragraphs. Explain key choices briefly if helpful. Ask ONE question for refinement if needed.
+🚨 TEACH FIRST: Provide the content or writing FIRST. Make reasonable assumptions about tone and style if not specified. Questions are optional and come after your draft (maximum 2).
 
-Remember: Write first, explain second, move forward. Write like a human, not a document."""
+Address the writing need directly. Provide the content or edit in clear paragraphs. Explain key choices briefly if helpful. Optionally ask 1-2 questions for refinement at the end.
+
+Remember: Write first, ask second, move forward. Write like a human, not a document."""
     },
     
     'Ember': {
@@ -6626,11 +6644,13 @@ WORKING WITH THE TEAM:
 Turn Luna's insights into creative concepts. Give Sage compelling content to refine. Help Mila plan creative executions.
 
 RESPONSE APPROACH:
-Present creative concepts in natural paragraphs. Explain the reasoning briefly for each idea. Ask ONE question to refine direction if needed.
+🚨 TEACH FIRST: Present creative concepts FIRST. Make reasonable assumptions about brand/style if not specified. Questions are optional and come after your concepts (maximum 2).
 
-Remember: Inspire first, iterate second, stay bold. Write like a human, not a document."""
+Present creative concepts in natural paragraphs. Explain the reasoning briefly for each idea. Optionally ask 1-2 questions to refine direction at the end.
+
+Remember: Inspire first, ask second, stay bold. Write like a human, not a document."""
     },
-    
+
     'Sol': {
         'role': 'Strategic Thinking',
         'system_prompt': """You are Sol, a strategic advisor who sees the big picture and guides long-term success.
@@ -6638,7 +6658,7 @@ Remember: Inspire first, iterate second, stay bold. Write like a human, not a do
 COMMUNICATION STYLE:
 Write in natural, conversational paragraphs. Do NOT use asterisks, hashtags, dashes, or bullet points. Do NOT use markdown formatting. Just write normally like you're talking to someone.
 
-Keep responses warm, clear, and thoughtful. Be direct about strategy and avoid analysis paralysis. Ask only ONE focused question at a time if needed. Balance vision with pragmatism. Remember business context and goals. Skip reintroductions.
+Keep responses warm, clear, and thoughtful. Be direct about strategy and avoid analysis paralysis. Balance vision with pragmatism. Remember business context and goals. Skip reintroductions.
 
 YOUR EXPERTISE:
 Strategic planning and positioning, business growth and scaling, decision-making frameworks, risk assessment and opportunities.
@@ -6647,9 +6667,11 @@ WORKING WITH THE TEAM:
 Frame Luna's research strategically. Validate Ember's creative direction against business goals. Help Mila prioritize what matters most.
 
 RESPONSE APPROACH:
-Provide strategic perspective in clear paragraphs. Present options with pros and cons in natural language. Recommend direction with reasoning. Ask ONE key question to clarify priorities if needed.
+🚨 TEACH FIRST: Provide strategic perspective and recommendations FIRST. Make reasonable assumptions about goals and constraints if not specified. Questions are optional and come after your analysis (maximum 2).
 
-Remember: Think long-term, balance risk, guide with confidence. Write like a human, not a document."""
+Provide strategic perspective in clear paragraphs. Present options with pros and cons in natural language. Recommend direction with reasoning. Optionally ask 1-2 key questions at the end to clarify priorities.
+
+Remember: Recommend first, ask second. Think long-term, balance risk, guide with confidence. Write like a human, not a document."""
     },
     
     'Nova': {
@@ -6706,11 +6728,13 @@ EXAMPLE WEBSITE RESPONSE FORMAT:
 This includes a responsive hero section, menu display, and contact form with email validation. The color scheme uses warm browns and creams. Just download the file and open it in your browser!"
 
 RESPONSE APPROACH:
-Identify the technical issue clearly in natural language. Provide solution with code or steps in plain paragraphs. Explain why it works briefly. Ask ONE question if more context needed.
+🚨 TEACH FIRST: Provide the solution, code, or technical implementation FIRST. Make reasonable assumptions about tech stack and requirements if not specified. Questions are optional and come after your solution (maximum 2).
 
-Remember: Solve clearly, explain simply, move forward. Write like a human, not a document."""
+Identify the technical issue clearly in natural language. Provide solution with code or steps in plain paragraphs. Explain why it works briefly. Optionally ask 1-2 questions at the end if more context would improve the next iteration.
+
+Remember: Solve first, ask second. Solve clearly, explain simply, move forward. Write like a human, not a document."""
     },
-    
+
     'Theo': {
         'role': 'Implementation',
         'system_prompt': """You are Theo, a reliable builder who turns ideas into working solutions through practical action.
@@ -6718,7 +6742,7 @@ Remember: Solve clearly, explain simply, move forward. Write like a human, not a
 COMMUNICATION STYLE:
 Write in natural, conversational paragraphs. Do NOT use asterisks, hashtags, dashes, or bullet points. Do NOT use markdown formatting. Just write normally like you're talking to someone.
 
-Keep responses warm, clear, and straightforward. Be direct with action steps and focus on doing. Ask only ONE focused question at a time if needed. Provide clear, executable instructions in plain language. Remember what's been built already. Skip reintroductions.
+Keep responses warm, clear, and straightforward. Be direct with action steps and focus on doing. Provide clear, executable instructions in plain language. Remember what's been built already. Skip reintroductions.
 
 YOUR EXPERTISE:
 Turning plans into action, building systems and processes, creating documentation and workflows, making things actually work, building websites and web pages (HTML/CSS/JavaScript).
@@ -6764,11 +6788,127 @@ EXAMPLE RESPONSE:
 I've built a responsive portfolio with sections for About, Projects, Skills, and Contact. Click the download button to get your file, then open it in your browser!"
 
 RESPONSE APPROACH:
-Acknowledge what needs building in natural language. Provide step-by-step implementation in clear paragraphs. Include checkpoints to verify progress. Ask ONE question if requirements unclear.
+🚨 TEACH FIRST: Provide the implementation, build, or working solution FIRST. Make reasonable assumptions about requirements if not specified. Questions are optional and come after your implementation (maximum 2).
 
-Remember: Build step-by-step, verify progress, keep momentum. Write like a human, not a document."""
+Acknowledge what needs building in natural language. Provide step-by-step implementation in clear paragraphs. Include checkpoints to verify progress. Optionally ask 1-2 questions at the end if requirements need clarification.
+
+Remember: Build first, ask second. Build step-by-step, verify progress, keep momentum. Write like a human, not a document."""
     }
 }
+
+# ============================================
+# WORKING MODE CONFIGURATION
+# ============================================
+
+def get_default_working_mode(agent_name):
+    """
+    Get the default working mode for an agent.
+
+    Modes:
+    - output_first: Produce output immediately, ask 0-2 questions at end
+    - ask_then_output: Ask up to 3 questions first, then output
+    - coaching: Guided thinking, up to 5 questions per turn
+
+    Agent Defaults:
+    - Sage, Theo, Ember: output_first
+    - Luna, Mila, Sol: ask_then_output
+    - Nova: output_first (with technical blocker questions)
+    """
+    ask_then_output_agents = ['Luna', 'Mila', 'Sol']
+
+    if agent_name in ask_then_output_agents:
+        return 'ask_then_output'
+    else:
+        # Default for Sage, Theo, Ember, Nova, and all others
+        return 'output_first'
+
+
+def get_working_mode_instructions(mode, agent_name=''):
+    """
+    Generate system prompt instructions based on working mode.
+
+    These instructions enforce TEACH FIRST behavior, question limits, and loop breaker logic.
+    """
+    critical_teach_first_rule = """
+🚨 CRITICAL BEHAVIOR RULE — TEACH FIRST 🚨
+
+When a user asks for help, you MUST ALWAYS provide useful information upfront.
+
+YOU ARE REQUIRED TO:
+1. Give an initial explanation, draft, example, or solution BEFORE asking questions
+2. Make reasonable assumptions if information is missing
+3. State assumptions briefly if needed
+
+ONLY AFTER PROVIDING VALUE may you ask clarification questions:
+- Maximum 2 questions per response
+- Questions must be OPTIONAL and used only to refine the next response
+- Questions should improve future output, not block current output
+
+YOU ARE STRICTLY FORBIDDEN from sending a response that contains ONLY questions.
+
+If you are unsure, produce a best-effort answer FIRST, then ask for clarification.
+
+CRITICAL RESPONSE REQUIREMENTS:
+- NEVER send a message consisting only of questions
+- Every response MUST include at least one of:
+  a) A draft, solution, or usable output
+  b) Partial output with a clear next step
+- If you asked questions in your previous response without providing output, you MUST provide output in this response
+"""
+
+    if mode == 'output_first':
+        return f"""{critical_teach_first_rule}
+
+WORKING MODE: Output First
+1. START with useful output immediately
+2. Make reasonable assumptions when information is missing
+3. Provide output FIRST, then optionally ask 0-2 questions at the END
+4. If critical information is missing, still produce output and clearly list your assumptions
+
+RESPONSE STRUCTURE:
+- Main output or solution (REQUIRED - must come first)
+- Assumptions made (if any)
+- Optional: 0-2 clarifying questions at the very end
+
+REMEMBER: The user wants to see results immediately. Provide value first, questions second."""
+
+    elif mode == 'ask_then_output':
+        return f"""{critical_teach_first_rule}
+
+WORKING MODE: Ask Then Output
+1. ALWAYS provide a draft/solution FIRST based on your best understanding
+2. After providing output, you may ask up to 2 questions to refine the next iteration
+3. Make questions specific and use multiple choice format when possible
+4. State your assumptions clearly before the output
+
+RESPONSE STRUCTURE:
+- Brief context + stated assumptions (1-2 sentences)
+- Main output or solution (REQUIRED)
+- Optional: Up to 2 clarifying questions at the end to improve next version
+
+REMEMBER: Even in "Ask Then Output" mode, you must output FIRST. Questions come after value is provided."""
+
+    elif mode == 'coaching':
+        return f"""{critical_teach_first_rule}
+
+WORKING MODE: Coaching
+1. Start with a tangible artifact (outline, draft, checklist, or framework)
+2. Then ask up to 3 exploratory questions to guide thinking
+3. ALWAYS include a clear next step
+4. Every response must contain concrete output (no question-only responses)
+5. Balance questions with actionable guidance
+
+RESPONSE STRUCTURE:
+- Initial tangible output (outline, draft, checklist - REQUIRED)
+- Brief reflection or guidance (2-3 sentences)
+- Up to 3 exploratory questions
+- Clear next step
+
+REMEMBER: Coaching means providing frameworks and structure FIRST, then guiding with questions."""
+
+    else:
+        # Fallback to output_first
+        return get_working_mode_instructions('output_first', agent_name)
 
 # ============================================
 # AI CHAT API
@@ -7159,62 +7299,186 @@ def call_mistral_with_history(model_id, system_prompt, history, new_message, max
 
     return response.choices[0].message.content
 
-def route_to_model(model_key, system_prompt, history, new_message):
-    """Route to appropriate AI model with conversation history"""
+# ============================================
+# MODEL FALLBACK CONFIGURATION
+# ============================================
+
+# Strict one-way fallback order based on cost and quota reliability
+MODEL_FALLBACK_ORDER = [
+    'gemini-2.0-flash',      # Primary (free, default)
+    'gemini-1.5-pro',        # Fallback Tier 1 (same provider)
+    'claude-sonnet-4.5',     # Fallback Tier 2 (cross-provider, high reliability)
+    'gpt-4o',                # Fallback Tier 3 (final safety net)
+]
+
+def is_quota_or_rate_limit_error(error):
+    """
+    Detect if an error is due to quota or rate limiting.
+    Returns True if the error should trigger fallback.
+    """
+    error_str = str(error).lower()
+    error_indicators = [
+        '429',  # HTTP 429 Too Many Requests
+        'quota',
+        'rate limit',
+        'rate_limit',
+        'ratelimit',
+        'resource_exhausted',  # gRPC error code
+        'too many requests',
+        'exceeded',
+        'limit reached',
+        'throttl',
+        'capacity',
+    ]
+
+    return any(indicator in error_str for indicator in error_indicators)
+
+def get_friendly_error_message(tried_models, is_final_fallback=False):
+    """
+    Generate a friendly, calm user-facing message.
+    Never exposes provider names, error codes, or technical details.
+    """
+    if is_final_fallback:
+        return "I ran into some temporary capacity issues, but I've switched to a backup system so we can keep going. Your message is being processed now."
+
+    if len(tried_models) == 1:
+        return "That model is temporarily busy. Switching to a backup so you can keep going..."
+
+    return "Still working on your request. Trying another model to keep things moving..."
+
+def call_model_with_retry(model_key, system_prompt, history, new_message, retry_count=0, tried_models=None):
+    """
+    Call a model with automatic retry and fallback on quota/rate limit errors.
+
+    Retry rules:
+    - Retry same model once after 5-10 second delay
+    - If retry fails, move to next model in fallback order
+    - Never retry same model more than once
+    - Never cycle back up the list
+
+    Returns: (response_text, user_facing_message, model_used)
+    """
+    import time
+    import random
+
+    if tried_models is None:
+        tried_models = []
+
     if model_key not in MODELS:
-        model_key = 'gemini-2.0-flash'  # Default fallback (free, no API key needed)
-    
+        model_key = 'gemini-2.0-flash'
+
     config = MODELS[model_key]
     provider = config['provider']
     model_id = config['model_id']
     max_tokens = config.get('max_tokens', 2000)
-    
+
     try:
+        # Call the appropriate provider
         if provider == 'anthropic':
-            return call_claude_with_history(model_id, system_prompt, history, new_message, max_tokens)
+            response = call_claude_with_history(model_id, system_prompt, history, new_message, max_tokens)
         elif provider == 'openai':
-            return call_gpt_with_history(model_id, system_prompt, history, new_message, max_tokens)
+            response = call_gpt_with_history(model_id, system_prompt, history, new_message, max_tokens)
         elif provider == 'google':
-            return call_gemini_with_history(model_id, system_prompt, history, new_message, max_tokens)
+            response = call_gemini_with_history(model_id, system_prompt, history, new_message, max_tokens)
         elif provider == 'deepseek':
-            return call_deepseek_with_history(model_id, system_prompt, history, new_message, max_tokens)
+            response = call_deepseek_with_history(model_id, system_prompt, history, new_message, max_tokens)
         elif provider == 'perplexity':
-            return call_perplexity_with_history(model_id, system_prompt, history, new_message, max_tokens)
+            response = call_perplexity_with_history(model_id, system_prompt, history, new_message, max_tokens)
         elif provider == 'grok':
-            return call_grok_with_history(model_id, system_prompt, history, new_message, max_tokens)
+            response = call_grok_with_history(model_id, system_prompt, history, new_message, max_tokens)
         elif provider == 'openrouter':
-            return call_openrouter_with_history(model_id, system_prompt, history, new_message, max_tokens)
+            response = call_openrouter_with_history(model_id, system_prompt, history, new_message, max_tokens)
         elif provider == 'mistral':
-            return call_mistral_with_history(model_id, system_prompt, history, new_message, max_tokens)
+            response = call_mistral_with_history(model_id, system_prompt, history, new_message, max_tokens)
         else:
             raise Exception(f"Unknown provider: {provider}")
+
+        # Success! Return response with no error message
+        return response, None, model_key
+
     except Exception as e:
-        print(f"Error with {provider} ({model_key}): {e}")
-        # Fallback to Gemini (free) if other model fails
-        if provider not in ['google', 'gemini']:
-            print(f"Falling back to Gemini 2.0 Flash...")
-            return call_gemini_with_history('gemini-2.0-flash-exp', system_prompt, history, new_message, 2000)
+        # Log full error internally for debugging
+        print(f"❌ Model error: {provider} ({model_key})")
+        print(f"   Error type: {type(e).__name__}")
+        print(f"   Error message: {str(e)[:500]}")  # Truncate long errors
+
+        # Check if this is a quota/rate limit error
+        if is_quota_or_rate_limit_error(e):
+            print(f"   ⚠️  Detected quota/rate limit error")
+
+            # RETRY LOGIC: Try once more after delay (if not already retried)
+            if model_key not in tried_models and retry_count == 0:
+                retry_delay = random.uniform(5, 10)  # 5-10 seconds
+                print(f"   🔄 Retrying {model_key} after {retry_delay:.1f}s delay...")
+                time.sleep(retry_delay)
+                tried_models.append(model_key)
+                return call_model_with_retry(model_key, system_prompt, history, new_message,
+                                            retry_count=1, tried_models=tried_models)
+
+            # FALLBACK LOGIC: Move to next model in fallback order
+            print(f"   ↪️  Attempting fallback...")
+            tried_models.append(model_key)
+
+            # Find next available model in fallback order
+            current_index = MODEL_FALLBACK_ORDER.index(model_key) if model_key in MODEL_FALLBACK_ORDER else -1
+
+            for next_model in MODEL_FALLBACK_ORDER[current_index + 1:]:
+                if next_model not in tried_models:
+                    print(f"   🔀 Falling back to {next_model}")
+                    is_final = next_model == MODEL_FALLBACK_ORDER[-1]
+                    friendly_msg = get_friendly_error_message(tried_models, is_final)
+
+                    try:
+                        response, _, final_model = call_model_with_retry(
+                            next_model, system_prompt, history, new_message,
+                            retry_count=0, tried_models=tried_models
+                        )
+                        return response, friendly_msg, final_model
+                    except Exception as fallback_error:
+                        print(f"   ❌ Fallback to {next_model} also failed: {fallback_error}")
+                        continue
+
+            # All fallbacks exhausted - return graceful degradation
+            print(f"   🚨 All fallback models exhausted")
+            degraded_response = (
+                "I'm experiencing some temporary technical difficulties, but I'll do my best to help. "
+                "Based on your message, here's what I can offer: "
+                "\n\n[Due to current capacity constraints, I'm providing a brief response. "
+                "Please try again in a moment for a more detailed answer.]"
+            )
+            return degraded_response, "All models are temporarily busy. Providing a brief response...", model_key
+
+        # Not a quota error - this is a different kind of error, re-raise it
+        print(f"   ⚠️  Non-quota error, re-raising")
         raise
 
-def call_ai_with_image(model_key, system_prompt, history, message, image_path):
-    """Call AI model with image vision capabilities"""
-    import base64
-    
-    # Read and encode image
-    with open(image_path, 'rb') as f:
-        image_data = base64.b64encode(f.read()).decode('utf-8')
-    
-    # Determine image type
-    ext = image_path.rsplit('.', 1)[1].lower()
-    media_type = f"image/{ext}" if ext != 'jpg' else "image/jpeg"
-    
+def route_to_model(model_key, system_prompt, history, new_message):
+    """
+    Route to appropriate AI model with automatic fallback on quota/rate limit errors.
+
+    This function wraps call_model_with_retry to maintain backward compatibility.
+    Returns just the response text (no error message or model info).
+    """
+    response, error_msg, model_used = call_model_with_retry(model_key, system_prompt, history, new_message)
+
+    # If there was a fallback message, prepend it to the response
+    if error_msg:
+        response = f"{error_msg}\n\n{response}"
+
+    return response
+
+def call_ai_with_image_internal(model_key, system_prompt, history, message, image_path, image_data, media_type):
+    """
+    Internal function to call AI model with image vision capabilities.
+    Used by call_ai_with_image_with_retry for retry/fallback logic.
+    """
     if model_key not in MODELS:
         model_key = 'gemini-2.0-flash'  # Default to free model
-    
+
     config = MODELS[model_key]
     provider = config['provider']
     model_id = config['model_id']
-    
+
     try:
         if provider == 'anthropic':
             # Claude vision
@@ -7308,11 +7572,81 @@ def call_ai_with_image(model_key, system_prompt, history, message, image_path):
             
         else:
             raise Exception(f"Provider {provider} doesn't support image vision")
-            
+
     except Exception as e:
-        print(f"Error in image vision: {e}")
-        # Fallback: describe that an image was sent
-        return f"I can see you've sent an image, but I encountered an error processing it: {str(e)}"
+        # Re-raise to let the retry/fallback wrapper handle it
+        raise
+
+def call_ai_with_image(model_key, system_prompt, history, message, image_path):
+    """
+    Call AI model with image vision capabilities with automatic retry/fallback.
+    Wraps call_ai_with_image_internal with the same fallback logic as text-only calls.
+    """
+    import base64
+    import time
+    import random
+
+    # Read and encode image once (reuse across retries)
+    with open(image_path, 'rb') as f:
+        image_data = base64.b64encode(f.read()).decode('utf-8')
+
+    # Determine image type
+    ext = image_path.rsplit('.', 1)[1].lower()
+    media_type = f"image/{ext}" if ext != 'jpg' else "image/jpeg"
+
+    if model_key not in MODELS:
+        model_key = 'gemini-2.0-flash'
+
+    tried_models = []
+    retry_count = 0
+
+    while True:
+        try:
+            response = call_ai_with_image_internal(model_key, system_prompt, history, message,
+                                                   image_path, image_data, media_type)
+            return response
+
+        except Exception as e:
+            # Log error
+            print(f"❌ Image vision error: {model_key}")
+            print(f"   Error: {str(e)[:500]}")
+
+            # Check if quota/rate limit error
+            if is_quota_or_rate_limit_error(e):
+                print(f"   ⚠️  Detected quota/rate limit error in image vision")
+
+                # RETRY LOGIC
+                if model_key not in tried_models and retry_count == 0:
+                    retry_delay = random.uniform(5, 10)
+                    print(f"   🔄 Retrying {model_key} after {retry_delay:.1f}s...")
+                    time.sleep(retry_delay)
+                    tried_models.append(model_key)
+                    retry_count = 1
+                    continue
+
+                # FALLBACK LOGIC
+                tried_models.append(model_key)
+                current_index = MODEL_FALLBACK_ORDER.index(model_key) if model_key in MODEL_FALLBACK_ORDER else -1
+
+                fallback_found = False
+                for next_model in MODEL_FALLBACK_ORDER[current_index + 1:]:
+                    if next_model not in tried_models:
+                        print(f"   🔀 Falling back to {next_model} for image")
+                        model_key = next_model
+                        retry_count = 0
+                        fallback_found = True
+                        break
+
+                if fallback_found:
+                    continue
+
+                # All fallbacks exhausted
+                print(f"   🚨 All image vision models exhausted")
+                return "I can see you've sent an image, but I'm experiencing temporary capacity issues with image processing. Please try again in a moment, or describe what you'd like me to help with regarding the image."
+
+            # Non-quota error - return friendly message
+            print(f"   ⚠️  Non-quota error in image vision")
+            return f"I can see you've sent an image, but I encountered a temporary issue processing it. Please try again."
 
 @app.route('/api/chat', methods=['POST'])
 @rate_limit(max_requests=100, window_seconds=60)  # 100 messages per minute
@@ -7330,6 +7664,7 @@ def chat():
             message = data.get('message')
             agent = data.get('agent', 'Ember')
             model_key = data.get('model', 'gemini-2.0-flash')  # Default to Gemini (free)
+            working_mode = data.get('working_mode', None)  # Get working_mode from request
             attached_file = data.get('file')
             # Support newer clients that send a list of uploaded file paths (from /api/upload)
             # Expected: {"filepaths": ["uploads/<user_id>/..."], ...}
@@ -7343,6 +7678,7 @@ def chat():
             message = request.form.get('message', '')
             agent = request.form.get('agent', 'Luna')
             model_key = request.form.get('model', 'gemini-2.0-flash')  # Default to Gemini (free)
+            working_mode = request.form.get('working_mode', None)  # Get working_mode from request
             attached_file = None
 
             # Handle multiple files
@@ -7741,16 +8077,18 @@ def chat():
 
 {base_prompt}
 
+🚨 CRITICAL BEHAVIOR RULE — TEACH FIRST 🚨
+ALWAYS provide useful output BEFORE asking questions. Make reasonable assumptions if information is missing. Questions are OPTIONAL and come AFTER value is provided (maximum 2 questions).
+
 CRITICAL FORMATTING RULES:
 - Write in natural, conversational paragraphs
 - Do NOT use asterisks (**), hashtags (##), dashes (---), or bullet points (•)
 - Do NOT use markdown formatting of any kind
-- Ask only ONE question per response (if you need to ask questions)
 - Write like you're talking to someone, not writing a document
 - Keep responses clear and focused
 - When introducing yourself, say "I'm {agent_name}" (not Luna or any other name)
 
-Remember: You are {agent_name}, a premium Stand Alone Client Agent. Natural conversation only. No formatting."""
+Remember: You are {agent_name}, a premium Stand Alone Client Agent. Teach first, then ask. Natural conversation only. No formatting."""
                 print(f"✅ Using client agent '{agent_name}' for user {current_user.id}")
 
         # PRIORITY 2: Check built-in agents
@@ -7784,16 +8122,18 @@ Remember: You are {agent_name}, a premium Stand Alone Client Agent. Natural conv
 
 {base_prompt}
 
+🚨 CRITICAL BEHAVIOR RULE — TEACH FIRST 🚨
+ALWAYS provide useful output BEFORE asking questions. Make reasonable assumptions if information is missing. Questions are OPTIONAL and come AFTER value is provided (maximum 2 questions).
+
 CRITICAL FORMATTING RULES:
 - Write in natural, conversational paragraphs
 - Do NOT use asterisks (**), hashtags (##), dashes (---), or bullet points (•)
 - Do NOT use markdown formatting of any kind
-- Ask only ONE question per response (if you need to ask questions)
 - Write like you're talking to someone, not writing a document
 - Keep responses clear and focused
 - When introducing yourself, say "I'm {agent}" (not Luna or any other name)
 
-Remember: You are {agent}. Natural conversation only. No formatting."""
+Remember: You are {agent}. Teach first, then ask. Natural conversation only. No formatting."""
 
         # PRIORITY 4: Check for global agent
         if not system_prompt:
@@ -7887,16 +8227,18 @@ If the user asks about these, suggest they connect them via the Integrations pag
 {base_prompt}
 {integration_context}
 
+🚨 CRITICAL BEHAVIOR RULE — TEACH FIRST 🚨
+ALWAYS provide useful output BEFORE asking questions. Make reasonable assumptions if information is missing. Questions are OPTIONAL and come AFTER value is provided (maximum 2 questions).
+
 CRITICAL FORMATTING RULES:
 - Write in natural, conversational paragraphs
 - Do NOT use asterisks (**), hashtags (##), dashes (---), or bullet points (•)
 - Do NOT use markdown formatting of any kind
-- Ask only ONE question per response (if you need to ask questions)
 - Write like you're talking to someone, not writing a document
 - Keep responses clear and focused
 - When introducing yourself, say "I'm {agent}" (not Luna or any other name)
 
-Remember: You are {agent}. Natural conversation only. No formatting."""
+Remember: You are {agent}. Teach first, then ask. Natural conversation only. No formatting."""
 
         # Final check: If no agent was found in any category, return error
         if not system_prompt:
@@ -8173,7 +8515,63 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
             except Exception:
                 pass
 
+        # ============================================
+        # APPLY WORKING MODE INSTRUCTIONS
+        # ============================================
+        # Apply default working mode if not set (for guests and new conversations)
+        if not working_mode:
+            working_mode = get_default_working_mode(agent)
+
+        # Append working mode instructions to system prompt
+        working_mode_instructions = get_working_mode_instructions(working_mode, agent)
+        system_prompt = f"{system_prompt}\n\n{working_mode_instructions}"
+
+        # ============================================
+        # AGGRESSIVE LOOP BREAKER LOGIC
+        # ============================================
+        # Detect if the previous assistant message asked questions without providing substantial output
+        # If so, add an extra instruction to force output in this response
+        if history and len(history) > 0:
+            last_response = history[-1].get('response', '') if isinstance(history[-1], dict) else history[-1][1]
+
+            # Count questions (sentences ending with ?)
+            question_count = last_response.count('?')
+            response_length = len(last_response)
+
+            # Calculate question-to-content ratio
+            # If more than 30% of the response is questions, it's question-heavy
+            question_ratio = question_count / max(response_length / 100, 1)  # questions per 100 chars
+
+            # AGGRESSIVE detection: trigger loop breaker if ANY of these conditions are met:
+            is_question_heavy = (
+                question_count >= 2 or  # 2 or more questions
+                (question_count >= 1 and response_length < 300) or  # Even 1 question if response is short
+                question_ratio > 0.3 or  # More than 30% questions by ratio
+                (question_count >= 1 and '?' in last_response[-100:])  # Question at the very end suggests no output
+            )
+
+            # If previous response was question-heavy, enforce output in this turn
+            if is_question_heavy:
+                loop_breaker_instruction = """
+
+🚨🚨🚨 CRITICAL OVERRIDE - TEACH FIRST VIOLATION DETECTED 🚨🚨🚨
+
+Your previous response asked questions without providing sufficient output.
+
+YOU MUST IMMEDIATELY:
+1. Provide a COMPLETE, SUBSTANTIAL solution/draft/output in THIS response
+2. Make reasonable assumptions and state them briefly
+3. Do NOT ask more questions
+4. Do NOT wait for clarification
+
+This is a CRITICAL directive. Produce valuable output NOW, even if imperfect.
+If you send another question-heavy response, you have FAILED the TEACH FIRST rule."""
+                system_prompt = f"{system_prompt}{loop_breaker_instruction}"
+                print(f"🔄 AGGRESSIVE loop breaker activated: Previous response had {question_count} questions, {response_length} chars (ratio: {question_ratio:.2f})")
+
+        # ============================================
         # Route to selected model with conversation history
+        # ============================================
 
         # For images, we need special handling
         if file_info and file_info['extension'] in ['png', 'jpg', 'jpeg', 'gif', 'webp']:
@@ -8194,9 +8592,13 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
         
         # Save chat history and increment counter (only for authenticated users)
         if not is_guest:
+            # Apply default working mode if not provided
+            if not working_mode:
+                working_mode = get_default_working_mode(agent)
+
             # Get or create conversation for this agent
             cursor.execute("""
-                SELECT id FROM conversations
+                SELECT id, working_mode FROM conversations
                 WHERE user_id = ? AND agent_name = ? AND is_active = 1
                 ORDER BY updated_at DESC
                 LIMIT 1
@@ -8206,18 +8608,19 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
 
             if conv_result:
                 conversation_id = conv_result[0]
-                # Update conversation timestamp
+                existing_mode = conv_result[1]
+                # Update conversation timestamp and working_mode if it changed
                 cursor.execute("""
                     UPDATE conversations
-                    SET updated_at = ?
+                    SET updated_at = ?, working_mode = ?
                     WHERE id = ?
-                """, (datetime.utcnow().isoformat(), conversation_id))
+                """, (datetime.utcnow().isoformat(), working_mode, conversation_id))
             else:
-                # Create new conversation
+                # Create new conversation with working_mode
                 cursor.execute("""
-                    INSERT INTO conversations (user_id, agent_name, title, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?)
-                """, (current_user.id, agent, f'Chat with {agent}', datetime.utcnow().isoformat(), datetime.utcnow().isoformat()))
+                    INSERT INTO conversations (user_id, agent_name, title, created_at, updated_at, working_mode)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (current_user.id, agent, f'Chat with {agent}', datetime.utcnow().isoformat(), datetime.utcnow().isoformat(), working_mode))
                 conversation_id = cursor.lastrowid
 
             # Save message with conversation_id
@@ -8668,24 +9071,26 @@ def create_conversation():
         data = request.json
         agent_name = data.get('agent', 'Luna')
         title = data.get('title', 'New conversation')
-        
+        working_mode = data.get('working_mode', get_default_working_mode(agent_name))
+
         conn = get_db_connection()
         cursor = conn.cursor()
-        
+
         cursor.execute("""
-            INSERT INTO conversations (user_id, agent_name, title, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?)
-        """, (current_user.id, agent_name, title, datetime.utcnow().isoformat(), datetime.utcnow().isoformat()))
-        
+            INSERT INTO conversations (user_id, agent_name, title, created_at, updated_at, working_mode)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (current_user.id, agent_name, title, datetime.utcnow().isoformat(), datetime.utcnow().isoformat(), working_mode))
+
         conv_id = cursor.lastrowid
         conn.commit()
         conn.close()
-        
+
         return jsonify({
             'success': True,
             'conversation_id': conv_id,
             'agent': agent_name,
-            'title': title
+            'title': title,
+            'working_mode': working_mode
         }), 200
         
     except Exception as e:
