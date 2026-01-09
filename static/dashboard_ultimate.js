@@ -366,7 +366,8 @@ async function sendMessage() {
                 message: message || 'Please analyze the uploaded file(s)',
                 agent: currentAgent,
                 model: selectedModel,
-                filepaths: filepaths
+                filepaths: filepaths,
+                working_mode: getWorkingMode()
             })
         });
 
@@ -1177,11 +1178,22 @@ async function downloadFromUrl(url) {
 }
 
 function downloadText(text) {
+    // Create better filename: ai-team-[agent-name]-[YYYY-MM-DD]-[short-slug].txt
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+    const agentName = currentAgent || 'assistant';
+
+    // Create a short slug from the first few words of the text
+    const words = text.trim().split(/\s+/).slice(0, 3).join('-');
+    const slug = words.replace(/[^a-zA-Z0-9-]/g, '').toLowerCase().substring(0, 20);
+
+    const filename = `ai-team-${agentName.toLowerCase()}-${dateStr}-${slug || 'response'}.txt`;
+
     const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'response_' + Date.now() + '.txt';
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -1190,8 +1202,116 @@ function downloadText(text) {
 
 function copyToClipboard(text) {
     navigator.clipboard.writeText(text).then(() => {
-        alert('✅ Copied!');
-    }).catch(() => {
-        alert('Failed to copy');
+        // Show a temporary "Copied!" message instead of alert
+        const toast = document.createElement('div');
+        toast.textContent = '✅ Copied to clipboard!';
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #10a37f;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 10000;
+            animation: slideInUp 0.3s ease;
+        `;
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            toast.style.animation = 'fadeOut 0.3s ease';
+            setTimeout(() => document.body.removeChild(toast), 300);
+        }, 2000);
+    }).catch((err) => {
+        console.error('Copy failed:', err);
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            alert('✅ Copied!');
+        } catch (e) {
+            alert('❌ Failed to copy');
+        }
+        document.body.removeChild(textArea);
     });
+}
+
+// ================================================
+// WORKING MODE FUNCTIONS
+// ================================================
+
+// Global variable to store the current working mode
+let currentWorkingMode = null;
+
+/**
+ * Get the current working mode
+ * Returns the selected mode, or defaults based on the agent
+ */
+function getWorkingMode() {
+    if (currentWorkingMode) {
+        return currentWorkingMode;
+    }
+
+    // Apply agent-specific defaults
+    const askThenOutputAgents = ['Luna', 'Mila', 'Sol'];
+    if (askThenOutputAgents.includes(currentAgent)) {
+        return 'ask_then_output';
+    }
+
+    // Default for all others (Sage, Theo, Ember, Nova, etc.)
+    return 'output_first';
+}
+
+/**
+ * Select and persist working mode
+ */
+function selectWorkingMode(mode) {
+    currentWorkingMode = mode;
+
+    // Update UI - remove active class from all buttons
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+
+    // Add active class to selected button
+    const selectedBtn = document.querySelector(`[data-mode="${mode}"]`);
+    if (selectedBtn) {
+        selectedBtn.classList.add('active');
+    }
+
+    // Store in sessionStorage for persistence
+    sessionStorage.setItem('workingMode', mode);
+
+    console.log(`Working mode set to: ${mode}`);
+}
+
+/**
+ * Initialize working mode on page load
+ */
+function initializeWorkingMode() {
+    // Check if mode was previously selected in this session
+    const savedMode = sessionStorage.getItem('workingMode');
+
+    if (savedMode) {
+        selectWorkingMode(savedMode);
+    } else {
+        // Apply agent-specific default
+        const defaultMode = getWorkingMode();
+        selectWorkingMode(defaultMode);
+    }
+}
+
+// Initialize working mode when the page loads
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeWorkingMode);
+} else {
+    initializeWorkingMode();
 }

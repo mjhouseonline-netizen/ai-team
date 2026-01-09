@@ -992,9 +992,21 @@ def init_database():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             is_active BOOLEAN DEFAULT 1,
+            working_mode TEXT DEFAULT 'output_first',
             FOREIGN KEY (user_id) REFERENCES users (id)
         )
     """)
+
+    # Add working_mode column if it doesn't exist (for existing tables)
+    cursor.execute("PRAGMA table_info(conversations)")
+    conv_columns = [col[1] for col in cursor.fetchall()]
+
+    if 'working_mode' not in conv_columns:
+        try:
+            cursor.execute("ALTER TABLE conversations ADD COLUMN working_mode TEXT DEFAULT 'output_first'")
+            print("✅ Added working_mode column to conversations")
+        except sqlite3.OperationalError as e:
+            print(f"⚠️  Could not add working_mode column: {e}")
     
     # ============================================
     # AGENT TYPE 2: CUSTOM AGENTS
@@ -6771,6 +6783,106 @@ Remember: Build step-by-step, verify progress, keep momentum. Write like a human
 }
 
 # ============================================
+# WORKING MODE CONFIGURATION
+# ============================================
+
+def get_default_working_mode(agent_name):
+    """
+    Get the default working mode for an agent.
+
+    Modes:
+    - output_first: Produce output immediately, ask 0-2 questions at end
+    - ask_then_output: Ask up to 3 questions first, then output
+    - coaching: Guided thinking, up to 5 questions per turn
+
+    Agent Defaults:
+    - Sage, Theo, Ember: output_first
+    - Luna, Mila, Sol: ask_then_output
+    - Nova: output_first (with technical blocker questions)
+    """
+    ask_then_output_agents = ['Luna', 'Mila', 'Sol']
+
+    if agent_name in ask_then_output_agents:
+        return 'ask_then_output'
+    else:
+        # Default for Sage, Theo, Ember, Nova, and all others
+        return 'output_first'
+
+
+def get_working_mode_instructions(mode, agent_name=''):
+    """
+    Generate system prompt instructions based on working mode.
+
+    These instructions enforce question limits, output requirements, and loop breaker logic.
+    """
+    base_guardrails = """
+CRITICAL RESPONSE REQUIREMENTS:
+- NEVER send a message consisting only of questions
+- Every response MUST include at least one of:
+  a) A draft, solution, or usable output
+  b) Partial output with a clear next step
+- If you asked questions in your previous response without providing output, you MUST provide output in this response
+"""
+
+    if mode == 'output_first':
+        return f"""{base_guardrails}
+
+WORKING MODE: Output First
+1. START with useful output immediately
+2. Make reasonable assumptions when information is missing
+3. If you need clarification, provide output FIRST, then ask at most 1-2 questions at the END
+4. If critical information is missing, still produce output and clearly list your assumptions
+
+RESPONSE STRUCTURE:
+- Main output or solution (required)
+- Assumptions made (if any)
+- Optional: 1-2 clarifying questions at the very end
+
+REMEMBER: The user wants to see results immediately. Provide value first, ask questions second."""
+
+    elif mode == 'ask_then_output':
+        return f"""{base_guardrails}
+
+WORKING MODE: Ask Then Output
+1. If you need clarification, ask up to 3 concise questions first
+2. Make questions specific and use multiple choice format when possible
+3. After receiving answers (or if no answer comes), produce output using your best judgment
+4. NEVER exceed 3 questions in one turn
+5. If the user doesn't answer your questions, proceed with reasonable assumptions
+
+RESPONSE STRUCTURE (when questions needed):
+- Brief context (1 sentence)
+- Up to 3 specific questions
+- "Based on typical use cases, here's a solution..." (provide output even without answers)
+
+RESPONSE STRUCTURE (when no questions needed):
+- Direct output or solution
+
+REMEMBER: Questions should be quick to answer. Always include usable output in the same response."""
+
+    elif mode == 'coaching':
+        return f"""{base_guardrails}
+
+WORKING MODE: Coaching
+1. Guide the user through thinking and exploration
+2. Ask up to 5 questions per turn to develop understanding
+3. ALWAYS include a clear next step
+4. NEVER go more than 2 turns without producing a tangible artifact (draft, outline, checklist, plan)
+5. Balance questions with actionable guidance
+
+RESPONSE STRUCTURE:
+- Brief reflection or guidance (2-3 sentences)
+- Up to 5 exploratory questions
+- Clear next step
+- Small tangible output (checklist, outline, or draft every 2 turns)
+
+REMEMBER: Coaching means guiding, not interrogating. Always move toward a concrete deliverable."""
+
+    else:
+        # Fallback to output_first
+        return get_working_mode_instructions('output_first', agent_name)
+
+# ============================================
 # AI CHAT API
 # ============================================
 
@@ -7330,6 +7442,7 @@ def chat():
             message = data.get('message')
             agent = data.get('agent', 'Ember')
             model_key = data.get('model', 'gemini-2.0-flash')  # Default to Gemini (free)
+            working_mode = data.get('working_mode', None)  # Get working_mode from request
             attached_file = data.get('file')
             # Support newer clients that send a list of uploaded file paths (from /api/upload)
             # Expected: {"filepaths": ["uploads/<user_id>/..."], ...}
@@ -7343,6 +7456,7 @@ def chat():
             message = request.form.get('message', '')
             agent = request.form.get('agent', 'Luna')
             model_key = request.form.get('model', 'gemini-2.0-flash')  # Default to Gemini (free)
+            working_mode = request.form.get('working_mode', None)  # Get working_mode from request
             attached_file = None
 
             # Handle multiple files
@@ -8173,7 +8287,47 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
             except Exception:
                 pass
 
+        # ============================================
+        # APPLY WORKING MODE INSTRUCTIONS
+        # ============================================
+        # Apply default working mode if not set (for guests and new conversations)
+        if not working_mode:
+            working_mode = get_default_working_mode(agent)
+
+        # Append working mode instructions to system prompt
+        working_mode_instructions = get_working_mode_instructions(working_mode, agent)
+        system_prompt = f"{system_prompt}\n\n{working_mode_instructions}"
+
+        # ============================================
+        # LOOP BREAKER LOGIC
+        # ============================================
+        # Detect if the previous assistant message asked questions without providing output
+        # If so, add an extra instruction to force output in this response
+        if history and len(history) > 0:
+            last_response = history[-1].get('response', '') if isinstance(history[-1], dict) else history[-1][1]
+
+            # Count questions (sentences ending with ?)
+            question_count = last_response.count('?')
+
+            # Check if last response was mostly questions (heuristic: >2 questions and short response)
+            # or if it had questions but no substantial content
+            is_question_heavy = (
+                question_count >= 2 and len(last_response) < 500
+            ) or (
+                question_count >= 3
+            )
+
+            # If previous response was question-heavy, enforce output in this turn
+            if is_question_heavy:
+                loop_breaker_instruction = """
+
+⚠️ CRITICAL OVERRIDE: Your previous response contained multiple questions. You MUST provide substantial output/solution in THIS response. Do NOT send another message with only questions. Provide concrete value now."""
+                system_prompt = f"{system_prompt}{loop_breaker_instruction}"
+                print(f"🔄 Loop breaker activated: Previous response had {question_count} questions")
+
+        # ============================================
         # Route to selected model with conversation history
+        # ============================================
 
         # For images, we need special handling
         if file_info and file_info['extension'] in ['png', 'jpg', 'jpeg', 'gif', 'webp']:
@@ -8194,9 +8348,13 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
         
         # Save chat history and increment counter (only for authenticated users)
         if not is_guest:
+            # Apply default working mode if not provided
+            if not working_mode:
+                working_mode = get_default_working_mode(agent)
+
             # Get or create conversation for this agent
             cursor.execute("""
-                SELECT id FROM conversations
+                SELECT id, working_mode FROM conversations
                 WHERE user_id = ? AND agent_name = ? AND is_active = 1
                 ORDER BY updated_at DESC
                 LIMIT 1
@@ -8206,18 +8364,19 @@ Remember: You are {agent}. Natural conversation only. No formatting."""
 
             if conv_result:
                 conversation_id = conv_result[0]
-                # Update conversation timestamp
+                existing_mode = conv_result[1]
+                # Update conversation timestamp and working_mode if it changed
                 cursor.execute("""
                     UPDATE conversations
-                    SET updated_at = ?
+                    SET updated_at = ?, working_mode = ?
                     WHERE id = ?
-                """, (datetime.utcnow().isoformat(), conversation_id))
+                """, (datetime.utcnow().isoformat(), working_mode, conversation_id))
             else:
-                # Create new conversation
+                # Create new conversation with working_mode
                 cursor.execute("""
-                    INSERT INTO conversations (user_id, agent_name, title, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?)
-                """, (current_user.id, agent, f'Chat with {agent}', datetime.utcnow().isoformat(), datetime.utcnow().isoformat()))
+                    INSERT INTO conversations (user_id, agent_name, title, created_at, updated_at, working_mode)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (current_user.id, agent, f'Chat with {agent}', datetime.utcnow().isoformat(), datetime.utcnow().isoformat(), working_mode))
                 conversation_id = cursor.lastrowid
 
             # Save message with conversation_id
@@ -8668,24 +8827,26 @@ def create_conversation():
         data = request.json
         agent_name = data.get('agent', 'Luna')
         title = data.get('title', 'New conversation')
-        
+        working_mode = data.get('working_mode', get_default_working_mode(agent_name))
+
         conn = get_db_connection()
         cursor = conn.cursor()
-        
+
         cursor.execute("""
-            INSERT INTO conversations (user_id, agent_name, title, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?)
-        """, (current_user.id, agent_name, title, datetime.utcnow().isoformat(), datetime.utcnow().isoformat()))
-        
+            INSERT INTO conversations (user_id, agent_name, title, created_at, updated_at, working_mode)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (current_user.id, agent_name, title, datetime.utcnow().isoformat(), datetime.utcnow().isoformat(), working_mode))
+
         conv_id = cursor.lastrowid
         conn.commit()
         conn.close()
-        
+
         return jsonify({
             'success': True,
             'conversation_id': conv_id,
             'agent': agent_name,
-            'title': title
+            'title': title,
+            'working_mode': working_mode
         }), 200
         
     except Exception as e:
