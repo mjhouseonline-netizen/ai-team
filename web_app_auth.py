@@ -8670,12 +8670,44 @@ If you send another question-heavy response, you have FAILED the TEACH FIRST rul
         # Check if the agent suggested switching to another agent
         delegation_suggestion = suggest_agent_transfer(ai_response, agent)
 
+        # ============================================
+        # BUILD ATTACHMENT METADATA
+        # ============================================
+        attachments = []
+
+        # Add uploaded files from the request
+        if isinstance(filepaths, list) and filepaths:
+            for filepath in filepaths:
+                try:
+                    if os.path.exists(filepath):
+                        filename = os.path.basename(filepath)
+                        file_size = os.path.getsize(filepath)
+
+                        # Determine MIME type
+                        import mimetypes
+                        mime_type, _ = mimetypes.guess_type(filepath)
+                        if not mime_type:
+                            mime_type = 'application/octet-stream'
+
+                        attachments.append({
+                            'name': filename,
+                            'url': f'/api/files/download?path={filepath}',
+                            'mime': mime_type,
+                            'size': file_size
+                        })
+                except Exception as e:
+                    print(f"Error building attachment metadata for {filepath}: {e}")
+
         response_data = {
             'success': True,
             'response': ai_response,
             'agent': agent,
             'model_used': model_key
         }
+
+        # Add attachments if any
+        if attachments:
+            response_data['attachments'] = attachments
 
         # Add routing/delegation info if applicable
         if was_auto_routed:
@@ -12451,6 +12483,62 @@ def download_file(filename):
         print(f"❌ Error downloading file: {str(e)}")
         return "Error downloading file", 500
 
+@app.route('/api/files/download')
+@login_required
+def download_file_generic():
+    """
+    Universal file download endpoint for chat attachments.
+    Security: restricts to safe upload directories, prevents path traversal.
+    """
+    try:
+        filepath = request.args.get('path')
+        if not filepath:
+            return jsonify({'error': 'No file path provided'}), 400
+
+        # Security: get absolute paths and validate
+        # Define allowed base directories
+        allowed_bases = [
+            os.path.abspath('uploads'),
+            os.path.abspath('/mnt/user-data/uploads'),
+            os.path.abspath('/mnt/user-data/outputs')
+        ]
+
+        # Get absolute path of requested file
+        abs_filepath = os.path.abspath(filepath)
+
+        # Check if file is within allowed directories
+        is_allowed = False
+        for base in allowed_bases:
+            if abs_filepath.startswith(base):
+                is_allowed = True
+                break
+
+        if not is_allowed:
+            print(f"❌ Unauthorized file access attempt: {filepath}")
+            return jsonify({'error': 'Access denied'}), 403
+
+        # Check file exists
+        if not os.path.exists(abs_filepath):
+            return jsonify({'error': 'File not found'}), 404
+
+        # Get filename for download
+        filename = os.path.basename(abs_filepath)
+
+        # Send file
+        directory = os.path.dirname(abs_filepath)
+        return send_from_directory(
+            directory,
+            filename,
+            as_attachment=True,
+            download_name=filename
+        )
+
+    except Exception as e:
+        print(f"❌ Error in file download: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Download failed'}), 500
+
 @app.route('/download-website/<filename>')
 @login_required
 def download_website(filename):
@@ -12459,9 +12547,9 @@ def download_website(filename):
         # Verify user owns this file (check user ID in filename)
         if not filename.startswith(f"{current_user.id}_"):
             return "Unauthorized", 403
-        
+
         file_path = os.path.join('/mnt/user-data/outputs', filename)
-        
+
         if not os.path.exists(file_path):
             return "File not found", 404
         

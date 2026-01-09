@@ -380,7 +380,8 @@ async function sendMessage() {
                 data.response || data.message || '(No response)',
                 'assistant',
                 null,
-                modelBadge
+                modelBadge,
+                data.attachments || []  // Pass attachments from response
             );
             loadStats();
         } else {
@@ -432,19 +433,36 @@ async function sendMessage() {
 // MESSAGE DISPLAY
 // ================================================
 
-function addMessage(text, type, imageUrl = null, modelBadge = '') {
+function addMessage(text, type, imageUrl = null, modelBadge = '', attachments = []) {
     const container = document.getElementById('chatContainer');
     const welcome = container.querySelector('.welcome');
     if (welcome) welcome.remove();
-    
+
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${type}`;
-    
+
     const avatar = type === 'user' ? '👤' : currentAgentEmoji;
     const badge = modelBadge ? `<span class="model-badge">${modelBadge}</span>` : '';
-    
+
     const isWebsite = type === 'assistant' && detectWebsite(text);
-    
+
+    // Build attachment buttons HTML if attachments exist
+    let attachmentHtml = '';
+    if (type === 'assistant' && attachments && attachments.length > 0) {
+        console.log('Rendering attachments:', attachments); // Diagnostic log
+        const buttons = attachments.map(att => {
+            const safeUrl = att.url.replace(/"/g, '&quot;');
+            const safeName = escapeHtml(att.name);
+            return `<a href="${safeUrl}" class="attachment-btn" download="${safeName}">📎 ${safeName}</a>`;
+        }).join('');
+
+        attachmentHtml = `
+            <div class="message-attachments">
+                ${buttons}
+            </div>
+        `;
+    }
+
     if (imageUrl) {
         messageDiv.innerHTML = `
             <div class="avatar" style="${type === 'assistant' ? 'background: ' + (agentGradients[currentAgent] || 'linear-gradient(135deg, #667eea, #764ba2)') : 'background: #5436da'}">${avatar}</div>
@@ -453,6 +471,7 @@ function addMessage(text, type, imageUrl = null, modelBadge = '') {
                 <div style="margin-top:12px;">
                     <img src="${imageUrl}" style="max-width:100%; border-radius:8px; cursor:pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" onclick="showFloatingPreview('image', '${imageUrl}')" alt="Generated image">
                 </div>
+                ${attachmentHtml}
             </div>
         `;
     } else if (isWebsite) {
@@ -466,6 +485,7 @@ function addMessage(text, type, imageUrl = null, modelBadge = '') {
                     <button class="btn btn-primary" style="flex: 1; min-width: 120px;" onclick='showFloatingPreview("website", \`${code.replace(/`/g, '\\`')}\`)'>👁️ Preview</button>
                     <button class="btn btn-secondary" style="flex: 1; min-width: 120px;" onclick='createWebsiteDownload(\`${code.replace(/`/g, '\\`')}\`)'>💻 Download</button>
                 </div>
+                ${attachmentHtml}
             </div>
         `;
    } else {
@@ -492,10 +512,11 @@ function addMessage(text, type, imageUrl = null, modelBadge = '') {
             ${escapeHtml(text)}${badge}
             ${voiceBtn}
             ${actionBtns}
+            ${attachmentHtml}
         </div>
     `;
 }
-    
+
     container.appendChild(messageDiv);
     container.scrollTop = container.scrollHeight;
 }
