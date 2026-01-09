@@ -7299,62 +7299,186 @@ def call_mistral_with_history(model_id, system_prompt, history, new_message, max
 
     return response.choices[0].message.content
 
-def route_to_model(model_key, system_prompt, history, new_message):
-    """Route to appropriate AI model with conversation history"""
+# ============================================
+# MODEL FALLBACK CONFIGURATION
+# ============================================
+
+# Strict one-way fallback order based on cost and quota reliability
+MODEL_FALLBACK_ORDER = [
+    'gemini-2.0-flash',      # Primary (free, default)
+    'gemini-1.5-pro',        # Fallback Tier 1 (same provider)
+    'claude-sonnet-4.5',     # Fallback Tier 2 (cross-provider, high reliability)
+    'gpt-4o',                # Fallback Tier 3 (final safety net)
+]
+
+def is_quota_or_rate_limit_error(error):
+    """
+    Detect if an error is due to quota or rate limiting.
+    Returns True if the error should trigger fallback.
+    """
+    error_str = str(error).lower()
+    error_indicators = [
+        '429',  # HTTP 429 Too Many Requests
+        'quota',
+        'rate limit',
+        'rate_limit',
+        'ratelimit',
+        'resource_exhausted',  # gRPC error code
+        'too many requests',
+        'exceeded',
+        'limit reached',
+        'throttl',
+        'capacity',
+    ]
+
+    return any(indicator in error_str for indicator in error_indicators)
+
+def get_friendly_error_message(tried_models, is_final_fallback=False):
+    """
+    Generate a friendly, calm user-facing message.
+    Never exposes provider names, error codes, or technical details.
+    """
+    if is_final_fallback:
+        return "I ran into some temporary capacity issues, but I've switched to a backup system so we can keep going. Your message is being processed now."
+
+    if len(tried_models) == 1:
+        return "That model is temporarily busy. Switching to a backup so you can keep going..."
+
+    return "Still working on your request. Trying another model to keep things moving..."
+
+def call_model_with_retry(model_key, system_prompt, history, new_message, retry_count=0, tried_models=None):
+    """
+    Call a model with automatic retry and fallback on quota/rate limit errors.
+
+    Retry rules:
+    - Retry same model once after 5-10 second delay
+    - If retry fails, move to next model in fallback order
+    - Never retry same model more than once
+    - Never cycle back up the list
+
+    Returns: (response_text, user_facing_message, model_used)
+    """
+    import time
+    import random
+
+    if tried_models is None:
+        tried_models = []
+
     if model_key not in MODELS:
-        model_key = 'gemini-2.0-flash'  # Default fallback (free, no API key needed)
-    
+        model_key = 'gemini-2.0-flash'
+
     config = MODELS[model_key]
     provider = config['provider']
     model_id = config['model_id']
     max_tokens = config.get('max_tokens', 2000)
-    
+
     try:
+        # Call the appropriate provider
         if provider == 'anthropic':
-            return call_claude_with_history(model_id, system_prompt, history, new_message, max_tokens)
+            response = call_claude_with_history(model_id, system_prompt, history, new_message, max_tokens)
         elif provider == 'openai':
-            return call_gpt_with_history(model_id, system_prompt, history, new_message, max_tokens)
+            response = call_gpt_with_history(model_id, system_prompt, history, new_message, max_tokens)
         elif provider == 'google':
-            return call_gemini_with_history(model_id, system_prompt, history, new_message, max_tokens)
+            response = call_gemini_with_history(model_id, system_prompt, history, new_message, max_tokens)
         elif provider == 'deepseek':
-            return call_deepseek_with_history(model_id, system_prompt, history, new_message, max_tokens)
+            response = call_deepseek_with_history(model_id, system_prompt, history, new_message, max_tokens)
         elif provider == 'perplexity':
-            return call_perplexity_with_history(model_id, system_prompt, history, new_message, max_tokens)
+            response = call_perplexity_with_history(model_id, system_prompt, history, new_message, max_tokens)
         elif provider == 'grok':
-            return call_grok_with_history(model_id, system_prompt, history, new_message, max_tokens)
+            response = call_grok_with_history(model_id, system_prompt, history, new_message, max_tokens)
         elif provider == 'openrouter':
-            return call_openrouter_with_history(model_id, system_prompt, history, new_message, max_tokens)
+            response = call_openrouter_with_history(model_id, system_prompt, history, new_message, max_tokens)
         elif provider == 'mistral':
-            return call_mistral_with_history(model_id, system_prompt, history, new_message, max_tokens)
+            response = call_mistral_with_history(model_id, system_prompt, history, new_message, max_tokens)
         else:
             raise Exception(f"Unknown provider: {provider}")
+
+        # Success! Return response with no error message
+        return response, None, model_key
+
     except Exception as e:
-        print(f"Error with {provider} ({model_key}): {e}")
-        # Fallback to Gemini (free) if other model fails
-        if provider not in ['google', 'gemini']:
-            print(f"Falling back to Gemini 2.0 Flash...")
-            return call_gemini_with_history('gemini-2.0-flash-exp', system_prompt, history, new_message, 2000)
+        # Log full error internally for debugging
+        print(f"❌ Model error: {provider} ({model_key})")
+        print(f"   Error type: {type(e).__name__}")
+        print(f"   Error message: {str(e)[:500]}")  # Truncate long errors
+
+        # Check if this is a quota/rate limit error
+        if is_quota_or_rate_limit_error(e):
+            print(f"   ⚠️  Detected quota/rate limit error")
+
+            # RETRY LOGIC: Try once more after delay (if not already retried)
+            if model_key not in tried_models and retry_count == 0:
+                retry_delay = random.uniform(5, 10)  # 5-10 seconds
+                print(f"   🔄 Retrying {model_key} after {retry_delay:.1f}s delay...")
+                time.sleep(retry_delay)
+                tried_models.append(model_key)
+                return call_model_with_retry(model_key, system_prompt, history, new_message,
+                                            retry_count=1, tried_models=tried_models)
+
+            # FALLBACK LOGIC: Move to next model in fallback order
+            print(f"   ↪️  Attempting fallback...")
+            tried_models.append(model_key)
+
+            # Find next available model in fallback order
+            current_index = MODEL_FALLBACK_ORDER.index(model_key) if model_key in MODEL_FALLBACK_ORDER else -1
+
+            for next_model in MODEL_FALLBACK_ORDER[current_index + 1:]:
+                if next_model not in tried_models:
+                    print(f"   🔀 Falling back to {next_model}")
+                    is_final = next_model == MODEL_FALLBACK_ORDER[-1]
+                    friendly_msg = get_friendly_error_message(tried_models, is_final)
+
+                    try:
+                        response, _, final_model = call_model_with_retry(
+                            next_model, system_prompt, history, new_message,
+                            retry_count=0, tried_models=tried_models
+                        )
+                        return response, friendly_msg, final_model
+                    except Exception as fallback_error:
+                        print(f"   ❌ Fallback to {next_model} also failed: {fallback_error}")
+                        continue
+
+            # All fallbacks exhausted - return graceful degradation
+            print(f"   🚨 All fallback models exhausted")
+            degraded_response = (
+                "I'm experiencing some temporary technical difficulties, but I'll do my best to help. "
+                "Based on your message, here's what I can offer: "
+                "\n\n[Due to current capacity constraints, I'm providing a brief response. "
+                "Please try again in a moment for a more detailed answer.]"
+            )
+            return degraded_response, "All models are temporarily busy. Providing a brief response...", model_key
+
+        # Not a quota error - this is a different kind of error, re-raise it
+        print(f"   ⚠️  Non-quota error, re-raising")
         raise
 
-def call_ai_with_image(model_key, system_prompt, history, message, image_path):
-    """Call AI model with image vision capabilities"""
-    import base64
-    
-    # Read and encode image
-    with open(image_path, 'rb') as f:
-        image_data = base64.b64encode(f.read()).decode('utf-8')
-    
-    # Determine image type
-    ext = image_path.rsplit('.', 1)[1].lower()
-    media_type = f"image/{ext}" if ext != 'jpg' else "image/jpeg"
-    
+def route_to_model(model_key, system_prompt, history, new_message):
+    """
+    Route to appropriate AI model with automatic fallback on quota/rate limit errors.
+
+    This function wraps call_model_with_retry to maintain backward compatibility.
+    Returns just the response text (no error message or model info).
+    """
+    response, error_msg, model_used = call_model_with_retry(model_key, system_prompt, history, new_message)
+
+    # If there was a fallback message, prepend it to the response
+    if error_msg:
+        response = f"{error_msg}\n\n{response}"
+
+    return response
+
+def call_ai_with_image_internal(model_key, system_prompt, history, message, image_path, image_data, media_type):
+    """
+    Internal function to call AI model with image vision capabilities.
+    Used by call_ai_with_image_with_retry for retry/fallback logic.
+    """
     if model_key not in MODELS:
         model_key = 'gemini-2.0-flash'  # Default to free model
-    
+
     config = MODELS[model_key]
     provider = config['provider']
     model_id = config['model_id']
-    
+
     try:
         if provider == 'anthropic':
             # Claude vision
@@ -7448,11 +7572,81 @@ def call_ai_with_image(model_key, system_prompt, history, message, image_path):
             
         else:
             raise Exception(f"Provider {provider} doesn't support image vision")
-            
+
     except Exception as e:
-        print(f"Error in image vision: {e}")
-        # Fallback: describe that an image was sent
-        return f"I can see you've sent an image, but I encountered an error processing it: {str(e)}"
+        # Re-raise to let the retry/fallback wrapper handle it
+        raise
+
+def call_ai_with_image(model_key, system_prompt, history, message, image_path):
+    """
+    Call AI model with image vision capabilities with automatic retry/fallback.
+    Wraps call_ai_with_image_internal with the same fallback logic as text-only calls.
+    """
+    import base64
+    import time
+    import random
+
+    # Read and encode image once (reuse across retries)
+    with open(image_path, 'rb') as f:
+        image_data = base64.b64encode(f.read()).decode('utf-8')
+
+    # Determine image type
+    ext = image_path.rsplit('.', 1)[1].lower()
+    media_type = f"image/{ext}" if ext != 'jpg' else "image/jpeg"
+
+    if model_key not in MODELS:
+        model_key = 'gemini-2.0-flash'
+
+    tried_models = []
+    retry_count = 0
+
+    while True:
+        try:
+            response = call_ai_with_image_internal(model_key, system_prompt, history, message,
+                                                   image_path, image_data, media_type)
+            return response
+
+        except Exception as e:
+            # Log error
+            print(f"❌ Image vision error: {model_key}")
+            print(f"   Error: {str(e)[:500]}")
+
+            # Check if quota/rate limit error
+            if is_quota_or_rate_limit_error(e):
+                print(f"   ⚠️  Detected quota/rate limit error in image vision")
+
+                # RETRY LOGIC
+                if model_key not in tried_models and retry_count == 0:
+                    retry_delay = random.uniform(5, 10)
+                    print(f"   🔄 Retrying {model_key} after {retry_delay:.1f}s...")
+                    time.sleep(retry_delay)
+                    tried_models.append(model_key)
+                    retry_count = 1
+                    continue
+
+                # FALLBACK LOGIC
+                tried_models.append(model_key)
+                current_index = MODEL_FALLBACK_ORDER.index(model_key) if model_key in MODEL_FALLBACK_ORDER else -1
+
+                fallback_found = False
+                for next_model in MODEL_FALLBACK_ORDER[current_index + 1:]:
+                    if next_model not in tried_models:
+                        print(f"   🔀 Falling back to {next_model} for image")
+                        model_key = next_model
+                        retry_count = 0
+                        fallback_found = True
+                        break
+
+                if fallback_found:
+                    continue
+
+                # All fallbacks exhausted
+                print(f"   🚨 All image vision models exhausted")
+                return "I can see you've sent an image, but I'm experiencing temporary capacity issues with image processing. Please try again in a moment, or describe what you'd like me to help with regarding the image."
+
+            # Non-quota error - return friendly message
+            print(f"   ⚠️  Non-quota error in image vision")
+            return f"I can see you've sent an image, but I encountered a temporary issue processing it. Please try again."
 
 @app.route('/api/chat', methods=['POST'])
 @rate_limit(max_requests=100, window_seconds=60)  # 100 messages per minute
