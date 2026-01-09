@@ -1094,7 +1094,46 @@
             background: var(--bg-secondary);
             color: var(--text-primary);
         }
-        
+
+        /* File Attachments */
+        .message-attachments {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        .attachment-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            cursor: pointer;
+            max-width: fit-content;
+        }
+
+        .attachment-btn:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(16,163,127,0.2);
+        }
+
+        .attachment-btn:active {
+            transform: translateY(0);
+        }
+
         .message-content p {
             margin: 12px 0;
         }
