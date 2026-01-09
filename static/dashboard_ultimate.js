@@ -1271,20 +1271,59 @@ function getWorkingMode() {
 }
 
 /**
+ * Toggle working mode dropdown
+ */
+function toggleWorkingMode() {
+    const menu = document.getElementById('workingModeMenu');
+    if (menu) {
+        menu.classList.toggle('show');
+    }
+
+    // Close dropdown when clicking outside
+    if (menu && menu.classList.contains('show')) {
+        setTimeout(() => {
+            document.addEventListener('click', function closeDropdown(e) {
+                if (!e.target.closest('.working-mode-container')) {
+                    menu.classList.remove('show');
+                    document.removeEventListener('click', closeDropdown);
+                }
+            });
+        }, 0);
+    }
+}
+
+/**
  * Select and persist working mode
  */
 function selectWorkingMode(mode) {
     currentWorkingMode = mode;
 
-    // Update UI - remove active class from all buttons
-    document.querySelectorAll('.mode-btn').forEach(btn => {
+    // Update UI - remove active class from all mode options
+    document.querySelectorAll('.mode-option').forEach(btn => {
         btn.classList.remove('active');
     });
 
-    // Add active class to selected button
-    const selectedBtn = document.querySelector(`[data-mode="${mode}"]`);
+    // Add active class to selected option
+    const selectedBtn = document.querySelector(`.mode-option[data-mode="${mode}"]`);
     if (selectedBtn) {
         selectedBtn.classList.add('active');
+    }
+
+    // Update the icon in the main button
+    const modeIcons = {
+        'output_first': '⚡',
+        'ask_then_output': '💬',
+        'coaching': '🎯'
+    };
+    const iconElement = document.getElementById('workingModeIcon');
+    if (iconElement && modeIcons[mode]) {
+        iconElement.textContent = modeIcons[mode];
+    }
+
+    // Close the dropdown
+    const menu = document.getElementById('workingModeMenu');
+    if (menu) {
+        menu.classList.remove('show');
     }
 
     // Store in sessionStorage for persistence
