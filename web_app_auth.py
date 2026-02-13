@@ -166,8 +166,10 @@ app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
 # Create upload folder if it doesn't exist
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Enable CORS
-CORS(app, supports_credentials=True, origins=['*'])
+# Enable CORS - Use environment variable for allowed origins (comma-separated)
+# Example: ALLOWED_ORIGINS=https://yourdomain.com,https://app.yourdomain.com
+ALLOWED_ORIGINS = os.environ.get('ALLOWED_ORIGINS', '').split(',') if os.environ.get('ALLOWED_ORIGINS') else None
+CORS(app, supports_credentials=True, origins=ALLOWED_ORIGINS)
 
 # Setup Flask-Login
 login_manager = LoginManager()
@@ -2088,6 +2090,7 @@ def admin_cost_trends():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/admin/check-agents')
+@login_required
 def check_agents():
     """Check all custom agents and their share codes"""
     try:
@@ -2187,6 +2190,7 @@ def check_agents():
         }), 500
 
 @app.route('/admin/force-add-columns')
+@login_required
 def force_add_columns():
     """Force add missing columns to custom_agents table"""
     try:
@@ -2251,6 +2255,7 @@ def force_add_columns():
         }), 500
 
 @app.route('/admin/init-database-emergency')
+@login_required
 def emergency_database_init():
     """Emergency database initialization - visit this URL to fix database"""
     try:
@@ -2309,6 +2314,7 @@ def emergency_database_init():
         }), 500
 
 @app.route('/admin/create-default-agent/<int:user_id>')
+@login_required
 def create_default_agent(user_id):
     """Create default custom agent for user - visit /admin/create-default-agent/1"""
     try:
@@ -2424,6 +2430,7 @@ STYLE RULES:
         }), 500
 
 @app.route('/admin/migrate-starter-agents')
+@login_required
 def migrate_starter_agents():
     """Migrate old starter agents from custom_agents to global_agents system"""
     try:
@@ -2841,6 +2848,7 @@ def agent_link(agent_name):
                          guest_custom_js=guest_restrictions)
 
 @app.route('/admin/test-custom-link/<share_code>')
+@login_required
 def test_custom_link(share_code):
     """Test if a share code exists in database"""
     try:
@@ -13307,7 +13315,6 @@ def toggle_webhook(webhook_id):
 # RUN APPLICATION
 # ============================================
 
-@app.route('/admin/list-routes')
 # ============================================
 # SUPPORT CHATBOX HELPER ENDPOINTS
 # ============================================
@@ -13487,6 +13494,8 @@ def resolve_support_message(message_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/admin/list-routes')
+@login_required
 def list_routes():
     """List all registered Flask routes"""
     routes = []
@@ -13508,4 +13517,6 @@ def list_routes():
     })
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # Use FLASK_DEBUG environment variable, default to False for production safety
+    debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() in ('true', '1', 'yes')
+    app.run(debug=debug_mode, host='0.0.0.0', port=5000)
