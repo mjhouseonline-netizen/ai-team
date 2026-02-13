@@ -4953,21 +4953,80 @@ def log_integration_usage(user_id, integration_key, action, success, error_messa
 # OAUTH FLOW HELPERS
 # ============================================
 
+# OAuth credentials from environment variables
+OAUTH_CREDENTIALS = {
+    'google': {
+        'client_id': os.environ.get('GOOGLE_OAUTH_CLIENT_ID', ''),
+        'client_secret': os.environ.get('GOOGLE_OAUTH_CLIENT_SECRET', '')
+    },
+    'twitter': {
+        'client_id': os.environ.get('TWITTER_OAUTH_CLIENT_ID', ''),
+        'client_secret': os.environ.get('TWITTER_OAUTH_CLIENT_SECRET', '')
+    },
+    'linkedin': {
+        'client_id': os.environ.get('LINKEDIN_OAUTH_CLIENT_ID', ''),
+        'client_secret': os.environ.get('LINKEDIN_OAUTH_CLIENT_SECRET', '')
+    },
+    'github': {
+        'client_id': os.environ.get('GITHUB_OAUTH_CLIENT_ID', ''),
+        'client_secret': os.environ.get('GITHUB_OAUTH_CLIENT_SECRET', '')
+    },
+    'slack': {
+        'client_id': os.environ.get('SLACK_OAUTH_CLIENT_ID', ''),
+        'client_secret': os.environ.get('SLACK_OAUTH_CLIENT_SECRET', '')
+    },
+    'zoom': {
+        'client_id': os.environ.get('ZOOM_OAUTH_CLIENT_ID', ''),
+        'client_secret': os.environ.get('ZOOM_OAUTH_CLIENT_SECRET', '')
+    },
+    'microsoft': {
+        'client_id': os.environ.get('MICROSOFT_OAUTH_CLIENT_ID', ''),
+        'client_secret': os.environ.get('MICROSOFT_OAUTH_CLIENT_SECRET', '')
+    }
+}
+
+def get_oauth_credentials(service):
+    """Get OAuth credentials for a service, mapping service names to credential keys"""
+    service_to_provider = {
+        'gmail': 'google',
+        'google_sheets': 'google',
+        'google_calendar': 'google',
+        'outlook': 'microsoft',
+        'twitter': 'twitter',
+        'linkedin': 'linkedin',
+        'github': 'github',
+        'slack': 'slack',
+        'zoom': 'zoom'
+    }
+    provider = service_to_provider.get(service, service)
+    return OAUTH_CREDENTIALS.get(provider, {'client_id': '', 'client_secret': ''})
+
+def is_oauth_configured(service):
+    """Check if OAuth is properly configured for a service"""
+    creds = get_oauth_credentials(service)
+    return bool(creds.get('client_id')) and bool(creds.get('client_secret'))
+
 OAUTH_CONFIG = {
     'github': {
         'auth_url': 'https://github.com/login/oauth/authorize',
         'token_url': 'https://github.com/login/oauth/access_token',
-        'scopes': ['repo', 'user']
+        'scopes': ['repo', 'user'],
+        'name': 'GitHub',
+        'icon': '🐙'
     },
     'google_sheets': {
         'auth_url': 'https://accounts.google.com/o/oauth2/v2/auth',
         'token_url': 'https://oauth2.googleapis.com/token',
-        'scopes': ['https://www.googleapis.com/auth/spreadsheets']
+        'scopes': ['https://www.googleapis.com/auth/spreadsheets'],
+        'name': 'Google Sheets',
+        'icon': '📊'
     },
     'slack': {
         'auth_url': 'https://slack.com/oauth/v2/authorize',
         'token_url': 'https://slack.com/api/oauth.v2.access',
-        'scopes': ['chat:write', 'channels:read']
+        'scopes': ['chat:write', 'channels:read'],
+        'name': 'Slack',
+        'icon': '💬'
     },
     # Email Integrations
     'gmail': {
@@ -4976,7 +5035,8 @@ OAUTH_CONFIG = {
         'scopes': [
             'https://www.googleapis.com/auth/gmail.send',
             'https://www.googleapis.com/auth/gmail.readonly',
-            'https://www.googleapis.com/auth/gmail.compose'
+            'https://www.googleapis.com/auth/gmail.compose',
+            'https://www.googleapis.com/auth/userinfo.email'
         ],
         'name': 'Gmail',
         'icon': '📧'
@@ -4984,7 +5044,7 @@ OAUTH_CONFIG = {
     'outlook': {
         'auth_url': 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
         'token_url': 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
-        'scopes': ['Mail.Send', 'Mail.Read', 'Mail.ReadWrite'],
+        'scopes': ['Mail.Send', 'Mail.Read', 'Mail.ReadWrite', 'User.Read'],
         'name': 'Outlook',
         'icon': '📨'
     },
@@ -4992,9 +5052,10 @@ OAUTH_CONFIG = {
     'twitter': {
         'auth_url': 'https://twitter.com/i/oauth2/authorize',
         'token_url': 'https://api.twitter.com/2/oauth2/token',
-        'scopes': ['tweet.read', 'tweet.write', 'users.read'],
+        'scopes': ['tweet.read', 'tweet.write', 'users.read', 'offline.access'],
         'name': 'Twitter/X',
-        'icon': '🐦'
+        'icon': '🐦',
+        'pkce_required': True
     },
     'linkedin': {
         'auth_url': 'https://www.linkedin.com/oauth/v2/authorization',
@@ -5014,7 +5075,11 @@ OAUTH_CONFIG = {
     'google_calendar': {
         'auth_url': 'https://accounts.google.com/o/oauth2/v2/auth',
         'token_url': 'https://oauth2.googleapis.com/token',
-        'scopes': ['https://www.googleapis.com/auth/calendar.readonly'],
+        'scopes': [
+            'https://www.googleapis.com/auth/calendar.readonly',
+            'https://www.googleapis.com/auth/calendar.events',
+            'https://www.googleapis.com/auth/userinfo.email'
+        ],
         'name': 'Google Calendar',
         'icon': '📅'
     }
@@ -5130,10 +5195,22 @@ def connect_oauth_integration(service):
         if service not in OAUTH_CONFIG:
             return jsonify({'error': 'Service not supported'}), 400
 
+        # Check if OAuth credentials are configured
+        if not is_oauth_configured(service):
+            return jsonify({
+                'error': f'OAuth not configured for {service}. Please contact the administrator to set up {OAUTH_CONFIG[service]["name"]} integration.'
+            }), 400
+
         oauth_config = OAUTH_CONFIG[service]
+        oauth_creds = get_oauth_credentials(service)
 
         # Generate state for CSRF protection
         state = secrets.token_urlsafe(32)
+
+        # For Twitter PKCE, generate code verifier and challenge
+        code_verifier = None
+        if oauth_config.get('pkce_required'):
+            code_verifier = secrets.token_urlsafe(64)
 
         # Store state in session
         conn = get_db_connection()
@@ -5144,14 +5221,15 @@ def connect_oauth_integration(service):
                 state TEXT PRIMARY KEY,
                 user_id INTEGER NOT NULL,
                 service TEXT NOT NULL,
+                code_verifier TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
 
         cursor.execute("""
-            INSERT INTO oauth_states (state, user_id, service)
-            VALUES (?, ?, ?)
-        """, (state, current_user.id, service))
+            INSERT INTO oauth_states (state, user_id, service, code_verifier)
+            VALUES (?, ?, ?, ?)
+        """, (state, current_user.id, service, code_verifier))
 
         conn.commit()
         conn.close()
@@ -5160,9 +5238,32 @@ def connect_oauth_integration(service):
         callback_url = f"{request.host_url.rstrip('/')}/api/oauth/callback/{service}"
         scopes = ' '.join(oauth_config['scopes']) if isinstance(oauth_config['scopes'], list) else oauth_config['scopes']
 
-        # Note: client_id should be loaded from environment variables for each service
-        # This is a placeholder - you'll need to configure actual OAuth apps
-        auth_url = f"{oauth_config['auth_url']}?client_id=YOUR_{service.upper()}_CLIENT_ID&redirect_uri={callback_url}&state={state}&scope={scopes}&response_type=code&access_type=offline"
+        # Build auth URL with proper parameters
+        auth_params = {
+            'client_id': oauth_creds['client_id'],
+            'redirect_uri': callback_url,
+            'state': state,
+            'scope': scopes,
+            'response_type': 'code'
+        }
+
+        # Add access_type for Google OAuth (to get refresh token)
+        if service in ['gmail', 'google_sheets', 'google_calendar']:
+            auth_params['access_type'] = 'offline'
+            auth_params['prompt'] = 'consent'
+
+        # Add PKCE parameters for Twitter
+        if oauth_config.get('pkce_required') and code_verifier:
+            import hashlib
+            code_challenge = base64.urlsafe_b64encode(
+                hashlib.sha256(code_verifier.encode()).digest()
+            ).decode().rstrip('=')
+            auth_params['code_challenge'] = code_challenge
+            auth_params['code_challenge_method'] = 'S256'
+
+        # Build URL with query parameters
+        from urllib.parse import urlencode
+        auth_url = f"{oauth_config['auth_url']}?{urlencode(auth_params)}"
 
         return jsonify({
             'auth_url': auth_url,
@@ -5176,13 +5277,21 @@ def connect_oauth_integration(service):
 @app.route('/api/oauth/callback/<service>')
 def oauth_callback(service):
     """Handle OAuth callback and exchange code for tokens"""
+    import requests as http_requests
+    from urllib.parse import urlencode
+
     try:
         code = request.args.get('code')
         state = request.args.get('state')
         error = request.args.get('error')
+        error_description = request.args.get('error_description', '')
 
         if error:
-            return f"<html><body><h2>Authorization failed</h2><p>{error}</p><a href='/integrations'>Back to Integrations</a></body></html>", 400
+            return f"""<html><body style="font-family: system-ui; text-align: center; padding: 50px;">
+                <h2 style="color: #e53e3e;">Authorization failed</h2>
+                <p>{error}: {error_description}</p>
+                <a href="/integrations" style="background: #667eea; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none;">Back to Integrations</a>
+            </body></html>""", 400
 
         if not code or not state:
             return "<html><body><h2>Invalid callback</h2><p>Missing code or state</p></body></html>", 400
@@ -5192,7 +5301,7 @@ def oauth_callback(service):
         cursor = conn.cursor()
 
         cursor.execute("""
-            SELECT user_id, service FROM oauth_states WHERE state = ?
+            SELECT user_id, service, code_verifier FROM oauth_states WHERE state = ?
         """, (state,))
 
         oauth_state = cursor.fetchone()
@@ -5201,7 +5310,7 @@ def oauth_callback(service):
             conn.close()
             return "<html><body><h2>Invalid state</h2><p>State not found or expired</p></body></html>", 400
 
-        user_id, stored_service = oauth_state
+        user_id, stored_service, code_verifier = oauth_state
 
         if stored_service != service:
             conn.close()
@@ -5211,21 +5320,153 @@ def oauth_callback(service):
         cursor.execute("DELETE FROM oauth_states WHERE state = ?", (state,))
         conn.commit()
 
-        # Exchange authorization code for access token
-        # NOTE: This is a placeholder - actual OAuth token exchange requires:
-        # 1. Making POST request to oauth_config['token_url']
-        # 2. Including client_id, client_secret, code, redirect_uri
-        # 3. Parsing response to get access_token, refresh_token, expiry
+        # Get OAuth config and credentials
+        oauth_config = OAUTH_CONFIG.get(service)
+        oauth_creds = get_oauth_credentials(service)
 
-        # For now, store a placeholder (you'll need to implement actual OAuth exchange)
+        if not oauth_config or not oauth_creds.get('client_id'):
+            conn.close()
+            return "<html><body><h2>Configuration error</h2><p>OAuth not configured for this service</p></body></html>", 500
+
+        # Build callback URL
+        callback_url = f"{request.host_url.rstrip('/')}/api/oauth/callback/{service}"
+
+        # Prepare token exchange request
+        token_data = {
+            'grant_type': 'authorization_code',
+            'code': code,
+            'redirect_uri': callback_url,
+            'client_id': oauth_creds['client_id'],
+            'client_secret': oauth_creds['client_secret']
+        }
+
+        # Add PKCE verifier for Twitter
+        if oauth_config.get('pkce_required') and code_verifier:
+            token_data['code_verifier'] = code_verifier
+
+        # Set appropriate headers
+        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+
+        # GitHub requires Accept header for JSON response
+        if service == 'github':
+            headers['Accept'] = 'application/json'
+
+        # Twitter requires Basic auth
+        if service == 'twitter':
+            import base64
+            credentials = base64.b64encode(
+                f"{oauth_creds['client_id']}:{oauth_creds['client_secret']}".encode()
+            ).decode()
+            headers['Authorization'] = f'Basic {credentials}'
+            del token_data['client_id']
+            del token_data['client_secret']
+
+        # Exchange code for tokens
+        token_response = http_requests.post(
+            oauth_config['token_url'],
+            data=token_data,
+            headers=headers,
+            timeout=30
+        )
+
+        if token_response.status_code != 200:
+            print(f"❌ Token exchange failed: {token_response.status_code} - {token_response.text}")
+            conn.close()
+            return f"""<html><body style="font-family: system-ui; text-align: center; padding: 50px;">
+                <h2 style="color: #e53e3e;">Token exchange failed</h2>
+                <p>Could not complete authorization. Please try again.</p>
+                <a href="/integrations" style="background: #667eea; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none;">Back to Integrations</a>
+            </body></html>""", 400
+
+        token_json = token_response.json()
+
+        # Extract tokens (different services use different field names)
+        access_token = token_json.get('access_token')
+        refresh_token = token_json.get('refresh_token', '')
+        expires_in = token_json.get('expires_in', 3600)  # Default 1 hour
+
+        if not access_token:
+            conn.close()
+            return "<html><body><h2>Error</h2><p>No access token received</p></body></html>", 400
+
+        # Try to get user info/email for display
+        service_email = None
+        service_user_id = None
+
+        try:
+            if service in ['gmail', 'google_sheets', 'google_calendar']:
+                # Get Google user info
+                user_info = http_requests.get(
+                    'https://www.googleapis.com/oauth2/v2/userinfo',
+                    headers={'Authorization': f'Bearer {access_token}'},
+                    timeout=10
+                ).json()
+                service_email = user_info.get('email')
+                service_user_id = user_info.get('id')
+
+            elif service == 'outlook':
+                # Get Microsoft user info
+                user_info = http_requests.get(
+                    'https://graph.microsoft.com/v1.0/me',
+                    headers={'Authorization': f'Bearer {access_token}'},
+                    timeout=10
+                ).json()
+                service_email = user_info.get('mail') or user_info.get('userPrincipalName')
+                service_user_id = user_info.get('id')
+
+            elif service == 'github':
+                # Get GitHub user info
+                user_info = http_requests.get(
+                    'https://api.github.com/user',
+                    headers={'Authorization': f'Bearer {access_token}'},
+                    timeout=10
+                ).json()
+                service_email = user_info.get('email')
+                service_user_id = str(user_info.get('id'))
+
+            elif service == 'twitter':
+                # Get Twitter user info
+                user_info = http_requests.get(
+                    'https://api.twitter.com/2/users/me',
+                    headers={'Authorization': f'Bearer {access_token}'},
+                    timeout=10
+                ).json()
+                if user_info.get('data'):
+                    service_user_id = user_info['data'].get('id')
+                    service_email = f"@{user_info['data'].get('username', '')}"
+
+            elif service == 'linkedin':
+                # Get LinkedIn user info
+                user_info = http_requests.get(
+                    'https://api.linkedin.com/v2/me',
+                    headers={'Authorization': f'Bearer {access_token}'},
+                    timeout=10
+                ).json()
+                service_user_id = user_info.get('id')
+                # Get email separately
+                email_info = http_requests.get(
+                    'https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))',
+                    headers={'Authorization': f'Bearer {access_token}'},
+                    timeout=10
+                ).json()
+                if email_info.get('elements'):
+                    service_email = email_info['elements'][0].get('handle~', {}).get('emailAddress')
+
+        except Exception as e:
+            print(f"Warning: Could not fetch user info for {service}: {e}")
+
+        # Store the tokens
         cursor.execute("""
             INSERT OR REPLACE INTO user_integrations
-            (user_id, service, access_token, refresh_token, token_expiry, is_active)
-            VALUES (?, ?, ?, ?, datetime('now', '+3600 seconds'), 1)
-        """, (user_id, service, f'PLACEHOLDER_TOKEN_{service}', f'PLACEHOLDER_REFRESH_{service}'))
+            (user_id, service, access_token, refresh_token, token_expiry, is_active, service_email, service_user_id, connected_at)
+            VALUES (?, ?, ?, ?, datetime('now', '+' || ? || ' seconds'), 1, ?, ?, datetime('now'))
+        """, (user_id, service, access_token, refresh_token, expires_in, service_email, service_user_id))
 
         conn.commit()
         conn.close()
+
+        service_name = OAUTH_CONFIG[service]['name']
+        email_display = f"<p>Connected as: <strong>{service_email}</strong></p>" if service_email else ""
 
         # Redirect to integrations page with success message
         return f"""
@@ -5233,10 +5474,16 @@ def oauth_callback(service):
         <head><title>Connected Successfully</title></head>
         <body style="font-family: system-ui; text-align: center; padding: 50px;">
             <h1 style="color: #48bb78;">✓ Successfully Connected</h1>
-            <p>You've connected {OAUTH_CONFIG[service]['name']} to your AI Team account.</p>
+            <p>You've connected {service_name} to your AI Team account.</p>
+            {email_display}
             <p><a href="/integrations" style="background: #667eea; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; display: inline-block; margin-top: 20px;">Back to Integrations</a></p>
             <script>
-                setTimeout(function() {{ window.location.href = '/integrations'; }}, 3000);
+                if (window.opener) {{
+                    window.opener.location.reload();
+                    window.close();
+                }} else {{
+                    setTimeout(function() {{ window.location.href = '/integrations'; }}, 3000);
+                }}
             </script>
         </body>
         </html>
@@ -5244,7 +5491,13 @@ def oauth_callback(service):
 
     except Exception as e:
         print(f"❌ OAuth callback error: {str(e)}")
-        return f"<html><body><h2>Error</h2><p>{str(e)}</p></body></html>", 500
+        import traceback
+        traceback.print_exc()
+        return f"""<html><body style="font-family: system-ui; text-align: center; padding: 50px;">
+            <h2 style="color: #e53e3e;">Error</h2>
+            <p>{str(e)}</p>
+            <a href="/integrations" style="background: #667eea; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none;">Back to Integrations</a>
+        </body></html>""", 500
 
 @app.route('/api/user-integrations/<service>', methods=['DELETE'])
 @login_required
@@ -5279,8 +5532,74 @@ def disconnect_oauth_integration(service):
 # INTEGRATION HELPER FUNCTIONS (FOR AGENTS)
 # ============================================
 
+def refresh_oauth_token(user_id, service, refresh_token):
+    """Refresh an expired OAuth token"""
+    import requests as http_requests
+
+    try:
+        oauth_config = OAUTH_CONFIG.get(service)
+        oauth_creds = get_oauth_credentials(service)
+
+        if not oauth_config or not oauth_creds.get('client_id'):
+            return None
+
+        token_data = {
+            'grant_type': 'refresh_token',
+            'refresh_token': refresh_token,
+            'client_id': oauth_creds['client_id'],
+            'client_secret': oauth_creds['client_secret']
+        }
+
+        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+
+        # Twitter requires Basic auth for refresh
+        if service == 'twitter':
+            credentials = base64.b64encode(
+                f"{oauth_creds['client_id']}:{oauth_creds['client_secret']}".encode()
+            ).decode()
+            headers['Authorization'] = f'Basic {credentials}'
+            del token_data['client_id']
+            del token_data['client_secret']
+
+        response = http_requests.post(
+            oauth_config['token_url'],
+            data=token_data,
+            headers=headers,
+            timeout=30
+        )
+
+        if response.status_code != 200:
+            print(f"Token refresh failed for {service}: {response.status_code}")
+            return None
+
+        token_json = response.json()
+        new_access_token = token_json.get('access_token')
+        new_refresh_token = token_json.get('refresh_token', refresh_token)
+        expires_in = token_json.get('expires_in', 3600)
+
+        if new_access_token:
+            # Update tokens in database
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE user_integrations
+                SET access_token = ?, refresh_token = ?,
+                    token_expiry = datetime('now', '+' || ? || ' seconds')
+                WHERE user_id = ? AND service = ?
+            """, (new_access_token, new_refresh_token, expires_in, user_id, service))
+            conn.commit()
+            conn.close()
+
+            return new_access_token
+
+        return None
+
+    except Exception as e:
+        print(f"Error refreshing OAuth token: {e}")
+        return None
+
 def get_user_oauth_token(user_id, service):
-    """Get OAuth access token for a service"""
+    """Get OAuth access token for a service, refreshing if expired"""
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -5294,28 +5613,42 @@ def get_user_oauth_token(user_id, service):
         result = cursor.fetchone()
         conn.close()
 
-        if result:
-            return {
-                'access_token': result[0],
-                'refresh_token': result[1],
-                'token_expiry': result[2]
-            }
-        return None
+        if not result:
+            return None
+
+        access_token, refresh_token, token_expiry = result
+
+        # Check if token is expired or about to expire (within 5 minutes)
+        if token_expiry:
+            try:
+                from datetime import datetime
+                expiry_time = datetime.strptime(token_expiry, '%Y-%m-%d %H:%M:%S')
+                if expiry_time <= datetime.now() + timedelta(minutes=5):
+                    # Token expired or expiring soon, try to refresh
+                    if refresh_token:
+                        new_token = refresh_oauth_token(user_id, service, refresh_token)
+                        if new_token:
+                            access_token = new_token
+                        else:
+                            # Refresh failed, return None to trigger re-auth
+                            return None
+            except Exception as e:
+                print(f"Error checking token expiry: {e}")
+
+        return {
+            'access_token': access_token,
+            'refresh_token': refresh_token,
+            'token_expiry': token_expiry
+        }
 
     except Exception as e:
         print(f"Error getting OAuth token: {e}")
         return None
 
 def send_email_via_integration(user_id, to_email, subject, body):
-    """
-    Send email via Gmail integration
+    """Send email via Gmail integration using Gmail API"""
+    import requests as http_requests
 
-    NOTE: This is a placeholder. In production, this would:
-    1. Get user's Gmail OAuth token
-    2. Use Gmail API to send email
-    3. Handle token refresh if expired
-    4. Return success/failure status
-    """
     token_info = get_user_oauth_token(user_id, 'gmail')
 
     if not token_info:
@@ -5324,34 +5657,52 @@ def send_email_via_integration(user_id, to_email, subject, body):
             'error': 'Gmail not connected. Please connect Gmail via Integrations page.'
         }
 
-    # PLACEHOLDER: Actual Gmail API call would go here
-    # Example:
-    # from googleapiclient.discovery import build
-    # from google.oauth2.credentials import Credentials
-    #
-    # creds = Credentials(token=token_info['access_token'])
-    # service = build('gmail', 'v1', credentials=creds)
-    # message = create_message('me', to_email, subject, body)
-    # result = service.users().messages().send(userId='me', body=message).execute()
+    try:
+        # Create email message in RFC 2822 format
+        import email.mime.text
+        message = email.mime.text.MIMEText(body)
+        message['to'] = to_email
+        message['subject'] = subject
 
-    print(f"[PLACEHOLDER] Would send email to {to_email} via Gmail")
+        # Encode to base64url
+        raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
 
-    return {
-        'success': True,
-        'message': 'Email functionality requires OAuth app configuration',
-        'placeholder': True
-    }
+        # Send via Gmail API
+        response = http_requests.post(
+            'https://gmail.googleapis.com/gmail/v1/users/me/messages/send',
+            headers={
+                'Authorization': f"Bearer {token_info['access_token']}",
+                'Content-Type': 'application/json'
+            },
+            json={'raw': raw_message},
+            timeout=30
+        )
+
+        if response.status_code == 200:
+            result = response.json()
+            return {
+                'success': True,
+                'message': f'Email sent successfully',
+                'message_id': result.get('id')
+            }
+        else:
+            error_msg = response.json().get('error', {}).get('message', 'Unknown error')
+            return {
+                'success': False,
+                'error': f'Failed to send email: {error_msg}'
+            }
+
+    except Exception as e:
+        print(f"Error sending email: {e}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
 
 def post_to_twitter(user_id, text):
-    """
-    Post to Twitter/X via integration
+    """Post to Twitter/X via Twitter API v2"""
+    import requests as http_requests
 
-    NOTE: This is a placeholder. In production, this would:
-    1. Get user's Twitter OAuth token
-    2. Use Twitter API v2 to create tweet
-    3. Handle token refresh if needed
-    4. Return tweet ID and URL
-    """
     token_info = get_user_oauth_token(user_id, 'twitter')
 
     if not token_info:
@@ -5360,60 +5711,176 @@ def post_to_twitter(user_id, text):
             'error': 'Twitter not connected. Please connect Twitter via Integrations page.'
         }
 
-    print(f"[PLACEHOLDER] Would post to Twitter: {text}")
+    try:
+        # Post tweet via Twitter API v2
+        response = http_requests.post(
+            'https://api.twitter.com/2/tweets',
+            headers={
+                'Authorization': f"Bearer {token_info['access_token']}",
+                'Content-Type': 'application/json'
+            },
+            json={'text': text[:280]},  # Twitter has 280 char limit
+            timeout=30
+        )
 
-    return {
-        'success': True,
-        'message': 'Twitter posting requires OAuth app configuration',
-        'placeholder': True
-    }
+        if response.status_code in [200, 201]:
+            result = response.json()
+            tweet_id = result.get('data', {}).get('id')
+            return {
+                'success': True,
+                'message': 'Tweet posted successfully',
+                'tweet_id': tweet_id,
+                'tweet_url': f'https://twitter.com/i/web/status/{tweet_id}' if tweet_id else None
+            }
+        else:
+            error_detail = response.json().get('detail', response.json().get('title', 'Unknown error'))
+            return {
+                'success': False,
+                'error': f'Failed to post tweet: {error_detail}'
+            }
+
+    except Exception as e:
+        print(f"Error posting to Twitter: {e}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
 
 def post_to_linkedin(user_id, text):
-    """
-    Post to LinkedIn via integration
+    """Post to LinkedIn via LinkedIn API"""
+    import requests as http_requests
 
-    NOTE: This is a placeholder for LinkedIn posting
-    """
     token_info = get_user_oauth_token(user_id, 'linkedin')
 
     if not token_info:
         return {
             'success': False,
-            'error': 'LinkedIn not connected'
+            'error': 'LinkedIn not connected. Please connect LinkedIn via Integrations page.'
         }
 
-    print(f"[PLACEHOLDER] Would post to LinkedIn: {text}")
+    try:
+        # First get the user's LinkedIn URN
+        me_response = http_requests.get(
+            'https://api.linkedin.com/v2/me',
+            headers={'Authorization': f"Bearer {token_info['access_token']}"},
+            timeout=10
+        )
 
-    return {
-        'success': True,
-        'message': 'LinkedIn posting requires OAuth app configuration',
-        'placeholder': True
-    }
+        if me_response.status_code != 200:
+            return {
+                'success': False,
+                'error': 'Could not get LinkedIn profile'
+            }
+
+        person_urn = f"urn:li:person:{me_response.json().get('id')}"
+
+        # Create a share/post
+        post_data = {
+            "author": person_urn,
+            "lifecycleState": "PUBLISHED",
+            "specificContent": {
+                "com.linkedin.ugc.ShareContent": {
+                    "shareCommentary": {
+                        "text": text[:3000]  # LinkedIn has 3000 char limit
+                    },
+                    "shareMediaCategory": "NONE"
+                }
+            },
+            "visibility": {
+                "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
+            }
+        }
+
+        response = http_requests.post(
+            'https://api.linkedin.com/v2/ugcPosts',
+            headers={
+                'Authorization': f"Bearer {token_info['access_token']}",
+                'Content-Type': 'application/json',
+                'X-Restli-Protocol-Version': '2.0.0'
+            },
+            json=post_data,
+            timeout=30
+        )
+
+        if response.status_code in [200, 201]:
+            return {
+                'success': True,
+                'message': 'Posted to LinkedIn successfully',
+                'post_id': response.headers.get('x-restli-id')
+            }
+        else:
+            error_msg = response.json().get('message', 'Unknown error')
+            return {
+                'success': False,
+                'error': f'Failed to post to LinkedIn: {error_msg}'
+            }
+
+    except Exception as e:
+        print(f"Error posting to LinkedIn: {e}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
 
 def create_calendar_event(user_id, title, start_time, end_time, description=None):
-    """
-    Create Google Calendar event via integration
+    """Create Google Calendar event via Google Calendar API"""
+    import requests as http_requests
 
-    NOTE: This is a placeholder. In production, this would:
-    1. Get user's Google Calendar OAuth token
-    2. Use Google Calendar API to create event
-    3. Return event ID and link
-    """
     token_info = get_user_oauth_token(user_id, 'google_calendar')
 
     if not token_info:
         return {
             'success': False,
-            'error': 'Google Calendar not connected'
+            'error': 'Google Calendar not connected. Please connect via Integrations page.'
         }
 
-    print(f"[PLACEHOLDER] Would create calendar event: {title}")
+    try:
+        event_data = {
+            'summary': title,
+            'start': {
+                'dateTime': start_time,
+                'timeZone': 'UTC'
+            },
+            'end': {
+                'dateTime': end_time,
+                'timeZone': 'UTC'
+            }
+        }
 
-    return {
-        'success': True,
-        'message': 'Calendar integration requires OAuth app configuration',
-        'placeholder': True
-    }
+        if description:
+            event_data['description'] = description
+
+        response = http_requests.post(
+            'https://www.googleapis.com/calendar/v3/calendars/primary/events',
+            headers={
+                'Authorization': f"Bearer {token_info['access_token']}",
+                'Content-Type': 'application/json'
+            },
+            json=event_data,
+            timeout=30
+        )
+
+        if response.status_code in [200, 201]:
+            result = response.json()
+            return {
+                'success': True,
+                'message': 'Calendar event created',
+                'event_id': result.get('id'),
+                'event_link': result.get('htmlLink')
+            }
+        else:
+            error_msg = response.json().get('error', {}).get('message', 'Unknown error')
+            return {
+                'success': False,
+                'error': f'Failed to create event: {error_msg}'
+            }
+
+    except Exception as e:
+        print(f"Error creating calendar event: {e}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
 
 def get_available_integration_actions(user_id):
     """
