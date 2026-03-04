@@ -3457,8 +3457,8 @@ def profile():
 @app.route('/api/social/connect/<platform>', methods=['POST'])
 @login_required
 def connect_social_platform(platform):
-    """Connect social media account (Twitter, Facebook, LinkedIn)"""
-    supported_platforms = ['twitter', 'facebook', 'linkedin']
+    """Connect social media account"""
+    supported_platforms = ['facebook']
 
     if platform not in supported_platforms:
         return jsonify({'error': 'Unsupported platform'}), 400
@@ -4477,8 +4477,6 @@ def detect_integration_intent(message):
         'trello': ['create trello card', 'add to trello', 'trello card'],
         'gmail': ['send email', 'email to', 'send gmail'],
         'google_sheets': ['add to spreadsheet', 'update sheet', 'google sheets'],
-        'twitter': ['tweet this', 'post to twitter', 'share on twitter'],
-        'linkedin': ['post to linkedin', 'share on linkedin'],
         'asana': ['create task in asana', 'add asana task'],
         'jira': ['create jira ticket', 'jira issue'],
         'telegram': ['send telegram message', 'message on telegram'],
@@ -4736,15 +4734,6 @@ INTEGRATION_TEMPLATES = [
         'actions': ['trello_create_card']
     },
     {
-        'id': 'ai-social-scheduler',
-        'name': 'AI Social Media Scheduler',
-        'description': 'AI generates and schedules social posts',
-        'icon': '🤖📱',
-        'integrations_required': ['twitter', 'linkedin'],
-        'trigger': 'manual',
-        'actions': ['ai_generate_post', 'twitter_post', 'linkedin_post']
-    },
-    {
         'id': 'slack-ai-responder',
         'name': 'Slack AI Auto-Responder',
         'description': 'AI responds to Slack mentions automatically',
@@ -4959,14 +4948,6 @@ OAUTH_CREDENTIALS = {
         'client_id': os.environ.get('GOOGLE_OAUTH_CLIENT_ID', ''),
         'client_secret': os.environ.get('GOOGLE_OAUTH_CLIENT_SECRET', '')
     },
-    'twitter': {
-        'client_id': os.environ.get('TWITTER_OAUTH_CLIENT_ID', ''),
-        'client_secret': os.environ.get('TWITTER_OAUTH_CLIENT_SECRET', '')
-    },
-    'linkedin': {
-        'client_id': os.environ.get('LINKEDIN_OAUTH_CLIENT_ID', ''),
-        'client_secret': os.environ.get('LINKEDIN_OAUTH_CLIENT_SECRET', '')
-    },
     'github': {
         'client_id': os.environ.get('GITHUB_OAUTH_CLIENT_ID', ''),
         'client_secret': os.environ.get('GITHUB_OAUTH_CLIENT_SECRET', '')
@@ -4992,8 +4973,6 @@ def get_oauth_credentials(service):
         'google_sheets': 'google',
         'google_calendar': 'google',
         'outlook': 'microsoft',
-        'twitter': 'twitter',
-        'linkedin': 'linkedin',
         'github': 'github',
         'slack': 'slack',
         'zoom': 'zoom'
@@ -5048,22 +5027,6 @@ OAUTH_CONFIG = {
         'name': 'Outlook',
         'icon': '📨'
     },
-    # Social Media Integrations
-    'twitter': {
-        'auth_url': 'https://twitter.com/i/oauth2/authorize',
-        'token_url': 'https://api.twitter.com/2/oauth2/token',
-        'scopes': ['tweet.read', 'tweet.write', 'users.read', 'offline.access'],
-        'name': 'Twitter/X',
-        'icon': '🐦',
-        'pkce_required': True
-    },
-    'linkedin': {
-        'auth_url': 'https://www.linkedin.com/oauth/v2/authorization',
-        'token_url': 'https://www.linkedin.com/oauth/v2/accessToken',
-        'scopes': ['w_member_social', 'r_liteprofile', 'r_emailaddress'],
-        'name': 'LinkedIn',
-        'icon': '💼'
-    },
     # Meeting Integrations
     'zoom': {
         'auth_url': 'https://zoom.us/oauth/authorize',
@@ -5092,12 +5055,6 @@ AVAILABLE_INTEGRATIONS = {
         'description': 'Send and read emails',
         'services': ['gmail', 'outlook'],
         'icon': '📧'
-    },
-    'social_media': {
-        'name': 'Social Media',
-        'description': 'Post to social platforms',
-        'services': ['twitter', 'linkedin'],
-        'icon': '📱'
     },
     'meetings': {
         'name': 'Meetings',
@@ -5207,11 +5164,6 @@ def connect_oauth_integration(service):
         # Generate state for CSRF protection
         state = secrets.token_urlsafe(32)
 
-        # For Twitter PKCE, generate code verifier and challenge
-        code_verifier = None
-        if oauth_config.get('pkce_required'):
-            code_verifier = secrets.token_urlsafe(64)
-
         # Store state in session
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -5251,15 +5203,6 @@ def connect_oauth_integration(service):
         if service in ['gmail', 'google_sheets', 'google_calendar']:
             auth_params['access_type'] = 'offline'
             auth_params['prompt'] = 'consent'
-
-        # Add PKCE parameters for Twitter
-        if oauth_config.get('pkce_required') and code_verifier:
-            import hashlib
-            code_challenge = base64.urlsafe_b64encode(
-                hashlib.sha256(code_verifier.encode()).digest()
-            ).decode().rstrip('=')
-            auth_params['code_challenge'] = code_challenge
-            auth_params['code_challenge_method'] = 'S256'
 
         # Build URL with query parameters
         from urllib.parse import urlencode
@@ -5340,26 +5283,12 @@ def oauth_callback(service):
             'client_secret': oauth_creds['client_secret']
         }
 
-        # Add PKCE verifier for Twitter
-        if oauth_config.get('pkce_required') and code_verifier:
-            token_data['code_verifier'] = code_verifier
-
         # Set appropriate headers
         headers = {'Content-Type': 'application/x-www-form-urlencoded'}
 
         # GitHub requires Accept header for JSON response
         if service == 'github':
             headers['Accept'] = 'application/json'
-
-        # Twitter requires Basic auth
-        if service == 'twitter':
-            import base64
-            credentials = base64.b64encode(
-                f"{oauth_creds['client_id']}:{oauth_creds['client_secret']}".encode()
-            ).decode()
-            headers['Authorization'] = f'Basic {credentials}'
-            del token_data['client_id']
-            del token_data['client_secret']
 
         # Exchange code for tokens
         token_response = http_requests.post(
@@ -5423,34 +5352,6 @@ def oauth_callback(service):
                 ).json()
                 service_email = user_info.get('email')
                 service_user_id = str(user_info.get('id'))
-
-            elif service == 'twitter':
-                # Get Twitter user info
-                user_info = http_requests.get(
-                    'https://api.twitter.com/2/users/me',
-                    headers={'Authorization': f'Bearer {access_token}'},
-                    timeout=10
-                ).json()
-                if user_info.get('data'):
-                    service_user_id = user_info['data'].get('id')
-                    service_email = f"@{user_info['data'].get('username', '')}"
-
-            elif service == 'linkedin':
-                # Get LinkedIn user info
-                user_info = http_requests.get(
-                    'https://api.linkedin.com/v2/me',
-                    headers={'Authorization': f'Bearer {access_token}'},
-                    timeout=10
-                ).json()
-                service_user_id = user_info.get('id')
-                # Get email separately
-                email_info = http_requests.get(
-                    'https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))',
-                    headers={'Authorization': f'Bearer {access_token}'},
-                    timeout=10
-                ).json()
-                if email_info.get('elements'):
-                    service_email = email_info['elements'][0].get('handle~', {}).get('emailAddress')
 
         except Exception as e:
             print(f"Warning: Could not fetch user info for {service}: {e}")
@@ -5551,15 +5452,6 @@ def refresh_oauth_token(user_id, service, refresh_token):
         }
 
         headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-
-        # Twitter requires Basic auth for refresh
-        if service == 'twitter':
-            credentials = base64.b64encode(
-                f"{oauth_creds['client_id']}:{oauth_creds['client_secret']}".encode()
-            ).decode()
-            headers['Authorization'] = f'Basic {credentials}'
-            del token_data['client_id']
-            del token_data['client_secret']
 
         response = http_requests.post(
             oauth_config['token_url'],
@@ -5699,129 +5591,6 @@ def send_email_via_integration(user_id, to_email, subject, body):
             'error': str(e)
         }
 
-def post_to_twitter(user_id, text):
-    """Post to Twitter/X via Twitter API v2"""
-    import requests as http_requests
-
-    token_info = get_user_oauth_token(user_id, 'twitter')
-
-    if not token_info:
-        return {
-            'success': False,
-            'error': 'Twitter not connected. Please connect Twitter via Integrations page.'
-        }
-
-    try:
-        # Post tweet via Twitter API v2
-        response = http_requests.post(
-            'https://api.twitter.com/2/tweets',
-            headers={
-                'Authorization': f"Bearer {token_info['access_token']}",
-                'Content-Type': 'application/json'
-            },
-            json={'text': text[:280]},  # Twitter has 280 char limit
-            timeout=30
-        )
-
-        if response.status_code in [200, 201]:
-            result = response.json()
-            tweet_id = result.get('data', {}).get('id')
-            return {
-                'success': True,
-                'message': 'Tweet posted successfully',
-                'tweet_id': tweet_id,
-                'tweet_url': f'https://twitter.com/i/web/status/{tweet_id}' if tweet_id else None
-            }
-        else:
-            error_detail = response.json().get('detail', response.json().get('title', 'Unknown error'))
-            return {
-                'success': False,
-                'error': f'Failed to post tweet: {error_detail}'
-            }
-
-    except Exception as e:
-        print(f"Error posting to Twitter: {e}")
-        return {
-            'success': False,
-            'error': str(e)
-        }
-
-def post_to_linkedin(user_id, text):
-    """Post to LinkedIn via LinkedIn API"""
-    import requests as http_requests
-
-    token_info = get_user_oauth_token(user_id, 'linkedin')
-
-    if not token_info:
-        return {
-            'success': False,
-            'error': 'LinkedIn not connected. Please connect LinkedIn via Integrations page.'
-        }
-
-    try:
-        # First get the user's LinkedIn URN
-        me_response = http_requests.get(
-            'https://api.linkedin.com/v2/me',
-            headers={'Authorization': f"Bearer {token_info['access_token']}"},
-            timeout=10
-        )
-
-        if me_response.status_code != 200:
-            return {
-                'success': False,
-                'error': 'Could not get LinkedIn profile'
-            }
-
-        person_urn = f"urn:li:person:{me_response.json().get('id')}"
-
-        # Create a share/post
-        post_data = {
-            "author": person_urn,
-            "lifecycleState": "PUBLISHED",
-            "specificContent": {
-                "com.linkedin.ugc.ShareContent": {
-                    "shareCommentary": {
-                        "text": text[:3000]  # LinkedIn has 3000 char limit
-                    },
-                    "shareMediaCategory": "NONE"
-                }
-            },
-            "visibility": {
-                "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
-            }
-        }
-
-        response = http_requests.post(
-            'https://api.linkedin.com/v2/ugcPosts',
-            headers={
-                'Authorization': f"Bearer {token_info['access_token']}",
-                'Content-Type': 'application/json',
-                'X-Restli-Protocol-Version': '2.0.0'
-            },
-            json=post_data,
-            timeout=30
-        )
-
-        if response.status_code in [200, 201]:
-            return {
-                'success': True,
-                'message': 'Posted to LinkedIn successfully',
-                'post_id': response.headers.get('x-restli-id')
-            }
-        else:
-            error_msg = response.json().get('message', 'Unknown error')
-            return {
-                'success': False,
-                'error': f'Failed to post to LinkedIn: {error_msg}'
-            }
-
-    except Exception as e:
-        print(f"Error posting to LinkedIn: {e}")
-        return {
-            'success': False,
-            'error': str(e)
-        }
-
 def create_calendar_event(user_id, title, start_time, end_time, description=None):
     """Create Google Calendar event via Google Calendar API"""
     import requests as http_requests
@@ -5918,18 +5687,6 @@ def get_available_integration_actions(user_id):
             actions['email'].extend([
                 {'name': 'send_outlook_email', 'description': 'Send email via Outlook'},
                 {'name': 'read_outlook_emails', 'description': 'Read Outlook emails'}
-            ])
-
-        if 'twitter' in connected_services:
-            actions['social'].extend([
-                {'name': 'post_tweet', 'description': 'Post to Twitter'},
-                {'name': 'get_mentions', 'description': 'Get Twitter mentions'}
-            ])
-
-        if 'linkedin' in connected_services:
-            actions['social'].extend([
-                {'name': 'post_linkedin', 'description': 'Post to LinkedIn'},
-                {'name': 'get_connections', 'description': 'Get LinkedIn connections'}
             ])
 
         if 'google_calendar' in connected_services:
