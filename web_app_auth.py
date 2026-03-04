@@ -43,7 +43,11 @@ except ImportError:
 
 # Initialize Flask app
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', os.urandom(24).hex())
+_secret_key = os.environ.get('SECRET_KEY')
+if not _secret_key:
+    print("⚠️  WARNING: SECRET_KEY not set. Sessions will be invalidated on every restart. Set SECRET_KEY in your .env file.")
+    _secret_key = os.urandom(24).hex()
+app.config['SECRET_KEY'] = _secret_key
 app.config['ANTHROPIC_API_KEY'] = os.environ.get('ANTHROPIC_API_KEY')
 app.config['OPENAI_API_KEY'] = os.environ.get('OPENAI_API_KEY')
 app.config['GOOGLE_AI_API_KEY'] = os.environ.get('GOOGLE_AI_API_KEY')
@@ -291,7 +295,7 @@ def get_db_connection():
             print(f"❌ File writable: {os.access(DB_PATH, os.W_OK)}")
             try:
                 print(f"❌ File permissions: {oct(os.stat(DB_PATH).st_mode)[-3:]}")
-            except:
+            except OSError:
                 pass
 
         # If connection failed, try creating a new database in temp directory as last resort
@@ -6405,14 +6409,14 @@ def api_admin_analytics():
                 WHERE date(timestamp) = date('now')
             """)
             messages_today = cursor.fetchone()[0]
-        except:
+        except Exception:
             messages_today = 0
-        
+
         # Total messages
         try:
             cursor.execute("SELECT COUNT(*) FROM chat_history")
             total_messages = cursor.fetchone()[0]
-        except:
+        except Exception:
             total_messages = 0
         
         # Paid users (Starter, Pro)
@@ -8257,7 +8261,7 @@ def chat():
                         WHERE id = ?
                     """, (datetime.utcnow().isoformat(), current_user.id))
                     conn.commit()
-            except:
+            except (ValueError, TypeError):
                 pass  # Handle any date parsing issues gracefully
         
         # Check if user has exceeded daily limit
@@ -9883,8 +9887,8 @@ def create_master_code():
             VALUES ('MASTER-UNLIMITED-AMANDA', 'freeforlife', 1, 1)
         """)
         conn.commit()
-    except:
-        pass
+    except Exception as e:
+        print(f"⚠️  Could not create master promo code: {e}")
     finally:
         conn.close()
 
@@ -9910,7 +9914,8 @@ def create_api_key(user_id, name="Default"):
         conn.commit()
         conn.close()
         return api_key
-    except:
+    except Exception as e:
+        print(f"❌ Error creating API key: {e}")
         conn.close()
         return None
 
