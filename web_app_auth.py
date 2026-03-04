@@ -6555,7 +6555,7 @@ MODELS = {
         'model_id': 'claude-sonnet-4-20250514',
         'name': 'Claude Sonnet 4.5',
         'description': 'Fast & intelligent - Best all-around',
-        'max_tokens': 2000,
+        'max_tokens': 8000,
         'cost': '$3/1M tokens'
     },
     'claude-opus-4': {
@@ -6563,7 +6563,7 @@ MODELS = {
         'model_id': 'claude-opus-4-20250514',
         'name': 'Claude Opus 4',
         'description': 'Most capable - Deep reasoning',
-        'max_tokens': 2000,
+        'max_tokens': 8000,
         'cost': '$15/1M tokens'
     },
     'claude-haiku-4.5': {
@@ -6571,17 +6571,17 @@ MODELS = {
         'model_id': 'claude-haiku-4-5-20251001',
         'name': 'Claude Haiku 4.5',
         'description': 'Ultra-fast - Budget friendly',
-        'max_tokens': 2000,
+        'max_tokens': 8000,
         'cost': '$0.80/1M tokens'
     },
-    
+
     # OpenAI Models (GPT)
     'gpt-4o': {
         'provider': 'openai',
         'model_id': 'gpt-4o',
         'name': 'GPT-4o',
         'description': 'Latest - Multimodal powerhouse',
-        'max_tokens': 2000,
+        'max_tokens': 8000,
         'cost': '$2.50/1M tokens'
     },
     'gpt-4-turbo': {
@@ -6589,7 +6589,7 @@ MODELS = {
         'model_id': 'gpt-4-turbo-preview',
         'name': 'GPT-4 Turbo',
         'description': 'Powerful - Great for complex tasks',
-        'max_tokens': 2000,
+        'max_tokens': 8000,
         'cost': '$10/1M tokens'
     },
     'gpt-4o-mini': {
@@ -6597,17 +6597,17 @@ MODELS = {
         'model_id': 'gpt-4o-mini',
         'name': 'GPT-4o Mini',
         'description': 'Super fast - Most affordable',
-        'max_tokens': 2000,
+        'max_tokens': 8000,
         'cost': '$0.15/1M tokens'
     },
-    
+
     # Google Gemini Models
     'gemini-2.0-flash': {
         'provider': 'google',
         'model_id': 'gemini-2.0-flash-exp',
         'name': 'Gemini 2.0 Flash',
         'description': 'Newest - FREE tier available!',
-        'max_tokens': 2000,
+        'max_tokens': 8000,
         'cost': 'FREE (15 req/min)'
     },
     'gemini-1.5-pro': {
@@ -6615,7 +6615,7 @@ MODELS = {
         'model_id': 'gemini-1.5-pro',
         'name': 'Gemini 1.5 Pro',
         'description': 'Advanced - 2M token context',
-        'max_tokens': 2000,
+        'max_tokens': 8000,
         'cost': '$1.25/1M tokens'
     },
 
@@ -6625,7 +6625,7 @@ MODELS = {
         'model_id': 'deepseek-chat',
         'name': 'DeepSeek V3',
         'description': 'Ultra cheap - Great reasoning',
-        'max_tokens': 2000,
+        'max_tokens': 8000,
         'cost': '$0.27/1M tokens'
     },
     'deepseek-r1': {
@@ -6633,7 +6633,7 @@ MODELS = {
         'model_id': 'deepseek-reasoner',
         'name': 'DeepSeek R1',
         'description': 'Chain-of-thought - Deep reasoning',
-        'max_tokens': 2000,
+        'max_tokens': 8000,
         'cost': '$0.55/1M tokens'
     },
 
@@ -6643,7 +6643,7 @@ MODELS = {
         'model_id': 'sonar',
         'name': 'Perplexity Sonar',
         'description': 'Real-time search - Up-to-date info',
-        'max_tokens': 2000,
+        'max_tokens': 8000,
         'cost': '$1/1M tokens'
     },
     'perplexity-sonar-pro': {
@@ -6651,7 +6651,7 @@ MODELS = {
         'model_id': 'sonar-pro',
         'name': 'Perplexity Sonar Pro',
         'description': 'Advanced search - Best for research',
-        'max_tokens': 2000,
+        'max_tokens': 8000,
         'cost': '$3/1M tokens'
     },
 
@@ -6661,7 +6661,7 @@ MODELS = {
         'model_id': 'grok-2-latest',
         'name': 'Grok 2',
         'description': 'Latest Grok - Real-time X/Twitter data',
-        'max_tokens': 2000,
+        'max_tokens': 8000,
         'cost': '$2/1M tokens'
     },
     'grok-2-vision': {
@@ -6669,7 +6669,7 @@ MODELS = {
         'model_id': 'grok-2-vision-latest',
         'name': 'Grok 2 Vision',
         'description': 'Multimodal - Image understanding',
-        'max_tokens': 2000,
+        'max_tokens': 8000,
         'cost': '$2/1M tokens'
     },
 
@@ -6679,7 +6679,7 @@ MODELS = {
         'model_id': 'meta-llama/llama-3.3-70b-instruct',
         'name': 'Llama 3.3 70B',
         'description': 'Meta\'s latest - Open source power',
-        'max_tokens': 2000,
+        'max_tokens': 8000,
         'cost': '$0.18/1M tokens'
     },
     'llama-3.1-405b': {
@@ -6687,7 +6687,7 @@ MODELS = {
         'model_id': 'meta-llama/llama-3.1-405b-instruct',
         'name': 'Llama 3.1 405B',
         'description': 'Largest open model - Top performance',
-        'max_tokens': 2000,
+        'max_tokens': 8000,
         'cost': '$2.70/1M tokens'
     },
 
@@ -6697,7 +6697,7 @@ MODELS = {
         'model_id': 'mistral-large-latest',
         'name': 'Mistral Large',
         'description': 'European flagship - Multilingual',
-        'max_tokens': 2000,
+        'max_tokens': 8000,
         'cost': '$2/1M tokens'
     },
     'mistral-small': {
@@ -6705,7 +6705,7 @@ MODELS = {
         'model_id': 'mistral-small-latest',
         'name': 'Mistral Small',
         'description': 'Fast & efficient - Cost-effective',
-        'max_tokens': 2000,
+        'max_tokens': 8000,
         'cost': '$0.20/1M tokens'
     }
 }
@@ -6972,22 +6972,13 @@ def get_default_working_mode(agent_name):
     Get the default working mode for an agent.
 
     Modes:
-    - output_first: Produce output immediately, ask 0-2 questions at end
-    - ask_then_output: Ask up to 3 questions first, then output
-    - coaching: Guided thinking, up to 5 questions per turn
+    - output_first: Produce output immediately, only ask if truly blocked
+    - coaching: Guided thinking with structured artifacts
 
-    Agent Defaults:
-    - Sage, Theo, Ember: output_first
-    - Luna, Mila, Sol: ask_then_output
-    - Nova: output_first (with technical blocker questions)
+    All agents default to output_first — complete the task, minimal questions.
     """
-    ask_then_output_agents = ['Luna', 'Mila', 'Sol']
-
-    if agent_name in ask_then_output_agents:
-        return 'ask_then_output'
-    else:
-        # Default for Sage, Theo, Ember, Nova, and all others
-        return 'output_first'
+    # All agents default to output_first
+    return 'output_first'
 
 
 def get_working_mode_instructions(mode, agent_name=''):
@@ -6996,82 +6987,44 @@ def get_working_mode_instructions(mode, agent_name=''):
 
     These instructions enforce TEACH FIRST behavior, question limits, and loop breaker logic.
     """
-    critical_teach_first_rule = """
-🚨 CRITICAL BEHAVIOR RULE — TEACH FIRST 🚨
+    critical_rule = """
+CRITICAL RULE: COMPLETE THE TASK
 
-When a user asks for help, you MUST ALWAYS provide useful information upfront.
+When given a task, complete it fully. Do not stop partway through. Do not ask for permission to continue.
 
-YOU ARE REQUIRED TO:
-1. Give an initial explanation, draft, example, or solution BEFORE asking questions
-2. Make reasonable assumptions if information is missing
-3. State assumptions briefly if needed
+YOU MUST:
+1. Deliver a complete, usable output every time
+2. Make reasonable assumptions if details are missing — do not ask before starting
+3. If you assume something, mention it briefly after the output, not before
 
-ONLY AFTER PROVIDING VALUE may you ask clarification questions:
-- Maximum 2 questions per response
-- Questions must be OPTIONAL and used only to refine the next response
-- Questions should improve future output, not block current output
+YOU MUST NOT:
+- Send a response that is only questions
+- Stop mid-task to ask if you should continue
+- Ask for information you can reasonably infer
+- Offer to do the task instead of doing it
 
-YOU ARE STRICTLY FORBIDDEN from sending a response that contains ONLY questions.
-
-If you are unsure, produce a best-effort answer FIRST, then ask for clarification.
-
-CRITICAL RESPONSE REQUIREMENTS:
-- NEVER send a message consisting only of questions
-- Every response MUST include at least one of:
-  a) A draft, solution, or usable output
-  b) Partial output with a clear next step
-- If you asked questions in your previous response without providing output, you MUST provide output in this response
+If you are ever unsure, make your best reasonable choice and complete the work.
 """
 
     if mode == 'output_first':
-        return f"""{critical_teach_first_rule}
+        return f"""{critical_rule}
 
-WORKING MODE: Output First
-1. START with useful output immediately
-2. Make reasonable assumptions when information is missing
-3. Provide output FIRST, then optionally ask 0-2 questions at the END
-4. If critical information is missing, still produce output and clearly list your assumptions
+WORKING MODE: Complete the task immediately.
+- Deliver the full output now
+- Make assumptions as needed and state them briefly after your output
+- Only ask a question if you genuinely cannot produce anything useful without the answer
+- If you must ask, ask only one question, then stop
 
-RESPONSE STRUCTURE:
-- Main output or solution (REQUIRED - must come first)
-- Assumptions made (if any)
-- Optional: 0-2 clarifying questions at the very end
-
-REMEMBER: The user wants to see results immediately. Provide value first, questions second."""
-
-    elif mode == 'ask_then_output':
-        return f"""{critical_teach_first_rule}
-
-WORKING MODE: Ask Then Output
-1. ALWAYS provide a draft/solution FIRST based on your best understanding
-2. After providing output, you may ask up to 2 questions to refine the next iteration
-3. Make questions specific and use multiple choice format when possible
-4. State your assumptions clearly before the output
-
-RESPONSE STRUCTURE:
-- Brief context + stated assumptions (1-2 sentences)
-- Main output or solution (REQUIRED)
-- Optional: Up to 2 clarifying questions at the end to improve next version
-
-REMEMBER: Even in "Ask Then Output" mode, you must output FIRST. Questions come after value is provided."""
+NEVER ask questions at the end of a completed response just to seem helpful."""
 
     elif mode == 'coaching':
-        return f"""{critical_teach_first_rule}
+        return f"""{critical_rule}
 
 WORKING MODE: Coaching
-1. Start with a tangible artifact (outline, draft, checklist, or framework)
-2. Then ask up to 3 exploratory questions to guide thinking
-3. ALWAYS include a clear next step
-4. Every response must contain concrete output (no question-only responses)
-5. Balance questions with actionable guidance
-
-RESPONSE STRUCTURE:
-- Initial tangible output (outline, draft, checklist - REQUIRED)
-- Brief reflection or guidance (2-3 sentences)
-- Up to 3 exploratory questions
-- Clear next step
-
-REMEMBER: Coaching means providing frameworks and structure FIRST, then guiding with questions."""
+- Start with a concrete artifact (outline, draft, checklist, or framework)
+- Add brief guidance to help the user move forward
+- Ask at most one focused question to guide the next step
+- Every response must contain real output — no question-only responses"""
 
     else:
         # Fallback to output_first
