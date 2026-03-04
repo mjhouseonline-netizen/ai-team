@@ -1281,13 +1281,7 @@ function getWorkingMode() {
         return currentWorkingMode;
     }
 
-    // Apply agent-specific defaults
-    const askThenOutputAgents = ['Luna', 'Mila', 'Sol'];
-    if (askThenOutputAgents.includes(currentAgent)) {
-        return 'ask_then_output';
-    }
-
-    // Default for all others (Sage, Theo, Ember, Nova, etc.)
+    // All agents default to output_first
     return 'output_first';
 }
 
@@ -1333,7 +1327,6 @@ function selectWorkingMode(mode) {
     // Update the icon in the main button
     const modeIcons = {
         'output_first': '⚡',
-        'ask_then_output': '💬',
         'coaching': '🎯'
     };
     const iconElement = document.getElementById('workingModeIcon');
