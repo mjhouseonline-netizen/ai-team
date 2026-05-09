@@ -1,4 +1,4 @@
-// ================================================
+﻿// ================================================
 // AI TEAM ULTIMATE DASHBOARD - JAVASCRIPT
 // Sidebar + Floating Preview + Enhanced Features
 // ================================================
@@ -6,39 +6,62 @@
 // Global State
 // Note: imageMode and recognition are declared in dashboard.html to avoid redeclaration errors
 let currentAgent = 'Luna';
-let currentAgentEmoji = '🌙';
-let currentAgentRole = 'Research Analyst';
+let currentAgentEmoji = 'L';
+let currentAgentRole = 'Evidence Researcher';
 let voiceMode = false;
 let uploadedFile = null;
 let speechSynthesis = window.speechSynthesis;
+let recommendationTimer = null;
 async function uploadSingleFile(file) {
-    const fd = new FormData();
-    fd.append('file', file); // REQUIRED name for your /api/upload backend
+ const fd = new FormData();
+ fd.append('file', file); // REQUIRED name for your /api/upload backend
 
-    const res = await fetch('/api/upload', {
-        method: 'POST',
-        credentials: 'include',
-        body: fd
-    });
+ const res = await fetch('/api/upload', {
+ method: 'POST',
+ credentials: 'include',
+ body: fd
+ });
 
-    const data = await res.json();
+ const data = await res.json();
 
-    if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Upload failed');
-    }
+ if (!res.ok || !data.success) {
+ throw new Error(data.error || 'Upload failed');
+ }
 
-    return data.filepath;
+ return data.filepath;
 }
 
 const agentGradients = {
-    'Luna': 'linear-gradient(135deg, #667eea, #764ba2)',
-    'Mila': 'linear-gradient(135deg, #f093fb, #f5576c)',
-    'Sage': 'linear-gradient(135deg, #4facfe, #00f2fe)',
-    'Ember': 'linear-gradient(135deg, #fa709a, #fee140)',
-    'Sol': 'linear-gradient(135deg, #ffecd2, #fcb69f)',
-    'Nova': 'linear-gradient(135deg, #a8edea, #fed6e3)',
-    'Theo': 'linear-gradient(135deg, #ff9a9e, #fecfef)'
+ 'Luna': 'linear-gradient(135deg, #667eea, #764ba2)',
+ 'Mila': 'linear-gradient(135deg, #f093fb, #f5576c)',
+ 'Sage': 'linear-gradient(135deg, #4facfe, #00f2fe)',
+ 'Ember': 'linear-gradient(135deg, #fa709a, #fee140)',
+ 'Sol': 'linear-gradient(135deg, #ffecd2, #fcb69f)',
+ 'Nova': 'linear-gradient(135deg, #a8edea, #fed6e3)',
+ 'Theo': 'linear-gradient(135deg, #ff9a9e, #fecfef)'
 };
+
+const baseAgentMeta = {
+ 'Luna': { emoji: 'L', role: 'Evidence Researcher' },
+ 'Mila': { emoji: 'M', role: 'Workflow Planner' },
+ 'Sage': { emoji: 'S', role: 'Copy & Content Writer' },
+ 'Ember': { emoji: 'E', role: 'Creative Concept Designer' },
+ 'Sol': { emoji: 'S', role: 'Business Strategist' },
+ 'Nova': { emoji: 'N', role: 'Tech Builder' },
+ 'Theo': { emoji: 'T', role: 'Execution Lead' }
+};
+
+function switchToBaseAgent(agentName) {
+ if (typeof switchAgent === 'function') {
+ switchAgent(agentName);
+ return true;
+ }
+
+ const agent = baseAgentMeta[agentName];
+ if (!agent) return false;
+ selectAgent(agentName, agent.emoji, agent.role);
+ return true;
+}
 
 // ================================================
 // INITIALIZATION
@@ -51,57 +74,59 @@ const agentGradients = {
 // Some builds handle file selection in dashboard.html. If setupFileInput isn't defined there,
 // we provide a safe stub here to avoid runtime crashes.
 function setupFileInput() {
-    // If dashboard.html already wired a global uploadedFiles array, we don't need to do anything.
-    if (typeof uploadedFiles !== 'undefined') {
-        console.log('✅ File input handler available (dashboard.html)');
-        return;
-    }
+ // If dashboard.html already wired a global uploadedFiles array, we don't need to do anything.
+ if (typeof uploadedFiles !== 'undefined') {
+ console.log(' File input handler available (dashboard.html)');
+ return;
+ }
 
-    // Fallback: wire up a basic file input if it exists.
-    const fileInput = document.getElementById('fileInput');
-    if (!fileInput) {
-        console.warn('⚠️ No #fileInput element found; file uploads may be unavailable.');
-        return;
-    }
+ // Fallback: wire up a basic file input if it exists.
+ const fileInput = document.getElementById('fileInput');
+ if (!fileInput) {
+ console.warn(' No #fileInput element found; file uploads may be unavailable.');
+ return;
+ }
 
-    fileInput.addEventListener('change', (e) => {
-        const file = e.target.files && e.target.files[0];
-        if (!file) return;
+ fileInput.addEventListener('change', (e) => {
+ const file = e.target.files && e.target.files[0];
+ if (!file) return;
 
-        // Store a real File object so FormData can upload bytes correctly.
-        uploadedFile = { file, original_filename: file.name, size: file.size, type: file.type };
-        console.log('✅ File selected:', uploadedFile.original_filename, uploadedFile.size, 'bytes');
-    });
+ // Store a real File object so FormData can upload bytes correctly.
+ uploadedFile = { file, original_filename: file.name, size: file.size, type: file.type };
+ console.log(' File selected:', uploadedFile.original_filename, uploadedFile.size, 'bytes');
+ });
 
-    console.log('✅ File input handler initialized (dashboard_ultimate.js fallback)');
+ console.log(' File input handler initialized (dashboard_ultimate.js fallback)');
 }
 
 
 document.addEventListener('DOMContentLoaded', function() {
-    loadStats();
-    checkAdminStatus();
-    if (typeof setupFileInput === 'function') { setupFileInput(); }
-    initVoiceRecognition();
-    loadCustomAgents();
-    setupMobileToggle();
-    
-    setInterval(loadStats, 30000);
-    document.addEventListener('click', handleOutsideClick);
+ loadStats();
+ checkAdminStatus();
+ if (typeof setupFileInput === 'function') { setupFileInput(); }
+ initVoiceRecognition();
+ loadCustomAgents();
+ setupAgentRecommendationHints();
+ applyPrefillPromptIfPresent();
+ setupMobileToggle();
+ 
+ setInterval(loadStats, 30000);
+ document.addEventListener('click', handleOutsideClick);
 });
 
 function setupMobileToggle() {
-    if (window.innerWidth <= 768) {
-        document.getElementById('sidebarToggle').style.display = 'block';
-    }
-    
-    window.addEventListener('resize', function() {
-        if (window.innerWidth <= 768) {
-            document.getElementById('sidebarToggle').style.display = 'block';
-        } else {
-            document.getElementById('sidebarToggle').style.display = 'none';
-            document.getElementById('sidebar').classList.remove('active');
-        }
-    });
+ if (window.innerWidth <= 768) {
+ document.getElementById('sidebarToggle').style.display = 'block';
+ }
+ 
+ window.addEventListener('resize', function() {
+ if (window.innerWidth <= 768) {
+ document.getElementById('sidebarToggle').style.display = 'block';
+ } else {
+ document.getElementById('sidebarToggle').style.display = 'none';
+ document.getElementById('sidebar').classList.remove('active');
+ }
+ });
 }
 
 // ================================================
@@ -109,29 +134,29 @@ function setupMobileToggle() {
 // ================================================
 
 function toggleSidebar() {
-    document.getElementById('sidebar').classList.toggle('active');
+ document.getElementById('sidebar').classList.toggle('active');
 }
 
 function toggleMenu() {
-    const menu = document.getElementById('dropdownMenu');
-    menu.classList.toggle('active');
+ const menu = document.getElementById('dropdownMenu');
+ menu.classList.toggle('active');
 }
 
 function handleOutsideClick(e) {
-    const menu = document.getElementById('dropdownMenu');
-    const menuBtn = e.target.closest('.menu-btn');
-    if (!menuBtn && !menu.contains(e.target)) {
-        menu.classList.remove('active');
-    }
-    
-    // Close sidebar on mobile when clicking outside
-    if (window.innerWidth <= 768) {
-        const sidebar = document.getElementById('sidebar');
-        const sidebarToggle = e.target.closest('.sidebar-toggle');
-        if (!sidebar.contains(e.target) && !sidebarToggle) {
-            sidebar.classList.remove('active');
-        }
-    }
+ const menu = document.getElementById('dropdownMenu');
+ const menuBtn = e.target.closest('.menu-btn');
+ if (!menuBtn && !menu.contains(e.target)) {
+ menu.classList.remove('active');
+ }
+ 
+ // Close sidebar on mobile when clicking outside
+ if (window.innerWidth <= 768) {
+ const sidebar = document.getElementById('sidebar');
+ const sidebarToggle = e.target.closest('.sidebar-toggle');
+ if (!sidebar.contains(e.target) && !sidebarToggle) {
+ sidebar.classList.remove('active');
+ }
+ }
 }
 
 // ================================================
@@ -139,38 +164,40 @@ function handleOutsideClick(e) {
 // ================================================
 
 function selectAgent(name, emoji, role) {
-    currentAgent = name;
-    currentAgentEmoji = emoji;
-    currentAgentRole = role;
-    
-    // Update active state in sidebar
-    document.querySelectorAll('.agent-item').forEach(item => {
-        item.classList.remove('active');
-    });
-    event.currentTarget.classList.add('active');
-    
-    // Update header
-    const avatar = document.getElementById('currentAgentAvatar');
-    avatar.textContent = emoji;
-    avatar.style.background = agentGradients[name] || 'linear-gradient(135deg, #667eea, #764ba2)';
-    document.getElementById('currentAgentName').textContent = name;
-    
-    // Update input placeholder
-    document.getElementById('messageInput').placeholder = `Message ${name}...`;
-    
-    // Update welcome message
-    const welcome = document.querySelector('.welcome');
-    if (welcome) {
-        welcome.innerHTML = `
-            <h2>Hi! I'm ${name} ${emoji}</h2>
-            <p>I'm your ${role.toLowerCase()}. How can I help you today?</p>
-        `;
-    }
-    
-    // Close sidebar on mobile
-    if (window.innerWidth <= 768) {
-        toggleSidebar();
-    }
+ currentAgent = name;
+ currentAgentEmoji = emoji;
+ currentAgentRole = role;
+ 
+ // Update active state in sidebar
+ document.querySelectorAll('.agent-item').forEach(item => {
+ item.classList.remove('active');
+ });
+ event.currentTarget.classList.add('active');
+ 
+ // Update header
+ const avatar = document.getElementById('currentAgentAvatar');
+ avatar.textContent = emoji;
+ avatar.style.background = agentGradients[name] || 'linear-gradient(135deg, #667eea, #764ba2)';
+ document.getElementById('currentAgentName').textContent = name;
+ 
+ // Update input placeholder
+ document.getElementById('messageInput').placeholder = `Message ${name}...`;
+ 
+ // Update welcome message
+ const welcome = document.querySelector('.welcome');
+ if (welcome) {
+ welcome.innerHTML = `
+ <h2>Hi! I'm ${name} ${emoji}</h2>
+ <p>I'm your ${role.toLowerCase()}. How can I help you today?</p>
+ `;
+ }
+
+ updateAgentRecommendationHint();
+ 
+ // Close sidebar on mobile
+ if (window.innerWidth <= 768) {
+ toggleSidebar();
+ }
 }
 
 // ================================================
@@ -178,35 +205,35 @@ function selectAgent(name, emoji, role) {
 // ================================================
 
 function handleKeyPress(event) {
-    if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        sendMessage();
-    }
+ if (event.key === 'Enter' && !event.shiftKey) {
+ event.preventDefault();
+ sendMessage();
+ }
 }
 
 // autoResize is defined in dashboard.html. (disabled in dashboard_ultimate.js)
 
 
 function toggleImageMode() {
-    imageMode = !imageMode;
-    const input = document.getElementById('messageInput');
-    
-    if (imageMode) {
-        input.placeholder = '🎨 Describe the image you want to generate...';
-        input.style.borderColor = '#10a37f';
-        input.style.borderWidth = '2px';
-        // Visual feedback
-        const notification = document.createElement('div');
-        notification.textContent = '🎨 Image Mode Active!';
-        notification.style.cssText = 'position:fixed;top:20px;right:20px;background:#10a37f;color:white;padding:12px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:10000;font-weight:600;';
-        document.body.appendChild(notification);
-        setTimeout(() => notification.remove(), 2000);
-    } else {
-        input.placeholder = `Message ${currentAgent}...`;
-        input.style.borderColor = '';
-        input.style.borderWidth = '';
-    }
-    input.focus();
+ imageMode = !imageMode;
+ const input = document.getElementById('messageInput');
+ 
+ if (imageMode) {
+ input.placeholder = ' Describe the image you want to generate...';
+ input.style.borderColor = '#10a37f';
+ input.style.borderWidth = '2px';
+ // Visual feedback
+ const notification = document.createElement('div');
+ notification.textContent = ' Image Mode Active!';
+ notification.style.cssText = 'position:fixed;top:20px;right:20px;background:#10a37f;color:white;padding:12px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:10000;font-weight:600;';
+ document.body.appendChild(notification);
+ setTimeout(() => notification.remove(), 2000);
+ } else {
+ input.placeholder = `Message ${currentAgent}...`;
+ input.style.borderColor = '';
+ input.style.borderWidth = '';
+ }
+ input.focus();
 }
 
 // ================================================
@@ -224,59 +251,59 @@ function toggleImageMode() {
 // ================================================
 
 function initVoiceRecognition() {
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        recognition = new SpeechRecognition();
-        recognition.continuous = false;
-        recognition.interimResults = false;
-        recognition.lang = 'en-US';
-        
-        recognition.onresult = function(event) {
-            const transcript = event.results[0][0].transcript;
-            document.getElementById('messageInput').value = transcript;
-            voiceMode = false;
-            document.getElementById('voiceBtn').classList.remove('active');
-        };
-        
-        recognition.onerror = function(event) {
-            voiceMode = false;
-            document.getElementById('voiceBtn').classList.remove('active');
-        };
-        
-        recognition.onend = function() {
-            voiceMode = false;
-            document.getElementById('voiceBtn').classList.remove('active');
-        };
-    }
+ if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+ const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+ recognition = new SpeechRecognition();
+ recognition.continuous = false;
+ recognition.interimResults = false;
+ recognition.lang = 'en-US';
+ 
+ recognition.onresult = function(event) {
+ const transcript = event.results[0][0].transcript;
+ document.getElementById('messageInput').value = transcript;
+ voiceMode = false;
+ document.getElementById('voiceBtn').classList.remove('active');
+ };
+ 
+ recognition.onerror = function(event) {
+ voiceMode = false;
+ document.getElementById('voiceBtn').classList.remove('active');
+ };
+ 
+ recognition.onend = function() {
+ voiceMode = false;
+ document.getElementById('voiceBtn').classList.remove('active');
+ };
+ }
 }
 
 function toggleVoice() {
-    if (!recognition) {
-        alert('Voice input not supported in your browser. Try Chrome or Edge.');
-        return;
-    }
-    
-    voiceMode = !voiceMode;
-    const btn = document.getElementById('voiceBtn');
-    
-    if (voiceMode) {
-        btn.classList.add('active');
-        recognition.start();
-    } else {
-        btn.classList.remove('active');
-        recognition.stop();
-    }
+ if (!recognition) {
+ alert('Voice input not supported in your browser. Try Chrome or Edge.');
+ return;
+ }
+ 
+ voiceMode = !voiceMode;
+ const btn = document.getElementById('voiceBtn');
+ 
+ if (voiceMode) {
+ btn.classList.add('active');
+ recognition.start();
+ } else {
+ btn.classList.remove('active');
+ recognition.stop();
+ }
 }
 
 function speakText(text) {
-    if (!speechSynthesis) return;
-    
-    speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1.0;
-    utterance.pitch = 1.0;
-    utterance.volume = 1.0;
-    speechSynthesis.speak(utterance);
+ if (!speechSynthesis) return;
+ 
+ speechSynthesis.cancel();
+ const utterance = new SpeechSynthesisUtterance(text);
+ utterance.rate = 1.0;
+ utterance.pitch = 1.0;
+ utterance.volume = 1.0;
+ speechSynthesis.speak(utterance);
 }
 
 // ================================================
@@ -284,267 +311,394 @@ function speakText(text) {
 // ================================================
 
 async function sendMessage() {
-    const input = document.getElementById('messageInput');
-    const message = input.value.trim();
+ const input = document.getElementById('messageInput');
+ const message = input.value.trim();
 
-    // Prefer the dashboard.html global multi-file array if present
-    const filesToSend = (typeof uploadedFiles !== 'undefined') ? uploadedFiles : [];
+ // Prefer the dashboard.html global multi-file array if present
+ const filesToSend = (typeof uploadedFiles !== 'undefined') ? uploadedFiles : [];
 
-    // Fallback single-file object (if dashboard.html handler isn't present)
-    const singleFile = (uploadedFile && uploadedFile.file instanceof File) ? uploadedFile.file : null;
+ // Fallback single-file object (if dashboard.html handler isn't present)
+ const singleFile = (uploadedFile && uploadedFile.file instanceof File) ? uploadedFile.file : null;
 
-    if (!message && filesToSend.length === 0 && !singleFile) return;
+ if (!message && filesToSend.length === 0 && !singleFile) return;
 
-    const sendBtn = document.getElementById('sendBtn');
-    sendBtn.disabled = true;
-    sendBtn.textContent = 'Sending...';
+ const sendBtn = document.getElementById('sendBtn');
+ sendBtn.disabled = true;
+ sendBtn.textContent = 'Sending...';
 
-    // Display user message immediately
-    let displayMessage = message;
-    const displayNames = [];
+ // Display user message immediately
+ let displayMessage = message;
+ const displayNames = [];
 
-    if (filesToSend.length > 0) displayNames.push(...filesToSend.map(f => f.name));
-    if (singleFile && displayNames.length === 0) displayNames.push(singleFile.name);
+ if (filesToSend.length > 0) displayNames.push(...filesToSend.map(f => f.name));
+ if (singleFile && displayNames.length === 0) displayNames.push(singleFile.name);
 
-    if (displayNames.length > 0) {
-        displayMessage = `📎 ${displayNames.join(', ')}\n${message}`;
-    }
+ if (displayNames.length > 0) {
+ displayMessage = ` ${displayNames.join(', ')}\n${message}`;
+ }
 
-    addMessage(displayMessage || '📎 File uploaded', 'user');
-    input.value = '';
-    input.style.height = 'auto';
+ addMessage(displayMessage || ' File uploaded', 'user');
+ input.value = '';
+ input.style.height = 'auto';
+ hideAgentRecommendationHint();
 
-    const typingId = showTyping();
+ const typingId = showTyping();
 
-    try {
-        const selectedModel = document.getElementById('modelSelect').value;
+ try {
+ const selectedModel = document.getElementById('modelSelect').value;
 
-        // Image mode uses JSON (no file upload required for generation)
-        if (imageMode) {
-            const response = await fetch('/api/generate-image-free', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ prompt: message, agent: currentAgent })
-            });
+ // Image mode uses JSON (no file upload required for generation)
+ if (imageMode) {
+ const response = await fetch('/api/generate-image-free', {
+ method: 'POST',
+ headers: { 'Content-Type': 'application/json' },
+ credentials: 'include',
+ body: JSON.stringify({ prompt: message, agent: currentAgent })
+ });
 
-            const data = await response.json();
-            removeTyping(typingId);
+ const data = await response.json();
+ removeTyping(typingId);
 
-            if (response.ok && data.image_url) {
-                addMessage("Here's your generated image!", 'assistant', data.image_url);
-            } else {
-                addMessage(`Error: ${data.error || 'Failed to generate image'}`, 'assistant');
-            }
+ if (response.ok && data.image_url) {
+ addMessage("Here's your generated image!", 'assistant', data.image_url);
+ } else {
+ addMessage(`Error: ${data.error || 'Failed to generate image'}`, 'assistant');
+ }
 
-            sendBtn.disabled = false;
-            sendBtn.textContent = 'Send';
-            toggleImageMode();
-            return;
-        }
+ sendBtn.disabled = false;
+ sendBtn.textContent = 'Send';
+ toggleImageMode();
+ return;
+ }
 
-        // Chat mode: upload files first, then send JSON with filepaths
-        const filepaths = [];
+ // Chat mode: upload files first, then send JSON with filepaths
+ const filepaths = [];
 
-        if (filesToSend.length > 0) {
-            for (const f of filesToSend) {
-                if (f instanceof File) {
-                    const fp = await uploadSingleFile(f);
-                    filepaths.push(fp);
-                }
-            }
-        } else if (singleFile) {
-            const fp = await uploadSingleFile(singleFile);
-            filepaths.push(fp);
-        }
+ if (filesToSend.length > 0) {
+ for (const f of filesToSend) {
+ if (f instanceof File) {
+ const fp = await uploadSingleFile(f);
+ filepaths.push(fp);
+ }
+ }
+ } else if (singleFile) {
+ const fp = await uploadSingleFile(singleFile);
+ filepaths.push(fp);
+ }
 
-        const response = await fetch('/api/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({
-                message: message || 'Please analyze the uploaded file(s)',
-                agent: currentAgent,
-                model: selectedModel,
-                filepaths: filepaths,
-                working_mode: getWorkingMode()
-            })
-        });
+ const response = await fetch('/api/chat', {
+ method: 'POST',
+ headers: { 'Content-Type': 'application/json' },
+ credentials: 'include',
+ body: JSON.stringify({
+ message: message || 'Please analyze the uploaded file(s)',
+ agent: currentAgent,
+ model: selectedModel,
+ filepaths: filepaths,
+ working_mode: getWorkingMode()
+ })
+ });
 
-        const data = await response.json();
-        removeTyping(typingId);
+ const data = await response.json();
+ removeTyping(typingId);
 
-        if (response.ok) {
-            const modelBadge = data.model_used ? getModelName(data.model_used) : '';
-            addMessage(
-                data.response || data.message || '(No response)',
-                'assistant',
-                null,
-                modelBadge,
-                data.attachments || []  // Pass attachments from response
-            );
-            loadStats();
-        } else {
-            if (response.status === 403 && data.upgrade_required) {
-                const modelName = getModelName(data.blocked_model || selectedModel);
-                const requiredTier = data.required_tier || 'a paid plan';
-                const currentTier = data.current_tier || 'free';
+ if (response.ok) {
+ if (data.auto_routed && data.agent) {
+ switchToBaseAgent(data.agent);
+ addMessage(`Routed to ${data.agent}: ${data.routing_reason || 'this task fits their skill lane better.'}`, 'assistant');
+ }
 
-                if (typeof showUpgradeModal === 'function') {
-                    showUpgradeModal(modelName, requiredTier, currentTier);
-                } else {
-                    addMessage(
-                        `Upgrade Required: ${data.error || 'Please upgrade to use this model.'}`,
-                        'assistant'
-                    );
-                }
-            } else {
-                addMessage(
-                    `Error: ${data.error || 'Failed to get response'}`,
-                    'assistant'
-                );
-            }
-        }
+ const modelBadge = data.model_used ? getModelName(data.model_used) : '';
+ addMessage(
+ data.response || data.message || '(No response)',
+ 'assistant',
+ null,
+ modelBadge,
+ data.attachments || [], // Pass attachments from response
+ data.active_skills || []
+ );
 
-    } catch (error) {
-        removeTyping(typingId);
-        console.error('Send message error:', error);
-        addMessage('Error: Failed to connect to server', 'assistant');
-    } finally {
-        sendBtn.disabled = false;
-        sendBtn.textContent = 'Send';
+ if (data.delegation_suggested && data.suggested_agent) {
+ addMessage(`${data.suggestion_reason || `This would be better handled by ${data.suggested_agent}.`} Type "switch to ${data.suggested_agent}" or click that agent in the sidebar to continue.`, 'assistant');
+ }
 
-        // Clear files via dashboard.html helper if available
-        if (typeof removeFile === 'function') {
-            removeFile();
-        } else {
-            // Fallback
-            uploadedFile = null;
-            if (typeof uploadedFiles !== 'undefined') {
-                uploadedFiles.length = 0;
-            }
-        }
+ loadStats();
+ } else {
+ if (response.status === 403 && data.upgrade_required) {
+ const modelName = getModelName(data.blocked_model || selectedModel);
+ const requiredTier = data.required_tier || 'a paid plan';
+ const currentTier = data.current_tier || 'free';
 
-        if (imageMode) toggleImageMode();
-    }
+ if (typeof showUpgradeModal === 'function') {
+ showUpgradeModal(modelName, requiredTier, currentTier);
+ } else {
+ addMessage(
+ `Upgrade Required: ${data.error || 'Please upgrade to use this model.'}`,
+ 'assistant'
+ );
+ }
+ } else {
+ addMessage(
+ `Error: ${data.error || 'Failed to get response'}`,
+ 'assistant'
+ );
+ }
+ }
+
+ } catch (error) {
+ removeTyping(typingId);
+ console.error('Send message error:', error);
+ addMessage('Error: Failed to connect to server', 'assistant');
+ } finally {
+ sendBtn.disabled = false;
+ sendBtn.textContent = 'Send';
+
+ // Clear files via dashboard.html helper if available
+ if (typeof removeFile === 'function') {
+ removeFile();
+ } else {
+ // Fallback
+ uploadedFile = null;
+ if (typeof uploadedFiles !== 'undefined') {
+ uploadedFiles.length = 0;
+ }
+ }
+
+ if (imageMode) toggleImageMode();
+ }
 }
 
 // ================================================
 // MESSAGE DISPLAY
 // ================================================
 
-function addMessage(text, type, imageUrl = null, modelBadge = '', attachments = []) {
-    const container = document.getElementById('chatContainer');
-    const welcome = container.querySelector('.welcome');
-    if (welcome) welcome.remove();
+function addMessage(text, type, imageUrl = null, modelBadge = '', attachments = [], activeSkills = []) {
+ const container = document.getElementById('chatContainer');
+ const welcome = container.querySelector('.welcome');
+ if (welcome) welcome.remove();
 
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${type}`;
+ const messageDiv = document.createElement('div');
+ messageDiv.className = `message ${type}`;
 
-    const avatar = type === 'user' ? '👤' : currentAgentEmoji;
-    const badge = modelBadge ? `<span class="model-badge">${modelBadge}</span>` : '';
+ const avatar = type === 'user' ? '' : currentAgentEmoji;
+ const badge = modelBadge ? `<span class="model-badge">${modelBadge}</span>` : '';
+ const skillsHtml = formatActiveSkills(activeSkills);
 
-    const isWebsite = type === 'assistant' && detectWebsite(text);
+ const isWebsite = type === 'assistant' && detectWebsite(text);
 
-    // Build attachment buttons HTML if attachments exist
-    let attachmentHtml = '';
-    if (type === 'assistant' && attachments && attachments.length > 0) {
-        console.log('Rendering attachments:', attachments); // Diagnostic log
-        const buttons = attachments.map(att => {
-            const safeUrl = att.url.replace(/"/g, '&quot;');
-            const safeName = escapeHtml(att.name);
-            return `<a href="${safeUrl}" class="attachment-btn" download="${safeName}">📎 ${safeName}</a>`;
-        }).join('');
+ // Build attachment buttons HTML if attachments exist
+ let attachmentHtml = '';
+ if (type === 'assistant' && attachments && attachments.length > 0) {
+ console.log('Rendering attachments:', attachments); // Diagnostic log
+ const buttons = attachments.map(att => {
+ const safeUrl = att.url.replace(/"/g, '&quot;');
+ const safeName = escapeHtml(att.name);
+ return `<a href="${safeUrl}" class="attachment-btn" download="${safeName}"> ${safeName}</a>`;
+ }).join('');
 
-        attachmentHtml = `
-            <div class="message-attachments">
-                ${buttons}
-            </div>
-        `;
-    }
+ attachmentHtml = `
+ <div class="message-attachments">
+ ${buttons}
+ </div>
+ `;
+ }
 
-    if (imageUrl) {
-        messageDiv.innerHTML = `
-            <div class="avatar" style="${type === 'assistant' ? 'background: ' + (agentGradients[currentAgent] || 'linear-gradient(135deg, #667eea, #764ba2)') : 'background: #5436da'}">${avatar}</div>
-            <div class="message-content">
-                ${escapeHtml(text)}${badge}
-                <div style="margin-top:12px;">
-                    <img src="${imageUrl}" style="max-width:100%; border-radius:8px; cursor:pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" onclick="showFloatingPreview('image', '${imageUrl}')" alt="Generated image">
-                </div>
-                ${attachmentHtml}
-            </div>
-        `;
-    } else if (isWebsite) {
-        const code = extractWebsiteCode(text);
-        const shortText = text.substring(0, 200) + (text.length > 200 ? '...' : '');
-        messageDiv.innerHTML = `
-            <div class="avatar" style="background: ${agentGradients[currentAgent] || 'linear-gradient(135deg, #667eea, #764ba2)'}">${avatar}</div>
-            <div class="message-content">
-                ${escapeHtml(shortText)}${badge}
-                <div style="margin-top:12px; display: flex; gap: 8px; flex-wrap: wrap;">
-                    <button class="btn btn-primary" style="flex: 1; min-width: 120px;" onclick='showFloatingPreview("website", \`${code.replace(/`/g, '\\`')}\`)'>👁️ Preview</button>
-                    <button class="btn btn-secondary" style="flex: 1; min-width: 120px;" onclick='createWebsiteDownload(\`${code.replace(/`/g, '\\`')}\`)'>💻 Download</button>
-                </div>
-                ${attachmentHtml}
-            </div>
-        `;
-   } else {
-    const safeText = text.replace(/`/g, '\\`').replace(/"/g, '&quot;');
+ if (imageUrl) {
+ messageDiv.innerHTML = `
+ <div class="avatar" style="${type === 'assistant' ? 'background: ' + (agentGradients[currentAgent] || 'linear-gradient(135deg, #667eea, #764ba2)') : 'background: #5436da'}">${avatar}</div>
+ <div class="message-content">
+ ${escapeHtml(text)}${badge}
+ ${skillsHtml}
+ <div style="margin-top:12px;">
+ <img src="${imageUrl}" style="max-width:100%; border-radius:8px; cursor:pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" onclick="showFloatingPreview('image', '${imageUrl}')" alt="Generated image">
+ </div>
+ ${attachmentHtml}
+ </div>
+ `;
+ } else if (isWebsite) {
+ const code = extractWebsiteCode(text);
+ const shortText = text.substring(0, 200) + (text.length > 200 ? '...' : '');
+ messageDiv.innerHTML = `
+ <div class="avatar" style="background: ${agentGradients[currentAgent] || 'linear-gradient(135deg, #667eea, #764ba2)'}">${avatar}</div>
+ <div class="message-content">
+ ${escapeHtml(shortText)}${badge}
+ ${skillsHtml}
+ <div style="margin-top:12px; display: flex; gap: 8px; flex-wrap: wrap;">
+ <button class="btn btn-primary" style="flex: 1; min-width: 120px;" onclick='showFloatingPreview("website", \`${code.replace(/`/g, '\\`')}\`)'> Preview</button>
+ <button class="btn btn-secondary" style="flex: 1; min-width: 120px;" onclick='createWebsiteDownload(\`${code.replace(/`/g, '\\`')}\`)'> Download</button>
+ </div>
+ ${attachmentHtml}
+ </div>
+ `;
+ } else {
+ const safeText = text.replace(/`/g, '\\`').replace(/"/g, '&quot;');
 
-    const voiceBtn = type === 'assistant'
-        ? `<button class="voice-btn" onclick="speakText(\`${safeText}\`)">🔊 Listen</button>`
-        : '';
+ const voiceBtn = type === 'assistant'
+ ? `<button class="voice-btn" onclick="speakText(\`${safeText}\`)"> Listen</button>`
+ : '';
 
-    const actionBtns = type === 'assistant'
-        ? `
-            <div class="message-actions">
-                <button class="action-btn" onclick="copyToClipboard(\`${safeText}\`)">📋 Copy</button>
-                <button class="action-btn" onclick="downloadText(\`${safeText}\`)">⬇️ Download</button>
-            </div>
-        `
-        : '';
+ const actionBtns = type === 'assistant'
+ ? `
+ <div class="message-actions">
+ <button class="action-btn" onclick="copyToClipboard(\`${safeText}\`)"> Copy</button>
+ <button class="action-btn" onclick="downloadText(\`${safeText}\`)"> Download</button>
+ </div>
+ `
+ : '';
 
-    messageDiv.innerHTML = `
-        <div class="avatar" style="${type === 'assistant'
-            ? 'background: ' + (agentGradients[currentAgent] || 'linear-gradient(135deg, #667eea, #764ba2)')
-            : 'background: #5436da'}">${avatar}</div>
-        <div class="message-content">
-            ${escapeHtml(text)}${badge}
-            ${voiceBtn}
-            ${actionBtns}
-            ${attachmentHtml}
-        </div>
-    `;
+ messageDiv.innerHTML = `
+ <div class="avatar" style="${type === 'assistant'
+ ? 'background: ' + (agentGradients[currentAgent] || 'linear-gradient(135deg, #667eea, #764ba2)')
+ : 'background: #5436da'}">${avatar}</div>
+ <div class="message-content">
+ ${escapeHtml(text)}${badge}
+ ${skillsHtml}
+ ${voiceBtn}
+ ${actionBtns}
+ ${attachmentHtml}
+ </div>
+ `;
 }
 
-    container.appendChild(messageDiv);
-    container.scrollTop = container.scrollHeight;
+ container.appendChild(messageDiv);
+ container.scrollTop = container.scrollHeight;
+}
+
+function applyPrefillPromptIfPresent() {
+ const input = document.getElementById('messageInput');
+ if (!input) return;
+
+ const promptKey = 'ai_team_prefill_prompt';
+ const agentKey = 'ai_team_prefill_agent';
+ const prefill = localStorage.getItem(promptKey);
+ const targetAgent = localStorage.getItem(agentKey);
+
+ if (targetAgent && typeof switchToBaseAgent === 'function') {
+ switchToBaseAgent(targetAgent);
+ }
+
+ if (!prefill) return;
+
+ input.value = prefill;
+ input.focus();
+ if (typeof autoResize === 'function') {
+ autoResize(input);
+ }
+ localStorage.removeItem(promptKey);
+ localStorage.removeItem(agentKey);
+ updateAgentRecommendationHint();
+}
+
+function setupAgentRecommendationHints() {
+ const input = document.getElementById('messageInput');
+ if (!input) return;
+
+ input.addEventListener('input', function() {
+ if (recommendationTimer) {
+ clearTimeout(recommendationTimer);
+ }
+ recommendationTimer = setTimeout(updateAgentRecommendationHint, 350);
+ });
+
+ updateAgentRecommendationHint();
+}
+
+function hideAgentRecommendationHint() {
+ const hint = document.getElementById('agentRecommendationHint');
+ if (!hint) return;
+ hint.style.display = 'none';
+ hint.textContent = '';
+}
+
+async function updateAgentRecommendationHint() {
+ const input = document.getElementById('messageInput');
+ const hint = document.getElementById('agentRecommendationHint');
+ if (!input || !hint) return;
+
+ const message = (input.value || '').trim();
+ if (!message) {
+ hideAgentRecommendationHint();
+ return;
+ }
+
+ try {
+ const response = await fetch('/api/agent-recommendation', {
+ method: 'POST',
+ headers: { 'Content-Type': 'application/json' },
+ credentials: 'include',
+ body: JSON.stringify({
+ message: message,
+ current_agent: currentAgent
+ })
+ });
+
+ if (!response.ok) {
+ hideAgentRecommendationHint();
+ return;
+ }
+
+ const data = await response.json();
+ if (!data || !data.recommended_agent) {
+ hideAgentRecommendationHint();
+ return;
+ }
+
+ const recommended = data.recommended_agent;
+ const confidence = Number(data.confidence || 0);
+ const score = confidence > 0 ? ` (${confidence})` : '';
+
+ if (recommended !== currentAgent) {
+ hint.innerHTML = `Recommended lane: <strong>${escapeHtml(recommended)}</strong>${score}`;
+ } else {
+ hint.innerHTML = `Current lane: <strong>${escapeHtml(currentAgent)}</strong>${score}`;
+ }
+ hint.style.display = 'block';
+ } catch (error) {
+ hideAgentRecommendationHint();
+ }
+}
+
+function formatActiveSkills(activeSkills) {
+ if (!Array.isArray(activeSkills) || activeSkills.length === 0) return '';
+
+ const skillLabels = activeSkills
+ .map(skill => skill && skill.label ? escapeHtml(skill.label) : '')
+ .filter(Boolean);
+
+ if (skillLabels.length === 0) return '';
+
+ return `
+ <div class="active-skills">
+ <span>Skills</span>
+ ${skillLabels.map(label => `<strong>${label}</strong>`).join('')}
+ </div>
+ `;
 }
 
 function showTyping() {
-    const container = document.getElementById('chatContainer');
-    const typingDiv = document.createElement('div');
-    const id = 'typing-' + Date.now();
-    typingDiv.id = id;
-    typingDiv.className = 'message assistant';
-    typingDiv.innerHTML = `
-        <div class="avatar" style="background: ${agentGradients[currentAgent] || 'linear-gradient(135deg, #667eea, #764ba2)'}">${currentAgentEmoji}</div>
-        <div class="message-content">
-            <div class="typing-indicator">
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
-            </div>
-        </div>
-    `;
-    container.appendChild(typingDiv);
-    container.scrollTop = container.scrollHeight;
-    return id;
+ const container = document.getElementById('chatContainer');
+ const typingDiv = document.createElement('div');
+ const id = 'typing-' + Date.now();
+ typingDiv.id = id;
+ typingDiv.className = 'message assistant';
+ typingDiv.innerHTML = `
+ <div class="avatar" style="background: ${agentGradients[currentAgent] || 'linear-gradient(135deg, #667eea, #764ba2)'}">${currentAgentEmoji}</div>
+ <div class="message-content">
+ <div class="typing-indicator">
+ <div class="typing-dot"></div>
+ <div class="typing-dot"></div>
+ <div class="typing-dot"></div>
+ </div>
+ </div>
+ `;
+ container.appendChild(typingDiv);
+ container.scrollTop = container.scrollHeight;
+ return id;
 }
 
 function removeTyping(id) {
-    const typing = document.getElementById(id);
-    if (typing) typing.remove();
+ const typing = document.getElementById(id);
+ if (typing) typing.remove();
 }
 
 // ================================================
@@ -552,42 +706,42 @@ function removeTyping(id) {
 // ================================================
 
 function showFloatingPreview(type, content) {
-    const preview = document.getElementById('floatingPreview');
-    const title = document.getElementById('previewTitle');
-    const body = document.getElementById('floatingPreviewBody');
-    const actions = document.getElementById('floatingPreviewActions');
-    
-    if (type === 'image') {
-        title.textContent = 'Image Preview';
-        body.innerHTML = `<img src="${content}" style="max-width:100%; border-radius:8px;">`;
-        actions.innerHTML = `
-            <button class="btn btn-primary" style="flex: 1;" onclick="downloadFromUrl('${content}')">📥 Download</button>
-            <button class="btn btn-secondary" style="flex: 1;" onclick="copyToClipboard('${content}')">📋 Copy URL</button>
-        `;
-    } else if (type === 'website') {
-        title.textContent = 'Website Preview';
-        
-        // Create blob URL for iframe
-        const blob = new Blob([content], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
-        
-        body.innerHTML = `<iframe class="preview-iframe" src="${url}"></iframe>`;
-        actions.innerHTML = `
-            <button class="btn btn-primary" style="flex: 1;" onclick='createWebsiteDownload(\`${content.replace(/`/g, '\\`')}\`)'>💻 Download</button>
-            <button class="btn btn-secondary" style="flex: 1;" onclick='copyToClipboard(\`${content.replace(/`/g, '\\`')}\`)'>📋 Copy Code</button>
-        `;
-    }
-    
-    preview.classList.add('active');
+ const preview = document.getElementById('floatingPreview');
+ const title = document.getElementById('previewTitle');
+ const body = document.getElementById('floatingPreviewBody');
+ const actions = document.getElementById('floatingPreviewActions');
+ 
+ if (type === 'image') {
+ title.textContent = 'Image Preview';
+ body.innerHTML = `<img src="${content}" style="max-width:100%; border-radius:8px;">`;
+ actions.innerHTML = `
+ <button class="btn btn-primary" style="flex: 1;" onclick="downloadFromUrl('${content}')"> Download</button>
+ <button class="btn btn-secondary" style="flex: 1;" onclick="copyToClipboard('${content}')"> Copy URL</button>
+ `;
+ } else if (type === 'website') {
+ title.textContent = 'Website Preview';
+ 
+ // Create blob URL for iframe
+ const blob = new Blob([content], { type: 'text/html' });
+ const url = URL.createObjectURL(blob);
+ 
+ body.innerHTML = `<iframe class="preview-iframe" src="${url}"></iframe>`;
+ actions.innerHTML = `
+ <button class="btn btn-primary" style="flex: 1;" onclick='createWebsiteDownload(\`${content.replace(/`/g, '\\`')}\`)'> Download</button>
+ <button class="btn btn-secondary" style="flex: 1;" onclick='copyToClipboard(\`${content.replace(/`/g, '\\`')}\`)'> Copy Code</button>
+ `;
+ }
+ 
+ preview.classList.add('active');
 }
 
 function closeFloatingPreview() {
-    document.getElementById('floatingPreview').classList.remove('active');
+ document.getElementById('floatingPreview').classList.remove('active');
 }
 
 function minimizePreview() {
-    // Could implement minimize functionality
-    closeFloatingPreview();
+ // Could implement minimize functionality
+ closeFloatingPreview();
 }
 
 // ================================================
@@ -595,22 +749,22 @@ function minimizePreview() {
 // ================================================
 
 function detectWebsite(text) {
-    return /<!DOCTYPE html>|<html|<\/html>/i.test(text);
+ return /<!DOCTYPE html>|<html|<\/html>/i.test(text);
 }
 
 function extractWebsiteCode(text) {
-    const match = text.match(/```html\n([\s\S]*?)```/) || text.match(/(<!DOCTYPE[\s\S]*<\/html>)/i);
-    return match ? match[1] : text;
+ const match = text.match(/```html\n([\s\S]*?)```/) || text.match(/(<!DOCTYPE[\s\S]*<\/html>)/i);
+ return match ? match[1] : text;
 }
 
 function createWebsiteDownload(code) {
-    const blob = new Blob([code], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'website_' + Date.now() + '.html';
-    a.click();
-    URL.revokeObjectURL(url);
+ const blob = new Blob([code], { type: 'text/html' });
+ const url = URL.createObjectURL(blob);
+ const a = document.createElement('a');
+ a.href = url;
+ a.download = 'website_' + Date.now() + '.html';
+ a.click();
+ URL.revokeObjectURL(url);
 }
 
 // ================================================
@@ -618,78 +772,78 @@ function createWebsiteDownload(code) {
 // ================================================
 
 function openCustomAgentModal() {
-    document.getElementById('customAgentModal').classList.add('active');
-    toggleMenu();
+ document.getElementById('customAgentModal').classList.add('active');
+ toggleMenu();
 }
 
 function closeCustomAgentModal() {
-    document.getElementById('customAgentModal').classList.remove('active');
-    document.getElementById('customAgentForm').reset();
+ document.getElementById('customAgentModal').classList.remove('active');
+ document.getElementById('customAgentForm').reset();
 }
 
 async function saveCustomAgent(event) {
-    event.preventDefault();
-    
-    const name = document.getElementById('agentName').value;
-    const role = document.getElementById('agentRole').value;
-    const emoji = document.getElementById('agentEmoji').value || '✨';
-    const prompt = document.getElementById('agentPrompt').value;
-    
-    try {
-        const response = await fetch('/api/custom-agents', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({
-                name: name,
-                role: role,
-                emoji: emoji,
-                instructions: `You are ${name}, a ${role}. ${prompt}`
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            alert('✅ Custom agent created!');
-            closeCustomAgentModal();
-            loadCustomAgents();
-        } else {
-            alert('Error: ' + (data.error || 'Failed to create agent'));
-        }
-    } catch (error) {
-        alert('Error: Failed to connect');
-    }
+ event.preventDefault();
+ 
+ const name = document.getElementById('agentName').value;
+ const role = document.getElementById('agentRole').value;
+ const emoji = document.getElementById('agentEmoji').value || '';
+ const prompt = document.getElementById('agentPrompt').value;
+ 
+ try {
+ const response = await fetch('/api/custom-agents', {
+ method: 'POST',
+ headers: { 'Content-Type': 'application/json' },
+ credentials: 'include',
+ body: JSON.stringify({
+ name: name,
+ role: role,
+ emoji: emoji,
+ instructions: `You are ${name}, a ${role}. ${prompt}`
+ })
+ });
+ 
+ const data = await response.json();
+ 
+ if (response.ok) {
+ alert(' Custom agent created!');
+ closeCustomAgentModal();
+ loadCustomAgents();
+ } else {
+ alert('Error: ' + (data.error || 'Failed to create agent'));
+ }
+ } catch (error) {
+ alert('Error: Failed to connect');
+ }
 }
 
 async function loadCustomAgents() {
-    try {
-        const response = await fetch('/api/custom-agents', { credentials: 'include' });
-        const data = await response.json();
-        
-        const container = document.getElementById('customAgentsList');
-        container.innerHTML = '';
-        
-        if (data.agents.length > 0) {
-            document.getElementById('customAgentsTitle').style.display = 'block';
-            
-            data.agents.forEach(agent => {
-                const item = document.createElement('div');
-                item.className = 'agent-item';
-                item.innerHTML = `
-                    <div class="agent-avatar" style="background: linear-gradient(135deg, #667eea, #764ba2);">${agent.emoji || '✨'}</div>
-                    <div class="agent-info">
-                        <div class="agent-name">${agent.name}</div>
-                        <div class="agent-role">${agent.role || 'Custom Agent'}</div>
-                    </div>
-                `;
-                item.onclick = () => selectAgent(agent.name, agent.emoji || '✨', agent.role || 'Custom Agent');
-                container.appendChild(item);
-            });
-        }
-    } catch (error) {
-        console.error('Error loading custom agents:', error);
-    }
+ try {
+ const response = await fetch('/api/custom-agents', { credentials: 'include' });
+ const data = await response.json();
+ 
+ const container = document.getElementById('customAgentsList');
+ container.innerHTML = '';
+ 
+ if (data.agents.length > 0) {
+ document.getElementById('customAgentsTitle').style.display = 'block';
+ 
+ data.agents.forEach(agent => {
+ const item = document.createElement('div');
+ item.className = 'agent-item';
+ item.innerHTML = `
+ <div class="agent-avatar" style="background: linear-gradient(135deg, #667eea, #764ba2);">${agent.emoji || ''}</div>
+ <div class="agent-info">
+ <div class="agent-name">${agent.name}</div>
+ <div class="agent-role">${agent.role || 'Custom Agent'}</div>
+ </div>
+ `;
+ item.onclick = () => selectAgent(agent.name, agent.emoji || '', agent.role || 'Custom Agent');
+ container.appendChild(item);
+ });
+ }
+ } catch (error) {
+ console.error('Error loading custom agents:', error);
+ }
 }
 
 // ================================================
@@ -697,31 +851,31 @@ async function loadCustomAgents() {
 // ================================================
 
 function openPromptBuilder() {
-    document.getElementById('promptBuilderModal').classList.add('active');
-    toggleMenu();
+ document.getElementById('promptBuilderModal').classList.add('active');
+ toggleMenu();
 }
 
 function closePromptBuilder() {
-    document.getElementById('promptBuilderModal').classList.remove('active');
+ document.getElementById('promptBuilderModal').classList.remove('active');
 }
 
 function buildPrompt() {
-    const input = document.getElementById('promptInput').value.trim();
-    const style = document.getElementById('promptStyle').value;
-    const outputField = document.getElementById('promptOutput');
-    
-    if (!input) {
-        alert('Please describe what you want help with');
-        return;
-    }
-    
-    // Create prompts using the 7 Pillars of Effective Prompting:
-    // 1. Task/Goal, 2. Context, 3. Exemplars, 4. Persona, 5. Format, 6. Tone, 7. Constraints
-    let enhancedPrompt = '';
-    
-    switch(style) {
-        case 'detailed':
-            enhancedPrompt = `TASK: ${input}
+ const input = document.getElementById('promptInput').value.trim();
+ const style = document.getElementById('promptStyle').value;
+ const outputField = document.getElementById('promptOutput');
+ 
+ if (!input) {
+ alert('Please describe what you want help with');
+ return;
+ }
+ 
+ // Create prompts using the 7 Pillars of Effective Prompting:
+ // 1. Task/Goal, 2. Context, 3. Exemplars, 4. Persona, 5. Format, 6. Tone, 7. Constraints
+ let enhancedPrompt = '';
+ 
+ switch(style) {
+ case 'detailed':
+ enhancedPrompt = `TASK: ${input}
 
 ROLE: Act as an expert consultant with deep knowledge in this area.
 
@@ -738,10 +892,10 @@ FORMAT: Please structure your response with:
 TONE: Professional yet accessible. Use clear explanations without oversimplifying.
 
 CONSTRAINTS: Focus on actionable, practical advice. If you need more information to give the best answer, ask specific clarifying questions.`;
-            break;
-            
-        case 'concise':
-            enhancedPrompt = `TASK: ${input}
+ break;
+ 
+ case 'concise':
+ enhancedPrompt = `TASK: ${input}
 
 ROLE: Act as an efficient expert who values clarity and brevity.
 
@@ -754,10 +908,10 @@ CONSTRAINTS:
 - Skip background unless critical
 - Use simple language
 - Get straight to the answer`;
-            break;
-            
-        case 'creative':
-            enhancedPrompt = `TASK: ${input}
+ break;
+ 
+ case 'creative':
+ enhancedPrompt = `TASK: ${input}
 
 ROLE: Act as a creative innovator and brainstorming partner with fresh perspectives.
 
@@ -772,10 +926,10 @@ FORMAT: Present your ideas as:
 TONE: Enthusiastic, inspiring, and imaginative while staying grounded.
 
 CONSTRAINTS: Ideas should be creative but implementable. Explain the "why" behind each suggestion.`;
-            break;
-            
-        case 'professional':
-            enhancedPrompt = `TASK: ${input}
+ break;
+ 
+ case 'professional':
+ enhancedPrompt = `TASK: ${input}
 
 ROLE: Act as a senior business consultant with expertise in this domain.
 
@@ -791,10 +945,10 @@ FORMAT: Provide a business-focused analysis including:
 TONE: Formal, authoritative, business-appropriate.
 
 CONSTRAINTS: Use professional terminology appropriately. Back recommendations with reasoning. Consider ROI and practical business constraints.`;
-            break;
-            
-        case 'casual':
-            enhancedPrompt = `TASK: ${input}
+ break;
+ 
+ case 'casual':
+ enhancedPrompt = `TASK: ${input}
 
 ROLE: Act as a knowledgeable friend who explains things in a relatable way.
 
@@ -809,25 +963,25 @@ FORMAT: Explain in a conversational way using:
 TONE: Friendly, warm, approachable. Like talking to someone who really gets it.
 
 CONSTRAINTS: Keep it conversational but still informative. No jargon unless you explain it simply.`;
-            break;
-            
-        default:
-            enhancedPrompt = input;
-    }
-    
-    outputField.value = enhancedPrompt;
+ break;
+ 
+ default:
+ enhancedPrompt = input;
+ }
+ 
+ outputField.value = enhancedPrompt;
 }
 
 function usePrompt() {
-    const prompt = document.getElementById('promptOutput').value;
-    if (!prompt) {
-        alert('Generate a prompt first');
-        return;
-    }
-    
-    document.getElementById('messageInput').value = prompt;
-    closePromptBuilder();
-    document.getElementById('messageInput').focus();
+ const prompt = document.getElementById('promptOutput').value;
+ if (!prompt) {
+ alert('Generate a prompt first');
+ return;
+ }
+ 
+ document.getElementById('messageInput').value = prompt;
+ closePromptBuilder();
+ document.getElementById('messageInput').focus();
 }
 
 // ================================================
@@ -835,308 +989,308 @@ function usePrompt() {
 // ================================================
 
 async function viewHistory() {
-    try {
-        const response = await fetch('/api/history', { credentials: 'include' });
-        const data = await response.json();
-        
-        if (!response.ok) {
-            alert('Error loading chat history');
-            toggleMenu();
-            return;
-        }
-        
-        const history = data.history || [];
-        
-        if (history.length === 0) {
-            alert('No chat history yet. Start chatting to build your history!');
-            toggleMenu();
-            return;
-        }
-        
-        // Group ALL messages by agent (not by date)
-        const agentChats = {};
-        history.forEach(item => {
-            const agent = item.agent;
-            if (!agentChats[agent]) {
-                agentChats[agent] = {
-                    agent: agent,
-                    messages: [],
-                    lastTimestamp: item.timestamp
-                };
-            }
-            agentChats[agent].messages.push(item);
-            // Update last timestamp if this message is more recent
-            if (new Date(item.timestamp) > new Date(agentChats[agent].lastTimestamp)) {
-                agentChats[agent].lastTimestamp = item.timestamp;
-            }
-        });
-        
-        // Create history modal
-        let historyHTML = '<div class="history-modal-backdrop" onclick="closeHistoryModal()">';
-        historyHTML += '<div class="history-modal" onclick="event.stopPropagation()">';
-        historyHTML += '<div class="history-header">';
-        historyHTML += '<h2>📜 Chat History</h2>';
-        historyHTML += '<button onclick="closeHistoryModal()" class="history-close">✕</button>';
-        historyHTML += '</div>';
-        historyHTML += '<div class="history-content">';
-        
-        // Sort agents by most recent activity
-        const sortedAgents = Object.values(agentChats).sort((a, b) => 
-            new Date(b.lastTimestamp) - new Date(a.lastTimestamp)
-        );
-        
-        sortedAgents.forEach((agentChat, index) => {
-            const msgCount = agentChat.messages.length;
-            const firstMsg = agentChat.messages[0];
-            const lastDate = new Date(agentChat.lastTimestamp).toLocaleDateString();
-            const preview = firstMsg.message.substring(0, 80);
-            
-            // Get agent emoji
-            const agentEmojis = {
-                'Luna': '🌙',
-                'Mila': '🐉',
-                'Sage': '🦉',
-                'Ember': '🦁',
-                'Sol': '🐤',
-                'Nova': '🌌',
-                'Theo': '🐰'
-            };
-            const emoji = agentEmojis[agentChat.agent] || '🤖';
-            
-            historyHTML += `
-                <div class="history-item" onclick="loadAgentHistory('${escapeHtml(agentChat.agent)}', ${index})" style="cursor: pointer; transition: all 0.2s;">
-                    <div class="history-meta" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <span class="history-agent" style="font-weight: 600; color: #10a37f; font-size: 16px;">
-                            ${emoji} ${escapeHtml(agentChat.agent)}
-                        </span>
-                        <span class="history-count" style="background: #10a37f; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600;">
-                            ${msgCount} messages
-                        </span>
-                    </div>
-                    <div class="history-time" style="color: #666; font-size: 13px; margin-bottom: 6px;">
-                        Last active: ${lastDate}
-                    </div>
-                    <div class="history-preview" style="color: #374151; font-size: 14px; line-height: 1.4;">
-                        ${escapeHtml(preview)}${preview.length >= 80 ? '...' : ''}
-                    </div>
-                </div>
-            `;
-        });
-        
-        historyHTML += '</div></div></div>';
-        
-        // Store agent chats for later access
-        window.agentHistory = sortedAgents;
-        
-        // Add to page
-        document.body.insertAdjacentHTML('beforeend', historyHTML);
-        
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Error loading chat history');
-    }
-    toggleMenu();
+ try {
+ const response = await fetch('/api/history', { credentials: 'include' });
+ const data = await response.json();
+ 
+ if (!response.ok) {
+ alert('Error loading chat history');
+ toggleMenu();
+ return;
+ }
+ 
+ const history = data.history || [];
+ 
+ if (history.length === 0) {
+ alert('No chat history yet. Start chatting to build your history!');
+ toggleMenu();
+ return;
+ }
+ 
+ // Group ALL messages by agent (not by date)
+ const agentChats = {};
+ history.forEach(item => {
+ const agent = item.agent;
+ if (!agentChats[agent]) {
+ agentChats[agent] = {
+ agent: agent,
+ messages: [],
+ lastTimestamp: item.timestamp
+ };
+ }
+ agentChats[agent].messages.push(item);
+ // Update last timestamp if this message is more recent
+ if (new Date(item.timestamp) > new Date(agentChats[agent].lastTimestamp)) {
+ agentChats[agent].lastTimestamp = item.timestamp;
+ }
+ });
+ 
+ // Create history modal
+ let historyHTML = '<div class="history-modal-backdrop" onclick="closeHistoryModal()">';
+ historyHTML += '<div class="history-modal" onclick="event.stopPropagation()">';
+ historyHTML += '<div class="history-header">';
+ historyHTML += '<h2> Chat History</h2>';
+ historyHTML += '<button onclick="closeHistoryModal()" class="history-close"></button>';
+ historyHTML += '</div>';
+ historyHTML += '<div class="history-content">';
+ 
+ // Sort agents by most recent activity
+ const sortedAgents = Object.values(agentChats).sort((a, b) => 
+ new Date(b.lastTimestamp) - new Date(a.lastTimestamp)
+ );
+ 
+ sortedAgents.forEach((agentChat, index) => {
+ const msgCount = agentChat.messages.length;
+ const firstMsg = agentChat.messages[0];
+ const lastDate = new Date(agentChat.lastTimestamp).toLocaleDateString();
+ const preview = firstMsg.message.substring(0, 80);
+ 
+ // Get agent emoji
+ const agentEmojis = {
+ 'Luna': '',
+ 'Mila': '',
+ 'Sage': '',
+ 'Ember': '',
+ 'Sol': '',
+ 'Nova': '',
+ 'Theo': ''
+ };
+ const emoji = agentEmojis[agentChat.agent] || '';
+ 
+ historyHTML += `
+ <div class="history-item" onclick="loadAgentHistory('${escapeHtml(agentChat.agent)}', ${index})" style="cursor: pointer; transition: all 0.2s;">
+ <div class="history-meta" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+ <span class="history-agent" style="font-weight: 600; color: #10a37f; font-size: 16px;">
+ ${emoji} ${escapeHtml(agentChat.agent)}
+ </span>
+ <span class="history-count" style="background: #10a37f; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600;">
+ ${msgCount} messages
+ </span>
+ </div>
+ <div class="history-time" style="color: #666; font-size: 13px; margin-bottom: 6px;">
+ Last active: ${lastDate}
+ </div>
+ <div class="history-preview" style="color: #374151; font-size: 14px; line-height: 1.4;">
+ ${escapeHtml(preview)}${preview.length >= 80 ? '...' : ''}
+ </div>
+ </div>
+ `;
+ });
+ 
+ historyHTML += '</div></div></div>';
+ 
+ // Store agent chats for later access
+ window.agentHistory = sortedAgents;
+ 
+ // Add to page
+ document.body.insertAdjacentHTML('beforeend', historyHTML);
+ 
+ } catch (error) {
+ console.error('Error:', error);
+ alert('Error loading chat history');
+ }
+ toggleMenu();
 }
 
 function loadAgentHistory(agent, agentIndex) {
-    // Close history modal
-    closeHistoryModal();
-    
-    // Get agent's chat history
-    const agentChat = window.agentHistory[agentIndex];
-    if (!agentChat) return;
-    
-    // Switch to the agent
-    switchAgent(agent);
-    
-    // Clear current chat
-    const container = document.getElementById('chatContainer');
-    container.innerHTML = '';
-    
-    // Load ALL messages from this agent in chronological order
-    agentChat.messages.forEach(msg => {
-        addMessage(msg.message, 'user');
-        addMessage(msg.response, 'assistant');
-    });
-    
-    // Scroll to bottom
-    container.scrollTop = container.scrollHeight;
-    
-    // Show notification
-    const notification = document.createElement('div');
-    notification.textContent = `📜 Loaded ${agentChat.messages.length} messages with ${agent}`;
-    notification.style.cssText = 'position:fixed;top:20px;right:20px;background:#10a37f;color:white;padding:12px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:10000;font-weight:600;';
-    document.body.appendChild(notification);
-    setTimeout(() => notification.remove(), 3000);
+ // Close history modal
+ closeHistoryModal();
+ 
+ // Get agent's chat history
+ const agentChat = window.agentHistory[agentIndex];
+ if (!agentChat) return;
+ 
+ // Switch to the agent
+ switchAgent(agent);
+ 
+ // Clear current chat
+ const container = document.getElementById('chatContainer');
+ container.innerHTML = '';
+ 
+ // Load ALL messages from this agent in chronological order
+ agentChat.messages.forEach(msg => {
+ addMessage(msg.message, 'user');
+ addMessage(msg.response, 'assistant');
+ });
+ 
+ // Scroll to bottom
+ container.scrollTop = container.scrollHeight;
+ 
+ // Show notification
+ const notification = document.createElement('div');
+ notification.textContent = ` Loaded ${agentChat.messages.length} messages with ${agent}`;
+ notification.style.cssText = 'position:fixed;top:20px;right:20px;background:#10a37f;color:white;padding:12px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:10000;font-weight:600;';
+ document.body.appendChild(notification);
+ setTimeout(() => notification.remove(), 3000);
 }
 
 function closeHistoryModal() {
-    const modal = document.querySelector('.history-modal-backdrop');
-    if (modal) {
-        modal.remove();
-    }
+ const modal = document.querySelector('.history-modal-backdrop');
+ if (modal) {
+ modal.remove();
+ }
 }
 
 async function clearAllChat() {
-    if (!confirm('Clear all chat history?')) return;
-    
-    try {
-        const response = await fetch('/api/clear-chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ agent: 'all' })
-        });
-        
-        if (response.ok) {
-            document.getElementById('chatContainer').innerHTML = '<div class="welcome"><h2>All chats cleared!</h2><p>Start fresh.</p></div>';
-            alert('✅ Chats cleared');
-        }
-    } catch (error) {
-        alert('Error clearing chats');
-    }
-    toggleMenu();
+ if (!confirm('Clear all chat history?')) return;
+ 
+ try {
+ const response = await fetch('/api/clear-chat', {
+ method: 'POST',
+ headers: { 'Content-Type': 'application/json' },
+ credentials: 'include',
+ body: JSON.stringify({ agent: 'all' })
+ });
+ 
+ if (response.ok) {
+ document.getElementById('chatContainer').innerHTML = '<div class="welcome"><h2>All chats cleared!</h2><p>Start fresh.</p></div>';
+ alert(' Chats cleared');
+ }
+ } catch (error) {
+ alert('Error clearing chats');
+ }
+ toggleMenu();
 }
 
 async function loadStats() {
-    try {
-        const response = await fetch('/api/user-stats', { credentials: 'include' });
-        const data = await response.json();
-        document.getElementById('messages-used').textContent = data.messages_today || 0;
-        document.getElementById('daily-limit').textContent = data.daily_limit || 25;
-    } catch (error) {
-        console.error('Error loading stats:', error);
-    }
+ try {
+ const response = await fetch('/api/user-stats', { credentials: 'include' });
+ const data = await response.json();
+ document.getElementById('messages-used').textContent = data.messages_today || 0;
+ document.getElementById('daily-limit').textContent = data.daily_limit || 25;
+ } catch (error) {
+ console.error('Error loading stats:', error);
+ }
 }
 
 async function checkAdminStatus() {
-    try {
-        const response = await fetch('/api/user-info', { credentials: 'include' });
-        const data = await response.json();
-        if (data.is_admin) {
-            document.getElementById('adminLink').style.display = 'block';
-            document.getElementById('adminSidebarLink').style.display = 'flex';
-            document.getElementById('promoSidebarLink').style.display = 'flex';
-        }
-    } catch (error) {
-        console.error('Error checking admin:', error);
-    }
+ try {
+ const response = await fetch('/api/user-info', { credentials: 'include' });
+ const data = await response.json();
+ if (data.is_admin) {
+ document.getElementById('adminLink').style.display = 'block';
+ document.getElementById('adminSidebarLink').style.display = 'flex';
+ document.getElementById('promoSidebarLink').style.display = 'flex';
+ }
+ } catch (error) {
+ console.error('Error checking admin:', error);
+ }
 }
 
 async function openAgentLibrary() {
-    toggleMenu();
-    
-    const modal = document.getElementById('agentLibraryModal');
-    const loading = document.getElementById('libraryLoading');
-    const empty = document.getElementById('libraryEmpty');
-    const grid = document.getElementById('libraryGrid');
-    
-    // Show modal
-    modal.style.display = 'block';
-    
-    // Show loading state
-    loading.style.display = 'block';
-    empty.style.display = 'none';
-    grid.style.display = 'none';
-    grid.innerHTML = '';
-    
-    try {
-        // Load custom agents
-        const response = await fetch('/api/custom-agents', {
-            credentials: 'include'
-        });
-        
-        const data = await response.json();
-        
-        loading.style.display = 'none';
-        
-        if (!data.agents || data.agents.length === 0) {
-            // No agents yet
-            empty.style.display = 'block';
-        } else {
-            // Show agents in grid
-            grid.style.display = 'grid';
-            
-            data.agents.forEach(agent => {
-                const card = document.createElement('div');
-                card.className = 'library-agent-card';
-                
-                card.innerHTML = `
-                    <div class="library-agent-emoji">${agent.emoji || '🤖'}</div>
-                    <div class="library-agent-name">${escapeHtml(agent.name)}</div>
-                    <div class="library-agent-role">${escapeHtml(agent.role)}</div>
-                    <div class="library-agent-personality">${escapeHtml(agent.personality || 'A helpful AI assistant')}</div>
-                    <div class="library-agent-actions">
-                        <button class="library-action-btn library-chat-btn" onclick="chatWithLibraryAgent('${escapeHtml(agent.name)}', ${agent.id})">
-                            💬 Chat
-                        </button>
-                        <button class="library-action-btn library-delete-btn" onclick="deleteLibraryAgent(${agent.id}, '${escapeHtml(agent.name)}')">
-                            🗑️
-                        </button>
-                    </div>
-                `;
-                
-                grid.appendChild(card);
-            });
-        }
-    } catch (error) {
-        console.error('Error loading agent library:', error);
-        loading.style.display = 'none';
-        empty.style.display = 'block';
-        document.getElementById('libraryEmpty').innerHTML = `
-            <div style="font-size: 60px; margin-bottom: 20px;">⚠️</div>
-            <h3 style="color: #333; margin-bottom: 10px;">Error Loading Agents</h3>
-            <p style="color: #666; margin-bottom: 20px;">Please try again later</p>
-            <button onclick="closeAgentLibrary()" style="background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; cursor: pointer;">Close</button>
-        `;
-    }
+ toggleMenu();
+ 
+ const modal = document.getElementById('agentLibraryModal');
+ const loading = document.getElementById('libraryLoading');
+ const empty = document.getElementById('libraryEmpty');
+ const grid = document.getElementById('libraryGrid');
+ 
+ // Show modal
+ modal.style.display = 'block';
+ 
+ // Show loading state
+ loading.style.display = 'block';
+ empty.style.display = 'none';
+ grid.style.display = 'none';
+ grid.innerHTML = '';
+ 
+ try {
+ // Load custom agents
+ const response = await fetch('/api/custom-agents', {
+ credentials: 'include'
+ });
+ 
+ const data = await response.json();
+ 
+ loading.style.display = 'none';
+ 
+ if (!data.agents || data.agents.length === 0) {
+ // No agents yet
+ empty.style.display = 'block';
+ } else {
+ // Show agents in grid
+ grid.style.display = 'grid';
+ 
+ data.agents.forEach(agent => {
+ const card = document.createElement('div');
+ card.className = 'library-agent-card';
+ 
+ card.innerHTML = `
+ <div class="library-agent-emoji">${agent.emoji || ''}</div>
+ <div class="library-agent-name">${escapeHtml(agent.name)}</div>
+ <div class="library-agent-role">${escapeHtml(agent.role)}</div>
+ <div class="library-agent-personality">${escapeHtml(agent.personality || 'A helpful AI assistant')}</div>
+ <div class="library-agent-actions">
+ <button class="library-action-btn library-chat-btn" onclick="chatWithLibraryAgent('${escapeHtml(agent.name)}', ${agent.id})">
+  Chat
+ </button>
+ <button class="library-action-btn library-delete-btn" onclick="deleteLibraryAgent(${agent.id}, '${escapeHtml(agent.name)}')">
+ 
+ </button>
+ </div>
+ `;
+ 
+ grid.appendChild(card);
+ });
+ }
+ } catch (error) {
+ console.error('Error loading agent library:', error);
+ loading.style.display = 'none';
+ empty.style.display = 'block';
+ document.getElementById('libraryEmpty').innerHTML = `
+ <div style="font-size: 60px; margin-bottom: 20px;"></div>
+ <h3 style="color: #333; margin-bottom: 10px;">Error Loading Agents</h3>
+ <p style="color: #666; margin-bottom: 20px;">Please try again later</p>
+ <button onclick="closeAgentLibrary()" style="background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; cursor: pointer;">Close</button>
+ `;
+ }
 }
 
 function closeAgentLibrary() {
-    document.getElementById('agentLibraryModal').style.display = 'none';
+ document.getElementById('agentLibraryModal').style.display = 'none';
 }
 
 function chatWithLibraryAgent(agentName, agentId) {
-    closeAgentLibrary();
-    switchAgent(agentName);
-    document.getElementById('messageInput').focus();
+ closeAgentLibrary();
+ switchAgent(agentName);
+ document.getElementById('messageInput').focus();
 }
 
 async function deleteLibraryAgent(agentId, agentName) {
-    if (!confirm(`Delete "${agentName}"? This cannot be undone.`)) {
-        return;
-    }
-    
-    try {
-        const response = await fetch(`/api/custom-agents/${agentId}`, {
-            method: 'DELETE',
-            credentials: 'include'
-        });
-        
-        if (response.ok) {
-            // Reload the library
-            openAgentLibrary();
-            
-            // Also remove from sidebar if it exists
-            const sidebarAgents = document.querySelectorAll('.agent-item');
-            sidebarAgents.forEach(item => {
-                if (item.querySelector('.agent-name')?.textContent === agentName) {
-                    item.remove();
-                }
-            });
-        } else {
-            alert('Failed to delete agent. Please try again.');
-        }
-    } catch (error) {
-        console.error('Error deleting agent:', error);
-        alert('Error deleting agent. Please try again.');
-    }
+ if (!confirm(`Delete "${agentName}"? This cannot be undone.`)) {
+ return;
+ }
+ 
+ try {
+ const response = await fetch(`/api/custom-agents/${agentId}`, {
+ method: 'DELETE',
+ credentials: 'include'
+ });
+ 
+ if (response.ok) {
+ // Reload the library
+ openAgentLibrary();
+ 
+ // Also remove from sidebar if it exists
+ const sidebarAgents = document.querySelectorAll('.agent-item');
+ sidebarAgents.forEach(item => {
+ if (item.querySelector('.agent-name')?.textContent === agentName) {
+ item.remove();
+ }
+ });
+ } else {
+ alert('Failed to delete agent. Please try again.');
+ }
+ } catch (error) {
+ console.error('Error deleting agent:', error);
+ alert('Error deleting agent. Please try again.');
+ }
 }
 
 function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+ const div = document.createElement('div');
+ div.textContent = text;
+ return div.innerHTML;
 }
 
 // ================================================
@@ -1144,125 +1298,125 @@ function escapeHtml(text) {
 // ================================================
 
 function getModelName(key) {
-    const models = {
-        'claude-sonnet-4.5': 'Sonnet 4.5',
-        'claude-opus-4': 'Opus 4',
-        'claude-haiku-4.5': 'Haiku 4.5',
-        'gpt-4o': 'GPT-4o',
-        'gpt-4-turbo': 'GPT-4 Turbo',
-        'gpt-4o-mini': 'GPT-4o Mini',
-        'gemini-2.0-flash': 'Gemini 2.0',
-        'gemini-1.5-pro': 'Gemini 1.5 Pro'
-    };
-    return models[key] || key;
+ const models = {
+ 'claude-sonnet-4.5': 'Sonnet 4.5',
+ 'claude-opus-4': 'Opus 4',
+ 'claude-haiku-4.5': 'Haiku 4.5',
+ 'gpt-4o': 'GPT-4o',
+ 'gpt-4-turbo': 'GPT-4 Turbo',
+ 'gpt-4o-mini': 'GPT-4o Mini',
+ 'gemini-2.0-flash': 'Gemini 2.0',
+ 'gemini-1.5-pro': 'Gemini 1.5 Pro'
+ };
+ return models[key] || key;
 }
 
 function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML.replace(/\n/g, '<br>');
+ const div = document.createElement('div');
+ div.textContent = text;
+ return div.innerHTML.replace(/\n/g, '<br>');
 }
 
 async function downloadFromUrl(url) {
-    try {
-        // Fetch the file to handle cross-origin resources
-        const response = await fetch(url);
-        if (!response.ok) throw new Error('Failed to fetch file');
+ try {
+ // Fetch the file to handle cross-origin resources
+ const response = await fetch(url);
+ if (!response.ok) throw new Error('Failed to fetch file');
 
-        // Convert to blob
-        const blob = await response.blob();
+ // Convert to blob
+ const blob = await response.blob();
 
-        // Create object URL and download
-        const objectUrl = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = objectUrl;
+ // Create object URL and download
+ const objectUrl = URL.createObjectURL(blob);
+ const a = document.createElement('a');
+ a.href = objectUrl;
 
-        // Try to extract filename from URL or use default
-        const urlPath = new URL(url).pathname;
-        const filename = urlPath.split('/').pop() || 'download_' + Date.now() + '.png';
-        a.download = filename;
+ // Try to extract filename from URL or use default
+ const urlPath = new URL(url).pathname;
+ const filename = urlPath.split('/').pop() || 'download_' + Date.now() + '.png';
+ a.download = filename;
 
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+ document.body.appendChild(a);
+ a.click();
+ document.body.removeChild(a);
 
-        // Clean up object URL
-        URL.revokeObjectURL(objectUrl);
-    } catch (error) {
-        console.error('Download failed:', error);
-        // Fallback to direct download for same-origin resources
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'download_' + Date.now() + '.png';
-        a.click();
-    }
+ // Clean up object URL
+ URL.revokeObjectURL(objectUrl);
+ } catch (error) {
+ console.error('Download failed:', error);
+ // Fallback to direct download for same-origin resources
+ const a = document.createElement('a');
+ a.href = url;
+ a.download = 'download_' + Date.now() + '.png';
+ a.click();
+ }
 }
 
 function downloadText(text) {
-    // Create better filename: ai-team-[agent-name]-[YYYY-MM-DD]-[short-slug].txt
-    const now = new Date();
-    const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
-    const agentName = currentAgent || 'assistant';
+ // Create better filename: ai-team-[agent-name]-[YYYY-MM-DD]-[short-slug].txt
+ const now = new Date();
+ const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+ const agentName = currentAgent || 'assistant';
 
-    // Create a short slug from the first few words of the text
-    const words = text.trim().split(/\s+/).slice(0, 3).join('-');
-    const slug = words.replace(/[^a-zA-Z0-9-]/g, '').toLowerCase().substring(0, 20);
+ // Create a short slug from the first few words of the text
+ const words = text.trim().split(/\s+/).slice(0, 3).join('-');
+ const slug = words.replace(/[^a-zA-Z0-9-]/g, '').toLowerCase().substring(0, 20);
 
-    const filename = `ai-team-${agentName.toLowerCase()}-${dateStr}-${slug || 'response'}.txt`;
+ const filename = `ai-team-${agentName.toLowerCase()}-${dateStr}-${slug || 'response'}.txt`;
 
-    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+ const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+ const url = URL.createObjectURL(blob);
+ const a = document.createElement('a');
+ a.href = url;
+ a.download = filename;
+ document.body.appendChild(a);
+ a.click();
+ document.body.removeChild(a);
+ URL.revokeObjectURL(url);
 }
 
 function copyToClipboard(text) {
-    navigator.clipboard.writeText(text).then(() => {
-        // Show a temporary "Copied!" message instead of alert
-        const toast = document.createElement('div');
-        toast.textContent = '✅ Copied to clipboard!';
-        toast.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: #10a37f;
-            color: white;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            z-index: 10000;
-            animation: slideInUp 0.3s ease;
-        `;
-        document.body.appendChild(toast);
+ navigator.clipboard.writeText(text).then(() => {
+ // Show a temporary "Copied!" message instead of alert
+ const toast = document.createElement('div');
+ toast.textContent = ' Copied to clipboard!';
+ toast.style.cssText = `
+ position: fixed;
+ bottom: 20px;
+ right: 20px;
+ background: #10a37f;
+ color: white;
+ padding: 12px 24px;
+ border-radius: 8px;
+ font-size: 14px;
+ font-weight: 500;
+ box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+ z-index: 10000;
+ animation: slideInUp 0.3s ease;
+ `;
+ document.body.appendChild(toast);
 
-        setTimeout(() => {
-            toast.style.animation = 'fadeOut 0.3s ease';
-            setTimeout(() => document.body.removeChild(toast), 300);
-        }, 2000);
-    }).catch((err) => {
-        console.error('Copy failed:', err);
-        // Fallback for older browsers
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-9999px';
-        document.body.appendChild(textArea);
-        textArea.select();
-        try {
-            document.execCommand('copy');
-            alert('✅ Copied!');
-        } catch (e) {
-            alert('❌ Failed to copy');
-        }
-        document.body.removeChild(textArea);
-    });
+ setTimeout(() => {
+ toast.style.animation = 'fadeOut 0.3s ease';
+ setTimeout(() => document.body.removeChild(toast), 300);
+ }, 2000);
+ }).catch((err) => {
+ console.error('Copy failed:', err);
+ // Fallback for older browsers
+ const textArea = document.createElement('textarea');
+ textArea.value = text;
+ textArea.style.position = 'fixed';
+ textArea.style.left = '-9999px';
+ document.body.appendChild(textArea);
+ textArea.select();
+ try {
+ document.execCommand('copy');
+ alert(' Copied!');
+ } catch (e) {
+ alert(' Failed to copy');
+ }
+ document.body.removeChild(textArea);
+ });
 }
 
 // ================================================
@@ -1277,101 +1431,106 @@ let currentWorkingMode = null;
  * Returns the selected mode, or defaults based on the agent
  */
 function getWorkingMode() {
-    if (currentWorkingMode) {
-        return currentWorkingMode;
-    }
+ if (currentWorkingMode) {
+ return currentWorkingMode;
+ }
 
-    // Apply agent-specific defaults
-    const askThenOutputAgents = ['Luna', 'Mila', 'Sol'];
-    if (askThenOutputAgents.includes(currentAgent)) {
-        return 'ask_then_output';
-    }
+ // Apply agent-specific defaults
+ const askThenOutputAgents = ['Luna', 'Mila', 'Sol'];
+ if (askThenOutputAgents.includes(currentAgent)) {
+ return 'ask_then_output';
+ }
 
-    // Default for all others (Sage, Theo, Ember, Nova, etc.)
-    return 'output_first';
+ // Default for all others (Sage, Theo, Ember, Nova, etc.)
+ return 'output_first';
 }
 
 /**
  * Toggle working mode dropdown
  */
 function toggleWorkingMode() {
-    const menu = document.getElementById('workingModeMenu');
-    if (menu) {
-        menu.classList.toggle('show');
-    }
+ const menu = document.getElementById('workingModeMenu');
+ if (menu) {
+ menu.classList.toggle('show');
+ }
 
-    // Close dropdown when clicking outside
-    if (menu && menu.classList.contains('show')) {
-        setTimeout(() => {
-            document.addEventListener('click', function closeDropdown(e) {
-                if (!e.target.closest('.working-mode-container')) {
-                    menu.classList.remove('show');
-                    document.removeEventListener('click', closeDropdown);
-                }
-            });
-        }, 0);
-    }
+ // Close dropdown when clicking outside
+ if (menu && menu.classList.contains('show')) {
+ setTimeout(() => {
+ document.addEventListener('click', function closeDropdown(e) {
+ if (!e.target.closest('.working-mode-container')) {
+ menu.classList.remove('show');
+ document.removeEventListener('click', closeDropdown);
+ }
+ });
+ }, 0);
+ }
 }
 
 /**
  * Select and persist working mode
  */
 function selectWorkingMode(mode) {
-    currentWorkingMode = mode;
+ currentWorkingMode = mode;
 
-    // Update UI - remove active class from all mode options
-    document.querySelectorAll('.mode-option').forEach(btn => {
-        btn.classList.remove('active');
-    });
+ // Update UI - remove active class from all mode options
+ document.querySelectorAll('.mode-option').forEach(btn => {
+ btn.classList.remove('active');
+ });
 
-    // Add active class to selected option
-    const selectedBtn = document.querySelector(`.mode-option[data-mode="${mode}"]`);
-    if (selectedBtn) {
-        selectedBtn.classList.add('active');
-    }
+ // Add active class to selected option
+ const selectedBtn = document.querySelector(`.mode-option[data-mode="${mode}"]`);
+ if (selectedBtn) {
+ selectedBtn.classList.add('active');
+ }
 
-    // Update the icon in the main button
-    const modeIcons = {
-        'output_first': '⚡',
-        'ask_then_output': '💬',
-        'coaching': '🎯'
-    };
-    const iconElement = document.getElementById('workingModeIcon');
-    if (iconElement && modeIcons[mode]) {
-        iconElement.textContent = modeIcons[mode];
-    }
+ // Update the icon in the main button
+ const modeIcons = {
+ 'output_first': 'Mode',
+ 'ask_then_output': '',
+ 'coaching': ''
+ };
+ const iconElement = document.getElementById('workingModeIcon');
+ if (iconElement && modeIcons[mode]) {
+ iconElement.textContent = modeIcons[mode];
+ }
 
-    // Close the dropdown
-    const menu = document.getElementById('workingModeMenu');
-    if (menu) {
-        menu.classList.remove('show');
-    }
+ // Close the dropdown
+ const menu = document.getElementById('workingModeMenu');
+ if (menu) {
+ menu.classList.remove('show');
+ }
 
-    // Store in sessionStorage for persistence
-    sessionStorage.setItem('workingMode', mode);
+ // Store in sessionStorage for persistence
+ sessionStorage.setItem('workingMode', mode);
 
-    console.log(`Working mode set to: ${mode}`);
+ console.log(`Working mode set to: ${mode}`);
 }
 
 /**
  * Initialize working mode on page load
  */
 function initializeWorkingMode() {
-    // Check if mode was previously selected in this session
-    const savedMode = sessionStorage.getItem('workingMode');
+ // Check if mode was previously selected in this session
+ const savedMode = sessionStorage.getItem('workingMode');
 
-    if (savedMode) {
-        selectWorkingMode(savedMode);
-    } else {
-        // Apply agent-specific default
-        const defaultMode = getWorkingMode();
-        selectWorkingMode(defaultMode);
-    }
+ if (savedMode) {
+ selectWorkingMode(savedMode);
+ } else {
+ // Apply agent-specific default
+ const defaultMode = getWorkingMode();
+ selectWorkingMode(defaultMode);
+ }
 }
 
 // Initialize working mode when the page loads
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeWorkingMode);
+ document.addEventListener('DOMContentLoaded', initializeWorkingMode);
 } else {
-    initializeWorkingMode();
+ initializeWorkingMode();
 }
+
+
+
+
+
