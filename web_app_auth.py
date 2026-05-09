@@ -15,6 +15,7 @@ from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 import sqlite3
+import shutil
 import anthropic
 import base64
 import mimetypes
@@ -29,6 +30,7 @@ import time
 
 # Load environment variables from .env file
 load_dotenv()
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # ============================================
 # NOTION INTEGRATION IMPORT
@@ -148,23 +150,67 @@ PRIMARY_AGENTS = [
 # Table: client_agents
 # Premium paid deliverables, admin-only, private to one client
 
-# File upload configuration
-UPLOAD_FOLDER = 'uploads'
+# Detect deployment profile and build centralized data paths
+IS_RENDER = os.environ.get('RENDER') == 'true' or os.environ.get('RENDER_SERVICE_NAME') is not None
+IS_PRODUCTION = (
+    os.environ.get('FLASK_ENV') == 'production'
+    or os.environ.get('ENVIRONMENT') == 'production'
+    or IS_RENDER
+)
+
+DEFAULT_DATA_DIR = '/data' if IS_RENDER else BASE_DIR
+DATA_DIR = os.path.abspath(os.environ.get('DATA_DIR', DEFAULT_DATA_DIR))
+DB_PATH = os.path.abspath(os.environ.get('DB_PATH', os.path.join(DATA_DIR, 'ai_team.db')))
+UPLOAD_FOLDER = os.path.abspath(os.environ.get('UPLOAD_FOLDER', os.path.join(DATA_DIR, 'uploads')))
+OUTPUT_FOLDER = os.path.abspath(os.environ.get('OUTPUT_FOLDER', os.path.join(DATA_DIR, 'outputs')))
+BACKUP_ROOT = os.path.abspath(os.environ.get('BACKUP_ROOT', os.path.join(DATA_DIR, 'backups')))
+MIGRATION_BACKUP_DIR = os.path.abspath(os.environ.get('MIGRATION_BACKUP_DIR', os.path.join(DATA_DIR, 'migration_backups')))
+
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 ALLOWED_EXTENSIONS = {
-    # Images
     'png', 'jpg', 'jpeg', 'gif', 'webp',
-    # Documents
     'pdf', 'txt', 'md', 'csv',
-    # Office
     'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'
 }
 
+def ensure_storage_paths():
+    for path in [DATA_DIR, os.path.dirname(DB_PATH), UPLOAD_FOLDER, OUTPUT_FOLDER, BACKUP_ROOT, MIGRATION_BACKUP_DIR]:
+        if path:
+            os.makedirs(path, exist_ok=True)
+
+def validate_storage_configuration():
+    """Startup safety checks for low-cost single deploy mode."""
+    print(f"DATA_DIR: {DATA_DIR}")
+    print(f"DB_PATH: {DB_PATH}")
+    print(f"UPLOAD_FOLDER: {UPLOAD_FOLDER}")
+    print(f"OUTPUT_FOLDER: {OUTPUT_FOLDER}")
+    print(f"BACKUP_ROOT: {BACKUP_ROOT}")
+
+    warnings = []
+    ephemeral_markers = ['/tmp', '\\Temp\\', '\\AppData\\Local\\Temp\\']
+    if IS_PRODUCTION and any(marker in DATA_DIR for marker in ephemeral_markers):
+        warnings.append(f"Production DATA_DIR appears ephemeral: {DATA_DIR}")
+    if IS_RENDER and DATA_DIR != '/data':
+        warnings.append(f"Render detected but DATA_DIR is not /data: {DATA_DIR}")
+
+    for path in [DATA_DIR, os.path.dirname(DB_PATH), UPLOAD_FOLDER, OUTPUT_FOLDER, BACKUP_ROOT]:
+        if not os.access(path, os.W_OK):
+            warnings.append(f"Path is not writable: {path}")
+
+    if warnings:
+        print("STORAGE SAFETY WARNINGS:")
+        for warning in warnings:
+            print(f" - {warning}")
+        if IS_PRODUCTION:
+            print("App can run, but this configuration risks data loss.")
+    else:
+        print("Storage safety checks passed")
+
+ensure_storage_paths()
+validate_storage_configuration()
+
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
-
-# Create upload folder if it doesn't exist
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # Enable CORS
 CORS(app, supports_credentials=True, origins=['*'])
@@ -181,7 +227,7 @@ login_manager.login_view = 'login'
 @app.route('/static/<path:filename>')
 def serve_static(filename):
     """Serve static files (images, CSS, JS)"""
-    static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
+    static_dir = os.path.join(BASE_DIR, 'static')
     return send_from_directory(static_dir, filename)
 
 # ============================================
@@ -192,53 +238,6 @@ if NOTION_AVAILABLE:
     print("✅ Notion integration enabled")
 else:
     print("⚠️  Notion integration disabled")
-
-# Database path - use local database (Render /data has worker process permission issues)
-import os
-import shutil
-
-# IMPORTANT: On Render, the application directory is not writable.
-# Use /tmp for database storage which is always writable.
-# /tmp is ephemeral but we can copy from /data on startup if it exists.
-
-# Detect if we're on Render (production) - Render sets RENDER environment variable
-IS_RENDER = os.environ.get('RENDER') == 'true' or os.environ.get('RENDER_SERVICE_NAME') is not None
-
-if IS_RENDER:
-    # CRITICAL FIX: Use /data (persistent) instead of /tmp (ephemeral)
-    # /tmp gets wiped on every Render restart, causing data loss!
-    # /data is persistent across restarts
-    DB_PATH = '/data/ai_team.db'
-    print(f"🔍 Render environment detected - using PERSISTENT storage: {DB_PATH}")
-
-    # Ensure /data directory exists
-    os.makedirs('/data', exist_ok=True)
-
-    # Legacy migration: If database is still in /tmp, move it to /data
-    tmp_db = '/tmp/ai_team.db'
-    if os.path.exists(tmp_db) and not os.path.exists(DB_PATH):
-        try:
-            print(f"📋 Migrating database from /tmp to /data...")
-            shutil.copy(tmp_db, DB_PATH)
-            print(f"✅ Database migrated to persistent storage: {DB_PATH}")
-        except Exception as e:
-            print(f"⚠️  Migration failed: {e}")
-else:
-    # Local development: use local file
-    DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ai_team.db')
-    print(f"🔍 Local development - database path: {DB_PATH}")
-
-# Ensure /data is writable (Render check)
-if IS_RENDER:
-    try:
-        test_file = '/data/test_write.txt'
-        with open(test_file, 'w') as f:
-            f.write('test')
-        os.remove(test_file)
-        print(f"✅ /data directory is writable")
-    except Exception as e:
-        print(f"❌ /data is NOT writable: {e}")
-        print(f"   This is critical - application may fail")
 
 # Check if database file exists
 if os.path.exists(DB_PATH):
@@ -317,14 +316,10 @@ def sync_database_to_persistent_storage():
     Database is already in /data (persistent storage), no sync required
     Kept for backward compatibility with existing code that calls this
     """
-    if not IS_RENDER:
-        return
-
-    # Database is already in /data, create a timestamped backup instead
     try:
         if os.path.exists(DB_PATH) and os.path.getsize(DB_PATH) > 0:
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            backup_dir = '/data/backups'
+            backup_dir = BACKUP_ROOT
             os.makedirs(backup_dir, exist_ok=True)
 
             backup_path = os.path.join(backup_dir, f'backup_{timestamp}.db')
@@ -343,6 +338,32 @@ def sync_database_to_persistent_storage():
 
     except Exception as e:
         print(f"⚠️  Database sync failed: {e}")
+
+def create_database_backup(reason='manual'):
+    """Create a timestamped database backup in BACKUP_ROOT."""
+    if not os.path.exists(DB_PATH):
+        return {'success': False, 'error': f'Database not found at {DB_PATH}'}
+    if os.path.getsize(DB_PATH) <= 0:
+        return {'success': False, 'error': f'Database file is empty at {DB_PATH}'}
+
+    os.makedirs(BACKUP_ROOT, exist_ok=True)
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    safe_reason = ''.join(c if c.isalnum() or c in ('-', '_') else '_' for c in reason)[:40]
+    backup_path = os.path.join(BACKUP_ROOT, f'{safe_reason}_{timestamp}.db')
+    shutil.copy2(DB_PATH, backup_path)
+
+    backups = sorted(
+        [f for f in os.listdir(BACKUP_ROOT) if f.endswith('.db')],
+        reverse=True
+    )
+    for old_backup in backups[24:]:
+        old_path = os.path.join(BACKUP_ROOT, old_backup)
+        try:
+            os.remove(old_path)
+        except Exception:
+            pass
+
+    return {'success': True, 'backup_path': backup_path}
 
 # ============================================
 # USER MODEL
@@ -804,12 +825,7 @@ def init_database():
 
         # Only backup if database exists and has data
         if os.path.exists(DB_PATH) and os.path.getsize(DB_PATH) > 0:
-            # On Render, save backups to /data for persistence across restarts
-            if IS_RENDER:
-                backup_dir = '/data/migration_backups'
-            else:
-                backup_dir = 'migration_backups'
-
+            backup_dir = MIGRATION_BACKUP_DIR
             os.makedirs(backup_dir, exist_ok=True)
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             backup_path = os.path.join(backup_dir, f'pre_migration_{timestamp}.db')
@@ -6103,6 +6119,46 @@ def automations():
         traceback.print_exc()
         return f"Error loading automations page: {str(e)}", 500
 
+@app.route('/api/storage-health', methods=['GET'])
+@login_required
+def storage_health():
+    """Return storage configuration and writability checks."""
+    checks = {}
+    for name, path in [
+        ('DATA_DIR', DATA_DIR),
+        ('DB_DIR', os.path.dirname(DB_PATH)),
+        ('UPLOAD_FOLDER', UPLOAD_FOLDER),
+        ('OUTPUT_FOLDER', OUTPUT_FOLDER),
+        ('BACKUP_ROOT', BACKUP_ROOT),
+    ]:
+        checks[name] = {
+            'path': path,
+            'exists': os.path.exists(path),
+            'writable': os.access(path, os.W_OK) if os.path.exists(path) else False
+        }
+
+    return jsonify({
+        'success': True,
+        'is_production': IS_PRODUCTION,
+        'is_render': IS_RENDER,
+        'data_dir': DATA_DIR,
+        'db_path': DB_PATH,
+        'checks': checks
+    }), 200
+
+@app.route('/api/admin/run-backup', methods=['POST'])
+@login_required
+def run_backup():
+    """Admin-only manual backup trigger."""
+    if current_user.id != 1:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    reason = (request.get_json(silent=True) or {}).get('reason', 'manual')
+    result = create_database_backup(reason=reason)
+    if result.get('success'):
+        return jsonify(result), 200
+    return jsonify(result), 500
+
 @app.route('/admin')
 @login_required
 def admin_portal():
@@ -7065,7 +7121,7 @@ def diagnose_file_libs():
     }
 
     # Check output folder for created files
-    output_dir = '/mnt/user-data/outputs'
+    output_dir = OUTPUT_FOLDER
     diagnosis['upload_folders']['OUTPUT_FOLDER'] = {
         'path': output_dir,
         'exists': os.path.exists(output_dir),
@@ -12187,7 +12243,7 @@ def create_website_file():
         unique_filename = f"{current_user.id}_{timestamp}_{filename}"
         
         # Save to outputs directory (temporary storage)
-        output_path = os.path.join('/mnt/user-data/outputs', unique_filename)
+        output_path = os.path.join(OUTPUT_FOLDER, unique_filename)
         
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(code)
@@ -12239,7 +12295,7 @@ def create_pdf():
         unique_filename = f"{current_user.id}_{timestamp}_{filename}"
 
         # Ensure output directory exists
-        output_dir = '/mnt/user-data/outputs'
+        output_dir = OUTPUT_FOLDER
         os.makedirs(output_dir, exist_ok=True)
         output_path = os.path.join(output_dir, unique_filename)
 
@@ -12302,7 +12358,7 @@ def create_docx():
         unique_filename = f"{current_user.id}_{timestamp}_{filename}"
 
         # Ensure output directory exists
-        output_dir = '/mnt/user-data/outputs'
+        output_dir = OUTPUT_FOLDER
         os.makedirs(output_dir, exist_ok=True)
         output_path = os.path.join(output_dir, unique_filename)
 
@@ -12362,7 +12418,7 @@ def create_xlsx():
         unique_filename = f"{current_user.id}_{timestamp}_{filename}"
 
         # Ensure output directory exists
-        output_dir = '/mnt/user-data/outputs'
+        output_dir = OUTPUT_FOLDER
         os.makedirs(output_dir, exist_ok=True)
         output_path = os.path.join(output_dir, unique_filename)
 
@@ -12426,7 +12482,7 @@ def create_zip():
         unique_filename = f"{current_user.id}_{timestamp}_{filename}"
 
         # Ensure output directory exists
-        output_dir = '/mnt/user-data/outputs'
+        output_dir = OUTPUT_FOLDER
         os.makedirs(output_dir, exist_ok=True)
         output_path = os.path.join(output_dir, unique_filename)
 
@@ -12464,7 +12520,7 @@ def download_file(filename):
         if not filename.startswith(f"{current_user.id}_"):
             return "Unauthorized", 403
 
-        file_path = os.path.join('/mnt/user-data/outputs', filename)
+        file_path = os.path.join(OUTPUT_FOLDER, filename)
 
         if not os.path.exists(file_path):
             return "File not found", 404
@@ -12473,7 +12529,7 @@ def download_file(filename):
         original_filename = '_'.join(filename.split('_')[2:])
 
         return send_from_directory(
-            '/mnt/user-data/outputs',
+            OUTPUT_FOLDER,
             filename,
             as_attachment=True,
             download_name=original_filename
@@ -12500,7 +12556,7 @@ def download_file_generic():
         allowed_bases = [
             os.path.abspath('uploads'),
             os.path.abspath('/mnt/user-data/uploads'),
-            os.path.abspath('/mnt/user-data/outputs')
+            os.path.abspath(OUTPUT_FOLDER)
         ]
 
         # Get absolute path of requested file
@@ -12548,7 +12604,7 @@ def download_website(filename):
         if not filename.startswith(f"{current_user.id}_"):
             return "Unauthorized", 403
 
-        file_path = os.path.join('/mnt/user-data/outputs', filename)
+        file_path = os.path.join(OUTPUT_FOLDER, filename)
 
         if not os.path.exists(file_path):
             return "File not found", 404
@@ -12557,7 +12613,7 @@ def download_website(filename):
         original_filename = '_'.join(filename.split('_')[2:])
         
         return send_from_directory(
-            '/mnt/user-data/outputs',
+            OUTPUT_FOLDER,
             filename,
             as_attachment=True,
             download_name=original_filename
@@ -13509,3 +13565,5 @@ def list_routes():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
+
+
