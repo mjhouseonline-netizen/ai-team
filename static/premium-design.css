@@ -883,3 +883,68 @@ h1, h2, h3 {
         border: 1px solid var(--color-gray-300);
     }
 }
+
+/* ============================================
+   8. Global Dark + Gold Enforcement
+   ============================================ */
+html, body {
+    background: #0b0b0a !important;
+    color: #f4efe4 !important;
+}
+
+.container,
+.main-container,
+.content,
+.card,
+.panel,
+.section,
+.stats-card,
+.pricing-card,
+.feature-card,
+.faq-item,
+.integration-card,
+.modal-content,
+table,
+thead,
+tbody,
+tr,
+td,
+th {
+    background-color: #141310 !important;
+    color: #f4efe4 !important;
+    border-color: rgba(225, 204, 153, 0.2) !important;
+}
+
+input,
+textarea,
+select {
+    background: #171612 !important;
+    color: #f4efe4 !important;
+    border-color: rgba(225, 204, 153, 0.28) !important;
+}
+
+a,
+.link,
+.text-link,
+.nav-link {
+    color: #d6b873 !important;
+}
+
+button,
+.btn,
+.button,
+.action-btn,
+.back-btn,
+.select-button,
+.new-chat-btn,
+.send-btn {
+    background: linear-gradient(135deg, #d6b873, #a87d38) !important;
+    color: #11110f !important;
+    border-color: rgba(225, 204, 153, 0.45) !important;
+}
+
+button:hover,
+.btn:hover,
+.button:hover {
+    background: linear-gradient(135deg, #e2c982, #b78b44) !important;
+}
