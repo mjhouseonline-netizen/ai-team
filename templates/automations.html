@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Automations</title>
+  <style>
+    :root {
+      --bg: #121210;
+      --panel: #1a1916;
+      --panel-2: #201f1b;
+      --line: rgba(225, 204, 153, 0.2);
+      --text: #f6efdf;
+      --muted: #bba987;
+      --accent: #d6b873;
+      --accent-2: #8d682e;
+      --ok: #84cc8a;
+      --warn: #e5c07b;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: radial-gradient(circle at 20% 10%, #242117 0%, #13120f 55%, #0d0d0c 100%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .shell {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 28px 20px 40px;
+    }
+
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 22px;
+      gap: 12px;
+    }
+
+    .top h1 {
+      margin: 0;
+      font-size: 30px;
+      color: #f5e7c6;
+    }
+
+    .top a {
+      color: #1b150a;
+      text-decoration: none;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      border: 1px solid rgba(255, 241, 206, 0.35);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-weight: 600;
+    }
+
+    .intro {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 18px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    .card {
+      background: linear-gradient(180deg, var(--panel), var(--panel-2));
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 14px;
+    }
+
+    .card h3 {
+      margin: 0 0 8px;
+      color: #f5e7c6;
+      font-size: 18px;
+    }
+
+    .desc {
+      color: var(--muted);
+      margin-bottom: 10px;
+      line-height: 1.45;
+      font-size: 14px;
+    }
+
+    .meta {
+      font-size: 12px;
+      color: #ccb88f;
+      margin-bottom: 12px;
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .pill {
+      font-size: 12px;
+      border: 1px solid rgba(225, 204, 153, 0.25);
+      border-radius: 999px;
+      padding: 4px 9px;
+      color: #d8c59e;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .btn {
+      border: 1px solid rgba(255, 241, 206, 0.35);
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #1b150a;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn.secondary {
+      background: rgba(255, 255, 255, 0.04);
+      color: #f4ead2;
+      border-color: var(--line);
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 9px 0;
+      border-bottom: 1px solid rgba(225, 204, 153, 0.12);
+      gap: 10px;
+    }
+
+    .status-item:last-child { border-bottom: none; }
+
+    .status {
+      font-size: 11px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      padding: 3px 8px;
+      white-space: nowrap;
+    }
+
+    .status.ready { color: var(--ok); border-color: rgba(132, 204, 138, 0.4); }
+    .status.connected_limited { color: var(--warn); border-color: rgba(229, 192, 123, 0.4); }
+    .status.needs_oauth_setup { color: #d7b37c; border-color: rgba(215, 179, 124, 0.4); }
+
+    @media (min-width: 920px) {
+      .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .split { grid-template-columns: 1.1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="top">
+      <h1>Automations</h1>
+      <a href="/dashboard">Back to Dashboard</a>
+    </div>
+
+    <div class="intro">
+      One-click templates create a ready prompt and hand you off to the best agent lane. Use these to launch workflow design quickly, then refine details in chat.
+    </div>
+
+    <div id="templateGrid" class="grid"></div>
+
+    <div class="split">
+      <div class="card">
+        <h3>Integration Readiness</h3>
+        <div class="desc">Connected tools are shown with readiness states so you can see what is fully live vs still limited.</div>
+        <div id="integrationList"></div>
+      </div>
+
+      <div class="card">
+        <h3>Quick Actions</h3>
+        <div class="desc">Use these shortcuts to continue setup.</div>
+        <div class="row">
+          <a class="btn secondary" href="/integrations">Open Integrations</a>
+          <a class="btn secondary" href="/dashboard">Open Team Chat</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function goToTemplate(prompt, agent) {
+      localStorage.setItem('ai_team_prefill_prompt', prompt);
+      localStorage.setItem('ai_team_prefill_agent', agent || '');
+      window.location.href = '/dashboard';
+    }
+
+    function statusLabel(status) {
+      if (status === 'ready') return 'Ready';
+      if (status === 'connected_limited') return 'Connected (Limited)';
+      return 'Needs OAuth Setup';
+    }
+
+    async function loadTemplates() {
+      const grid = document.getElementById('templateGrid');
+      const response = await fetch('/api/automation-templates', { credentials: 'include' });
+      const data = await response.json();
+      if (!response.ok || !data.templates) {
+        grid.innerHTML = '<div class="card">Unable to load templates right now.</div>';
+        return;
+      }
+
+      grid.innerHTML = data.templates.map(t => {
+        const encodedPrompt = encodeURIComponent(t.starter_prompt || '');
+        return `
+        <div class="card">
+          <h3>${t.name}</h3>
+          <div class="desc">${t.description}</div>
+          <div class="meta">Owner lane: ${t.owner_agent}</div>
+          <div class="row" style="margin-bottom:10px;">
+            ${(t.recommended_integrations || []).map(i => `<span class="pill">${i}</span>`).join('')}
+          </div>
+          <div class="row">
+            <button class="btn" onclick="goToTemplate(decodeURIComponent('${encodedPrompt}'), '${t.owner_agent}')">Use Template</button>
+            <button class="btn secondary" onclick="navigator.clipboard.writeText(decodeURIComponent('${encodedPrompt}'))">Copy Prompt</button>
+          </div>
+        </div>
+      `;
+      }).join('');
+    }
+
+    async function loadIntegrations() {
+      const target = document.getElementById('integrationList');
+      const response = await fetch('/api/user-integrations', { credentials: 'include' });
+      const data = await response.json();
+      if (!response.ok || !data.available) {
+        target.innerHTML = '<div class="status-item">Unable to load integration status.</div>';
+        return;
+      }
+
+      const top = data.available.slice(0, 10);
+      target.innerHTML = top.map(item => `
+        <div class="status-item">
+          <div>${item.icon || ''} ${item.name}</div>
+          <div class="status ${item.readiness?.status || 'needs_oauth_setup'}">
+            ${statusLabel(item.readiness?.status || 'needs_oauth_setup')}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    loadTemplates().catch(() => {
+      document.getElementById('templateGrid').innerHTML = '<div class="card">Unable to load templates right now.</div>';
+    });
+    loadIntegrations().catch(() => {
+      document.getElementById('integrationList').innerHTML = '<div class="status-item">Unable to load integration status.</div>';
+    });
+  </script>
+</body>
+</html>
