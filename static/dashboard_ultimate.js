@@ -481,7 +481,8 @@ function addMessage(text, type, imageUrl = null, modelBadge = '', attachments = 
  messageDiv.className = `message ${type}`;
 
  const avatar = type === 'user' ? '' : currentAgentEmoji;
- const badge = modelBadge ? `<span class="model-badge">${modelBadge}</span>` : '';
+ // Hide model labels in chat UI (user requested cleaner messages)
+ const badge = '';
  const skillsHtml = formatActiveSkills(activeSkills);
 
  const isWebsite = type === 'assistant' && detectWebsite(text);
@@ -540,11 +541,17 @@ function addMessage(text, type, imageUrl = null, modelBadge = '', attachments = 
  const actionBtns = type === 'assistant'
  ? `
  <div class="message-actions">
- <button class="action-btn" onclick="copyToClipboard(\`${safeText}\`)"> Copy</button>
- <button class="action-btn" onclick="downloadText(\`${safeText}\`)"> Download</button>
+ <button class="message-action-btn" onclick="copyToClipboard(\`${safeText}\`)">Copy</button>
+ <button class="message-action-btn" onclick="downloadText(\`${safeText}\`)">Download</button>
  </div>
  `
- : '';
+ : `
+ <div class="message-actions">
+ <button class="message-action-btn" onclick="editMessageText(\`${safeText}\`)">Edit</button>
+ <button class="message-action-btn" onclick="copyToClipboard(\`${safeText}\`)">Copy</button>
+ <button class="message-action-btn" onclick="downloadText(\`${safeText}\`)">Download</button>
+ </div>
+ `;
 
  messageDiv.innerHTML = `
  <div class="avatar" style="${type === 'assistant'
@@ -1373,6 +1380,20 @@ function downloadText(text) {
  a.click();
  document.body.removeChild(a);
  URL.revokeObjectURL(url);
+}
+
+function editMessageText(text) {
+ const input = document.getElementById('messageInput');
+ if (!input) return;
+ input.value = text || '';
+ input.focus();
+ input.setSelectionRange(input.value.length, input.value.length);
+ if (typeof autoResize === 'function') {
+ autoResize(input);
+ }
+ if (typeof showNotification === 'function') {
+ showNotification('Message loaded for editing');
+ }
 }
 
 function copyToClipboard(text) {
