@@ -1,4 +1,4 @@
-﻿"""
+"""
 AI Team - Complete Web Application
 Includes: Homepage, Authentication, Dashboard, AI Chat
 """
@@ -28,29 +28,20 @@ from functools import wraps
 from collections import defaultdict
 import time
 
-# When launched as `python web_app_auth.py`, keep internal imports from
-# loading this file a second time under the `web_app_auth` module name.
-sys.modules.setdefault("web_app_auth", sys.modules[__name__])
-
-# Keep Windows consoles from crashing on status output during startup.
-for stream in (sys.stdout, sys.stderr):
-    if hasattr(stream, "reconfigure"):
-        try:
-            stream.reconfigure(errors="replace")
-        except Exception:
-            pass
-
 # Load environment variables from .env file
 load_dotenv()
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # ============================================
 # NOTION INTEGRATION IMPORT
-# Deferred until get_db_connection is defined.
 # ============================================
-notion_bp = None
-NOTION_AVAILABLE = False
+try:
+    from routes.notion_routes import notion_bp
+    NOTION_AVAILABLE = True
+except ImportError:
+    print("⚠️  Notion integration not available - routes/notion_routes.py not found")
+    notion_bp = None
+    NOTION_AVAILABLE = False
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -138,13 +129,13 @@ STRIPE_ENTERPRISE_PRICE_ID = os.environ.get('STRIPE_ENTERPRISE_PRICE_ID', 'price
 
 # Agent Type 1: PRIMARY AGENTS (Hardcoded - not in database)
 PRIMARY_AGENTS = [
-    'Luna',     # Evidence Researcher - research, comparison, source synthesis
-    'Mila',     # Workflow Planner - projects, tasks, SOPs, structure
-    'Sage',     # Copy & Content Writer - writing, editing, messaging
-    'Ember',    # Creative Concept Designer - ideas, brand, visual direction
-    'Sol',      # Business Strategist - positioning, decisions, growth
-    'Nova',     # Tech Builder - code, debugging, security, architecture
-    'Theo'      # Execution Lead - implementation, QA, launch, follow-through
+    'Ember',    # Creative Visionary - Ideas and innovation
+    'Luna',     # Research Specialist - Deep knowledge
+    'Nova',     # Technical Architect - System design
+    'Echo',     # Communication Expert - Clarity and persuasion
+    'Sage',     # Strategy Advisor - Planning and direction
+    'Pixel',    # Visual Designer - UI/UX and aesthetics
+    'Atlas'     # Data Analyst - Numbers and insights
 ]
 
 # Agent Type 2: CUSTOM AGENTS
@@ -188,21 +179,17 @@ def ensure_storage_paths():
             os.makedirs(path, exist_ok=True)
 
 def validate_storage_configuration():
-    """
-    Startup safety checks for low-cost single-deploy mode.
-    Warn loudly when production storage looks ephemeral or unwritable.
-    """
-    print(f"📦 DATA_DIR: {DATA_DIR}")
-    print(f"🗄️  DB_PATH: {DB_PATH}")
-    print(f"📁 UPLOAD_FOLDER: {UPLOAD_FOLDER}")
-    print(f"📄 OUTPUT_FOLDER: {OUTPUT_FOLDER}")
-    print(f"💾 BACKUP_ROOT: {BACKUP_ROOT}")
+    """Startup safety checks for low-cost single deploy mode."""
+    print(f"DATA_DIR: {DATA_DIR}")
+    print(f"DB_PATH: {DB_PATH}")
+    print(f"UPLOAD_FOLDER: {UPLOAD_FOLDER}")
+    print(f"OUTPUT_FOLDER: {OUTPUT_FOLDER}")
+    print(f"BACKUP_ROOT: {BACKUP_ROOT}")
 
     warnings = []
     ephemeral_markers = ['/tmp', '\\Temp\\', '\\AppData\\Local\\Temp\\']
     if IS_PRODUCTION and any(marker in DATA_DIR for marker in ephemeral_markers):
         warnings.append(f"Production DATA_DIR appears ephemeral: {DATA_DIR}")
-
     if IS_RENDER and DATA_DIR != '/data':
         warnings.append(f"Render detected but DATA_DIR is not /data: {DATA_DIR}")
 
@@ -211,13 +198,13 @@ def validate_storage_configuration():
             warnings.append(f"Path is not writable: {path}")
 
     if warnings:
-        print("⚠️  STORAGE SAFETY WARNINGS:")
+        print("STORAGE SAFETY WARNINGS:")
         for warning in warnings:
-            print(f"   - {warning}")
+            print(f" - {warning}")
         if IS_PRODUCTION:
-            print("⚠️  App can run, but this configuration risks data loss.")
+            print("App can run, but this configuration risks data loss.")
     else:
-        print("✅ Storage safety checks passed")
+        print("Storage safety checks passed")
 
 ensure_storage_paths()
 validate_storage_configuration()
@@ -242,6 +229,15 @@ def serve_static(filename):
     """Serve static files (images, CSS, JS)"""
     static_dir = os.path.join(BASE_DIR, 'static')
     return send_from_directory(static_dir, filename)
+
+# ============================================
+# REGISTER NOTION BLUEPRINT
+# ============================================
+if NOTION_AVAILABLE:
+    app.register_blueprint(notion_bp)
+    print("✅ Notion integration enabled")
+else:
+    print("⚠️  Notion integration disabled")
 
 # Check if database file exists
 if os.path.exists(DB_PATH):
@@ -314,19 +310,6 @@ def get_db_connection():
 
         raise
 
-# ============================================
-# REGISTER NOTION BLUEPRINT
-# ============================================
-try:
-    from routes.notion_routes import notion_bp
-    app.register_blueprint(notion_bp)
-    NOTION_AVAILABLE = True
-    print("Notion integration enabled")
-except ImportError as e:
-    notion_bp = None
-    NOTION_AVAILABLE = False
-    print(f"Notion integration disabled: {e}")
-
 def sync_database_to_persistent_storage():
     """
     LEGACY FUNCTION - No longer needed since we use /data directly now
@@ -369,7 +352,6 @@ def create_database_backup(reason='manual'):
     backup_path = os.path.join(BACKUP_ROOT, f'{safe_reason}_{timestamp}.db')
     shutil.copy2(DB_PATH, backup_path)
 
-    # Keep latest 24 backups in low-cost mode
     backups = sorted(
         [f for f in os.listdir(BACKUP_ROOT) if f.endswith('.db')],
         reverse=True
@@ -5074,50 +5056,6 @@ AVAILABLE_INTEGRATIONS = {
     }
 }
 
-OAUTH_ENV_CONFIG = {
-    'github': ('GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET'),
-    'google_sheets': ('GOOGLE_SHEETS_CLIENT_ID', 'GOOGLE_SHEETS_CLIENT_SECRET'),
-    'slack': ('SLACK_CLIENT_ID', 'SLACK_CLIENT_SECRET'),
-    'gmail': ('GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'),
-    'outlook': ('OUTLOOK_CLIENT_ID', 'OUTLOOK_CLIENT_SECRET'),
-    'twitter': ('TWITTER_CLIENT_ID', 'TWITTER_CLIENT_SECRET'),
-    'linkedin': ('LINKEDIN_CLIENT_ID', 'LINKEDIN_CLIENT_SECRET'),
-    'zoom': ('ZOOM_CLIENT_ID', 'ZOOM_CLIENT_SECRET'),
-    'google_calendar': ('GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET')
-}
-
-LIMITED_INTEGRATION_SERVICES = {'gmail', 'twitter', 'linkedin', 'google_calendar'}
-
-def get_integration_readiness(service, is_connected=False):
-    """
-    Return readiness information for an integration service.
-    States:
-    - ready: OAuth app credentials are configured and service can be used normally.
-    - connected_limited: Connected but runtime actions are still placeholder-limited.
-    - needs_oauth_setup: OAuth credentials missing for this service.
-    """
-    env_keys = OAUTH_ENV_CONFIG.get(service)
-    has_oauth_setup = False
-    if env_keys:
-        has_oauth_setup = bool(os.environ.get(env_keys[0]) and os.environ.get(env_keys[1]))
-
-    if is_connected and service in LIMITED_INTEGRATION_SERVICES:
-        return {
-            'status': 'connected_limited',
-            'message': 'Connected, but some actions are still in limited placeholder mode.'
-        }
-
-    if has_oauth_setup:
-        return {
-            'status': 'ready',
-            'message': 'Integration is configured and ready.'
-        }
-
-    return {
-        'status': 'needs_oauth_setup',
-        'message': 'OAuth app credentials are not fully configured for this service.'
-    }
-
 # ============================================
 # USER OAUTH INTEGRATIONS API
 # ============================================
@@ -5171,19 +5109,14 @@ def get_user_integrations():
             for service in info['services']:
                 if service in OAUTH_CONFIG:
                     oauth_info = OAUTH_CONFIG[service]
-                    service_name = oauth_info.get('name', service.replace('_', ' ').title())
-                    service_icon = oauth_info.get('icon', '')
-                    is_connected = service in connected
-                    readiness = get_integration_readiness(service, is_connected=is_connected)
                     available.append({
                         'service': service,
-                        'name': service_name,
-                        'icon': service_icon,
+                        'name': oauth_info['name'],
+                        'icon': oauth_info['icon'],
                         'category': category,
-                        'is_connected': is_connected,
+                        'is_connected': service in connected,
                         'is_needed': category in needed_categories,
-                        'connection_info': connected.get(service),
-                        'readiness': readiness
+                        'connection_info': connected.get(service)
                     })
 
         conn.close()
@@ -5308,7 +5241,7 @@ def oauth_callback(service):
         <head><title>Connected Successfully</title></head>
         <body style="font-family: system-ui; text-align: center; padding: 50px;">
             <h1 style="color: #48bb78;">✓ Successfully Connected</h1>
-            <p>You've connected {OAUTH_CONFIG[service].get('name', service.replace('_', ' ').title())} to your AI Team account.</p>
+            <p>You've connected {OAUTH_CONFIG[service]['name']} to your AI Team account.</p>
             <p><a href="/integrations" style="background: #667eea; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; display: inline-block; margin-top: 20px;">Back to Integrations</a></p>
             <script>
                 setTimeout(function() {{ window.location.href = '/integrations'; }}, 3000);
@@ -6186,42 +6119,6 @@ def automations():
         traceback.print_exc()
         return f"Error loading automations page: {str(e)}", 500
 
-@app.route('/api/automation-templates', methods=['GET'])
-@login_required
-def automation_templates():
-    """Return prebuilt one-click automation templates."""
-    templates = [
-        {
-            'id': 'lead-intake',
-            'name': 'Lead Intake to CRM',
-            'owner_agent': 'Mila',
-            'description': 'Capture inbound leads, normalize data, and send to CRM with follow-up tasks.',
-            'starter_prompt': 'Design an automation workflow for lead intake from website forms to CRM with duplicate checks, owner assignment, and a 24-hour follow-up reminder.',
-            'recommended_integrations': ['hubspot', 'salesforce', 'slack']
-        },
-        {
-            'id': 'support-triage',
-            'name': 'Support Triage Pipeline',
-            'owner_agent': 'Theo',
-            'description': 'Route support requests by severity, notify team channels, and create resolution checkpoints.',
-            'starter_prompt': 'Create an execution runbook for support triage automation with priority tagging, escalation rules, and SLA reminders.',
-            'recommended_integrations': ['gmail', 'slack', 'discord']
-        },
-        {
-            'id': 'content-publish',
-            'name': 'Content Publish Queue',
-            'owner_agent': 'Nova',
-            'description': 'Schedule reviewed content, publish to channels, and track post status for retries.',
-            'starter_prompt': 'Build the technical automation plan for publishing approved content across social channels with retry handling and audit logs.',
-            'recommended_integrations': ['twitter', 'linkedin', 'meta_business']
-        }
-    ]
-
-    return jsonify({
-        'success': True,
-        'templates': templates
-    }), 200
-
 @app.route('/api/storage-health', methods=['GET'])
 @login_required
 def storage_health():
@@ -6640,168 +6537,31 @@ MODELS = {
 # Agent capabilities for natural language routing
 AGENT_CAPABILITIES = {
     'Luna': {
-        'keywords': ['research', 'evidence', 'source', 'sources', 'compare', 'analyze', 'investigate', 'facts', 'summary', 'summarize', 'insights', 'market', 'competitor'],
-        'strengths': ['Research synthesis', 'Evidence review', 'Comparison', 'Uploaded document analysis', 'Clear summaries'],
-        'when_to_use': 'Researching a topic, comparing options, summarizing evidence, or analyzing uploaded information'
+        'keywords': ['research', 'analyze', 'data', 'find', 'investigate', 'study', 'compare', 'facts', 'information', 'insights'],
+        'strengths': ['Deep research', 'Data analysis', 'Fact-finding', 'Pattern recognition', 'Strategic insights'],
+        'when_to_use': 'Research, analysis, data interpretation, finding information'
     },
     'Mila': {
-        'keywords': ['plan', 'organize', 'schedule', 'task', 'workflow', 'project', 'manage', 'coordinate', 'prioritize', 'structure', 'sop', 'process', 'checklist', 'automation', 'automate', 'handoff'],
-        'strengths': ['Project planning', 'Workflow design', 'Task breakdown', 'Prioritization', 'Repeatable processes', 'Automation blueprints'],
-        'when_to_use': 'Turning messy work into plans, workflows, SOPs, automation blueprints, task lists, or schedules'
+        'keywords': ['plan', 'organize', 'schedule', 'task', 'workflow', 'project', 'manage', 'coordinate', 'prioritize', 'structure'],
+        'strengths': ['Project planning', 'Task organization', 'Workflow creation', 'Time management', 'Action plans'],
+        'when_to_use': 'Planning projects, organizing tasks, creating workflows, breaking down complex work'
     },
     'Sage': {
-        'keywords': ['write', 'edit', 'content', 'copy', 'draft', 'rewrite', 'polish', 'text', 'article', 'blog', 'email', 'caption', 'script', 'tone'],
-        'strengths': ['Copywriting', 'Editing', 'Tone matching', 'Messaging', 'Readable content'],
-        'when_to_use': 'Writing, editing, rewriting, polishing, or adapting content and communications'
+        'keywords': ['write', 'edit', 'content', 'copy', 'draft', 'rewrite', 'polish', 'text', 'article', 'blog'],
+        'strengths': ['Writing compelling copy', 'Editing content', 'Tone adaptation', 'Clear communication', 'Content refinement'],
+        'when_to_use': 'Writing, editing, content creation, communication drafts'
     },
     'Ember': {
-        'keywords': ['creative', 'brainstorm', 'concept', 'idea', 'ideas', 'brand', 'visual', 'design', 'aesthetic', 'luxury', 'style', 'campaign', 'name'],
-        'strengths': ['Creative ideation', 'Brand concepts', 'Visual direction', 'Campaign angles', 'Memorable positioning'],
-        'when_to_use': 'Generating concepts, naming ideas, brand direction, visual style, or creative campaigns'
+        'keywords': ['create', 'design', 'ideas', 'creative', 'brainstorm', 'concept', 'innovative', 'brand', 'visual', 'unique'],
+        'strengths': ['Creative ideation', 'Design concepts', 'Brand identity', 'Visual thinking', 'Innovation'],
+        'when_to_use': 'Creative concepts, design direction, brainstorming, brand development'
     },
     'Sol': {
-        'keywords': ['strategy', 'business', 'growth', 'decision', 'choose', 'recommend', 'pricing', 'cost', 'cheaper', 'hosting', 'positioning', 'risk', 'revenue', 'customer', 'market', 'roi', 'tradeoff'],
-        'strengths': ['Business strategy', 'Decision support', 'Positioning', 'Pricing tradeoffs', 'Risk assessment'],
-        'when_to_use': 'Making business decisions, choosing between options, pricing, positioning, or growth strategy'
-    },
-    'Nova': {
-        'keywords': ['code', 'technical', 'bug', 'debug', 'fix', 'security', 'login', 'password', 'database', 'api', 'deploy', 'server', 'frontend', 'backend', 'build', 'integration', 'webhook', 'oauth', 'auth', 'token'],
-        'strengths': ['Code implementation', 'Debugging', 'Security review', 'Architecture', 'Deployment troubleshooting', 'Integration engineering'],
-        'when_to_use': 'Fixing technical issues, building features, reviewing security, implementing integrations, or debugging app behavior'
-    },
-    'Theo': {
-        'keywords': ['implement', 'execute', 'launch', 'finish', 'qa', 'test', 'check', 'deploy', 'release', 'handoff', 'deliver', 'rollout', 'setup', 'runbook', 'automation ops', 'monitor'],
-        'strengths': ['Execution plans', 'QA checklists', 'Launch readiness', 'Operational follow-through', 'Delivery coordination', 'Automation runbooks'],
-        'when_to_use': 'Taking a plan to completion, QA, launch checklists, release steps, automation runbooks, and operational follow-through'
+        'keywords': ['strategy', 'business', 'growth', 'decision', 'long-term', 'goals', 'vision', 'opportunity', 'risk', 'positioning'],
+        'strengths': ['Strategic planning', 'Business growth', 'Decision frameworks', 'Risk assessment', 'Big picture thinking'],
+        'when_to_use': 'Strategy, business decisions, long-term planning, growth opportunities'
     }
 }
-
-AGENT_SKILL_LIBRARY = {
-    'clarify': {
-        'label': 'Clarify',
-        'keywords': ['clarify', 'understand', 'requirements', 'scope', 'brief', 'ask', 'figure out'],
-        'instruction': 'Identify the real need, name assumptions, and ask at most one focused question only after giving useful direction.'
-    },
-    'plan': {
-        'label': 'Plan',
-        'keywords': ['plan', 'steps', 'roadmap', 'schedule', 'organize', 'workflow', 'prioritize', 'timeline'],
-        'instruction': 'Turn the request into a clear sequence of next actions with priorities and dependencies.'
-    },
-    'research': {
-        'label': 'Research',
-        'keywords': ['research', 'compare', 'find', 'facts', 'evidence', 'investigate', 'options', 'best'],
-        'instruction': 'Separate facts from assumptions, compare options, and explain what evidence would change the recommendation.'
-    },
-    'draft': {
-        'label': 'Draft',
-        'keywords': ['write', 'draft', 'copy', 'rewrite', 'edit', 'polish', 'content', 'caption', 'email'],
-        'instruction': 'Produce usable wording first, then briefly explain tone or structure choices when helpful.'
-    },
-    'critique': {
-        'label': 'Critique',
-        'keywords': ['review', 'audit', 'fix', 'improve', 'risk', 'security', 'broken', 'does not work', "doesn't work"],
-        'instruction': 'Look for issues, risks, missing pieces, and concrete improvements before suggesting expansion.'
-    },
-    'build': {
-        'label': 'Build',
-        'keywords': ['build', 'implement', 'code', 'create', 'make', 'add', 'develop', 'feature'],
-        'instruction': 'Prefer practical implementation details, sensible defaults, and a working first version.'
-    },
-    'automate': {
-        'label': 'Automate',
-        'keywords': ['automate', 'integration', 'trigger', 'connect', 'webhook', 'sync', 'repeat', 'workflow'],
-        'instruction': 'Identify repeatable actions, inputs, outputs, triggers, and failure points.'
-    },
-    'decide': {
-        'label': 'Decide',
-        'keywords': ['choose', 'decide', 'recommend', 'strategy', 'business', 'cost', 'cheaper', 'tradeoff'],
-        'instruction': 'Make a recommendation with tradeoffs, constraints, and the next decision point.'
-    }
-}
-
-AGENT_DEFAULT_SKILLS = {
-    'Luna': ['research', 'critique'],
-    'Mila': ['plan', 'automate'],
-    'Sage': ['draft', 'clarify'],
-    'Ember': ['build', 'draft'],
-    'Sol': ['decide', 'critique'],
-    'Nova': ['build', 'critique'],
-    'Theo': ['plan', 'build']
-}
-
-def detect_adaptive_skills(message, agent_name=None, limit=3):
-    """Return the best skill modes for this request without changing the selected agent."""
-    text = (message or '').lower()
-    scored_skills = []
-
-    for skill_id, skill in AGENT_SKILL_LIBRARY.items():
-        score = 0
-        for keyword in skill['keywords']:
-            if keyword in text:
-                score += 2 if ' ' in keyword else 1
-        if agent_name in AGENT_DEFAULT_SKILLS and skill_id in AGENT_DEFAULT_SKILLS[agent_name]:
-            score += 0.5
-        if score > 0:
-            scored_skills.append((score, skill_id))
-
-    if not scored_skills and agent_name in AGENT_DEFAULT_SKILLS:
-        scored_skills = [(0.5, skill_id) for skill_id in AGENT_DEFAULT_SKILLS[agent_name][:2]]
-
-    scored_skills.sort(key=lambda item: item[0], reverse=True)
-
-    active_skills = []
-    seen = set()
-    for _, skill_id in scored_skills:
-        if skill_id in seen or skill_id not in AGENT_SKILL_LIBRARY:
-            continue
-        skill = AGENT_SKILL_LIBRARY[skill_id]
-        active_skills.append({
-            'id': skill_id,
-            'label': skill['label'],
-            'instruction': skill['instruction']
-        })
-        seen.add(skill_id)
-        if len(active_skills) >= limit:
-            break
-
-    return active_skills
-
-def build_adaptive_skills_context(active_skills):
-    if not active_skills:
-        return ''
-
-    skill_lines = "\n".join([
-        f"- {skill['label']}: {skill['instruction']}"
-        for skill in active_skills
-    ])
-
-    return f"""
-ADAPTIVE SKILLS FOR THIS REQUEST:
-{skill_lines}
-
-Use these as temporary skill modes for this answer. Keep your core agent role and personality. Do not claim to become a different agent. If the request belongs with another agent, suggest that handoff after providing useful help first.
-"""
-
-def serialize_agent_skills():
-    return [
-        {
-            'id': skill_id,
-            'label': skill['label'],
-            'keywords': skill['keywords'],
-            'instruction': skill['instruction']
-        }
-        for skill_id, skill in AGENT_SKILL_LIBRARY.items()
-    ]
-
-@app.route('/api/agent-skills')
-@login_required
-def get_agent_skills():
-    """Expose adaptive skill modes so the UI can show how agents adapt."""
-    return jsonify({
-        'success': True,
-        'skills': serialize_agent_skills(),
-        'agent_defaults': AGENT_DEFAULT_SKILLS
-    })
 
 def analyze_intent_and_suggest_agent(message):
     """
@@ -6829,40 +6589,6 @@ def analyze_intent_and_suggest_agent(message):
 
     return None, 0
 
-def get_routing_reason(agent_name):
-    """Return a short, user-facing reason for agent recommendation."""
-    info = AGENT_CAPABILITIES.get(agent_name, {})
-    return info.get('when_to_use', 'Best fit based on request intent.')
-
-@app.route('/api/agent-recommendation', methods=['POST'])
-@login_required
-def agent_recommendation():
-    """Lightweight recommendation endpoint for pre-send UI hints."""
-    try:
-        data = request.get_json() or {}
-        message = (data.get('message') or '').strip()
-        current_agent = data.get('current_agent')
-
-        if not message:
-            return jsonify({
-                'success': True,
-                'recommended_agent': current_agent or 'Luna',
-                'confidence': 0,
-                'reason': 'Type a message to get a recommendation.'
-            }), 200
-
-        suggested_agent, confidence = analyze_intent_and_suggest_agent(message)
-        recommended = suggested_agent or (current_agent or 'Luna')
-
-        return jsonify({
-            'success': True,
-            'recommended_agent': recommended,
-            'confidence': confidence,
-            'reason': get_routing_reason(recommended)
-        }), 200
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
 def get_agent_coordination_context():
     """
     Returns context about available agents for coordination.
@@ -6873,15 +6599,13 @@ TEAM COORDINATION:
 You are part of an AI Team. When a request would be better handled by another agent, you can suggest they help:
 
 Available Agents:
-- Luna: Evidence research, comparison, source synthesis, uploaded document analysis
-- Mila: Workflow planning, SOPs, task organization, automation blueprinting
-- Sage: Copywriting, editing, rewriting, tone and messaging
-- Ember: Creative concepts, brand direction, visual style, campaign ideas
-- Sol: Business strategy, pricing, positioning, decisions, risk tradeoffs
-- Nova: Technical build, debugging, integrations, APIs, security, deployment issues
-- Theo: Implementation, QA, automation runbooks, launch checklists, delivery follow-through
+- Luna: Research & analysis, data insights, fact-finding
+- Mila: Project planning, organization, workflow creation
+- Sage: Writing & content, editing, communication
+- Ember: Creative concepts, design direction, brainstorming
+- Sol: Strategy, business decisions, long-term planning
 
-If a user request falls outside your expertise, provide useful help first, then suggest the better agent. For example: "This is mainly a technical security issue, so Nova is the best fit after this first pass."
+If a user request falls outside your expertise, naturally acknowledge it and suggest which agent would be better suited. For example: "This sounds like a strategic planning question - Sol would be perfect for this. Would you like me to bring Sol into this conversation?"
 
 The system will automatically route the conversation when you make this suggestion.
 """
@@ -6892,8 +6616,8 @@ The system will automatically route the conversation when you make this suggesti
 
 AGENT_PERSONALITIES = {
     'Luna': {
-        'role': 'Evidence Researcher',
-        'system_prompt': """You are Luna, an evidence researcher who specializes in research synthesis, comparison, and clear analysis.
+        'role': 'Research & Analysis',
+        'system_prompt': """You are Luna, a thoughtful analyst who specializes in research and data analysis.
 
 COMMUNICATION STYLE:
 Write in natural, conversational paragraphs. Do NOT use asterisks, hashtags, dashes, or bullet points. Do NOT use markdown formatting. Just write normally like you're talking to someone.
@@ -6901,7 +6625,7 @@ Write in natural, conversational paragraphs. Do NOT use asterisks, hashtags, das
 Keep responses warm, clear, and direct. Avoid overexplaining unless asked. Ask only ONE focused question at a time if needed. Remember conversation context to avoid repetition. Never reintroduce yourself - jump straight to helping.
 
 YOUR EXPERTISE:
-Research synthesis, comparing options, summarizing uploaded documents, separating facts from assumptions, finding patterns in information, and turning evidence into clear insight. You do not claim to browse live websites unless live browsing is explicitly available in the tool context.
+Deep research and fact-finding, data analysis and insights, strategic thinking and planning, connecting dots between information.
 
 WORKING WITH THE TEAM:
 Reference work by other agents when relevant. Build on previous conversations naturally. If another agent already covered something, acknowledge it briefly and add your perspective.
@@ -6915,8 +6639,8 @@ Remember: Output first, questions second. Be helpful, stay focused, move convers
     },
 
     'Mila': {
-        'role': 'Workflow Planner',
-        'system_prompt': """You are Mila, a workflow planner who turns chaos into clear systems, tasks, and repeatable processes.
+        'role': 'Organization & Planning',
+        'system_prompt': """You are Mila, a master organizer who turns chaos into clear action plans.
 
 COMMUNICATION STYLE:
 Write in natural, conversational paragraphs. Do NOT use asterisks, hashtags, dashes, or bullet points. Do NOT use markdown formatting. Just write normally like you're talking to someone.
@@ -6924,7 +6648,7 @@ Write in natural, conversational paragraphs. Do NOT use asterisks, hashtags, das
 Keep responses warm, clear, and direct. Avoid overexplaining unless asked. Remember what's been discussed. Never reintroduce yourself.
 
 YOUR EXPERTISE:
-Project planning, workflow design, SOPs, task breakdowns, prioritization, schedules, checklists, and turning unclear work into a practical operating plan.
+Project planning and organization, creating actionable workflows, breaking complex tasks into steps, time management and prioritization.
 
 WORKING WITH THE TEAM:
 Build on Luna's research with actionable plans. Help implement Ember's creative ideas. Coordinate with Sol on project timelines.
@@ -6938,8 +6662,8 @@ Remember: Plan first, ask second. Stay practical, create clarity, drive action. 
     },
 
     'Sage': {
-        'role': 'Copy & Content Writer',
-        'system_prompt': """You are Sage, a copy and content writer who crafts clear, useful, on-brand communication.
+        'role': 'Writing & Content',
+        'system_prompt': """You are Sage, a skilled wordsmith who crafts clear, compelling content.
 
 COMMUNICATION STYLE:
 Write in natural, conversational paragraphs. Do NOT use asterisks, hashtags, dashes, or bullet points. Do NOT use markdown formatting. Just write normally like you're talking to someone.
@@ -6947,7 +6671,7 @@ Write in natural, conversational paragraphs. Do NOT use asterisks, hashtags, das
 Keep responses warm, clear, and direct. Get to the writing quickly. Structure content for readability using natural paragraphs. Remember the user's voice and style preferences. Skip reintroductions.
 
 YOUR EXPERTISE:
-Copywriting, editing, rewriting, tone matching, emails, captions, articles, scripts, website copy, and making complex ideas easy to read.
+Writing compelling copy, editing and refining text, adapting tone and style, making complex ideas accessible.
 
 WORKING WITH THE TEAM:
 Polish Ember's creative concepts into polished copy. Turn Luna's research into readable content. Help Mila communicate plans clearly.
@@ -6961,8 +6685,8 @@ Remember: Write first, ask second, move forward. Write like a human, not a docum
     },
     
     'Ember': {
-        'role': 'Creative Concept Designer',
-        'system_prompt': """You are Ember, a creative concept designer who turns raw ideas into distinctive concepts, brand direction, and visual style.
+        'role': 'Creative Direction',
+        'system_prompt': """You are Ember, a bold creative who sparks innovative ideas and unique solutions.
 
 COMMUNICATION STYLE:
 Write in natural, conversational paragraphs. Do NOT use asterisks, hashtags, dashes, or bullet points. Do NOT use markdown formatting. Just write normally like you're talking to someone.
@@ -6970,7 +6694,7 @@ Write in natural, conversational paragraphs. Do NOT use asterisks, hashtags, das
 Keep responses warm, clear, and enthusiastic. Be direct with ideas without overexplaining the creative process. Ask only ONE focused question at a time if needed. Present concepts in clear language. Remember user's creative preferences. Skip reintroductions and dive into creativity.
 
 YOUR EXPERTISE:
-Creative ideation, brand concepts, visual direction, naming, campaign angles, aesthetic systems, and making products, pages, and offers feel memorable and distinctive.
+Creative ideation and concepts, visual thinking and design direction, brand identity and messaging, making things memorable and unique.
 
 WORKING WITH THE TEAM:
 Turn Luna's insights into creative concepts. Give Sage compelling content to refine. Help Mila plan creative executions.
@@ -6984,8 +6708,8 @@ Remember: Inspire first, ask second, stay bold. Write like a human, not a docume
     },
 
     'Sol': {
-        'role': 'Business Strategist',
-        'system_prompt': """You are Sol, a business strategist who helps users make sharper decisions about direction, growth, pricing, and positioning.
+        'role': 'Strategic Thinking',
+        'system_prompt': """You are Sol, a strategic advisor who sees the big picture and guides long-term success.
 
 COMMUNICATION STYLE:
 Write in natural, conversational paragraphs. Do NOT use asterisks, hashtags, dashes, or bullet points. Do NOT use markdown formatting. Just write normally like you're talking to someone.
@@ -6993,7 +6717,7 @@ Write in natural, conversational paragraphs. Do NOT use asterisks, hashtags, das
 Keep responses warm, clear, and thoughtful. Be direct about strategy and avoid analysis paralysis. Balance vision with pragmatism. Remember business context and goals. Skip reintroductions.
 
 YOUR EXPERTISE:
-Business strategy, positioning, pricing tradeoffs, growth decisions, market choices, customer fit, risk assessment, and turning options into a recommended direction.
+Strategic planning and positioning, business growth and scaling, decision-making frameworks, risk assessment and opportunities.
 
 WORKING WITH THE TEAM:
 Frame Luna's research strategically. Validate Ember's creative direction against business goals. Help Mila prioritize what matters most.
@@ -7007,8 +6731,8 @@ Remember: Recommend first, ask second. Think long-term, balance risk, guide with
     },
     
     'Nova': {
-        'role': 'Tech Builder',
-        'system_prompt': """You are Nova, a technical builder who solves code, architecture, security, debugging, and deployment problems.
+        'role': 'Technical Solutions',
+        'system_prompt': """You are Nova, a technical expert who solves complex problems and makes tech accessible.
 
 COMMUNICATION STYLE:
 Write in natural, conversational paragraphs. Do NOT use asterisks, hashtags, dashes, or bullet points. Do NOT use markdown formatting. Just write normally like you're talking to someone.
@@ -7016,7 +6740,7 @@ Write in natural, conversational paragraphs. Do NOT use asterisks, hashtags, das
 Keep responses warm, clear, and approachable. Be direct with solutions and skip unnecessary jargon. Ask only ONE focused question at a time if needed. Break down technical concepts simply in plain language. Remember technical context and constraints. Skip reintroductions.
 
 YOUR EXPERTISE:
-Code implementation, debugging, security review, app architecture, backend and frontend issues, database/API problems, deployment troubleshooting, and explaining technical work in plain language.
+Technical problem-solving, code and system architecture, debugging and troubleshooting, explaining complex tech simply, website and web development (HTML/CSS/JavaScript).
 
 WORKING WITH THE TEAM:
 Implement Mila's organized plans technically. Make Theo's workflows technically sound. Validate technical feasibility for team ideas.
@@ -7068,8 +6792,8 @@ Remember: Solve first, ask second. Solve clearly, explain simply, move forward. 
     },
 
     'Theo': {
-        'role': 'Execution Lead',
-        'system_prompt': """You are Theo, an execution lead who turns plans into finished, checked, launch-ready work.
+        'role': 'Implementation',
+        'system_prompt': """You are Theo, a reliable builder who turns ideas into working solutions through practical action.
 
 COMMUNICATION STYLE:
 Write in natural, conversational paragraphs. Do NOT use asterisks, hashtags, dashes, or bullet points. Do NOT use markdown formatting. Just write normally like you're talking to someone.
@@ -7077,7 +6801,7 @@ Write in natural, conversational paragraphs. Do NOT use asterisks, hashtags, das
 Keep responses warm, clear, and straightforward. Be direct with action steps and focus on doing. Provide clear, executable instructions in plain language. Remember what's been built already. Skip reintroductions.
 
 YOUR EXPERTISE:
-Implementation planning, QA checklists, launch readiness, handoffs, delivery coordination, setup steps, operational follow-through, and making sure work is finished rather than just described.
+Turning plans into action, building systems and processes, creating documentation and workflows, making things actually work, building websites and web pages (HTML/CSS/JavaScript).
 
 WORKING WITH THE TEAM:
 Execute Mila's organized plans step-by-step. Implement Nova's technical solutions practically. Build out Ember's creative concepts.
@@ -8044,8 +7768,6 @@ def chat():
             elif file_count:
                 debug_info = f"[DEBUG: file_count={file_count} but no files found in request.files. Keys: {list(request.files.keys())}] "
                 message = debug_info + (message if message else "")
-
-        raw_user_message = message or ""
         # ---------- SAVE UPLOADED FILES TO DISK (FormData) ----------
         # Ensure these exist even for FormData
         filepaths = filepaths if isinstance(filepaths, list) else []
@@ -8387,7 +8109,7 @@ def chat():
         # Auto-route on first message if confidence is high and different from current agent
         # BUT: Don't auto-route if current agent is a custom agent (user explicitly chose it)
         is_custom_agent = agent not in AGENT_PERSONALITIES
-        if suggested_agent and suggested_agent != agent and confidence >= 2 and is_first_message and not is_custom_agent:
+        if suggested_agent and suggested_agent != agent and confidence >= 4 and is_first_message and not is_custom_agent:
             print(f"🎯 Auto-routing: {agent} → {suggested_agent} (confidence: {confidence})")
             agent = suggested_agent  # Switch to the better agent
             was_auto_routed = True
@@ -8513,14 +8235,14 @@ Remember: You are {agent}. Teach first, then ask. Natural conversation only. No 
                                         if service in connected_services:
                                             available_integrations.append({
                                                 'service': service,
-                                                'name': OAUTH_CONFIG[service].get('name', service.replace('_', ' ').title()),
+                                                'name': OAUTH_CONFIG[service]['name'],
                                                 'email': connected_services[service],
-                                                'icon': OAUTH_CONFIG[service].get('icon', '')
+                                                'icon': OAUTH_CONFIG[service]['icon']
                                             })
                                         else:
                                             missing_integrations.append({
                                                 'service': service,
-                                                'name': OAUTH_CONFIG[service].get('name', service.replace('_', ' ').title())
+                                                'name': OAUTH_CONFIG[service]['name']
                                             })
 
                             # Add integration context to system prompt
@@ -8579,11 +8301,6 @@ Remember: You are {agent}. Teach first, then ask. Natural conversation only. No 
             if not is_guest:
                 conn.close()
             return jsonify({'error': f'Agent "{agent}" not found'}), 400
-
-        active_skills = detect_adaptive_skills(raw_user_message or message, agent)
-        adaptive_skills_context = build_adaptive_skills_context(active_skills)
-        if adaptive_skills_context:
-            system_prompt = f"{system_prompt}\n\n{adaptive_skills_context}"
 
         # Get conversation history (last 10 messages for context - optimized for speed)
         # Guests don't have history (not logged in)
@@ -9041,11 +8758,7 @@ If you send another question-heavy response, you have FAILED the TEACH FIRST rul
             'success': True,
             'response': ai_response,
             'agent': agent,
-            'model_used': model_key,
-            'active_skills': [
-                {'id': skill['id'], 'label': skill['label']}
-                for skill in active_skills
-            ]
+            'model_used': model_key
         }
 
         # Add attachments if any
@@ -12816,7 +12529,7 @@ def download_file(filename):
         original_filename = '_'.join(filename.split('_')[2:])
 
         return send_from_directory(
-            '/mnt/user-data/outputs',
+            OUTPUT_FOLDER,
             filename,
             as_attachment=True,
             download_name=original_filename
@@ -12843,7 +12556,7 @@ def download_file_generic():
         allowed_bases = [
             os.path.abspath('uploads'),
             os.path.abspath('/mnt/user-data/uploads'),
-            os.path.abspath('/mnt/user-data/outputs')
+            os.path.abspath(OUTPUT_FOLDER)
         ]
 
         # Get absolute path of requested file
@@ -12900,7 +12613,7 @@ def download_website(filename):
         original_filename = '_'.join(filename.split('_')[2:])
         
         return send_from_directory(
-            '/mnt/user-data/outputs',
+            OUTPUT_FOLDER,
             filename,
             as_attachment=True,
             download_name=original_filename
@@ -13411,45 +13124,45 @@ def api_list_agents():
     agents = [
         {
             'name': 'Luna',
-            'role': 'Evidence Researcher',
-            'description': 'Synthesizes research, compares options, analyzes uploaded information, and separates facts from assumptions',
-            'specialties': ['Research Synthesis', 'Evidence Review', 'Comparison', 'Document Analysis']
+            'role': 'Data Analyst',
+            'description': 'Expert at analyzing data, finding patterns, and providing insights',
+            'specialties': ['Data Analysis', 'Pattern Recognition', 'Insights', 'Statistics']
         },
         {
             'name': 'Mila',
-            'role': 'Workflow Planner',
-            'description': 'Turns messy work into project plans, SOPs, checklists, workflows, task priorities, and automation blueprints',
-            'specialties': ['Workflow Design', 'Project Planning', 'SOPs', 'Automation Blueprinting']
+            'role': 'Organization & Planning',
+            'description': 'Helps with planning, task management, and project organization',
+            'specialties': ['Project Planning', 'Task Management', 'Organization', 'Scheduling']
         },
         {
             'name': 'Sage',
-            'role': 'Copy & Content Writer',
-            'description': 'Writes, edits, rewrites, polishes, and adapts content to the right tone',
-            'specialties': ['Copywriting', 'Editing', 'Tone Matching', 'Messaging']
+            'role': 'Writing & Content',
+            'description': 'Creates engaging written content, from articles to marketing copy',
+            'specialties': ['Content Writing', 'Copywriting', 'Articles', 'Marketing']
         },
         {
             'name': 'Ember',
-            'role': 'Creative Concept Designer',
-            'description': 'Develops creative concepts, brand direction, visual style, names, and campaign ideas',
-            'specialties': ['Creative Concepts', 'Brand Direction', 'Visual Style', 'Campaign Ideas']
+            'role': 'Creative Direction',
+            'description': 'Provides creative ideas, artistic direction, and design suggestions',
+            'specialties': ['Creative Ideas', 'Design', 'Branding', 'Visual Concepts']
         },
         {
             'name': 'Sol',
-            'role': 'Business Strategist',
-            'description': 'Helps with business decisions, pricing, positioning, growth, risk, and strategic tradeoffs',
-            'specialties': ['Business Strategy', 'Positioning', 'Pricing', 'Decision Support']
+            'role': 'Strategic Thinking',
+            'description': 'Helps with business strategy, decision-making, and long-term planning',
+            'specialties': ['Strategy', 'Business Planning', 'Decision Making', 'Analysis']
         },
         {
             'name': 'Nova',
-            'role': 'Tech Builder',
-            'description': 'Handles code, debugging, integration engineering, security review, app architecture, APIs, databases, and deployment issues',
-            'specialties': ['Coding', 'Integrations', 'Security', 'Deployment']
+            'role': 'Technical Solutions',
+            'description': 'Assists with coding, debugging, and technical problem-solving',
+            'specialties': ['Coding', 'Debugging', 'Technical Support', 'Development']
         },
         {
             'name': 'Theo',
-            'role': 'Execution Lead',
-            'description': 'Turns plans into finished work with implementation steps, QA, automation runbooks, launch checks, and delivery follow-through',
-            'specialties': ['Implementation', 'QA', 'Automation Runbooks', 'Launch Readiness']
+            'role': 'Implementation',
+            'description': 'Helps turn ideas into actionable plans and execute them',
+            'specialties': ['Execution', 'Implementation', 'Action Plans', 'Delivery']
         }
     ]
     
@@ -13851,8 +13564,6 @@ def list_routes():
     })
 
 if __name__ == '__main__':
-    app.run(
-        debug=os.environ.get('FLASK_DEBUG') == '1',
-        host=os.environ.get('HOST', '127.0.0.1'),
-        port=int(os.environ.get('PORT', 5000))
-    )
+    app.run(debug=True, host='0.0.0.0', port=5000)
+
+
