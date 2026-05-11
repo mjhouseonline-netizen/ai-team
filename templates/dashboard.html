@@ -1120,6 +1120,38 @@
  line-height: 1;
  }
 
+ .system-message {
+ max-width: 920px;
+ margin: 6px auto 10px;
+ padding: 0;
+ }
+
+ .system-message .message-content {
+ display: inline-flex;
+ align-items: center;
+ width: auto;
+ max-width: 100%;
+ background: rgba(201, 169, 104, 0.12);
+ border: 1px solid rgba(225, 204, 153, 0.24);
+ color: #e9d9b4;
+ padding: 7px 10px;
+ border-radius: 8px;
+ font-size: 12px;
+ line-height: 1.35;
+ box-shadow: none;
+ }
+
+ .system-message .system-switch-btn {
+ margin-left: 8px;
+ background: rgba(201, 169, 104, 0.16);
+ color: #f2e3bf;
+ border: 1px solid rgba(225, 204, 153, 0.28);
+ border-radius: 6px;
+ padding: 4px 8px;
+ font-size: 11px;
+ cursor: pointer;
+ }
+
  /* File Attachments */
  .message-attachments {
  display: flex;
@@ -4934,7 +4966,7 @@ oninput="autoResize(this)"
  const container = document.getElementById('chatContainer');
  const messageDiv = document.createElement('div');
  messageDiv.className = 'message system-message';
- messageDiv.innerHTML = '<div class="message-content" style="background: #f8f3e8; color: #5b4525; padding: 12px; border-left: 3px solid #c6a66a; border-radius: 8px;">' + message + '</div>';
+ messageDiv.innerHTML = '<div class="message-content">' + message + '</div>';
 
  container.appendChild(messageDiv);
  container.scrollTop = container.scrollHeight;
@@ -4945,11 +4977,9 @@ oninput="autoResize(this)"
  const messageDiv = document.createElement('div');
  messageDiv.className = 'message system-message';
  messageDiv.innerHTML = `
- <div class="message-content" style="background: linear-gradient(135deg, #0f0f0d 0%, #1a1814 100%); padding: 16px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
- <div style="color: white; font-weight: 500;">
- <span style="font-size: 20px;"></span> ${reason}<br>
- <button onclick="switchToAgent('${suggestedAgent}')" style="margin-top: 10px; background: #141310; color: #4f46e5; border: 0; border-radius: 8px; padding: 8px 12px; font-weight: 700; cursor: pointer;">Switch to ${suggestedAgent}</button>
- </div>
+ <div class="message-content">
+ ${reason}
+ <button class="system-switch-btn" onclick="switchToAgent('${suggestedAgent}')">Switch</button>
  </div>
  `;
 
