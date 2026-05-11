@@ -7,19 +7,19 @@
    ============================================ */
 :root {
     /* Primary Colors */
-    --color-primary: #667eea;
-    --color-primary-dark: #5568d3;
-    --color-primary-light: #8b9bf5;
-    --color-secondary: #764ba2;
-    --color-accent: #f093fb;
+    --color-primary: #c6a66a;
+    --color-primary-dark: #9f7b3f;
+    --color-primary-light: #ddc48f;
+    --color-secondary: #4d3a1f;
+    --color-accent: #e7d3a3;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --gradient-secondary: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    --gradient-success: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    --gradient-primary: linear-gradient(135deg, #c6a66a 0%, #9f7b3f 100%);
+    --gradient-secondary: linear-gradient(135deg, #ddc48f 0%, #b88b4a 100%);
+    --gradient-success: linear-gradient(135deg, #b78f4f 0%, #d6ba82 100%);
     --gradient-info: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    --gradient-warning: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-    --gradient-purple: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+    --gradient-warning: linear-gradient(135deg, #d8bc7e 0%, #e9d8b0 100%);
+    --gradient-purple: linear-gradient(135deg, #2f2618 0%, #5b4525 100%);
 
     /* Neutral Colors */
     --color-white: #ffffff;
@@ -90,11 +90,11 @@
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
     --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    --shadow-premium: 0 20px 60px rgba(102, 126, 234, 0.3);
+    --shadow-premium: 0 20px 60px rgba(198, 166, 106, 0.28);
 
     /* Glass Effects */
-    --glass-bg: rgba(255, 255, 255, 0.1);
-    --glass-border: rgba(255, 255, 255, 0.2);
+    --glass-bg: rgba(30, 24, 15, 0.36);
+    --glass-border: rgba(225, 204, 153, 0.24);
     --glass-blur: blur(10px);
 
     /* Transitions */
@@ -342,6 +342,23 @@
 .premium-btn-primary {
     background: var(--gradient-primary);
     color: white;
+}
+
+/* Global polish layer for pages that include this stylesheet */
+body {
+    letter-spacing: 0;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3 {
+    letter-spacing: 0;
+    font-weight: 650;
+}
+
+.premium-elevated {
+    border: 1px solid rgba(225, 204, 153, 0.2);
+    box-shadow: 0 12px 32px rgba(14, 12, 10, 0.24);
 }
 
 .premium-btn-secondary {
