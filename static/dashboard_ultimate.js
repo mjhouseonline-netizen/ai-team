@@ -477,6 +477,8 @@ function addMessage(text, type, imageUrl = null, modelBadge = '', attachments = 
  const welcome = container.querySelector('.welcome');
  if (welcome) welcome.remove();
 
+ const cleanedText = type === 'assistant' ? cleanAssistantOutput(text) : text;
+
  const messageDiv = document.createElement('div');
  messageDiv.className = `message ${type}`;
 
@@ -508,7 +510,7 @@ function addMessage(text, type, imageUrl = null, modelBadge = '', attachments = 
  messageDiv.innerHTML = `
  <div class="avatar" style="${type === 'assistant' ? 'background: ' + (agentGradients[currentAgent] || 'linear-gradient(135deg, #667eea, #764ba2)') : 'background: #5436da'}">${avatar}</div>
  <div class="message-content">
- ${escapeHtml(text)}${badge}
+ ${escapeHtml(cleanedText)}${badge}
  ${skillsHtml}
  <div style="margin-top:12px;">
  <img src="${imageUrl}" style="max-width:100%; border-radius:8px; cursor:pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" onclick="showFloatingPreview('image', '${imageUrl}')" alt="Generated image">
@@ -517,8 +519,8 @@ function addMessage(text, type, imageUrl = null, modelBadge = '', attachments = 
  </div>
  `;
  } else if (isWebsite) {
- const code = extractWebsiteCode(text);
- const shortText = text.substring(0, 200) + (text.length > 200 ? '...' : '');
+ const code = extractWebsiteCode(cleanedText);
+ const shortText = cleanedText.substring(0, 200) + (cleanedText.length > 200 ? '...' : '');
  messageDiv.innerHTML = `
  <div class="avatar" style="background: ${agentGradients[currentAgent] || 'linear-gradient(135deg, #667eea, #764ba2)'}">${avatar}</div>
  <div class="message-content">
@@ -532,7 +534,7 @@ function addMessage(text, type, imageUrl = null, modelBadge = '', attachments = 
  </div>
  `;
  } else {
- const safeText = text.replace(/`/g, '\\`').replace(/"/g, '&quot;');
+ const safeText = cleanedText.replace(/`/g, '\\`').replace(/"/g, '&quot;');
 
  const actionBtns = type === 'assistant'
  ? `
@@ -556,7 +558,7 @@ function addMessage(text, type, imageUrl = null, modelBadge = '', attachments = 
  ? 'background: ' + (agentGradients[currentAgent] || 'linear-gradient(135deg, #667eea, #764ba2)')
  : 'background: #5436da'}">${avatar}</div>
  <div class="message-content">
- ${escapeHtml(text)}${badge}
+ ${escapeHtml(cleanedText)}${badge}
  ${skillsHtml}
  ${actionBtns}
  ${attachmentHtml}
@@ -1295,6 +1297,20 @@ function escapeHtml(text) {
  const div = document.createElement('div');
  div.textContent = text;
  return div.innerHTML;
+}
+
+function cleanAssistantOutput(text) {
+ if (!text) return '';
+ let cleaned = String(text);
+ // Remove markdown heading markers and emphasis symbols
+ cleaned = cleaned.replace(/^#{1,6}\s*/gm, '');
+ cleaned = cleaned.replace(/\*\*(.*?)\*\*/g, '$1');
+ cleaned = cleaned.replace(/\*(.*?)\*/g, '$1');
+ cleaned = cleaned.replace(/__(.*?)__/g, '$1');
+ cleaned = cleaned.replace(/_(.*?)_/g, '$1');
+ // Remove remaining stray markdown markers
+ cleaned = cleaned.replace(/[*#]/g, '');
+ return cleaned;
 }
 
 // ================================================
