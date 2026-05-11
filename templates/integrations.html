@@ -581,6 +581,69 @@
             }
         }
     </style>
+    <style>
+        /* Dark luxury contrast lock */
+        body, .container, .tab-content, .integration-card, .header, .stats-bar, .category-filter, .tab-navigation {
+            color: #efe4d0 !important;
+        }
+        .header h1, .integration-name, .section-title, h1, h2, h3 {
+            color: #c6a66a !important;
+        }
+        .header p, .stat-label, .integration-description, .integration-category, .feature-tag, .tab-btn, .filter-btn, p, small, label, li, td, th {
+            color: #d8cebd !important;
+        }
+        .stats-bar { border-top: 1px solid rgba(225, 204, 153, 0.2) !important; }
+        .tab-btn, .filter-btn {
+            background: #141310 !important;
+            border-color: rgba(225, 204, 153, 0.26) !important;
+        }
+        .tab-btn.active, .filter-btn.active {
+            background: #c6a66a !important;
+            color: #14110b !important;
+            border-color: #c6a66a !important;
+        }
+        .integration-card {
+            background: #141310 !important;
+            border: 1px solid rgba(225, 204, 153, 0.2) !important;
+        }
+        .integration-card.connected,
+        .integration-card.featured {
+            background: #17150f !important;
+            border-color: rgba(225, 204, 153, 0.34) !important;
+        }
+        .integration-icon { background: #0f0f0d !important; border: 1px solid rgba(225, 204, 153, 0.22); }
+        .feature-tag {
+            background: #1e1a12 !important;
+            border: 1px solid rgba(225, 204, 153, 0.2);
+        }
+        .btn-secondary {
+            background: #1f1b13 !important;
+            color: #efe4d0 !important;
+            border: 1px solid rgba(225, 204, 153, 0.24) !important;
+        }
+        .btn-primary, .btn-success, .btn-danger {
+            color: #14110b !important;
+        }
+        #agents-tab h2,
+        #api-tab h2,
+        #webhooks-tab h2,
+        #webhooks-tab h3 {
+            color: #c6a66a !important;
+        }
+        #agents-tab p,
+        #api-tab p,
+        #webhooks-tab p,
+        #webhooks-tab li,
+        #addWebhookModal label {
+            color: #d8cebd !important;
+        }
+        #addWebhookModal input,
+        #addWebhookModal select {
+            color: #efe4d0 !important;
+            border-color: rgba(225, 204, 153, 0.24) !important;
+            background: #0f0f0d !important;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -1469,7 +1532,7 @@ sendMessage();</code></pre>
                         `;
 
                         const connectionInfo = integration.is_connected && integration.connection_info
-                            ? `<div style="font-size: 0.85em; color: #718096; margin-top: 10px;">
+                            ? `<div style="font-size: 0.85em; color: #d8cebd; margin-top: 10px;">
                                    ${integration.connection_info.email ? `<div>📧 ${integration.connection_info.email}</div>` : ''}
                                    <div>Connected: ${new Date(integration.connection_info.connected_at).toLocaleDateString()}</div>
                                </div>`
@@ -1497,7 +1560,7 @@ sendMessage();</code></pre>
                         `;
                     }).join('');
                 } else {
-                    grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #718096;"><p>No OAuth integrations available</p></div>';
+                    grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #d8cebd;"><p>No OAuth integrations available</p></div>';
                 }
 
             } catch (error) {
