@@ -9,6 +9,8 @@ import secrets
 import string
 import json
 from datetime import datetime, timedelta
+from urllib.parse import urlencode
+from email.message import EmailMessage
 from flask import Flask, request, jsonify, session, redirect, url_for, render_template, send_from_directory, flash
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_cors import CORS
@@ -27,6 +29,7 @@ from agent_collaboration import detect_agent_mentions, suggest_agent_transfer
 from functools import wraps
 from collections import defaultdict
 import time
+import requests
 
 # Load environment variables from .env file
 load_dotenv()
@@ -4463,6 +4466,27 @@ def execute_integration_handler(integration_key, action, credentials, params):
             # This would use Google Sheets API
             return {'success': True, 'message': 'Row appended (demo mode)'}
 
+    # Gmail
+    elif integration_key == 'gmail':
+        if action in ['send_email', 'send_message']:
+            return send_email_via_integration(
+                current_user.id,
+                params.get('to') or params.get('to_email'),
+                params.get('subject', 'Message from AI Team'),
+                params.get('body') or params.get('message', '')
+            )
+
+    # Google Calendar
+    elif integration_key == 'google_calendar':
+        if action in ['create_event', 'schedule_event']:
+            return create_calendar_event(
+                current_user.id,
+                params.get('title') or params.get('summary') or 'AI Team Event',
+                params.get('start_time') or params.get('start'),
+                params.get('end_time') or params.get('end'),
+                params.get('description')
+            )
+
     # Twilio SMS
     elif integration_key == 'twilio':
         if action == 'send_sms':
@@ -5121,6 +5145,7 @@ def get_user_integrations():
                 needed_categories.update(integrations)
 
         # Build available integrations list with connection status
+        live_services = {'gmail', 'google_calendar'}
         available = []
         for category, info in AVAILABLE_INTEGRATIONS.items():
             for service in info['services']:
@@ -5131,6 +5156,7 @@ def get_user_integrations():
                         'name': oauth_info['name'],
                         'icon': oauth_info['icon'],
                         'category': category,
+                        'status': 'live' if service in live_services else 'coming_soon',
                         'is_connected': service in connected,
                         'is_needed': category in needed_categories,
                         'connection_info': connected.get(service)
@@ -5185,13 +5211,27 @@ def connect_oauth_integration(service):
         callback_url = f"{request.host_url.rstrip('/')}/api/oauth/callback/{service}"
         scopes = ' '.join(oauth_config['scopes']) if isinstance(oauth_config['scopes'], list) else oauth_config['scopes']
 
-        client_id = os.environ.get(f"{service.upper()}_CLIENT_ID")
+        client_id = (
+            os.environ.get(f"{service.upper()}_CLIENT_ID")
+            or os.environ.get('GOOGLE_CLIENT_ID')
+        )
         if not client_id:
             return jsonify({
                 'error': f'{oauth_config["name"]} OAuth is not configured yet. Missing {service.upper()}_CLIENT_ID.'
             }), 503
 
-        auth_url = f"{oauth_config['auth_url']}?client_id={client_id}&redirect_uri={callback_url}&state={state}&scope={scopes}&response_type=code&access_type=offline"
+        auth_params = {
+            'client_id': client_id,
+            'redirect_uri': callback_url,
+            'state': state,
+            'scope': scopes,
+            'response_type': 'code',
+            'access_type': 'offline'
+        }
+        if service in ['gmail', 'google_calendar', 'google_sheets']:
+            auth_params['prompt'] = 'consent'
+
+        auth_url = f"{oauth_config['auth_url']}?{urlencode(auth_params)}"
 
         return jsonify({
             'auth_url': auth_url,
@@ -5216,6 +5256,9 @@ def oauth_callback(service):
         if not code or not state:
             return "<html><body><h2>Invalid callback</h2><p>Missing code or state</p></body></html>", 400
 
+        if service not in OAUTH_CONFIG:
+            return "<html><body><h2>Unsupported service</h2></body></html>", 400
+
         # Verify state and get user_id
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -5236,20 +5279,98 @@ def oauth_callback(service):
             conn.close()
             return "<html><body><h2>Service mismatch</h2></body></html>", 400
 
-        # Token exchange is intentionally blocked until per-service secrets are configured.
+        oauth_config = OAUTH_CONFIG[service]
+        callback_url = f"{request.host_url.rstrip('/')}/api/oauth/callback/{service}"
+        client_id = (
+            os.environ.get(f"{service.upper()}_CLIENT_ID")
+            or os.environ.get('GOOGLE_CLIENT_ID')
+        )
+        client_secret = (
+            os.environ.get(f"{service.upper()}_CLIENT_SECRET")
+            or os.environ.get('GOOGLE_CLIENT_SECRET')
+        )
+
+        if not client_id or not client_secret:
+            conn.close()
+            return "<html><body><h2>OAuth not configured</h2><p>Missing client credentials on server.</p></body></html>", 503
+
+        token_response = requests.post(
+            oauth_config['token_url'],
+            data={
+                'code': code,
+                'client_id': client_id,
+                'client_secret': client_secret,
+                'redirect_uri': callback_url,
+                'grant_type': 'authorization_code'
+            },
+            headers={'Accept': 'application/json'},
+            timeout=20
+        )
+
+        if token_response.status_code >= 400:
+            conn.close()
+            return f"<html><body><h2>Token exchange failed</h2><p>{token_response.text}</p></body></html>", 400
+
+        token_data = token_response.json()
+        access_token = token_data.get('access_token')
+        refresh_token = token_data.get('refresh_token')
+        expires_in = token_data.get('expires_in')
+        scope_value = token_data.get('scope')
+
+        if not access_token:
+            conn.close()
+            return "<html><body><h2>Token exchange failed</h2><p>No access token returned.</p></body></html>", 400
+
+        token_expiry = None
+        if expires_in:
+            token_expiry = (datetime.utcnow() + timedelta(seconds=int(expires_in))).isoformat()
+
+        service_email = None
+        service_user_id = None
+        if service == 'gmail':
+            profile_response = requests.get(
+                'https://www.googleapis.com/oauth2/v2/userinfo',
+                headers={'Authorization': f'Bearer {access_token}'},
+                timeout=20
+            )
+            if profile_response.ok:
+                profile = profile_response.json()
+                service_email = profile.get('email')
+                service_user_id = profile.get('id')
+
+        cursor.execute("""
+            INSERT INTO user_integrations (
+                user_id, service, access_token, refresh_token, token_expiry,
+                service_user_id, service_email, scopes, is_active, connected_at, last_used_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ON CONFLICT(user_id, service) DO UPDATE SET
+                access_token = excluded.access_token,
+                refresh_token = COALESCE(excluded.refresh_token, user_integrations.refresh_token),
+                token_expiry = excluded.token_expiry,
+                service_user_id = COALESCE(excluded.service_user_id, user_integrations.service_user_id),
+                service_email = COALESCE(excluded.service_email, user_integrations.service_email),
+                scopes = excluded.scopes,
+                is_active = 1,
+                last_used_at = CURRENT_TIMESTAMP
+        """, (
+            user_id, service, access_token, refresh_token, token_expiry,
+            service_user_id, service_email, scope_value
+        ))
+
+        cursor.execute("DELETE FROM oauth_states WHERE state = ?", (state,))
+        conn.commit()
         conn.close()
 
-        # Return setup instructions instead of storing fake integration tokens.
-        return f"""
+        return """
         <html>
-        <head><title>OAuth Setup Incomplete</title></head>
+        <head><title>Connected</title></head>
         <body style="font-family: system-ui; text-align: center; padding: 50px;">
-            <h1 style="color: #b45309;">Setup Not Complete</h1>
-            <p>{OAUTH_CONFIG[service]["name"]} callback received, but token exchange is not configured on this server yet.</p>
-            <p>Please finish OAuth app setup before connecting this integration.</p>
+            <h1 style="color: #c6a66a;">Integration Connected</h1>
+            <p>Your account is now connected successfully.</p>
             <p><a href="/integrations" style="background: #c6a66a; color: #111111; padding: 10px 20px; border-radius: 8px; text-decoration: none; display: inline-block; margin-top: 20px;">Back to Integrations</a></p>
             <script>
-                setTimeout(function() {{ window.location.href = '/integrations'; }}, 3000);
+                setTimeout(function() { window.location.href = '/integrations'; }, 2000);
             </script>
         </body>
         </html>
@@ -5318,21 +5439,104 @@ def get_user_oauth_token(user_id, service):
         print(f"Error getting OAuth token: {e}")
         return None
 
+def refresh_oauth_access_token(service, refresh_token):
+    """Refresh OAuth access token for supported services."""
+    try:
+        oauth_config = OAUTH_CONFIG.get(service)
+        if not oauth_config or not refresh_token:
+            return None
+
+        client_id = (
+            os.environ.get(f"{service.upper()}_CLIENT_ID")
+            or os.environ.get('GOOGLE_CLIENT_ID')
+        )
+        client_secret = (
+            os.environ.get(f"{service.upper()}_CLIENT_SECRET")
+            or os.environ.get('GOOGLE_CLIENT_SECRET')
+        )
+        if not client_id or not client_secret:
+            return None
+
+        response = requests.post(
+            oauth_config['token_url'],
+            data={
+                'client_id': client_id,
+                'client_secret': client_secret,
+                'refresh_token': refresh_token,
+                'grant_type': 'refresh_token'
+            },
+            headers={'Accept': 'application/json'},
+            timeout=20
+        )
+        if not response.ok:
+            return None
+        return response.json()
+    except Exception as e:
+        print(f"OAuth refresh error ({service}): {e}")
+        return None
+
 def send_email_via_integration(user_id, to_email, subject, body):
     """
     Send email via Gmail integration
     """
     token_info = get_user_oauth_token(user_id, 'gmail')
-
     if not token_info:
         return {
             'success': False,
             'error': 'Gmail not connected. Please connect Gmail via Integrations page.'
         }
 
+    access_token = token_info.get('access_token')
+    refresh_token = token_info.get('refresh_token')
+
+    def _send_with_token(token):
+        msg = EmailMessage()
+        msg['To'] = to_email
+        msg['Subject'] = subject
+        msg.set_content(body or '')
+        raw_message = base64.urlsafe_b64encode(msg.as_bytes()).decode('utf-8')
+        return requests.post(
+            'https://gmail.googleapis.com/gmail/v1/users/me/messages/send',
+            headers={
+                'Authorization': f'Bearer {token}',
+                'Content-Type': 'application/json'
+            },
+            json={'raw': raw_message},
+            timeout=20
+        )
+
+    response = _send_with_token(access_token)
+    if response.status_code == 401 and refresh_token:
+        refreshed = refresh_oauth_access_token('gmail', refresh_token)
+        new_access_token = (refreshed or {}).get('access_token')
+        if new_access_token:
+            try:
+                conn = get_db_connection()
+                cursor = conn.cursor()
+                new_expiry = None
+                if refreshed.get('expires_in'):
+                    new_expiry = (datetime.utcnow() + timedelta(seconds=int(refreshed['expires_in']))).isoformat()
+                cursor.execute("""
+                    UPDATE user_integrations
+                    SET access_token = ?, token_expiry = ?, last_used_at = CURRENT_TIMESTAMP
+                    WHERE user_id = ? AND service = 'gmail'
+                """, (new_access_token, new_expiry, user_id))
+                conn.commit()
+                conn.close()
+            except Exception as e:
+                print(f"Failed to store refreshed Gmail token: {e}")
+            response = _send_with_token(new_access_token)
+
+    if not response.ok:
+        return {
+            'success': False,
+            'error': f'Gmail send failed: {response.text[:300]}'
+        }
+
     return {
-        'success': False,
-        'error': 'Gmail action is not enabled yet. Complete OAuth token exchange and Gmail API wiring first.'
+        'success': True,
+        'provider': 'gmail',
+        'message_id': response.json().get('id')
     }
 
 def post_to_twitter(user_id, text):
@@ -5387,9 +5591,61 @@ def create_calendar_event(user_id, title, start_time, end_time, description=None
             'error': 'Google Calendar not connected'
         }
 
+    access_token = token_info.get('access_token')
+    refresh_token = token_info.get('refresh_token')
+
+    event_payload = {
+        'summary': title or 'AI Team Event',
+        'description': description or '',
+        'start': {'dateTime': start_time},
+        'end': {'dateTime': end_time}
+    }
+
+    def _create_with_token(token):
+        return requests.post(
+            'https://www.googleapis.com/calendar/v3/calendars/primary/events',
+            headers={
+                'Authorization': f'Bearer {token}',
+                'Content-Type': 'application/json'
+            },
+            json=event_payload,
+            timeout=20
+        )
+
+    response = _create_with_token(access_token)
+    if response.status_code == 401 and refresh_token:
+        refreshed = refresh_oauth_access_token('google_calendar', refresh_token)
+        new_access_token = (refreshed or {}).get('access_token')
+        if new_access_token:
+            try:
+                conn = get_db_connection()
+                cursor = conn.cursor()
+                new_expiry = None
+                if refreshed.get('expires_in'):
+                    new_expiry = (datetime.utcnow() + timedelta(seconds=int(refreshed['expires_in']))).isoformat()
+                cursor.execute("""
+                    UPDATE user_integrations
+                    SET access_token = ?, token_expiry = ?, last_used_at = CURRENT_TIMESTAMP
+                    WHERE user_id = ? AND service = 'google_calendar'
+                """, (new_access_token, new_expiry, user_id))
+                conn.commit()
+                conn.close()
+            except Exception as e:
+                print(f"Failed to store refreshed Calendar token: {e}")
+            response = _create_with_token(new_access_token)
+
+    if not response.ok:
+        return {
+            'success': False,
+            'error': f'Calendar create failed: {response.text[:300]}'
+        }
+
+    payload = response.json()
     return {
-        'success': False,
-        'error': 'Google Calendar action is not enabled yet. Complete OAuth token exchange and Calendar API wiring first.'
+        'success': True,
+        'provider': 'google_calendar',
+        'event_id': payload.get('id'),
+        'event_link': payload.get('htmlLink')
     }
 
 def get_available_integration_actions(user_id):
