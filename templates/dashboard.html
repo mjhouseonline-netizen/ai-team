@@ -3889,6 +3889,8 @@ color: #f1dfad;
  <a href="#" onclick="clearAllChat(); return false;"> Clear Chats</a>
  {% if current_user.id == 1 %}
  <a href="/admin" id="adminLink"> Admin</a>
+ <a href="/admin/support-messages"> Inbox <span id="supportUnreadBadge" style="display:none; margin-left:6px; background:#c6a66a; color:#141310; border-radius:999px; padding:1px 6px; font-size:10px; font-weight:700;"></span></a>
+ <a href="/admin/support-messages"> Notifications</a>
  <a href="/promo-codes"> Promo Codes</a>
  {% endif %}
  <a href="/logout"> Logout</a>
@@ -8136,7 +8138,7 @@ gap: 8px;
  // Add welcome message if no messages yet
  const messagesDiv = document.getElementById('supportChatMessages');
  if (messagesDiv.children.length === 0) {
- addSupportMessage('assistant', 'Hi! I\'m here to help. Ask me about:\n How to navigate the platform\n Our AI agents\n Creating custom agents\n Integrations\n Pricing & API access\n\nOr anything else!');
+ addSupportMessage('assistant', 'Send your message here and it goes directly to admin inbox.');
  }
  }
 
@@ -8165,20 +8167,20 @@ gap: 8px;
  input.value = '';
 
  try {
- // Ask AI helper
- const response = await fetch('/api/support/ask', {
+ const response = await fetch('/api/support/message', {
  method: 'POST',
  headers: {'Content-Type': 'application/json'},
- body: JSON.stringify({question})
+ body: JSON.stringify({
+ subject: question.substring(0, 80),
+ message: question
+ })
  });
 
  const data = await response.json();
-
- if (data.success && data.can_help) {
- addSupportMessage('assistant', data.answer);
+ if (data.success) {
+ addSupportMessage('system', 'Sent to admin inbox.');
  } else {
- addSupportMessage('assistant', data.message || 'I\'m not sure about that.');
- showContactAdmin(question);
+ addSupportMessage('system', data.error || 'Failed to send message.');
  }
  } catch (error) {
  console.error('Support error:', error);
@@ -8231,6 +8233,34 @@ gap: 8px;
  addSupportMessage('system', ' Error sending message. Please try again.');
  }
  }
+
+ {% if current_user.id == 1 %}
+ async function loadSupportUnreadCount() {
+ try {
+ const res = await fetch('/api/support/messages');
+ const data = await res.json();
+ if (!data.success || !Array.isArray(data.messages)) return;
+
+ const unread = data.messages.filter(m => m.status === 'new').length;
+ const badge = document.getElementById('supportUnreadBadge');
+ if (!badge) return;
+ if (unread > 0) {
+ badge.style.display = 'inline-block';
+ badge.textContent = unread;
+ } else {
+ badge.style.display = 'none';
+ badge.textContent = '';
+ }
+ } catch (e) {
+ console.error('Unread support count error:', e);
+ }
+ }
+
+ document.addEventListener('DOMContentLoaded', function() {
+ loadSupportUnreadCount();
+ setInterval(loadSupportUnreadCount, 30000);
+ });
+ {% endif %}
 
  // ================================================
  // UPGRADE MODAL FUNCTIONS
