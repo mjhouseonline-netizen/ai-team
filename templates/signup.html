@@ -1,223 +1,289 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign Up - AI Team</title>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>Sign Up - AI Team</title>
 
-    <!-- Premium Design System -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='premium-design.css') }}">
+ <!-- Premium Design System -->
+ <link rel="stylesheet" href="{{ url_for('static', filename='premium-design.css') }}">
 
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+ <style>
+ * {
+ margin: 0;
+ padding: 0;
+ box-sizing: border-box;
+ }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #3aa76d 0%, #4fb883 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
+ body {
+ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+ background: linear-gradient(135deg, #3aa76d 0%, #4fb883 100%);
+ min-height: 100vh;
+ display: flex;
+ justify-content: center;
+ align-items: center;
+ padding: 20px;
+ }
 
-        .signup-container {
-            background: white;
-            padding: 50px 40px;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            width: 100%;
-            max-width: 450px;
-        }
+ .signup-container {
+ background: white;
+ padding: 50px 40px;
+ border-radius: 20px;
+ box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+ width: 100%;
+ max-width: 450px;
+ }
 
-        .logo {
-            text-align: center;
-            margin-bottom: 40px;
-        }
+ .logo {
+ text-align: center;
+ margin-bottom: 40px;
+ }
 
-        .logo h1 {
-            font-size: 2.5em;
-            background: linear-gradient(135deg, #10a37f 0%, #0d8c6f 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 10px;
-        }
+ .logo h1 {
+ font-size: 2.5em;
+ background: linear-gradient(135deg, #c6a66a 0%, #9f7b3f 100%);
+ -webkit-background-clip: text;
+ -webkit-text-fill-color: transparent;
+ background-clip: text;
+ margin-bottom: 10px;
+ }
 
-        .logo p {
-            color: #666;
-            font-size: 1.1em;
-        }
+ .logo p {
+ color: #666;
+ font-size: 1.1em;
+ }
 
-        .form-group {
-            margin-bottom: 25px;
-        }
+ .form-group {
+ margin-bottom: 25px;
+ }
 
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 600;
-            font-size: 0.95em;
-        }
+ .form-group label {
+ display: block;
+ margin-bottom: 8px;
+ color: #333;
+ font-weight: 600;
+ font-size: 0.95em;
+ }
 
-        .form-group input {
-            width: 100%;
-            padding: 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 1em;
-            transition: border-color 0.3s;
-        }
+ .form-group input {
+ width: 100%;
+ padding: 15px;
+ border: 2px solid #e0e0e0;
+ border-radius: 10px;
+ font-size: 1em;
+ transition: border-color 0.3s;
+ }
 
-        .form-group input:focus {
-            outline: none;
-            border-color: #10a37f;
-        }
+ .form-group input:focus {
+ outline: none;
+ border-color: #c6a66a;
+ }
 
-        .error-message {
-            background: #fee;
-            color: #c33;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 0.95em;
-            display: none;
-        }
+ .error-message {
+ background: #fee;
+ color: #c33;
+ padding: 12px;
+ border-radius: 8px;
+ margin-bottom: 20px;
+ font-size: 0.95em;
+ display: none;
+ }
 
-        .error-message.show {
-            display: block;
-        }
+ .error-message.show {
+ display: block;
+ }
 
-        .submit-btn {
-            width: 100%;
-            padding: 15px;
-            background: linear-gradient(135deg, #10a37f 0%, #0d8c6f 100%);
-            color: #ffffff;
-            border: none;
-            border-radius: 10px;
-            font-size: 1.1em;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
+ .submit-btn {
+ width: 100%;
+ padding: 15px;
+ background: linear-gradient(135deg, #c6a66a 0%, #9f7b3f 100%);
+ color: #ffffff;
+ border: none;
+ border-radius: 10px;
+ font-size: 1.1em;
+ font-weight: 600;
+ cursor: pointer;
+ transition: transform 0.2s, box-shadow 0.2s;
+ }
 
-        .submit-btn:hover {
-            background: linear-gradient(135deg, #0d8c6f 0%, #0a7a5f 100%);
-            color: #ffffff;
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(16, 163, 127, 0.4);
-        }
+ .submit-btn:hover {
+ background: linear-gradient(135deg, #9f7b3f 0%, #86642f 100%);
+ color: #ffffff;
+ transform: translateY(-2px);
+ box-shadow: 0 10px 20px rgba(198, 166, 106, 0.4);
+ }
 
-        .submit-btn:active {
-            transform: translateY(0);
-        }
+ .submit-btn:active {
+ transform: translateY(0);
+ }
 
-        .login-link {
-            text-align: center;
-            margin-top: 25px;
-            color: #666;
-        }
+ .login-link {
+ text-align: center;
+ margin-top: 25px;
+ color: #666;
+ }
 
-        .login-link a {
-            color: #10a37f;
-            text-decoration: none;
-            font-weight: 600;
-        }
+ .login-link a {
+ color: #c6a66a;
+ text-decoration: none;
+ font-weight: 600;
+ }
 
-        .login-link a:hover {
-            text-decoration: underline;
-        }
+ .login-link a:hover {
+ text-decoration: underline;
+ }
 
-        .home-link {
-            text-align: center;
-            margin-top: 20px;
-        }
+ .home-link {
+ text-align: center;
+ margin-top: 20px;
+ }
 
-        .home-link a {
-            color: #0d8c6f;
-            text-decoration: none;
-            font-size: 0.95em;
-        }
+ .home-link a {
+ color: #9f7b3f;
+ text-decoration: none;
+ font-size: 0.95em;
+ }
 
-        .home-link a:hover {
-            text-decoration: underline;
-        }
-    </style>
+ .home-link a:hover {
+ text-decoration: underline;
+ }
+
+ /* Luxury auth theme */
+ body {
+ background:
+ radial-gradient(circle at 20% 12%, rgba(214, 184, 115, 0.14), transparent 30%),
+ linear-gradient(135deg, #070706 0%, #12110f 54%, #080807 100%);
+ color: #f4efe4;
+ }
+
+ .signup-container {
+ background: linear-gradient(135deg, rgba(255,255,255,0.075), rgba(255,255,255,0.032));
+ border: 1px solid rgba(225, 204, 153, 0.18);
+ border-radius: 8px;
+ box-shadow: 0 28px 72px rgba(0, 0, 0, 0.48);
+ backdrop-filter: blur(18px);
+ -webkit-backdrop-filter: blur(18px);
+ }
+
+ .logo h1 {
+ background: none;
+ -webkit-text-fill-color: #fff7e8;
+ color: #fff7e8;
+ }
+
+ .logo p,
+ .login-link,
+ .home-link a {
+ color: #b9ad9a;
+ }
+
+ .form-group label {
+ color: #fff7e8;
+ }
+
+ .form-group input {
+ background: rgba(255,255,255,0.055);
+ border: 1px solid rgba(225, 204, 153, 0.18);
+ color: #fff7e8;
+ border-radius: 8px;
+ }
+
+ .form-group input:focus {
+ border-color: rgba(214, 184, 115, 0.7);
+ box-shadow: 0 0 0 3px rgba(201, 169, 104, 0.12);
+ }
+
+ .submit-btn {
+ background: linear-gradient(135deg, #d6b873, #a87d38);
+ color: #14110b;
+ border: 1px solid rgba(255, 239, 202, 0.32);
+ border-radius: 8px;
+ box-shadow: 0 14px 34px rgba(168, 125, 56, 0.24);
+ }
+
+ .submit-btn:hover {
+ background: linear-gradient(135deg, #e2c982, #b78b44);
+ color: #14110b;
+ box-shadow: 0 18px 42px rgba(168, 125, 56, 0.32);
+ }
+
+ .login-link a {
+ color: #d6b873;
+ }
+ </style>
 </head>
 <body>
-    <div class="signup-container">
-        <div class="logo">
-            <h1>🤖 AI Team</h1>
-            <p>Create your account</p>
-        </div>
+ <div class="signup-container">
+ <div class="logo">
+ <h1> AI Team</h1>
+ <p>Create your account</p>
+ </div>
 
-        <div class="error-message" id="errorMessage"></div>
+ <div class="error-message" id="errorMessage"></div>
 
-        <form id="signupForm">
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" required placeholder="Choose a username">
-            </div>
+ <form id="signupForm">
+ <div class="form-group">
+ <label for="username">Username</label>
+ <input type="text" id="username" name="username" required placeholder="Choose a username">
+ </div>
 
-            <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" name="email" required placeholder="your@email.com">
-            </div>
+ <div class="form-group">
+ <label for="email">Email</label>
+ <input type="email" id="email" name="email" required placeholder="your@email.com">
+ </div>
 
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required placeholder="Choose a strong password" minlength="6">
-            </div>
+ <div class="form-group">
+ <label for="password">Password</label>
+ <input type="password" id="password" name="password" required placeholder="Choose a strong password" minlength="6">
+ </div>
 
-            <button type="submit" class="submit-btn">Sign Up</button>
-        </form>
+ <button type="submit" class="submit-btn">Sign Up</button>
+ </form>
 
-        <div class="login-link">
-            Already have an account? <a href="/login">Login</a>
-        </div>
+ <div class="login-link">
+ Already have an account? <a href="/login">Login</a>
+ </div>
 
-        <div class="home-link">
-            <a href="/">← Back to homepage</a>
-        </div>
-    </div>
+ <div class="home-link">
+ <a href="/"> Back to homepage</a>
+ </div>
+ </div>
 
-    <script>
-        document.getElementById('signupForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const username = document.getElementById('username').value;
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const errorMessage = document.getElementById('errorMessage');
-            
-            try {
-                const response = await fetch('/api/signup', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    credentials: 'include',
-                    body: JSON.stringify({ username, email, password })
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok) {
-                    window.location.href = '/dashboard';
-                } else {
-                    errorMessage.textContent = data.error || 'Signup failed';
-                    errorMessage.classList.add('show');
-                }
-            } catch (error) {
-                errorMessage.textContent = 'An error occurred. Please try again.';
-                errorMessage.classList.add('show');
-            }
-        });
-    </script>
+ <script>
+ document.getElementById('signupForm').addEventListener('submit', async (e) => {
+ e.preventDefault();
+ 
+ const username = document.getElementById('username').value;
+ const email = document.getElementById('email').value;
+ const password = document.getElementById('password').value;
+ const errorMessage = document.getElementById('errorMessage');
+ 
+ try {
+ const response = await fetch('/api/signup', {
+ method: 'POST',
+ headers: {
+ 'Content-Type': 'application/json'
+ },
+ credentials: 'include',
+ body: JSON.stringify({ username, email, password })
+ });
+ 
+ const data = await response.json();
+ 
+ if (response.ok) {
+ window.location.href = '/dashboard';
+ } else {
+ errorMessage.textContent = data.error || 'Signup failed';
+ errorMessage.classList.add('show');
+ }
+ } catch (error) {
+ errorMessage.textContent = 'An error occurred. Please try again.';
+ errorMessage.classList.add('show');
+ }
+ });
+ </script>
 </body>
 </html>
+
+
+

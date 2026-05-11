@@ -1,4 +1,4 @@
-﻿// ================================================
+// ================================================
 // AI TEAM ULTIMATE DASHBOARD - JAVASCRIPT
 // Sidebar + Floating Preview + Enhanced Features
 // ================================================
@@ -220,12 +220,12 @@ function toggleImageMode() {
  
  if (imageMode) {
  input.placeholder = ' Describe the image you want to generate...';
- input.style.borderColor = '#10a37f';
+ input.style.borderColor = '#c6a66a';
  input.style.borderWidth = '2px';
  // Visual feedback
  const notification = document.createElement('div');
  notification.textContent = ' Image Mode Active!';
- notification.style.cssText = 'position:fixed;top:20px;right:20px;background:#10a37f;color:white;padding:12px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:10000;font-weight:600;';
+ notification.style.cssText = 'position:fixed;top:20px;right:20px;background:#c6a66a;color:white;padding:12px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:10000;font-weight:600;';
  document.body.appendChild(notification);
  setTimeout(() => notification.remove(), 2000);
  } else {
@@ -1060,10 +1060,10 @@ async function viewHistory() {
  historyHTML += `
  <div class="history-item" onclick="loadAgentHistory('${escapeHtml(agentChat.agent)}', ${index})" style="cursor: pointer; transition: all 0.2s;">
  <div class="history-meta" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
- <span class="history-agent" style="font-weight: 600; color: #10a37f; font-size: 16px;">
+ <span class="history-agent" style="font-weight: 600; color: #c6a66a; font-size: 16px;">
  ${emoji} ${escapeHtml(agentChat.agent)}
  </span>
- <span class="history-count" style="background: #10a37f; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600;">
+ <span class="history-count" style="background: #c6a66a; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600;">
  ${msgCount} messages
  </span>
  </div>
@@ -1119,7 +1119,7 @@ function loadAgentHistory(agent, agentIndex) {
  // Show notification
  const notification = document.createElement('div');
  notification.textContent = ` Loaded ${agentChat.messages.length} messages with ${agent}`;
- notification.style.cssText = 'position:fixed;top:20px;right:20px;background:#10a37f;color:white;padding:12px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:10000;font-weight:600;';
+ notification.style.cssText = 'position:fixed;top:20px;right:20px;background:#c6a66a;color:white;padding:12px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:10000;font-weight:600;';
  document.body.appendChild(notification);
  setTimeout(() => notification.remove(), 3000);
 }
@@ -1384,7 +1384,7 @@ function copyToClipboard(text) {
  position: fixed;
  bottom: 20px;
  right: 20px;
- background: #10a37f;
+ background: #c6a66a;
  color: white;
  padding: 12px 24px;
  border-radius: 8px;
@@ -1529,6 +1529,7 @@ if (document.readyState === 'loading') {
 } else {
  initializeWorkingMode();
 }
+
 
 
 

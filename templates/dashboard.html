@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
  <meta charset="UTF-8">
@@ -26,8 +26,8 @@
  }
 
  :root {
- --primary: #10a37f;
- --primary-hover: #0d8c6f;
+ --primary: #c6a66a;
+ --primary-hover: #9f7b3f;
  --sidebar-bg: #1a1a1a;
  --sidebar-hover: #2a2a2a;
  --bg-main: #ffffff;
@@ -685,7 +685,7 @@
  }
 
  .new-chat-btn {
- background: linear-gradient(135deg, #10a37f, #0d8c6f);
+ background: linear-gradient(135deg, #c6a66a, #9f7b3f);
  color: white;
  border: none;
  padding: 8px 16px;
@@ -697,12 +697,12 @@
  display: flex;
  align-items: center;
  gap: 6px;
- box-shadow: 0 2px 8px rgba(16, 163, 127, 0.2);
+ box-shadow: 0 2px 8px rgba(198, 166, 106, 0.2);
  }
 
  .new-chat-btn:hover {
  transform: translateY(-1px);
- box-shadow: 0 4px 12px rgba(16, 163, 127, 0.3);
+ box-shadow: 0 4px 12px rgba(198, 166, 106, 0.3);
  }
 
  .new-chat-btn:active {
@@ -1127,7 +1127,7 @@
  border-color: var(--primary);
  color: white;
  transform: translateY(-1px);
- box-shadow: 0 2px 8px rgba(16,163,127,0.2);
+ box-shadow: 0 2px 8px rgba(198, 166, 106, 0.2);
  }
 
  .attachment-btn:active {
@@ -1280,7 +1280,7 @@ font-weight: 600;
 
  .input-area:focus-within {
  border-color: var(--primary);
- box-shadow: 0 0 0 3px rgba(16,163,127,0.1);
+ box-shadow: 0 0 0 3px rgba(198, 166, 106, 0.1);
  }
 
  .input-btn {
@@ -1301,7 +1301,7 @@ font-weight: 600;
 
  .input-btn.active {
  color: var(--primary);
- background: rgba(16,163,127,0.1);
+ background: rgba(198, 166, 106, 0.1);
  }
 
  /* Combined Input Options */
@@ -1331,7 +1331,7 @@ font-weight: 600;
 
  .input-options-btn.active {
  color: var(--primary);
- background: rgba(16,163,127,0.1);
+ background: rgba(198, 166, 106, 0.1);
  }
 
  .desktop-only {
@@ -1471,7 +1471,7 @@ font-weight: 600;
 
  .working-mode-btn.active {
  color: var(--primary);
- background: rgba(16,163,127,0.1);
+ background: rgba(198, 166, 106, 0.1);
  }
 
  .working-mode-menu {
@@ -1525,7 +1525,7 @@ font-weight: 600;
  }
 
  .mode-option.active {
- background: rgba(16,163,127,0.05);
+ background: rgba(198, 166, 106, 0.05);
  }
 
  .mode-option.active .mode-name {
@@ -1635,10 +1635,10 @@ font-weight: 600;
 
  @keyframes pulse {
  0%, 100% {
- box-shadow: 0 0 0 0 rgba(16, 163, 127, 0.4);
+ box-shadow: 0 0 0 0 rgba(198, 166, 106, 0.4);
  }
  50% {
- box-shadow: 0 0 0 8px rgba(16, 163, 127, 0);
+ box-shadow: 0 0 0 8px rgba(198, 166, 106, 0);
  }
  }
 
@@ -1847,7 +1847,7 @@ font-weight: 600;
  .form-input:focus, .form-textarea:focus {
  outline: none;
  border-color: var(--primary);
- box-shadow: 0 0 0 3px rgba(16,163,127,0.1);
+ box-shadow: 0 0 0 3px rgba(198, 166, 106, 0.1);
  }
 
  .form-textarea {
@@ -2032,7 +2032,7 @@ font-weight: 600;
 
  /* Make upgrade plan stand out on mobile */
  .dropdown-menu a[href="/pricing"] {
- background: linear-gradient(135deg, var(--primary), #0d8c6f);
+ background: linear-gradient(135deg, var(--primary), #9f7b3f);
  color: white !important;
  font-weight: 600;
  border-radius: 8px;
@@ -2308,7 +2308,7 @@ font-weight: 600;
  ============================================ */
  
  .history-btn {
- background: linear-gradient(135deg, #10a37f, #0d8c6f);
+ background: linear-gradient(135deg, #c6a66a, #9f7b3f);
  color: white !important;
  border: none;
  padding: 8px 16px;
@@ -2324,7 +2324,7 @@ font-weight: 600;
 
  .history-btn:hover {
  transform: translateY(-2px);
- box-shadow: 0 5px 15px rgba(16, 163, 127, 0.4);
+ box-shadow: 0 5px 15px rgba(198, 166, 106, 0.4);
  }
 
  .history-dropdown {
@@ -2559,7 +2559,7 @@ font-weight: 600;
  }
 
  .copy-link-btn {
- background: #10a37f;
+ background: #c6a66a;
  color: white;
  border: none;
  padding: var(--spacing-xs) var(--spacing-sm);
@@ -2573,7 +2573,7 @@ font-weight: 600;
  }
 
  .copy-link-btn:hover {
- background: #0d8c6f;
+ background: #9f7b3f;
  transform: translateY(-2px);
  }
 
@@ -3424,7 +3424,7 @@ color: #f1dfad;
  <!-- Guest Mode: Show only the shared custom agent -->
  <div class="section-title">Your Agent</div>
  <div class="agent-item active" onclick="selectCustomAgent({{ custom_agent_id }}, '{{ custom_agent_name }}')">
- <div class="agent-avatar" style="background: linear-gradient(135deg, #10a37f, #0d8c6f);"></div>
+ <div class="agent-avatar" style="background: linear-gradient(135deg, #c6a66a, #9f7b3f);"></div>
  <div class="agent-info">
  <div class="agent-name">{{ custom_agent_name }}</div>
  <div class="agent-role">Custom Agent</div>
@@ -3645,7 +3645,7 @@ color: #f1dfad;
 
  <!-- Guest Mode Info Banner -->
  {% if is_guest %}
- <div style="margin-top: auto; padding: 16px; background: linear-gradient(135deg, #10a37f, #0d8c6f); border-radius: 12px; margin: 16px;">
+ <div style="margin-top: auto; padding: 16px; background: linear-gradient(135deg, #c6a66a, #9f7b3f); border-radius: 12px; margin: 16px;">
  <div style="color: white; font-size: 13px; text-align: center; margin-bottom: 8px;">
  <span style="font-weight: 600;"> Guest Mode</span>
  </div>
@@ -3676,7 +3676,7 @@ color: #f1dfad;
  <div class="header" {% if is_guest %}style="grid-row: 1 !important; background: #ffffff !important; display: flex !important; position: relative !important; z-index: 20 !important; visibility: visible !important; opacity: 1 !important; padding: 12px 24px !important; border-bottom: 1px solid #e5e7eb !important;"{% endif %}>
  <div class="header-left">
  <div class="current-agent-info">
- <div class="current-agent-avatar" id="currentAgentAvatar" style="background: linear-gradient(135deg, {% if is_guest %}#10a37f, #0d8c6f{% else %}#667eea, #764ba2{% endif %});">
+ <div class="current-agent-avatar" id="currentAgentAvatar" style="background: linear-gradient(135deg, {% if is_guest %}#c6a66a, #9f7b3f{% else %}#667eea, #764ba2{% endif %});">
  {% if is_guest %}AI{% else %}L{% endif %}
  </div>
  <div class="current-agent-name" id="currentAgentName">{% if is_guest and custom_agent_name %}{{ custom_agent_name }}{% else %}Luna{% endif %}</div>
@@ -4858,7 +4858,7 @@ oninput="autoResize(this)"
  const container = document.getElementById('chatContainer');
  const messageDiv = document.createElement('div');
  messageDiv.className = 'message system-message';
- messageDiv.innerHTML = '<div class="message-content" style="background: #f0fdf4; color: #166534; padding: 12px; border-left: 3px solid #10a37f; border-radius: 8px;">' + message + '</div>';
+ messageDiv.innerHTML = '<div class="message-content" style="background: #f8f3e8; color: #5b4525; padding: 12px; border-left: 3px solid #c6a66a; border-radius: 8px;">' + message + '</div>';
 
  container.appendChild(messageDiv);
  container.scrollTop = container.scrollHeight;
@@ -4946,7 +4946,7 @@ oninput="autoResize(this)"
  
  if (imageMode) {
  input.placeholder = ' Describe the image you want to generate...';
- input.style.borderColor = '#10a37f';
+ input.style.borderColor = '#c6a66a';
  input.style.borderWidth = '2px';
  
  // Visual feedback
@@ -4954,7 +4954,7 @@ oninput="autoResize(this)"
  
  // Change button color
  if (sendBtn) {
- sendBtn.style.background = 'linear-gradient(135deg, #10a37f, #0d8c6f)';
+ sendBtn.style.background = 'linear-gradient(135deg, #c6a66a, #9f7b3f)';
  }
  } else {
  input.placeholder = 'message...';
@@ -5208,7 +5208,7 @@ oninput="autoResize(this)"
  position: fixed;
  top: 80px;
  right: 20px;
- background: linear-gradient(135deg, #10a37f, #0d8c6f);
+ background: linear-gradient(135deg, #c6a66a, #9f7b3f);
  color: white;
  padding: 15px 20px;
  border-radius: 10px;
@@ -5303,7 +5303,7 @@ oninput="autoResize(this)"
  usageBadge.style.background = 'linear-gradient(135deg, #eab308, #ca8a04)'; // Yellow
  usageBadge.style.color = '#1f2937';
  } else {
- usageBadge.style.background = 'linear-gradient(135deg, #10a37f, #0d8c6f)'; // Green
+ usageBadge.style.background = 'linear-gradient(135deg, #c6a66a, #9f7b3f)'; // Green
  usageBadge.style.color = 'white';
  }
  }
@@ -5388,7 +5388,7 @@ oninput="autoResize(this)"
  <p>${text}</p>
  <img src="${imageUrl}" alt="Generated image" style="max-width: 100%; border-radius: 12px; margin-top: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); cursor: pointer;" onclick="window.open('${imageUrl}', '_blank')">
  <div style="margin-top: 10px; font-size: 12px; color: #6b7280;">
- <a href="${imageUrl}" target="_blank" download style="color: #10a37f; text-decoration: none; font-weight: 600;"> Download Image</a>
+ <a href="${imageUrl}" target="_blank" download style="color: #c6a66a; text-decoration: none; font-weight: 600;"> Download Image</a>
  <span style="margin-left: 15px; color: #9ca3af;">Powered by Pollinations.ai (Free)</span>
  </div>
  </div>
@@ -6223,7 +6223,7 @@ oninput="autoResize(this)"
 
  <div style="display: flex; gap: 12px; flex-wrap: wrap;">
  <button id="copyShareLink"
- style="flex: 1; min-width: 120px; padding: 12px; background: linear-gradient(135deg, #10a37f, #0d8c6f);
+ style="flex: 1; min-width: 120px; padding: 12px; background: linear-gradient(135deg, #c6a66a, #9f7b3f);
  color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">
   Copy Link
  </button>
@@ -6368,7 +6368,7 @@ oninput="autoResize(this)"
  } else {
  currentAgentAvatar.textContent = agentEmoji;
  }
- currentAgentAvatar.style.background = 'linear-gradient(135deg, #10a37f, #0d8c6f)';
+ currentAgentAvatar.style.background = 'linear-gradient(135deg, #c6a66a, #9f7b3f)';
  }
 
  // Update all agent items to remove active class
@@ -6709,7 +6709,7 @@ oninput="autoResize(this)"
 
  function likeMessage(messageId) {
  const btn = event.target;
- btn.style.color = '#10a37f';
+ btn.style.color = '#c6a66a';
  btn.textContent = '';
  showNotification(' Thanks for your feedback!');
  }
@@ -7072,7 +7072,7 @@ Please provide your response following these guidelines.`;
  <option value="eslc">ESLC - Academic</option>
  <option value="sop">SOP - Workflows</option>
  </select>
- <button onclick="generatePromptForAgent()" id="generatePromptBtn" style="padding: 6px 16px; border: 1px solid #10a37f; background: white; color: #10a37f; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; white-space: nowrap;"> Generate</button>
+ <button onclick="generatePromptForAgent()" id="generatePromptBtn" style="padding: 6px 16px; border: 1px solid #c6a66a; background: white; color: #c6a66a; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; white-space: nowrap;"> Generate</button>
  </div>
  </div>
  <textarea id="customAgentPersonality" placeholder="Describe the agent's personality, expertise, and how it should respond... Or click Generate to use AI!" style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; min-height: 120px; font-family: inherit;"></textarea>
@@ -7081,7 +7081,7 @@ Please provide your response following these guidelines.`;
 
  <div style="display: flex; gap: 12px; justify-content: flex-end;">
  <button onclick="closeCustomAgentModal()" style="padding: 12px 24px; border: 1px solid #d1d5db; background: white; border-radius: 8px; cursor: pointer; font-weight: 600; color: #374151;">Cancel</button>
- <button onclick="createCustomAgent()" style="padding: 12px 24px; border: none; background: linear-gradient(135deg, #10a37f, #0d8c6f); color: white; border-radius: 8px; cursor: pointer; font-weight: 600;">Create Agent</button>
+ <button onclick="createCustomAgent()" style="padding: 12px 24px; border: none; background: linear-gradient(135deg, #c6a66a, #9f7b3f); color: white; border-radius: 8px; cursor: pointer; font-weight: 600;">Create Agent</button>
  </div>
  </div>
  `;
@@ -7142,7 +7142,7 @@ Please provide your response following these guidelines.`;
 
  // Show success notification
  const notification = document.createElement('div');
- notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #10a37f; color: white; padding: 16px 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 10001; font-weight: 600;';
+ notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #c6a66a; color: white; padding: 16px 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 10001; font-weight: 600;';
  notification.textContent = ` Generated using ${data.framework_name}!`;
  document.body.appendChild(notification);
 
@@ -7322,7 +7322,7 @@ Please provide your response following these guidelines.`;
  .library-agent-card:hover {
  transform: translateY(-4px);
  border-color: var(--primary);
- box-shadow: 0 8px 20px rgba(16, 163, 127, 0.2);
+ box-shadow: 0 8px 20px rgba(198, 166, 106, 0.2);
  }
 
  .library-agent-initial {
@@ -7383,7 +7383,7 @@ Please provide your response following these guidelines.`;
  }
 
  .library-chat-btn:hover {
- background: #0d8c6f;
+ background: #9f7b3f;
  }
 
  .library-delete-btn {
@@ -7529,7 +7529,7 @@ Please provide your response following these guidelines.`;
  3 custom agents
  </p>
  <div class="upgrade-divider"></div>
- <p style="margin: 15px 0; color: #10a37f; font-weight: 600;">
+ <p style="margin: 15px 0; color: #c6a66a; font-weight: 600;">
  Want access to Claude and GPT?
  </p>
  <p style="margin: 15px 0; color: #666; line-height: 1.6;">
@@ -7672,7 +7672,7 @@ Please provide your response following these guidelines.`;
  }
 
  .contact-admin-btn {
- background: #10a37f !important;
+ background: #c6a66a !important;
  color: white !important;
  padding: 10px 20px;
  border: none;
@@ -7685,7 +7685,7 @@ Please provide your response following these guidelines.`;
  }
 
  .contact-admin-btn:hover {
- background: #0d8c6f !important;
+ background: #9f7b3f !important;
  }
 
  @media (max-width: 768px) {
@@ -7812,7 +7812,7 @@ Please provide your response following these guidelines.`;
 
  .upgrade-btn-primary {
  flex: 1;
- background: linear-gradient(135deg, #10a37f, #0d8c6f);
+ background: linear-gradient(135deg, #c6a66a, #9f7b3f);
  color: white;
  border: none;
  padding: 15px 30px;
@@ -7825,7 +7825,7 @@ Please provide your response following these guidelines.`;
 
  .upgrade-btn-primary:hover {
  transform: translateY(-2px);
- box-shadow: 0 8px 20px rgba(16, 163, 127, 0.4);
+ box-shadow: 0 8px 20px rgba(198, 166, 106, 0.4);
  }
 
  .upgrade-btn-secondary {
@@ -8148,6 +8148,8 @@ gap: 8px;
  </script>
 </body>
 </html>
+
+
 
 
 

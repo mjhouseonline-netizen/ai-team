@@ -1,1168 +1,1279 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Team - Complete AI-Powered Platform</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-
-    <!-- Premium Design System -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='premium-design.css') }}">
-
-    <style>
-        :root {
-            --primary-color: #10a37f;
-            --secondary-color: #0d8c6f;
-            --accent-color: #90EE90;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        .hero-section {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-            color: white;
-            padding: 120px 0 80px;
-            text-align: center;
-        }
-
-        .hero-section h1 {
-            font-size: 3.5rem;
-            font-weight: 700;
-            margin-bottom: 1.5rem;
-        }
-
-        .hero-section p {
-            font-size: 1.3rem;
-            margin-bottom: 2rem;
-            opacity: 0.95;
-        }
-
-        .hero-stats {
-            display: flex;
-            justify-content: center;
-            gap: 60px;
-            margin-top: 40px;
-            flex-wrap: wrap;
-        }
-
-        .stat-item {
-            text-align: center;
-        }
-
-        .stat-number {
-            font-size: 2.5rem;
-            font-weight: 700;
-            display: block;
-        }
-
-        .stat-label {
-            font-size: 1rem;
-            opacity: 0.9;
-        }
-
-        .btn-primary {
-            background: white;
-            color: var(--primary-color);
-            border: none;
-            padding: 15px 40px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            border-radius: 50px;
-            transition: all 0.3s;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-            color: var(--secondary-color);
-        }
-
-        .btn-secondary {
-            background: transparent;
-            color: white;
-            border: 2px solid white;
-            padding: 13px 40px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            border-radius: 50px;
-            transition: all 0.3s;
-            margin-left: 15px;
-        }
-
-        .btn-secondary:hover {
-            background: white;
-            color: var(--primary-color);
-        }
-
-        .section-title {
-            text-align: center;
-            margin-bottom: 60px;
-            position: relative;
-        }
-
-        .section-title h2 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: #333;
-            margin-bottom: 15px;
-        }
-
-        .section-title p {
-            font-size: 1.1rem;
-            color: #666;
-        }
-
-        .section-title::after {
-            content: '';
-            display: block;
-            width: 80px;
-            height: 4px;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            margin: 20px auto 0;
-            border-radius: 2px;
-        }
-
-        .features-section {
-            padding: 80px 0;
-            background: #f8f9fa;
-        }
-
-        .feature-card {
-            background: white;
-            border-radius: 15px;
-            padding: 40px 30px;
-            text-align: center;
-            transition: all 0.3s;
-            height: 100%;
-            border: 2px solid transparent;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .feature-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            transform: scaleX(0);
-            transition: transform 0.3s;
-        }
-
-        .feature-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-            border-color: var(--accent-color);
-        }
-
-        .feature-card:hover::before {
-            transform: scaleX(1);
-        }
-
-        .feature-icon {
-            font-size: 3rem;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 20px;
-        }
-
-        .feature-card h3 {
-            font-size: 1.4rem;
-            font-weight: 700;
-            margin-bottom: 15px;
-            color: #333;
-        }
-
-        .feature-card p {
-            color: #666;
-            line-height: 1.6;
-            margin-bottom: 0;
-        }
-
-        .feature-badge {
-            display: inline-block;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            margin-bottom: 15px;
-            letter-spacing: 0.5px;
-        }
-
-        .agent-preview {
-            padding: 80px 0;
-            background: white;
-        }
-
-        .agent-card {
-            background: white;
-            border-radius: 20px;
-            padding: 30px 25px;
-            text-align: center;
-            transition: all 0.3s;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-            height: 100%;
-            border: 2px solid #f0f0f0;
-        }
-
-        .agent-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
-            border-color: var(--accent-color);
-        }
-
-        .agent-image {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            margin: 0 auto 20px;
-            object-fit: cover;
-            border: 4px solid #f0f0f0;
-            transition: all 0.3s;
-        }
-
-        .agent-card:hover .agent-image {
-            border-color: var(--accent-color);
-            transform: scale(1.1);
-        }
-
-        .agent-card h4 {
-            color: var(--primary-color);
-            font-weight: 700;
-            margin-bottom: 10px;
-        }
-
-        .agent-card .role {
-            color: #666;
-            font-size: 0.9rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 15px;
-        }
-
-        .agent-card .description {
-            color: #555;
-            font-size: 0.95rem;
-            line-height: 1.6;
-        }
-
-        .integrations-section {
-            padding: 80px 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .integrations-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 20px;
-            margin-top: 40px;
-        }
-
-        .integration-item {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 20px;
-            text-align: center;
-            transition: all 0.3s;
-            border: 2px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .integration-item:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: translateY(-5px);
-        }
-
-        .integration-icon {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-        }
-
-        .integration-name {
-            font-size: 0.9rem;
-            font-weight: 600;
-        }
-
-        .capabilities-section {
-            padding: 80px 0;
-            background: white;
-        }
-
-        .capability-item {
-            display: flex;
-            align-items: start;
-            gap: 20px;
-            margin-bottom: 30px;
-            padding: 25px;
-            background: #f8f9fa;
-            border-radius: 15px;
-            transition: all 0.3s;
-        }
-
-        .capability-item:hover {
-            background: #e9ecef;
-            transform: translateX(10px);
-        }
-
-        .capability-icon {
-            font-size: 2rem;
-            color: var(--primary-color);
-            min-width: 50px;
-        }
-
-        .capability-content h4 {
-            font-weight: 700;
-            margin-bottom: 10px;
-            color: #333;
-        }
-
-        .capability-content p {
-            margin: 0;
-            color: #666;
-            line-height: 1.6;
-        }
-
-        .pricing-section {
-            padding: 80px 0;
-            background: #f8f9fa;
-        }
-
-        .pricing-card {
-            background: white;
-            border-radius: 20px;
-            padding: 40px 30px;
-            text-align: center;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
-            transition: all 0.3s;
-            height: 100%;
-            border: 3px solid transparent;
-        }
-
-        .pricing-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
-        }
-
-        .pricing-card.featured {
-            border-color: var(--primary-color);
-            position: relative;
-        }
-
-        .pricing-card.featured::before {
-            content: 'POPULAR';
-            position: absolute;
-            top: -15px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            padding: 5px 20px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 700;
-        }
-
-        .pricing-card h3 {
-            font-size: 1.8rem;
-            font-weight: 700;
-            margin-bottom: 15px;
-            color: #333;
-        }
-
-        .price {
-            font-size: 3rem;
-            font-weight: 700;
-            color: var(--primary-color);
-            margin: 20px 0;
-        }
-
-        .price span {
-            font-size: 1.2rem;
-            color: #666;
-        }
-
-        .pricing-features {
-            list-style: none;
-            padding: 0;
-            margin: 30px 0;
-        }
-
-        .pricing-features li {
-            padding: 12px 0;
-            border-bottom: 1px solid #f0f0f0;
-            color: #555;
-        }
-
-        .pricing-features li:last-child {
-            border-bottom: none;
-        }
-
-        .pricing-features i {
-            color: var(--primary-color);
-            margin-right: 10px;
-        }
-
-        .cta-section {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-            color: white;
-            padding: 80px 0;
-            text-align: center;
-        }
-
-        .navbar {
-            background: rgba(255, 255, 255, 0.95) !important;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-
-        .navbar-brand {
-            font-weight: 700;
-            font-size: 1.5rem;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .use-cases-section {
-            padding: 80px 0;
-            background: white;
-        }
-
-        .use-case-card {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border-radius: 20px;
-            padding: 40px 30px;
-            height: 100%;
-            transition: all 0.3s;
-            border: 2px solid transparent;
-        }
-
-        .use-case-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            border-color: var(--primary-color);
-        }
-
-        .use-case-icon {
-            font-size: 3rem;
-            margin-bottom: 20px;
-        }
-
-        .use-case-card h4 {
-            font-weight: 700;
-            margin-bottom: 15px;
-            color: #333;
-        }
-
-        .use-case-card ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .use-case-card li {
-            padding: 8px 0;
-            color: #555;
-            display: flex;
-            align-items: center;
-        }
-
-        .use-case-card li::before {
-            content: '✓';
-            color: var(--primary-color);
-            font-weight: 700;
-            margin-right: 10px;
-            font-size: 1.2rem;
-        }
-    </style>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>AI Team - Complete AI-Powered Platform</title>
+ <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+ <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+ <!-- Premium Design System -->
+ <link rel="stylesheet" href="{{ url_for('static', filename='premium-design.css') }}">
+
+ <style>
+ :root {
+ --primary-color: #c6a66a;
+ --secondary-color: #9f7b3f;
+ --accent-color: #90EE90;
+ }
+
+ body {
+ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+ }
+
+ /* Luxury public theme overrides */
+ :root {
+ --primary-color: #d6b873;
+ --secondary-color: #8d682e;
+ --accent-color: #e2c982;
+ }
+
+ body {
+ background: #080807;
+ color: #f4efe4;
+ }
+
+ .navbar,
+ footer {
+ background: rgba(8, 8, 7, 0.94) !important;
+ border-color: rgba(225, 204, 153, 0.16) !important;
+ }
+
+ .hero-section {
+ background:
+ radial-gradient(circle at 50% 0%, rgba(214, 184, 115, 0.18), transparent 32%),
+ linear-gradient(135deg, #070706 0%, #12110f 54%, #080807 100%);
+ color: #fff7e8;
+ }
+
+ .btn-primary,
+ .btn-secondary:hover {
+ background: linear-gradient(135deg, #d6b873, #a87d38);
+ color: #14110b;
+ border-color: rgba(255, 239, 202, 0.32);
+ border-radius: 8px;
+ }
+
+ .btn-secondary {
+ border-color: rgba(214, 184, 115, 0.58);
+ color: #f4efe4;
+ border-radius: 8px;
+ }
+
+ .features-section,
+ .agent-preview,
+ .integrations-section,
+ .pricing-section,
+ .use-cases-section,
+ .capabilities-section {
+ background: #0b0b0a !important;
+ color: #f4efe4;
+ }
+
+ .feature-card,
+ .agent-card,
+ .pricing-card,
+ .use-case-card,
+ .capability-item,
+ .integration-item {
+ background: linear-gradient(135deg, rgba(255,255,255,0.065), rgba(255,255,255,0.03)) !important;
+ border: 1px solid rgba(225, 204, 153, 0.16) !important;
+ border-radius: 8px !important;
+ color: #f4efe4 !important;
+ box-shadow: 0 20px 54px rgba(0,0,0,0.26) !important;
+ }
+
+ .section-title h2,
+ .feature-card h3,
+ .agent-card h4,
+ .pricing-card h3,
+ .use-case-card h4,
+ .capability-item h4 {
+ color: #fff7e8 !important;
+ }
+
+ .section-title p,
+ .feature-card p,
+ .agent-card .role,
+ .agent-card .description,
+ .use-case-card li,
+ .capability-item p {
+ color: #b9ad9a !important;
+ }
+
+ .hero-section {
+ background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+ color: white;
+ padding: 120px 0 80px;
+ text-align: center;
+ }
+
+ .hero-section h1 {
+ font-size: 3.5rem;
+ font-weight: 700;
+ margin-bottom: 1.5rem;
+ }
+
+ .hero-section p {
+ font-size: 1.3rem;
+ margin-bottom: 2rem;
+ opacity: 0.95;
+ }
+
+ .hero-stats {
+ display: flex;
+ justify-content: center;
+ gap: 60px;
+ margin-top: 40px;
+ flex-wrap: wrap;
+ }
+
+ .stat-item {
+ text-align: center;
+ }
+
+ .stat-number {
+ font-size: 2.5rem;
+ font-weight: 700;
+ display: block;
+ }
+
+ .stat-label {
+ font-size: 1rem;
+ opacity: 0.9;
+ }
+
+ .btn-primary {
+ background: white;
+ color: var(--primary-color);
+ border: none;
+ padding: 15px 40px;
+ font-size: 1.1rem;
+ font-weight: 600;
+ border-radius: 50px;
+ transition: all 0.3s;
+ }
+
+ .btn-primary:hover {
+ transform: translateY(-2px);
+ box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+ color: var(--secondary-color);
+ }
+
+ .btn-secondary {
+ background: transparent;
+ color: white;
+ border: 2px solid white;
+ padding: 13px 40px;
+ font-size: 1.1rem;
+ font-weight: 600;
+ border-radius: 50px;
+ transition: all 0.3s;
+ margin-left: 15px;
+ }
+
+ .btn-secondary:hover {
+ background: white;
+ color: var(--primary-color);
+ }
+
+ .section-title {
+ text-align: center;
+ margin-bottom: 60px;
+ position: relative;
+ }
+
+ .section-title h2 {
+ font-size: 2.5rem;
+ font-weight: 700;
+ color: #333;
+ margin-bottom: 15px;
+ }
+
+ .section-title p {
+ font-size: 1.1rem;
+ color: #666;
+ }
+
+ .section-title::after {
+ content: '';
+ display: block;
+ width: 80px;
+ height: 4px;
+ background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+ margin: 20px auto 0;
+ border-radius: 2px;
+ }
+
+ .features-section {
+ padding: 80px 0;
+ background: #f8f9fa;
+ }
+
+ .feature-card {
+ background: white;
+ border-radius: 15px;
+ padding: 40px 30px;
+ text-align: center;
+ transition: all 0.3s;
+ height: 100%;
+ border: 2px solid transparent;
+ position: relative;
+ overflow: hidden;
+ }
+
+ .feature-card::before {
+ content: '';
+ position: absolute;
+ top: 0;
+ left: 0;
+ right: 0;
+ height: 4px;
+ background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+ transform: scaleX(0);
+ transition: transform 0.3s;
+ }
+
+ .feature-card:hover {
+ transform: translateY(-10px);
+ box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+ border-color: var(--accent-color);
+ }
+
+ .feature-card:hover::before {
+ transform: scaleX(1);
+ }
+
+ .feature-icon {
+ font-size: 3rem;
+ background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+ -webkit-background-clip: text;
+ -webkit-text-fill-color: transparent;
+ margin-bottom: 20px;
+ }
+
+ .feature-card h3 {
+ font-size: 1.4rem;
+ font-weight: 700;
+ margin-bottom: 15px;
+ color: #333;
+ }
+
+ .feature-card p {
+ color: #666;
+ line-height: 1.6;
+ margin-bottom: 0;
+ }
+
+ .feature-badge {
+ display: inline-block;
+ background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+ color: white;
+ padding: 4px 12px;
+ border-radius: 20px;
+ font-size: 0.75rem;
+ font-weight: 600;
+ text-transform: uppercase;
+ margin-bottom: 15px;
+ letter-spacing: 0.5px;
+ }
+
+ .agent-preview {
+ padding: 80px 0;
+ background: white;
+ }
+
+ .agent-card {
+ background: white;
+ border-radius: 20px;
+ padding: 30px 25px;
+ text-align: center;
+ transition: all 0.3s;
+ box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+ height: 100%;
+ border: 2px solid #f0f0f0;
+ }
+
+ .agent-card:hover {
+ transform: translateY(-10px);
+ box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+ border-color: var(--accent-color);
+ }
+
+ .agent-image {
+ width: 100px;
+ height: 100px;
+ border-radius: 50%;
+ margin: 0 auto 20px;
+ object-fit: cover;
+ border: 4px solid #f0f0f0;
+ transition: all 0.3s;
+ }
+
+ .agent-card:hover .agent-image {
+ border-color: var(--accent-color);
+ transform: scale(1.1);
+ }
+
+ .agent-card h4 {
+ color: var(--primary-color);
+ font-weight: 700;
+ margin-bottom: 10px;
+ }
+
+ .agent-card .role {
+ color: #666;
+ font-size: 0.9rem;
+ font-weight: 600;
+ text-transform: uppercase;
+ letter-spacing: 0.5px;
+ margin-bottom: 15px;
+ }
+
+ .agent-card .description {
+ color: #555;
+ font-size: 0.95rem;
+ line-height: 1.6;
+ }
+
+ .integrations-section {
+ padding: 80px 0;
+ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+ color: white;
+ }
+
+ .integrations-grid {
+ display: grid;
+ grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+ gap: 20px;
+ margin-top: 40px;
+ }
+
+ .integration-item {
+ background: rgba(255, 255, 255, 0.1);
+ backdrop-filter: blur(10px);
+ border-radius: 15px;
+ padding: 20px;
+ text-align: center;
+ transition: all 0.3s;
+ border: 2px solid rgba(255, 255, 255, 0.2);
+ }
+
+ .integration-item:hover {
+ background: rgba(255, 255, 255, 0.2);
+ transform: translateY(-5px);
+ }
+
+ .integration-icon {
+ font-size: 2.5rem;
+ margin-bottom: 10px;
+ }
+
+ .integration-name {
+ font-size: 0.9rem;
+ font-weight: 600;
+ }
+
+ .capabilities-section {
+ padding: 80px 0;
+ background: white;
+ }
+
+ .capability-item {
+ display: flex;
+ align-items: start;
+ gap: 20px;
+ margin-bottom: 30px;
+ padding: 25px;
+ background: #f8f9fa;
+ border-radius: 15px;
+ transition: all 0.3s;
+ }
+
+ .capability-item:hover {
+ background: #e9ecef;
+ transform: translateX(10px);
+ }
+
+ .capability-icon {
+ font-size: 2rem;
+ color: var(--primary-color);
+ min-width: 50px;
+ }
+
+ .capability-content h4 {
+ font-weight: 700;
+ margin-bottom: 10px;
+ color: #333;
+ }
+
+ .capability-content p {
+ margin: 0;
+ color: #666;
+ line-height: 1.6;
+ }
+
+ .pricing-section {
+ padding: 80px 0;
+ background: #f8f9fa;
+ }
+
+ .pricing-card {
+ background: white;
+ border-radius: 20px;
+ padding: 40px 30px;
+ text-align: center;
+ box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+ transition: all 0.3s;
+ height: 100%;
+ border: 3px solid transparent;
+ }
+
+ .pricing-card:hover {
+ transform: translateY(-10px);
+ box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+ }
+
+ .pricing-card.featured {
+ border-color: var(--primary-color);
+ position: relative;
+ }
+
+ .pricing-card.featured::before {
+ content: 'POPULAR';
+ position: absolute;
+ top: -15px;
+ left: 50%;
+ transform: translateX(-50%);
+ background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+ color: white;
+ padding: 5px 20px;
+ border-radius: 20px;
+ font-size: 0.8rem;
+ font-weight: 700;
+ }
+
+ .pricing-card h3 {
+ font-size: 1.8rem;
+ font-weight: 700;
+ margin-bottom: 15px;
+ color: #333;
+ }
+
+ .price {
+ font-size: 3rem;
+ font-weight: 700;
+ color: var(--primary-color);
+ margin: 20px 0;
+ }
+
+ .price span {
+ font-size: 1.2rem;
+ color: #666;
+ }
+
+ .pricing-features {
+ list-style: none;
+ padding: 0;
+ margin: 30px 0;
+ }
+
+ .pricing-features li {
+ padding: 12px 0;
+ border-bottom: 1px solid #f0f0f0;
+ color: #555;
+ }
+
+ .pricing-features li:last-child {
+ border-bottom: none;
+ }
+
+ .pricing-features i {
+ color: var(--primary-color);
+ margin-right: 10px;
+ }
+
+ .cta-section {
+ background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+ color: white;
+ padding: 80px 0;
+ text-align: center;
+ }
+
+ .navbar {
+ background: rgba(255, 255, 255, 0.95) !important;
+ box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+ }
+
+ .navbar-brand {
+ font-weight: 700;
+ font-size: 1.5rem;
+ background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+ -webkit-background-clip: text;
+ -webkit-text-fill-color: transparent;
+ }
+
+ .use-cases-section {
+ padding: 80px 0;
+ background: white;
+ }
+
+ .use-case-card {
+ background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+ border-radius: 20px;
+ padding: 40px 30px;
+ height: 100%;
+ transition: all 0.3s;
+ border: 2px solid transparent;
+ }
+
+ .use-case-card:hover {
+ transform: translateY(-5px);
+ box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+ border-color: var(--primary-color);
+ }
+
+ .use-case-icon {
+ font-size: 3rem;
+ margin-bottom: 20px;
+ }
+
+ .use-case-card h4 {
+ font-weight: 700;
+ margin-bottom: 15px;
+ color: #333;
+ }
+
+ .use-case-card ul {
+ list-style: none;
+ padding: 0;
+ margin: 0;
+ }
+
+ .use-case-card li {
+ padding: 8px 0;
+ color: #555;
+ display: flex;
+ align-items: center;
+ }
+
+ .use-case-card li::before {
+ content: '';
+ color: var(--primary-color);
+ font-weight: 700;
+ margin-right: 10px;
+ font-size: 1.2rem;
+ }
+ 
+ /* Final luxury color lock */
+ body { background: #080807 !important; color: #f4efe4 !important; }
+ .navbar, footer { background: rgba(8, 8, 7, 0.96) !important; border-color: rgba(225, 204, 153, 0.16) !important; }
+ .navbar-brand, .nav-link { color: #fff7e8 !important; }
+ .hero-section, .cta-section {
+ background: radial-gradient(circle at 50% 0%, rgba(214, 184, 115, 0.18), transparent 32%), linear-gradient(135deg, #070706 0%, #12110f 54%, #080807 100%) !important;
+ color: #fff7e8 !important;
+ }
+ .btn-primary, .btn-secondary:hover, .pricing-card .btn, .cta-section .btn {
+ background: linear-gradient(135deg, #d6b873, #a87d38) !important;
+ color: #14110b !important;
+ border-color: rgba(255, 239, 202, 0.32) !important;
+ border-radius: 8px !important;
+ }
+ .btn-secondary { border-color: rgba(214, 184, 115, 0.58) !important; color: #f4efe4 !important; border-radius: 8px !important; }
+ .feature-badge, .popular-badge { background: linear-gradient(135deg, #d6b873, #a87d38) !important; color: #14110b !important; }
+ .feature-icon { background: none !important; -webkit-text-fill-color: #d6b873 !important; color: #d6b873 !important; }
+ .section-title::after, .feature-card::before { background: linear-gradient(135deg, #d6b873, #a87d38) !important; }
+ .features-section, .agent-preview, .integrations-section, .pricing-section, .use-cases-section, .capabilities-section { background: #0b0b0a !important; color: #f4efe4 !important; }
+ .feature-card, .agent-card, .pricing-card, .use-case-card, .capability-item, .integration-item {
+ background: linear-gradient(135deg, rgba(255,255,255,0.065), rgba(255,255,255,0.03)) !important;
+ border: 1px solid rgba(225, 204, 153, 0.16) !important;
+ border-radius: 8px !important;
+ color: #f4efe4 !important;
+ }
+ .section-title h2, .feature-card h3, .agent-card h4, .pricing-card h3, .use-case-card h4, .capability-item h4 { color: #fff7e8 !important; }
+ .section-title p, .feature-card p, .agent-card .role, .agent-card .description, .use-case-card li, .capability-item p, .integration-item { color: #b9ad9a !important; }</style>
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
-        <div class="container">
-            <a class="navbar-brand" href="/">
-                <i class="fas fa-users"></i> AI Team
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/">Home</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#features">Features</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#integrations">Integrations</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#pricing">Pricing</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/login">Sign In</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+ <!-- Navigation -->
+ <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+ <div class="container">
+ <a class="navbar-brand" href="/">
+ <i class="fas fa-users"></i> AI Team
+ </a>
+ <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+ <span class="navbar-toggler-icon"></span>
+ </button>
+ <div class="collapse navbar-collapse" id="navbarNav">
+ <ul class="navbar-nav ms-auto">
+ <li class="nav-item">
+ <a class="nav-link" href="/">Home</a>
+ </li>
+ <li class="nav-item">
+ <a class="nav-link" href="#features">Features</a>
+ </li>
+ <li class="nav-item">
+ <a class="nav-link" href="#integrations">Integrations</a>
+ </li>
+ <li class="nav-item">
+ <a class="nav-link" href="#pricing">Pricing</a>
+ </li>
+ <li class="nav-item">
+ <a class="nav-link" href="/login">Sign In</a>
+ </li>
+ </ul>
+ </div>
+ </div>
+ </nav>
 
-    <!-- Hero Section -->
-    <section class="hero-section" style="margin-top: 56px;">
-        <div class="container">
-            <h1>Your Complete AI-Powered Platform</h1>
-            <p>7 specialized AI agents + 30+ integrations + professional prompt frameworks</p>
-            <div>
-                <a href="/signup" class="btn btn-primary">Get Started Free</a>
-                <a href="/login" class="btn btn-secondary">Sign In</a>
-            </div>
-            <div class="hero-stats">
-                <div class="stat-item">
-                    <span class="stat-number">7</span>
-                    <span class="stat-label">AI Agents</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-number">30+</span>
-                    <span class="stat-label">Integrations</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-number">12</span>
-                    <span class="stat-label">Prompt Frameworks</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-number">∞</span>
-                    <span class="stat-label">Custom Agents</span>
-                </div>
-            </div>
-        </div>
-    </section>
+ <!-- Hero Section -->
+ <section class="hero-section" style="margin-top: 56px;">
+ <div class="container">
+ <h1>Your Complete AI-Powered Platform</h1>
+ <p>7 specialized AI agents + 30+ integrations + professional prompt frameworks</p>
+ <div>
+ <a href="/signup" class="btn btn-primary">Get Started Free</a>
+ <a href="/login" class="btn btn-secondary">Sign In</a>
+ </div>
+ <div class="hero-stats">
+ <div class="stat-item">
+ <span class="stat-number">7</span>
+ <span class="stat-label">AI Agents</span>
+ </div>
+ <div class="stat-item">
+ <span class="stat-number">30+</span>
+ <span class="stat-label">Integrations</span>
+ </div>
+ <div class="stat-item">
+ <span class="stat-number">12</span>
+ <span class="stat-label">Prompt Frameworks</span>
+ </div>
+ <div class="stat-item">
+ <span class="stat-number"></span>
+ <span class="stat-label">Custom Agents</span>
+ </div>
+ </div>
+ </div>
+ </section>
 
-    <!-- Core Features Section -->
-    <section class="features-section" id="features">
-        <div class="container">
-            <div class="section-title">
-                <h2>Everything You Need in One Platform</h2>
-                <p>A complete AI ecosystem for productivity, creativity, and automation</p>
-            </div>
-            <div class="row g-4">
-                <div class="col-md-6 col-lg-4">
-                    <div class="feature-card">
-                        <div class="feature-badge">Core</div>
-                        <div class="feature-icon">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <h3>7 Specialized AI Agents</h3>
-                        <p>Luna (Research), Mila (Organization), Sage (Writing), Ember (Creative), Sol (Strategy), Nova (Technical), Theo (Implementation) - each with unique personalities and expertise.</p>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <div class="feature-card">
-                        <div class="feature-badge">Advanced</div>
-                        <div class="feature-icon">
-                            <i class="fas fa-wand-magic-sparkles"></i>
-                        </div>
-                        <h3>Custom Agent Creator</h3>
-                        <p>Build unlimited custom AI agents with your own personalities, instructions, icons, and specialized capabilities. Tailor agents to your exact workflow needs.</p>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <div class="feature-card">
-                        <div class="feature-badge">Professional</div>
-                        <div class="feature-icon">
-                            <i class="fas fa-lightbulb"></i>
-                        </div>
-                        <h3>12 Prompt Frameworks</h3>
-                        <p>Professional prompt engineering with RTCF, RACI, CO-STAR, CRISPE, RISEN, Socratic Mode, ReAct, HPVA, ESLC, SOP, Rubric, and Steps+Constraints frameworks.</p>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <div class="feature-card">
-                        <div class="feature-badge">Productivity</div>
-                        <div class="feature-icon">
-                            <i class="fas fa-bolt"></i>
-                        </div>
-                        <h3>AI Prompt Builder</h3>
-                        <p>Generate professional prompts instantly using industry-standard frameworks. Transform simple goals into comprehensive AI instructions with one click.</p>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <div class="feature-card">
-                        <div class="feature-badge">Intelligence</div>
-                        <div class="feature-icon">
-                            <i class="fas fa-brain"></i>
-                        </div>
-                        <h3>AI Auto-Integration</h3>
-                        <p>Natural language integration detection. Just say "post to Slack" or "create GitHub issue" and the AI automatically triggers the right integration with smart parameter extraction.</p>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <div class="feature-card">
-                        <div class="feature-badge">Automation</div>
-                        <div class="feature-icon">
-                            <i class="fas fa-robot"></i>
-                        </div>
-                        <h3>Webhook Receivers</h3>
-                        <p>Receive events from external services. Process GitHub PRs, Stripe payments, form submissions, and more with custom webhook endpoints for each integration.</p>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <div class="feature-card">
-                        <div class="feature-badge">Workflows</div>
-                        <div class="feature-icon">
-                            <i class="fas fa-diagram-project"></i>
-                        </div>
-                        <h3>Integration Templates</h3>
-                        <p>Pre-built automation recipes like GitHub→Slack, Email→Trello, Form→Database. Enable one-click workflows that connect your favorite tools seamlessly.</p>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <div class="feature-card">
-                        <div class="feature-badge">Security</div>
-                        <div class="feature-icon">
-                            <i class="fas fa-shield-halved"></i>
-                        </div>
-                        <h3>OAuth 2.0 Flow</h3>
-                        <p>Secure authentication with state-based CSRF protection. Connect to GitHub, Google Sheets, Slack, and more with enterprise-grade security standards.</p>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <div class="feature-card">
-                        <div class="feature-badge">Plans</div>
-                        <div class="feature-icon">
-                            <i class="fas fa-layer-group"></i>
-                        </div>
-                        <h3>Flexible Plans</h3>
-                        <p>Free, Pro, and Enterprise tiers with customizable limits. Plan-based access control for custom agents, integrations, and advanced features.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+ <!-- Core Features Section -->
+ <section class="features-section" id="features">
+ <div class="container">
+ <div class="section-title">
+ <h2>Everything You Need in One Platform</h2>
+ <p>A complete AI ecosystem for productivity, creativity, and automation</p>
+ </div>
+ <div class="row g-4">
+ <div class="col-md-6 col-lg-4">
+ <div class="feature-card">
+ <div class="feature-badge">Core</div>
+ <div class="feature-icon">
+ <i class="fas fa-users"></i>
+ </div>
+ <h3>7 Specialized AI Agents</h3>
+ <p>Luna (Research), Mila (Organization), Sage (Writing), Ember (Creative), Sol (Strategy), Nova (Technical), Theo (Implementation) - each with unique personalities and expertise.</p>
+ </div>
+ </div>
+ <div class="col-md-6 col-lg-4">
+ <div class="feature-card">
+ <div class="feature-badge">Advanced</div>
+ <div class="feature-icon">
+ <i class="fas fa-wand-magic-sparkles"></i>
+ </div>
+ <h3>Custom Agent Creator</h3>
+ <p>Build unlimited custom AI agents with your own personalities, instructions, icons, and specialized capabilities. Tailor agents to your exact workflow needs.</p>
+ </div>
+ </div>
+ <div class="col-md-6 col-lg-4">
+ <div class="feature-card">
+ <div class="feature-badge">Professional</div>
+ <div class="feature-icon">
+ <i class="fas fa-lightbulb"></i>
+ </div>
+ <h3>12 Prompt Frameworks</h3>
+ <p>Professional prompt engineering with RTCF, RACI, CO-STAR, CRISPE, RISEN, Socratic Mode, ReAct, HPVA, ESLC, SOP, Rubric, and Steps+Constraints frameworks.</p>
+ </div>
+ </div>
+ <div class="col-md-6 col-lg-4">
+ <div class="feature-card">
+ <div class="feature-badge">Productivity</div>
+ <div class="feature-icon">
+ <i class="fas fa-bolt"></i>
+ </div>
+ <h3>AI Prompt Builder</h3>
+ <p>Generate professional prompts instantly using industry-standard frameworks. Transform simple goals into comprehensive AI instructions with one click.</p>
+ </div>
+ </div>
+ <div class="col-md-6 col-lg-4">
+ <div class="feature-card">
+ <div class="feature-badge">Intelligence</div>
+ <div class="feature-icon">
+ <i class="fas fa-brain"></i>
+ </div>
+ <h3>AI Auto-Integration</h3>
+ <p>Natural language integration detection. Just say "post to Slack" or "create GitHub issue" and the AI automatically triggers the right integration with smart parameter extraction.</p>
+ </div>
+ </div>
+ <div class="col-md-6 col-lg-4">
+ <div class="feature-card">
+ <div class="feature-badge">Automation</div>
+ <div class="feature-icon">
+ <i class="fas fa-robot"></i>
+ </div>
+ <h3>Webhook Receivers</h3>
+ <p>Receive events from external services. Process GitHub PRs, Stripe payments, form submissions, and more with custom webhook endpoints for each integration.</p>
+ </div>
+ </div>
+ <div class="col-md-6 col-lg-4">
+ <div class="feature-card">
+ <div class="feature-badge">Workflows</div>
+ <div class="feature-icon">
+ <i class="fas fa-diagram-project"></i>
+ </div>
+ <h3>Integration Templates</h3>
+ <p>Pre-built automation recipes like GitHubSlack, EmailTrello, FormDatabase. Enable one-click workflows that connect your favorite tools seamlessly.</p>
+ </div>
+ </div>
+ <div class="col-md-6 col-lg-4">
+ <div class="feature-card">
+ <div class="feature-badge">Security</div>
+ <div class="feature-icon">
+ <i class="fas fa-shield-halved"></i>
+ </div>
+ <h3>OAuth 2.0 Flow</h3>
+ <p>Secure authentication with state-based CSRF protection. Connect to GitHub, Google Sheets, Slack, and more with enterprise-grade security standards.</p>
+ </div>
+ </div>
+ <div class="col-md-6 col-lg-4">
+ <div class="feature-card">
+ <div class="feature-badge">Plans</div>
+ <div class="feature-icon">
+ <i class="fas fa-layer-group"></i>
+ </div>
+ <h3>Flexible Plans</h3>
+ <p>Free, Pro, and Enterprise tiers with customizable limits. Plan-based access control for custom agents, integrations, and advanced features.</p>
+ </div>
+ </div>
+ </div>
+ </div>
+ </section>
 
-    <!-- AI Agents Section -->
-    <section class="agent-preview">
-        <div class="container">
-            <div class="section-title">
-                <h2>Meet Your AI Team</h2>
-                <p>7 specialized agents with unique personalities and expertise</p>
-            </div>
+ <!-- AI Agents Section -->
+ <section class="agent-preview">
+ <div class="container">
+ <div class="section-title">
+ <h2>Meet Your AI Team</h2>
+ <p>7 specialized agents with unique personalities and expertise</p>
+ </div>
 
-            <div class="row g-4 mb-4">
-                <div class="col-md-6 col-lg-3">
-                    <div class="agent-card">
-                        <img src="{{ url_for('static', filename='Images/luna.png') }}" alt="Luna" class="agent-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                        <div style="display:none; font-size: 70px;">🌙</div>
-                        <h4>Luna</h4>
-                        <div class="role">Research & Analysis</div>
-                        <p class="description">Deep-dive researcher who uncovers insights, analyzes data, and finds information with precision.</p>
-                    </div>
-                </div>
+ <div class="row g-4 mb-4">
+ <div class="col-md-6 col-lg-3">
+ <div class="agent-card">
+ <img src="{{ url_for('static', filename='Images/luna.png') }}" alt="Luna" class="agent-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+ <div style="display:none; font-size: 70px;"></div>
+ <h4>Luna</h4>
+ <div class="role">Research & Analysis</div>
+ <p class="description">Deep-dive researcher who uncovers insights, analyzes data, and finds information with precision.</p>
+ </div>
+ </div>
 
-                <div class="col-md-6 col-lg-3">
-                    <div class="agent-card">
-                        <img src="{{ url_for('static', filename='Images/mila.png') }}" alt="Mila" class="agent-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                        <div style="display:none; font-size: 70px;">🐉</div>
-                        <h4>Mila</h4>
-                        <div class="role">Organization & Planning</div>
-                        <p class="description">Master organizer who creates systems, builds workflows, and turns chaos into structure.</p>
-                    </div>
-                </div>
+ <div class="col-md-6 col-lg-3">
+ <div class="agent-card">
+ <img src="{{ url_for('static', filename='Images/mila.png') }}" alt="Mila" class="agent-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+ <div style="display:none; font-size: 70px;"></div>
+ <h4>Mila</h4>
+ <div class="role">Organization & Planning</div>
+ <p class="description">Master organizer who creates systems, builds workflows, and turns chaos into structure.</p>
+ </div>
+ </div>
 
-                <div class="col-md-6 col-lg-3">
-                    <div class="agent-card">
-                        <img src="{{ url_for('static', filename='Images/sage.png') }}" alt="Sage" class="agent-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                        <div style="display:none; font-size: 70px;">🦉</div>
-                        <h4>Sage</h4>
-                        <div class="role">Writing & Content</div>
-                        <p class="description">Skilled wordsmith who crafts compelling copy and brings ideas to life through words.</p>
-                    </div>
-                </div>
+ <div class="col-md-6 col-lg-3">
+ <div class="agent-card">
+ <img src="{{ url_for('static', filename='Images/sage.png') }}" alt="Sage" class="agent-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+ <div style="display:none; font-size: 70px;"></div>
+ <h4>Sage</h4>
+ <div class="role">Writing & Content</div>
+ <p class="description">Skilled wordsmith who crafts compelling copy and brings ideas to life through words.</p>
+ </div>
+ </div>
 
-                <div class="col-md-6 col-lg-3">
-                    <div class="agent-card">
-                        <img src="{{ url_for('static', filename='Images/ember.png') }}" alt="Ember" class="agent-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                        <div style="display:none; font-size: 70px;">🦁</div>
-                        <h4>Ember</h4>
-                        <div class="role">Creative Direction</div>
-                        <p class="description">Bold visionary who sparks innovative ideas and pushes creative boundaries.</p>
-                    </div>
-                </div>
-            </div>
+ <div class="col-md-6 col-lg-3">
+ <div class="agent-card">
+ <img src="{{ url_for('static', filename='Images/ember.png') }}" alt="Ember" class="agent-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+ <div style="display:none; font-size: 70px;"></div>
+ <h4>Ember</h4>
+ <div class="role">Creative Direction</div>
+ <p class="description">Bold visionary who sparks innovative ideas and pushes creative boundaries.</p>
+ </div>
+ </div>
+ </div>
 
-            <div class="row g-4 justify-content-center">
-                <div class="col-md-6 col-lg-4">
-                    <div class="agent-card">
-                        <img src="{{ url_for('static', filename='Images/sol.png') }}" alt="Sol" class="agent-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                        <div style="display:none; font-size: 70px;">🐤</div>
-                        <h4>Sol</h4>
-                        <div class="role">Strategic Thinking</div>
-                        <p class="description">Strategic advisor who sees the big picture and guides toward long-term success.</p>
-                    </div>
-                </div>
+ <div class="row g-4 justify-content-center">
+ <div class="col-md-6 col-lg-4">
+ <div class="agent-card">
+ <img src="{{ url_for('static', filename='Images/sol.png') }}" alt="Sol" class="agent-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+ <div style="display:none; font-size: 70px;"></div>
+ <h4>Sol</h4>
+ <div class="role">Strategic Thinking</div>
+ <p class="description">Strategic advisor who sees the big picture and guides toward long-term success.</p>
+ </div>
+ </div>
 
-                <div class="col-md-6 col-lg-4">
-                    <div class="agent-card">
-                        <img src="{{ url_for('static', filename='Images/nova.png') }}" alt="Nova" class="agent-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                        <div style="display:none; font-size: 70px;">🌌</div>
-                        <h4>Nova</h4>
-                        <div class="role">Technical Solutions</div>
-                        <p class="description">Tech expert who solves complex problems and makes technology work for you.</p>
-                    </div>
-                </div>
+ <div class="col-md-6 col-lg-4">
+ <div class="agent-card">
+ <img src="{{ url_for('static', filename='Images/nova.png') }}" alt="Nova" class="agent-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+ <div style="display:none; font-size: 70px;"></div>
+ <h4>Nova</h4>
+ <div class="role">Technical Solutions</div>
+ <p class="description">Tech expert who solves complex problems and makes technology work for you.</p>
+ </div>
+ </div>
 
-                <div class="col-md-6 col-lg-4">
-                    <div class="agent-card">
-                        <img src="{{ url_for('static', filename='Images/theo.png') }}" alt="Theo" class="agent-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                        <div style="display:none; font-size: 70px;">🐰</div>
-                        <h4>Theo</h4>
-                        <div class="role">Implementation</div>
-                        <p class="description">Reliable builder who turns ideas into reality with practical action plans.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+ <div class="col-md-6 col-lg-4">
+ <div class="agent-card">
+ <img src="{{ url_for('static', filename='Images/theo.png') }}" alt="Theo" class="agent-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+ <div style="display:none; font-size: 70px;"></div>
+ <h4>Theo</h4>
+ <div class="role">Implementation</div>
+ <p class="description">Reliable builder who turns ideas into reality with practical action plans.</p>
+ </div>
+ </div>
+ </div>
+ </div>
+ </section>
 
-    <!-- Integrations Section -->
-    <section class="integrations-section" id="integrations">
-        <div class="container">
-            <div class="section-title" style="color: white;">
-                <h2 style="color: white;">30+ Powerful Integrations</h2>
-                <p>Connect your favorite tools and automate your workflow</p>
-            </div>
-            <div class="integrations-grid">
-                <div class="integration-item">
-                    <div class="integration-icon">💬</div>
-                    <div class="integration-name">Slack</div>
-                </div>
-                <div class="integration-item">
-                    <div class="integration-icon">🎮</div>
-                    <div class="integration-name">Discord</div>
-                </div>
-                <div class="integration-item">
-                    <div class="integration-icon">💼</div>
-                    <div class="integration-name">Teams</div>
-                </div>
-                <div class="integration-item">
-                    <div class="integration-icon">✉️</div>
-                    <div class="integration-name">SendGrid</div>
-                </div>
-                <div class="integration-item">
-                    <div class="integration-icon">📧</div>
-                    <div class="integration-name">Mailgun</div>
-                </div>
-                <div class="integration-item">
-                    <div class="integration-icon">📱</div>
-                    <div class="integration-name">Twilio</div>
-                </div>
-                <div class="integration-item">
-                    <div class="integration-icon">🎯</div>
-                    <div class="integration-name">HubSpot</div>
-                </div>
-                <div class="integration-item">
-                    <div class="integration-icon">☁️</div>
-                    <div class="integration-name">Salesforce</div>
-                </div>
-                <div class="integration-item">
-                    <div class="integration-icon">📊</div>
-                    <div class="integration-name">Pipedrive</div>
-                </div>
-                <div class="integration-item">
-                    <div class="integration-icon">✓</div>
-                    <div class="integration-name">Asana</div>
-                </div>
-                <div class="integration-item">
-                    <div class="integration-icon">📋</div>
-                    <div class="integration-name">Trello</div>
-                </div>
-                <div class="integration-item">
-                    <div class="integration-icon">🗓️</div>
-                    <div class="integration-name">Monday</div>
-                </div>
-                <div class="integration-item">
-                    <div class="integration-icon">🎯</div>
-                    <div class="integration-name">ClickUp</div>
-                </div>
-                <div class="integration-item">
-                    <div class="integration-icon">🐛</div>
-                    <div class="integration-name">Jira</div>
-                </div>
-                <div class="integration-item">
-                    <div class="integration-icon">📊</div>
-                    <div class="integration-name">Google Sheets</div>
-                </div>
-                <div class="integration-item">
-                    <div class="integration-icon">📄</div>
-                    <div class="integration-name">Google Docs</div>
-                </div>
-                <div class="integration-item">
-                    <div class="integration-icon">📅</div>
-                    <div class="integration-name">Google Calendar</div>
-                </div>
-                <div class="integration-item">
-                    <div class="integration-icon">📬</div>
-                    <div class="integration-name">Gmail</div>
-                </div>
-                <div class="integration-item">
-                    <div class="integration-icon">🗂️</div>
-                    <div class="integration-name">Airtable</div>
-                </div>
-                <div class="integration-item">
-                    <div class="integration-icon">🗄️</div>
-                    <div class="integration-name">MongoDB</div>
-                </div>
-                <div class="integration-item">
-                    <div class="integration-icon">⚡</div>
-                    <div class="integration-name">Supabase</div>
-                </div>
-                <div class="integration-item">
-                    <div class="integration-icon">💳</div>
-                    <div class="integration-name">Stripe</div>
-                </div>
-                <div class="integration-item">
-                    <div class="integration-icon">📈</div>
-                    <div class="integration-name">Google Analytics</div>
-                </div>
-                <div class="integration-item">
-                    <div class="integration-icon">🔬</div>
-                    <div class="integration-name">Mixpanel</div>
-                </div>
-                <div class="integration-item">
-                    <div class="integration-icon">🐙</div>
-                    <div class="integration-name">GitHub</div>
-                </div>
-                <div class="integration-item">
-                    <div class="integration-icon">🦊</div>
-                    <div class="integration-name">GitLab</div>
-                </div>
-                <div class="integration-item">
-                    <div class="integration-icon">📐</div>
-                    <div class="integration-name">Linear</div>
-                </div>
-                <div class="integration-item">
-                    <div class="integration-icon">💬</div>
-                    <div class="integration-name">Intercom</div>
-                </div>
-                <div class="integration-item">
-                    <div class="integration-icon">🎫</div>
-                    <div class="integration-name">Zendesk</div>
-                </div>
-                <div class="integration-item">
-                    <div class="integration-icon">📆</div>
-                    <div class="integration-name">Calendly</div>
-                </div>
-                <div class="integration-item">
-                    <div class="integration-icon">🛍️</div>
-                    <div class="integration-name">Shopify</div>
-                </div>
-                <div class="integration-item">
-                    <div class="integration-icon">📝</div>
-                    <div class="integration-name">WordPress</div>
-                </div>
-            </div>
-            <div class="text-center mt-5">
-                <a href="/integrations" class="btn btn-primary btn-lg">Explore All Integrations</a>
-            </div>
-        </div>
-    </section>
+ <!-- Integrations Section -->
+ <section class="integrations-section" id="integrations">
+ <div class="container">
+ <div class="section-title" style="color: white;">
+ <h2 style="color: white;">30+ Powerful Integrations</h2>
+ <p>Connect your favorite tools and automate your workflow</p>
+ </div>
+ <div class="integrations-grid">
+ <div class="integration-item">
+ <div class="integration-icon"></div>
+ <div class="integration-name">Slack</div>
+ </div>
+ <div class="integration-item">
+ <div class="integration-icon"></div>
+ <div class="integration-name">Discord</div>
+ </div>
+ <div class="integration-item">
+ <div class="integration-icon"></div>
+ <div class="integration-name">Teams</div>
+ </div>
+ <div class="integration-item">
+ <div class="integration-icon"></div>
+ <div class="integration-name">SendGrid</div>
+ </div>
+ <div class="integration-item">
+ <div class="integration-icon"></div>
+ <div class="integration-name">Mailgun</div>
+ </div>
+ <div class="integration-item">
+ <div class="integration-icon"></div>
+ <div class="integration-name">Twilio</div>
+ </div>
+ <div class="integration-item">
+ <div class="integration-icon"></div>
+ <div class="integration-name">HubSpot</div>
+ </div>
+ <div class="integration-item">
+ <div class="integration-icon"></div>
+ <div class="integration-name">Salesforce</div>
+ </div>
+ <div class="integration-item">
+ <div class="integration-icon"></div>
+ <div class="integration-name">Pipedrive</div>
+ </div>
+ <div class="integration-item">
+ <div class="integration-icon"></div>
+ <div class="integration-name">Asana</div>
+ </div>
+ <div class="integration-item">
+ <div class="integration-icon"></div>
+ <div class="integration-name">Trello</div>
+ </div>
+ <div class="integration-item">
+ <div class="integration-icon"></div>
+ <div class="integration-name">Monday</div>
+ </div>
+ <div class="integration-item">
+ <div class="integration-icon"></div>
+ <div class="integration-name">ClickUp</div>
+ </div>
+ <div class="integration-item">
+ <div class="integration-icon"></div>
+ <div class="integration-name">Jira</div>
+ </div>
+ <div class="integration-item">
+ <div class="integration-icon"></div>
+ <div class="integration-name">Google Sheets</div>
+ </div>
+ <div class="integration-item">
+ <div class="integration-icon"></div>
+ <div class="integration-name">Google Docs</div>
+ </div>
+ <div class="integration-item">
+ <div class="integration-icon"></div>
+ <div class="integration-name">Google Calendar</div>
+ </div>
+ <div class="integration-item">
+ <div class="integration-icon"></div>
+ <div class="integration-name">Gmail</div>
+ </div>
+ <div class="integration-item">
+ <div class="integration-icon"></div>
+ <div class="integration-name">Airtable</div>
+ </div>
+ <div class="integration-item">
+ <div class="integration-icon"></div>
+ <div class="integration-name">MongoDB</div>
+ </div>
+ <div class="integration-item">
+ <div class="integration-icon"></div>
+ <div class="integration-name">Supabase</div>
+ </div>
+ <div class="integration-item">
+ <div class="integration-icon"></div>
+ <div class="integration-name">Stripe</div>
+ </div>
+ <div class="integration-item">
+ <div class="integration-icon"></div>
+ <div class="integration-name">Google Analytics</div>
+ </div>
+ <div class="integration-item">
+ <div class="integration-icon"></div>
+ <div class="integration-name">Mixpanel</div>
+ </div>
+ <div class="integration-item">
+ <div class="integration-icon"></div>
+ <div class="integration-name">GitHub</div>
+ </div>
+ <div class="integration-item">
+ <div class="integration-icon"></div>
+ <div class="integration-name">GitLab</div>
+ </div>
+ <div class="integration-item">
+ <div class="integration-icon"></div>
+ <div class="integration-name">Linear</div>
+ </div>
+ <div class="integration-item">
+ <div class="integration-icon"></div>
+ <div class="integration-name">Intercom</div>
+ </div>
+ <div class="integration-item">
+ <div class="integration-icon"></div>
+ <div class="integration-name">Zendesk</div>
+ </div>
+ <div class="integration-item">
+ <div class="integration-icon"></div>
+ <div class="integration-name">Calendly</div>
+ </div>
+ <div class="integration-item">
+ <div class="integration-icon"></div>
+ <div class="integration-name">Shopify</div>
+ </div>
+ <div class="integration-item">
+ <div class="integration-icon"></div>
+ <div class="integration-name">WordPress</div>
+ </div>
+ </div>
+ <div class="text-center mt-5">
+ <a href="/integrations" class="btn btn-primary btn-lg">Explore All Integrations</a>
+ </div>
+ </div>
+ </section>
 
-    <!-- Platform Capabilities -->
-    <section class="capabilities-section">
-        <div class="container">
-            <div class="section-title">
-                <h2>Advanced Platform Capabilities</h2>
-                <p>Enterprise-grade features for teams of all sizes</p>
-            </div>
-            <div class="row">
-                <div class="col-lg-6">
-                    <div class="capability-item">
-                        <div class="capability-icon">
-                            <i class="fas fa-code"></i>
-                        </div>
-                        <div class="capability-content">
-                            <h4>RESTful API Architecture</h4>
-                            <p>Comprehensive API endpoints for all integrations, webhooks, templates, and analytics with full CRUD operations and authentication.</p>
-                        </div>
-                    </div>
-                    <div class="capability-item">
-                        <div class="capability-icon">
-                            <i class="fas fa-database"></i>
-                        </div>
-                        <div class="capability-content">
-                            <h4>Persistent Storage</h4>
-                            <p>SQLite database with structured tables for users, agents, conversations, integrations, webhooks, templates, and usage analytics.</p>
-                        </div>
-                    </div>
-                    <div class="capability-item">
-                        <div class="capability-icon">
-                            <i class="fas fa-ticket"></i>
-                        </div>
-                        <div class="capability-content">
-                            <h4>Promo Code System</h4>
-                            <p>Integrated with Stripe for promotional discounts, trial periods, and special offers. Track redemptions and validity periods.</p>
-                        </div>
-                    </div>
-                    <div class="capability-item">
-                        <div class="capability-icon">
-                            <i class="fas fa-bell"></i>
-                        </div>
-                        <div class="capability-content">
-                            <h4>Smart Notifications</h4>
-                            <p>Plan limit warnings, cost alerts, integration health notifications, and real-time updates on system events and webhook processing.</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-6">
-                    <div class="capability-item">
-                        <div class="capability-icon">
-                            <i class="fas fa-palette"></i>
-                        </div>
-                        <div class="capability-content">
-                            <h4>Custom Agent Icons</h4>
-                            <p>Upload custom avatars for your agents. Personalize with emojis, images, or brand elements to match your workflow aesthetic.</p>
-                        </div>
-                    </div>
-                    <div class="capability-item">
-                        <div class="capability-icon">
-                            <i class="fas fa-edit"></i>
-                        </div>
-                        <div class="capability-content">
-                            <h4>Agent Management</h4>
-                            <p>Edit, duplicate, delete, and organize custom agents. Full CRUD operations with inline editing and instant updates.</p>
-                        </div>
-                    </div>
-                    <div class="capability-item">
-                        <div class="capability-icon">
-                            <i class="fas fa-history"></i>
-                        </div>
-                        <div class="capability-content">
-                            <h4>Conversation History</h4>
-                            <p>Complete chat history with search, export, and archive capabilities. Never lose important conversations or insights.</p>
-                        </div>
-                    </div>
-                    <div class="capability-item">
-                        <div class="capability-icon">
-                            <i class="fas fa-file-shield"></i>
-                        </div>
-                        <div class="capability-content">
-                            <h4>Data Backup</h4>
-                            <p>Automated backup scripts for database safety. Export conversations, agents, and settings for migration or archival.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+ <!-- Platform Capabilities -->
+ <section class="capabilities-section">
+ <div class="container">
+ <div class="section-title">
+ <h2>Advanced Platform Capabilities</h2>
+ <p>Enterprise-grade features for teams of all sizes</p>
+ </div>
+ <div class="row">
+ <div class="col-lg-6">
+ <div class="capability-item">
+ <div class="capability-icon">
+ <i class="fas fa-code"></i>
+ </div>
+ <div class="capability-content">
+ <h4>RESTful API Architecture</h4>
+ <p>Comprehensive API endpoints for all integrations, webhooks, templates, and analytics with full CRUD operations and authentication.</p>
+ </div>
+ </div>
+ <div class="capability-item">
+ <div class="capability-icon">
+ <i class="fas fa-database"></i>
+ </div>
+ <div class="capability-content">
+ <h4>Persistent Storage</h4>
+ <p>SQLite database with structured tables for users, agents, conversations, integrations, webhooks, templates, and usage analytics.</p>
+ </div>
+ </div>
+ <div class="capability-item">
+ <div class="capability-icon">
+ <i class="fas fa-ticket"></i>
+ </div>
+ <div class="capability-content">
+ <h4>Promo Code System</h4>
+ <p>Integrated with Stripe for promotional discounts, trial periods, and special offers. Track redemptions and validity periods.</p>
+ </div>
+ </div>
+ <div class="capability-item">
+ <div class="capability-icon">
+ <i class="fas fa-bell"></i>
+ </div>
+ <div class="capability-content">
+ <h4>Smart Notifications</h4>
+ <p>Plan limit warnings, cost alerts, integration health notifications, and real-time updates on system events and webhook processing.</p>
+ </div>
+ </div>
+ </div>
+ <div class="col-lg-6">
+ <div class="capability-item">
+ <div class="capability-icon">
+ <i class="fas fa-palette"></i>
+ </div>
+ <div class="capability-content">
+ <h4>Custom Agent Icons</h4>
+ <p>Upload custom avatars for your agents. Personalize with emojis, images, or brand elements to match your workflow aesthetic.</p>
+ </div>
+ </div>
+ <div class="capability-item">
+ <div class="capability-icon">
+ <i class="fas fa-edit"></i>
+ </div>
+ <div class="capability-content">
+ <h4>Agent Management</h4>
+ <p>Edit, duplicate, delete, and organize custom agents. Full CRUD operations with inline editing and instant updates.</p>
+ </div>
+ </div>
+ <div class="capability-item">
+ <div class="capability-icon">
+ <i class="fas fa-history"></i>
+ </div>
+ <div class="capability-content">
+ <h4>Conversation History</h4>
+ <p>Complete chat history with search, export, and archive capabilities. Never lose important conversations or insights.</p>
+ </div>
+ </div>
+ <div class="capability-item">
+ <div class="capability-icon">
+ <i class="fas fa-file-shield"></i>
+ </div>
+ <div class="capability-content">
+ <h4>Data Backup</h4>
+ <p>Automated backup scripts for database safety. Export conversations, agents, and settings for migration or archival.</p>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </section>
 
-    <!-- Use Cases Section -->
-    <section class="use-cases-section">
-        <div class="container">
-            <div class="section-title">
-                <h2>Built For Every Workflow</h2>
-                <p>See how AI Team transforms different industries and use cases</p>
-            </div>
-            <div class="row g-4">
-                <div class="col-md-6 col-lg-4">
-                    <div class="use-case-card">
-                        <div class="use-case-icon">💼</div>
-                        <h4>Marketing Teams</h4>
-                        <ul>
-                            <li>Content creation with Sage</li>
-                            <li>Campaign planning with Sol</li>
-                            <li>Social media automation</li>
-                            <li>Analytics integration</li>
-                            <li>Email campaign management</li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <div class="use-case-card">
-                        <div class="use-case-icon">💻</div>
-                        <h4>Development Teams</h4>
-                        <ul>
-                            <li>Technical solutions with Nova</li>
-                            <li>GitHub integration</li>
-                            <li>Code documentation</li>
-                            <li>Project management</li>
-                            <li>Automated workflows</li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <div class="use-case-card">
-                        <div class="use-case-icon">🎨</div>
-                        <h4>Creative Agencies</h4>
-                        <ul>
-                            <li>Ideation with Ember</li>
-                            <li>Client communication</li>
-                            <li>Project organization</li>
-                            <li>Content workflows</li>
-                            <li>Team collaboration</li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <div class="use-case-card">
-                        <div class="use-case-icon">📊</div>
-                        <h4>Data Analysts</h4>
-                        <ul>
-                            <li>Research with Luna</li>
-                            <li>Spreadsheet integration</li>
-                            <li>Report generation</li>
-                            <li>Insight extraction</li>
-                            <li>Visualization support</li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <div class="use-case-card">
-                        <div class="use-case-icon">🏢</div>
-                        <h4>Business Operations</h4>
-                        <ul>
-                            <li>Process automation</li>
-                            <li>CRM integration</li>
-                            <li>Document management</li>
-                            <li>Workflow optimization</li>
-                            <li>Cost monitoring</li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <div class="use-case-card">
-                        <div class="use-case-icon">🎓</div>
-                        <h4>Educators & Students</h4>
-                        <ul>
-                            <li>Research assistance</li>
-                            <li>Writing support</li>
-                            <li>Study planning</li>
-                            <li>Content organization</li>
-                            <li>Learning frameworks</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+ <!-- Use Cases Section -->
+ <section class="use-cases-section">
+ <div class="container">
+ <div class="section-title">
+ <h2>Built For Every Workflow</h2>
+ <p>See how AI Team transforms different industries and use cases</p>
+ </div>
+ <div class="row g-4">
+ <div class="col-md-6 col-lg-4">
+ <div class="use-case-card">
+ <div class="use-case-icon"></div>
+ <h4>Marketing Teams</h4>
+ <ul>
+ <li>Content creation with Sage</li>
+ <li>Campaign planning with Sol</li>
+ <li>Social media automation</li>
+ <li>Analytics integration</li>
+ <li>Email campaign management</li>
+ </ul>
+ </div>
+ </div>
+ <div class="col-md-6 col-lg-4">
+ <div class="use-case-card">
+ <div class="use-case-icon"></div>
+ <h4>Development Teams</h4>
+ <ul>
+ <li>Technical solutions with Nova</li>
+ <li>GitHub integration</li>
+ <li>Code documentation</li>
+ <li>Project management</li>
+ <li>Automated workflows</li>
+ </ul>
+ </div>
+ </div>
+ <div class="col-md-6 col-lg-4">
+ <div class="use-case-card">
+ <div class="use-case-icon"></div>
+ <h4>Creative Agencies</h4>
+ <ul>
+ <li>Ideation with Ember</li>
+ <li>Client communication</li>
+ <li>Project organization</li>
+ <li>Content workflows</li>
+ <li>Team collaboration</li>
+ </ul>
+ </div>
+ </div>
+ <div class="col-md-6 col-lg-4">
+ <div class="use-case-card">
+ <div class="use-case-icon"></div>
+ <h4>Data Analysts</h4>
+ <ul>
+ <li>Research with Luna</li>
+ <li>Spreadsheet integration</li>
+ <li>Report generation</li>
+ <li>Insight extraction</li>
+ <li>Visualization support</li>
+ </ul>
+ </div>
+ </div>
+ <div class="col-md-6 col-lg-4">
+ <div class="use-case-card">
+ <div class="use-case-icon"></div>
+ <h4>Business Operations</h4>
+ <ul>
+ <li>Process automation</li>
+ <li>CRM integration</li>
+ <li>Document management</li>
+ <li>Workflow optimization</li>
+ <li>Cost monitoring</li>
+ </ul>
+ </div>
+ </div>
+ <div class="col-md-6 col-lg-4">
+ <div class="use-case-card">
+ <div class="use-case-icon"></div>
+ <h4>Educators & Students</h4>
+ <ul>
+ <li>Research assistance</li>
+ <li>Writing support</li>
+ <li>Study planning</li>
+ <li>Content organization</li>
+ <li>Learning frameworks</li>
+ </ul>
+ </div>
+ </div>
+ </div>
+ </div>
+ </section>
 
-    <!-- Pricing Section -->
-    <section class="pricing-section" id="pricing">
-        <div class="container">
-            <div class="section-title">
-                <h2>Choose Your Plan</h2>
-                <p>Flexible pricing for individuals and teams</p>
-            </div>
-            <div class="row g-4">
-                <div class="col-lg-3">
-                    <div class="pricing-card">
-                        <h3>Free</h3>
-                        <div class="price">$0<span>/month</span></div>
-                        <ul class="pricing-features">
-                            <li><i class="fas fa-check"></i> 25 messages per day</li>
-                            <li><i class="fas fa-check"></i> All 7 AI agents</li>
-                            <li><i class="fas fa-check"></i> File upload & analysis</li>
-                            <li><i class="fas fa-check"></i> Chat history</li>
-                            <li><i class="fas fa-check"></i> Notion integration</li>
-                        </ul>
-                        <a href="/signup" class="btn btn-primary btn-lg w-100 mt-3">Get Started</a>
-                    </div>
-                </div>
-                <div class="col-lg-3">
-                    <div class="pricing-card">
-                        <h3>Starter</h3>
-                        <div class="price">$19<span>/month</span></div>
-                        <ul class="pricing-features">
-                            <li><i class="fas fa-check"></i> 60 messages per day</li>
-                            <li><i class="fas fa-check"></i> Claude AI access</li>
-                            <li><i class="fas fa-check"></i> All 7 AI agents</li>
-                            <li><i class="fas fa-check"></i> File upload & analysis</li>
-                            <li><i class="fas fa-check"></i> Full chat history</li>
-                            <li><i class="fas fa-check"></i> Priority support</li>
-                        </ul>
-                        <a href="/pricing" class="btn btn-primary btn-lg w-100 mt-3">Get Starter</a>
-                    </div>
-                </div>
-                <div class="col-lg-3">
-                    <div class="pricing-card featured">
-                        <h3>Pro</h3>
-                        <div class="price">$49<span>/month</span></div>
-                        <ul class="pricing-features">
-                            <li><i class="fas fa-check"></i> 300 messages per day</li>
-                            <li><i class="fas fa-check"></i> Claude AI access</li>
-                            <li><i class="fas fa-check"></i> All integrations</li>
-                            <li><i class="fas fa-check"></i> API access & automation</li>
-                            <li><i class="fas fa-check"></i> Unlimited chat history</li>
-                            <li><i class="fas fa-check"></i> Priority support</li>
-                            <li><i class="fas fa-check"></i> Early access</li>
-                        </ul>
-                        <a href="/pricing" class="btn btn-primary btn-lg w-100 mt-3">Get Pro</a>
-                    </div>
-                </div>
-                <div class="col-lg-3">
-                    <div class="pricing-card">
-                        <h3>Enterprise</h3>
-                        <div class="price">$99<span>/month</span></div>
-                        <ul class="pricing-features">
-                            <li><i class="fas fa-check"></i> 1,000 messages/day</li>
-                            <li><i class="fas fa-check"></i> Full API access</li>
-                            <li><i class="fas fa-check"></i> Dedicated support</li>
-                            <li><i class="fas fa-check"></i> Custom training</li>
-                            <li><i class="fas fa-check"></i> White-label options</li>
-                            <li><i class="fas fa-check"></i> Team management</li>
-                            <li><i class="fas fa-check"></i> SLA guarantees</li>
-                        </ul>
-                        <a href="/pricing" class="btn btn-primary btn-lg w-100 mt-3">Get Enterprise</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+ <!-- Pricing Section -->
+ <section class="pricing-section" id="pricing">
+ <div class="container">
+ <div class="section-title">
+ <h2>Choose Your Plan</h2>
+ <p>Flexible pricing for individuals and teams</p>
+ </div>
+ <div class="row g-4">
+ <div class="col-lg-3">
+ <div class="pricing-card">
+ <h3>Free</h3>
+ <div class="price">$0<span>/month</span></div>
+ <ul class="pricing-features">
+ <li><i class="fas fa-check"></i> 25 messages per day</li>
+ <li><i class="fas fa-check"></i> All 7 AI agents</li>
+ <li><i class="fas fa-check"></i> File upload & analysis</li>
+ <li><i class="fas fa-check"></i> Chat history</li>
+ <li><i class="fas fa-check"></i> Notion integration</li>
+ </ul>
+ <a href="/signup" class="btn btn-primary btn-lg w-100 mt-3">Get Started</a>
+ </div>
+ </div>
+ <div class="col-lg-3">
+ <div class="pricing-card">
+ <h3>Starter</h3>
+ <div class="price">$19<span>/month</span></div>
+ <ul class="pricing-features">
+ <li><i class="fas fa-check"></i> 60 messages per day</li>
+ <li><i class="fas fa-check"></i> Claude AI access</li>
+ <li><i class="fas fa-check"></i> All 7 AI agents</li>
+ <li><i class="fas fa-check"></i> File upload & analysis</li>
+ <li><i class="fas fa-check"></i> Full chat history</li>
+ <li><i class="fas fa-check"></i> Priority support</li>
+ </ul>
+ <a href="/pricing" class="btn btn-primary btn-lg w-100 mt-3">Get Starter</a>
+ </div>
+ </div>
+ <div class="col-lg-3">
+ <div class="pricing-card featured">
+ <h3>Pro</h3>
+ <div class="price">$49<span>/month</span></div>
+ <ul class="pricing-features">
+ <li><i class="fas fa-check"></i> 300 messages per day</li>
+ <li><i class="fas fa-check"></i> Claude AI access</li>
+ <li><i class="fas fa-check"></i> All integrations</li>
+ <li><i class="fas fa-check"></i> API access & automation</li>
+ <li><i class="fas fa-check"></i> Unlimited chat history</li>
+ <li><i class="fas fa-check"></i> Priority support</li>
+ <li><i class="fas fa-check"></i> Early access</li>
+ </ul>
+ <a href="/pricing" class="btn btn-primary btn-lg w-100 mt-3">Get Pro</a>
+ </div>
+ </div>
+ <div class="col-lg-3">
+ <div class="pricing-card">
+ <h3>Enterprise</h3>
+ <div class="price">$99<span>/month</span></div>
+ <ul class="pricing-features">
+ <li><i class="fas fa-check"></i> 1,000 messages/day</li>
+ <li><i class="fas fa-check"></i> Full API access</li>
+ <li><i class="fas fa-check"></i> Dedicated support</li>
+ <li><i class="fas fa-check"></i> Custom training</li>
+ <li><i class="fas fa-check"></i> White-label options</li>
+ <li><i class="fas fa-check"></i> Team management</li>
+ <li><i class="fas fa-check"></i> SLA guarantees</li>
+ </ul>
+ <a href="/pricing" class="btn btn-primary btn-lg w-100 mt-3">Get Enterprise</a>
+ </div>
+ </div>
+ </div>
+ </div>
+ </section>
 
-    <!-- CTA Section -->
-    <section class="cta-section">
-        <div class="container">
-            <h2 class="mb-4">Ready to Transform Your Workflow?</h2>
-            <p class="lead mb-4">Join thousands using AI Team to accomplish more with intelligent automation</p>
-            <a href="/signup" class="btn btn-primary btn-lg">Start Free Today</a>
-        </div>
-    </section>
+ <!-- CTA Section -->
+ <section class="cta-section">
+ <div class="container">
+ <h2 class="mb-4">Ready to Transform Your Workflow?</h2>
+ <p class="lead mb-4">Join thousands using AI Team to accomplish more with intelligent automation</p>
+ <a href="/signup" class="btn btn-primary btn-lg">Start Free Today</a>
+ </div>
+ </section>
 
-    <!-- Footer -->
-    <footer class="bg-dark text-white text-center py-4">
-        <div class="container">
-            <div class="row">
-                <div class="col-md-4 mb-3">
-                    <h5>AI Team</h5>
-                    <p>Your complete AI-powered platform</p>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <h5>Quick Links</h5>
-                    <ul class="list-unstyled">
-                        <li><a href="/about" class="text-white-50">About</a></li>
-                        <li><a href="/faq" class="text-white-50">FAQ</a></li>
-                        <li><a href="/help" class="text-white-50">Help</a></li>
-                    </ul>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <h5>Connect</h5>
-                    <p class="text-white-50">Built by Skill & Soul Studio</p>
-                </div>
-            </div>
-            <hr class="bg-white-50">
-            <p class="mb-0">&copy; 2024 AI Team. All rights reserved.</p>
-        </div>
-    </footer>
+ <!-- Footer -->
+ <footer class="bg-dark text-white text-center py-4">
+ <div class="container">
+ <div class="row">
+ <div class="col-md-4 mb-3">
+ <h5>AI Team</h5>
+ <p>Your complete AI-powered platform</p>
+ </div>
+ <div class="col-md-4 mb-3">
+ <h5>Quick Links</h5>
+ <ul class="list-unstyled">
+ <li><a href="/about" class="text-white-50">About</a></li>
+ <li><a href="/faq" class="text-white-50">FAQ</a></li>
+ <li><a href="/help" class="text-white-50">Help</a></li>
+ </ul>
+ </div>
+ <div class="col-md-4 mb-3">
+ <h5>Connect</h5>
+ <p class="text-white-50">Built by Skill & Soul Studio</p>
+ </div>
+ </div>
+ <hr class="bg-white-50">
+ <p class="mb-0">&copy; 2024 AI Team. All rights reserved.</p>
+ </div>
+ </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+ <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+
+
+
+
