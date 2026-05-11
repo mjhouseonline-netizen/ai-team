@@ -118,9 +118,12 @@ except Exception as e:
 stripe.api_key = os.environ.get('STRIPE_SECRET_KEY')
 STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY')
 STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET')
-STRIPE_STARTER_PRICE_ID = os.environ.get('STRIPE_STARTER_PRICE_ID')
-STRIPE_PRO_PRICE_ID = os.environ.get('STRIPE_PRO_PRICE_ID')
-STRIPE_ENTERPRISE_PRICE_ID = os.environ.get('STRIPE_ENTERPRISE_PRICE_ID', 'price_1SaVi1Fj4r8OeJwWeMQuODE5')  # $99/month Enterprise tier
+STRIPE_PRO_PRICE_ID = os.environ.get('STRIPE_PRO_PRICE_ID') or os.environ.get('STRIPE_STARTER_PRICE_ID')
+STRIPE_TEAM_PRICE_ID = (
+    os.environ.get('STRIPE_TEAM_PRICE_ID')
+    or os.environ.get('STRIPE_ENTERPRISE_PRICE_ID')
+)
+STRIPE_ENTERPRISE_PRICE_ID = os.environ.get('STRIPE_ENTERPRISE_PRICE_ID')
 
 # ============================================
 # AGENT TYPES CONFIGURATION
@@ -409,96 +412,96 @@ SUBSCRIPTION_TIERS = {
     'free': {
         'name': 'Free',
         'price': 0,
-        'messages_per_day': 25,
-        'agents_available': 7,
+        'messages_per_day': 4,  # ~100/month
+        'messages_per_month': 100,
+        'uploads_per_month': 10,
+        'agents_available': 2,
         'custom_agents_limit': 1,
         'api_access': False,
         'features': [
-            '25 messages per day',
-            'Access to all 7 agents',
+            '100 messages per month',
+            '2 active agents',
+            '10 uploads per month',
             '1 custom agent',
             'Basic chat history',
-            'File upload & analysis',
+            'Basic file upload & analysis',
             'Notion integration'
-        ]
-    },
-    'freeforlife': {
-        'name': 'Free For Life',
-        'price': 0,
-        'messages_per_day': -1,  # Unlimited
-        'agents_available': 7,
-        'custom_agents_limit': 3,
-        'api_access': False,  # NO API access for promo users
-        'features': [
-            'Unlimited messages (no daily limit)',
-            'Access to free AI models (Gemini, Llama)',
-            'All 7 primary agents',
-            '3 custom agents',
-            'Full chat history',
-            'File upload & analysis',
-            'Notion integration',
-            '⚠️ Premium models (Claude, GPT) require paid subscription',
-            'Upgrade to Starter ($19/mo) for Claude & GPT access'
-        ]
-    },
-    'starter': {
-        'name': 'Starter',
-        'price': 19,  # Increased from $10
-        'messages_per_day': 60,  # Reduced from 100
-        'agents_available': 7,
-        'custom_agents_limit': 3,
-        'api_access': False,  # NO API access
-        'features': [
-            '60 messages per day',
-            'Claude AI access',
-            'All 7 AI agents',
-            '3 custom agents',
-            'Full chat history',
-            'File upload & analysis',
-            'Notion integration',
-            'Priority support'
         ]
     },
     'pro': {
         'name': 'Pro',
-        'price': 49,  # Increased from $30
-        'messages_per_day': 300,  # Reduced from 500
+        'price': 19,
+        'messages_per_day': 67,  # ~2,000/month
+        'messages_per_month': 2000,
+        'uploads_per_month': 200,
         'agents_available': 7,
-        'custom_agents_limit': 10,
-        'api_access': True,  # API access included
+        'custom_agents_limit': 3,
+        'api_access': False,
         'features': [
-            '300 messages per day',
+            '2,000 messages per month',
+            '200 uploads per month',
             'Claude AI access',
-            'All 7 AI agents',
-            '10 custom agents',
-            'Unlimited chat history',
+            'All role-based agents + handoff',
+            '3 custom agents',
+            'Full chat history',
             'File upload & analysis',
-            'All integrations',
-            'API access & automation',
-            'Priority support',
-            'Early access to new features'
+            'Priority responses',
+            'Basic automations'
         ]
     },
-    'enterprise': {
-        'name': 'Enterprise',
-        'price': 99,  # New tier
-        'messages_per_day': 1000,
+    'team': {
+        'name': 'Team',
+        'price': 79,
+        'messages_per_day': 334,  # ~10,000/month
+        'messages_per_month': 10000,
+        'uploads_per_month': 1000,
         'agents_available': 7,
-        'custom_agents_limit': -1,  # Unlimited
+        'custom_agents_limit': 25,
         'api_access': True,
         'features': [
-            '1,000 messages per day',
-            'Claude AI access',
-            'All 7 AI agents',
-            'Unlimited custom agents',
-            'Unlimited chat history',
-            'File upload & analysis',
-            'All integrations',
-            'Full API access & automation',
-            'Dedicated support',
-            'Custom agent training',
-            'White-label options',
-            'Early access to all features'
+            '10,000 messages per month (shared)',
+            '5 seats',
+            'Advanced automations + integrations',
+            'Admin controls + usage analytics',
+            'API access'
+        ]
+    },
+    # Legacy compatibility tiers
+    'starter': {
+        'name': 'Starter (Legacy)',
+        'price': 19,
+        'messages_per_day': 67,
+        'messages_per_month': 2000,
+        'uploads_per_month': 200,
+        'agents_available': 7,
+        'custom_agents_limit': 3,
+        'api_access': False,
+        'features': ['Legacy tier mapped to Pro limits']
+    },
+    'enterprise': {
+        'name': 'Enterprise (Legacy)',
+        'price': 99,  # New tier
+        'messages_per_day': 334,
+        'messages_per_month': 10000,
+        'uploads_per_month': 1000,
+        'agents_available': 7,
+        'custom_agents_limit': 25,
+        'api_access': True,
+        'features': ['Legacy tier mapped to Team limits']
+    },
+    'freeforlife': {
+        'name': 'Free For Life',
+        'price': 0,
+        'messages_per_day': -1,
+        'messages_per_month': -1,
+        'uploads_per_month': 200,
+        'agents_available': 7,
+        'custom_agents_limit': 3,
+        'api_access': False,
+        'features': [
+            'Unlimited messages (free models only)',
+            '3 custom agents',
+            'File upload & analysis'
         ]
     }
 }
@@ -583,22 +586,12 @@ EXPENSIVE_MODELS = ['claude-opus-4', 'gpt-4-turbo']
 # ============================================
 
 def is_paid_user(subscription_tier):
-    """Check if user is on a paid subscription (starter or pro)
-    
-    This prevents free and freeforlife users from using expensive Claude API,
-    saving significant costs. Only starter ($19/mo) and pro ($49/mo) subscribers
-    can access Claude AI models.
-    """
-    return subscription_tier in ['starter', 'pro', 'enterprise']
+    """Check if user is on a paid subscription."""
+    return subscription_tier in ['starter', 'pro', 'team', 'enterprise']
 
 def has_api_access(subscription_tier):
-    """Check if user has API access
-
-    API access is a premium feature only available to Pro ($49/mo) and
-    Enterprise ($99/mo) subscribers. This prevents API abuse and creates
-    a clear upgrade incentive from Starter to Pro.
-    """
-    return subscription_tier in ['pro', 'enterprise']
+    """Check if user has API access."""
+    return subscription_tier in ['team', 'enterprise']
 
 # ============================================
 # COST TRACKING FUNCTIONS
@@ -5586,9 +5579,8 @@ def pricing():
     """Display pricing page with Stripe checkout"""
     return render_template('pricing.html',
                          current_plan=current_user.subscription_tier,
-                         starter_price_id=STRIPE_STARTER_PRICE_ID,
                          pro_price_id=STRIPE_PRO_PRICE_ID,
-                         enterprise_price_id=STRIPE_ENTERPRISE_PRICE_ID)
+                         team_price_id=STRIPE_TEAM_PRICE_ID)
 
 
 @app.route('/api/create-portal-session', methods=['POST'])
@@ -5731,15 +5723,13 @@ def create_checkout_session():
 
         price_id = request.form.get('price_id')
         print(f"🔍 Checkout requested for price_id: {price_id}")
-        print(f"🔍 Available price IDs: STARTER={STRIPE_STARTER_PRICE_ID}, PRO={STRIPE_PRO_PRICE_ID}, ENTERPRISE={STRIPE_ENTERPRISE_PRICE_ID}")
+        print(f"🔍 Available price IDs: PRO={STRIPE_PRO_PRICE_ID}, TEAM={STRIPE_TEAM_PRICE_ID}")
 
         # Determine plan details based on price_id
-        if price_id == STRIPE_STARTER_PRICE_ID:
-            plan_name = 'starter'
-        elif price_id == STRIPE_PRO_PRICE_ID:
+        if price_id == STRIPE_PRO_PRICE_ID:
             plan_name = 'pro'
-        elif price_id == STRIPE_ENTERPRISE_PRICE_ID:
-            plan_name = 'enterprise'
+        elif price_id == STRIPE_TEAM_PRICE_ID:
+            plan_name = 'team'
         else:
             print(f"❌ Invalid price_id received: {price_id}")
             return jsonify({'error': f'Invalid price ID: {price_id}'}), 400
@@ -13384,8 +13374,8 @@ def support_ask_helper():
             'agents': 'We have 7 specialized AI agents:\n• Luna - Research & Analysis\n• Mila - Organization & Planning\n• Sage - Writing & Content\n• Ember - Creative Direction\n• Sol - Strategic Thinking\n• Nova - Technical Solutions\n• Theo - Implementation\n\nYou can also create custom agents!',
             'custom': 'To create a custom agent:\n1. Click "Create Custom Agent" in sidebar\n2. Name your agent\n3. Write personality/instructions\n4. Upload an icon (optional)\n5. Save!\n\nCustom agents remember your instructions.',
             'integrations': 'We support 30+ integrations including:\n• Slack, Discord, Teams\n• GitHub, GitLab\n• Google Sheets, Docs, Calendar\n• Stripe, Shopify\n• And many more!\n\nGo to Integrations page to connect.',
-            'pricing': 'Our pricing:\n• Free: $0/month - 25 messages/day\n• Starter: $19/month - 60 messages/day\n• Pro: $49/month - 300 messages/day + API\n• Enterprise: $99/month - 1000 messages/day\n\nVisit /pricing for details.',
-            'api': 'API access is available on Pro ($49/mo) and Enterprise ($99/mo) plans. You can:\n• Automate workflows\n• Integrate with custom apps\n• Use webhooks\n• Access all AI agents programmatically',
+            'pricing': 'Our pricing:\n• Free: $0/month - 100 messages/month\n• Pro: $19/month - 2,000 messages/month\n• Team: $79/month - 10,000 messages/month shared + API\n• Enterprise: Custom\n\nVisit /pricing for details.',
+            'api': 'API access is available on Team ($79/mo) and Enterprise plans. You can:\n• Automate workflows\n• Integrate with custom apps\n• Use webhooks\n• Access all AI agents programmatically',
             'help': 'Need help? You can:\n• Use this chatbox for quick questions\n• Send us a message (we\'ll reply ASAP)\n• Check /faq for common questions\n• Visit /help for documentation'
         }
 

@@ -341,7 +341,7 @@
                 </div>
                 <div style="background: rgba(255, 255, 255, 0.2); padding: 15px; border-radius: 10px; margin-top: 15px;">
                     <p style="margin: 0 0 10px 0; font-weight: 600;">⚠️ Note: Premium models (Claude, GPT) require a paid subscription</p>
-                    <p style="margin: 0; font-size: 14px; opacity: 0.9;">Upgrade to Starter ($19/mo) for Claude & GPT access</p>
+                    <p style="margin: 0; font-size: 14px; opacity: 0.9;">Upgrade to Pro ($19/mo) for Claude & GPT access</p>
                 </div>
             </div>
 
@@ -368,8 +368,8 @@
                 <div class="plan-description">Perfect for trying out AI Team</div>
                 
                 <ul class="features-list">
-                    <li>25 messages per day</li>
-                    <li>Access to all 7 AI agents</li>
+                    <li>100 messages per month</li>
+                    <li>2 active agents</li>
                     <li>File upload & analysis</li>
                     <li>Chat history</li>
                     <li>Notion integration</li>
@@ -382,52 +382,24 @@
                 {% endif %}
             </div>
 
-            <!-- Starter Plan -->
+            <!-- Pro Plan -->
             <div class="pricing-card">
-                <div class="plan-name">Starter</div>
+                <div class="plan-name">Pro</div>
                 <div class="plan-price">$19<span>/month</span></div>
-                <div class="plan-description">For regular users who need more</div>
+                <div class="plan-description">For growing teams and creators</div>
                 
                 <ul class="features-list">
-                    <li>60 messages per day</li>
+                    <li>2,000 messages per month</li>
+                    <li>200 uploads per month</li>
                     <li><strong>Claude AI access</strong></li>
-                    <li>Access to all 7 AI agents</li>
+                    <li>Role-based agent handoff</li>
                     <li>File upload & analysis</li>
                     <li>Full chat history</li>
-                    <li>Notion integration</li>
-                    <li>Priority support</li>
+                    <li>Basic automations</li>
+                    <li>Priority response speed</li>
                 </ul>
                 
-                {% if current_plan == 'starter' %}
-                <button class="select-button current">Your Current Plan</button>
-                {% else %}
-                <form action="/create-checkout-session" method="POST">
-                    <input type="hidden" name="price_id" value="{{ starter_price_id }}">
-                    <button type="submit" class="select-button">Select Starter</button>
-                </form>
-                {% endif %}
-            </div>
-
-            <!-- Pro Plan (Featured) -->
-            <div class="pricing-card featured">
-                <div class="plan-name">Pro</div>
-                <div class="plan-price">$49<span>/month</span></div>
-                <div class="plan-description">For power users & professionals</div>
-                <div class="api-badge">✨ API ACCESS INCLUDED</div>
-                
-                <ul class="features-list">
-                    <li>300 messages per day</li>
-                    <li><strong>Claude AI access</strong></li>
-                    <li>Access to all 7 AI agents</li>
-                    <li>File upload & analysis</li>
-                    <li>Unlimited chat history</li>
-                    <li>All integrations</li>
-                    <li><strong>API access & automation</strong></li>
-                    <li>Priority support</li>
-                    <li>Early access to new features</li>
-                </ul>
-                
-                {% if current_plan == 'pro' %}
+                {% if current_plan == 'pro' or current_plan == 'starter' %}
                 <button class="select-button current">Your Current Plan</button>
                 {% else %}
                 <form action="/create-checkout-session" method="POST">
@@ -437,34 +409,51 @@
                 {% endif %}
             </div>
 
+            <!-- Team Plan (Featured) -->
+            <div class="pricing-card featured">
+                <div class="plan-name">Team</div>
+                <div class="plan-price">$79<span>/month</span></div>
+                <div class="plan-description">For teams that need automation and scale</div>
+                <div class="api-badge">✨ API ACCESS INCLUDED</div>
+                
+                <ul class="features-list">
+                    <li>10,000 messages per month shared</li>
+                    <li><strong>Claude AI access</strong></li>
+                    <li>5 seats</li>
+                    <li>File upload & analysis</li>
+                    <li><strong>API access & automation</strong></li>
+                    <li>Advanced automations + integrations</li>
+                    <li>Admin controls + usage analytics</li>
+                </ul>
+                
+                {% if current_plan == 'team' or current_plan == 'enterprise' %}
+                <button class="select-button current">Your Current Plan</button>
+                {% else %}
+                <form action="/create-checkout-session" method="POST">
+                    <input type="hidden" name="price_id" value="{{ team_price_id }}">
+                    <button type="submit" class="select-button">Select Team</button>
+                </form>
+                {% endif %}
+            </div>
+
             <!-- Enterprise Plan -->
             <div class="pricing-card">
                 <div class="plan-name">Enterprise</div>
-                <div class="plan-price">$99<span>/month</span></div>
-                <div class="plan-description">For teams & businesses</div>
+                <div class="plan-price">Custom</div>
+                <div class="plan-description">For custom security and compliance needs</div>
                 <div class="api-badge">🚀 FULL API ACCESS</div>
                 
                 <ul class="features-list">
-                    <li>1,000 messages per day</li>
-                    <li><strong>Claude AI access</strong></li>
-                    <li>Access to all 7 AI agents</li>
-                    <li>File upload & analysis</li>
-                    <li>Unlimited chat history</li>
-                    <li>All integrations</li>
-                    <li><strong>Full API access</strong></li>
-                    <li>Dedicated support</li>
-                    <li>Custom agent training</li>
-                    <li>White-label options</li>
-                    <li>Early access to all features</li>
+                    <li>Volume pricing</li>
+                    <li>Advanced security controls</li>
+                    <li>SLA + onboarding support</li>
+                    <li>Dedicated architecture support</li>
                 </ul>
                 
                 {% if current_plan == 'enterprise' %}
                 <button class="select-button current">Your Current Plan</button>
                 {% else %}
-                <form action="/create-checkout-session" method="POST">
-                    <input type="hidden" name="price_id" value="{{ enterprise_price_id }}">
-                    <button type="submit" class="select-button">Select Enterprise</button>
-                </form>
+                <button type="button" class="select-button" onclick="window.location.href='mailto:sales@skillsoul.store?subject=AI%20Team%20Enterprise%20Plan'">Contact Sales</button>
                 {% endif %}
             </div>
 
@@ -481,8 +470,8 @@
                             <th style="padding: 15px; border-radius: 10px 0 0 0;">AI Model</th>
                             <th style="padding: 15px; text-align: center;">Free</th>
                             <th style="padding: 15px; text-align: center;">FREE4LIFE</th>
-                            <th style="padding: 15px; text-align: center;">Starter</th>
                             <th style="padding: 15px; text-align: center;">Pro</th>
+                            <th style="padding: 15px; text-align: center;">Team</th>
                             <th style="padding: 15px; text-align: center; border-radius: 0 10px 0 0;">Enterprise</th>
                         </tr>
                     </thead>
@@ -518,10 +507,10 @@
                             <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0;">✅</td>
                         </tr>
 
-                        <!-- Starter Models -->
+                        <!-- Pro/Team Models -->
                         <tr style="background: #f8f9fa;">
                             <td colspan="6" style="padding: 12px 15px; font-weight: 600; color: #10a37f;">
-                                🔒 Premium Models (Starter+)
+                                🔒 Premium Models (Pro+)
                             </td>
                         </tr>
                         <tr>
@@ -602,7 +591,7 @@
                 <p style="margin: 0; color: #856404; font-weight: 600;">💡 Pro Tip:</p>
                 <p style="margin: 10px 0 0 0; color: #856404;">
                     FREE4LIFE users can access unlimited messages with free models. Want Claude or GPT?
-                    <a href="#" style="color: #10a37f; font-weight: 600; text-decoration: underline;">Upgrade to Starter</a> for just $19/mo!
+                    <a href="#" style="color: #10a37f; font-weight: 600; text-decoration: underline;">Upgrade to Pro</a> for just $19/mo!
                 </p>
             </div>
         </div>
