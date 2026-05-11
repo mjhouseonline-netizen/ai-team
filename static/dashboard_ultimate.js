@@ -541,15 +541,15 @@ function addMessage(text, type, imageUrl = null, modelBadge = '', attachments = 
  const actionBtns = type === 'assistant'
  ? `
  <div class="message-actions">
- <button class="message-action-btn" onclick="copyToClipboard(\`${safeText}\`)">Copy</button>
- <button class="message-action-btn" onclick="downloadText(\`${safeText}\`)">Download</button>
+ <button class="message-action-btn" data-action="copy" onclick="copyToClipboard(\`${safeText}\`)">Copy</button>
+ <button class="message-action-btn" data-action="download" onclick="downloadText(\`${safeText}\`)">Download</button>
  </div>
  `
  : `
  <div class="message-actions">
- <button class="message-action-btn" onclick="editMessageText(\`${safeText}\`)">Edit</button>
- <button class="message-action-btn" onclick="copyToClipboard(\`${safeText}\`)">Copy</button>
- <button class="message-action-btn" onclick="downloadText(\`${safeText}\`)">Download</button>
+ <button class="message-action-btn" data-action="edit" onclick="editMessageText(\`${safeText}\`)">Edit</button>
+ <button class="message-action-btn" data-action="copy" onclick="copyToClipboard(\`${safeText}\`)">Copy</button>
+ <button class="message-action-btn" data-action="download" onclick="downloadText(\`${safeText}\`)">Download</button>
  </div>
  `;
 

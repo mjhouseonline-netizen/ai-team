@@ -1089,6 +1089,9 @@
  cursor: pointer;
  font-size: 12px;
  color: #d9cba8;
+ display: inline-flex;
+ align-items: center;
+ gap: 6px;
  transition: all 0.2s;
  }
 
@@ -1096,6 +1099,24 @@
  background: rgba(201, 169, 104, 0.15);
  border-color: rgba(225, 204, 153, 0.42);
  color: #fff3d6;
+ }
+
+ .message-action-btn[data-action="edit"]::before {
+ content: "✎";
+ font-size: 12px;
+ line-height: 1;
+ }
+
+ .message-action-btn[data-action="copy"]::before {
+ content: "⧉";
+ font-size: 12px;
+ line-height: 1;
+ }
+
+ .message-action-btn[data-action="download"]::before {
+ content: "↓";
+ font-size: 12px;
+ line-height: 1;
  }
 
  /* File Attachments */
