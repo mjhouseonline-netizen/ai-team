@@ -759,11 +759,24 @@
  cursor: pointer;
  transition: all 0.2s;
  font-family: inherit;
+ position: relative;
  }
 
  .user-menu-btn:hover {
  border-color: var(--primary);
  background: var(--bg-hover);
+ }
+
+ .admin-notification-dot {
+ display: none;
+ position: absolute;
+ top: 5px;
+ right: 5px;
+ width: 8px;
+ height: 8px;
+ border-radius: 999px;
+ background: #ef4444;
+ box-shadow: 0 0 0 2px rgba(20, 19, 16, 0.95);
  }
 
  .user-avatar {
@@ -3815,6 +3828,7 @@ color: #f1dfad;
  <!-- User Profile Dropdown -->
  <div class="user-menu">
  <button class="user-menu-btn" onclick="toggleUserMenu(event)">
+ <span id="adminNotificationDot" class="admin-notification-dot"></span>
  <div class="user-avatar">
  <span>{{ current_user.email[0]|upper }}</span>
  </div>
@@ -8247,9 +8261,13 @@ gap: 8px;
  if (unread > 0) {
  badge.style.display = 'inline-block';
  badge.textContent = unread;
+ const dot = document.getElementById('adminNotificationDot');
+ if (dot) dot.style.display = 'block';
  } else {
  badge.style.display = 'none';
  badge.textContent = '';
+ const dot = document.getElementById('adminNotificationDot');
+ if (dot) dot.style.display = 'none';
  }
  } catch (e) {
  console.error('Unread support count error:', e);
