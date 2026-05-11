@@ -1069,30 +1069,33 @@
  /* Message actions */
  .message-actions {
  display: flex;
- gap: 4px;
- margin-top: 8px;
+ gap: 8px;
+ margin-top: 10px;
+ flex-wrap: wrap;
  opacity: 0;
  transition: opacity 0.2s;
  }
 
- .assistant-message:hover .message-actions {
+ .assistant-message:hover .message-actions,
+ .user-message:hover .message-actions {
  opacity: 1;
  }
 
  .message-action-btn {
- background: none;
- border: none;
- padding: 4px 8px;
+ background: rgba(255, 255, 255, 0.04);
+ border: 1px solid rgba(225, 204, 153, 0.22);
+ padding: 5px 10px;
  border-radius: 6px;
  cursor: pointer;
  font-size: 12px;
- color: var(--text-secondary);
+ color: #d9cba8;
  transition: all 0.2s;
  }
 
  .message-action-btn:hover {
- background: var(--bg-secondary);
- color: var(--text-primary);
+ background: rgba(201, 169, 104, 0.15);
+ border-color: rgba(225, 204, 153, 0.42);
+ color: #fff3d6;
  }
 
  /* File Attachments */
@@ -2965,13 +2968,13 @@ font-weight: 600;
 
  body:not(.guest-mode) .message {
  max-width: 980px;
- margin: 0 auto 18px;
- padding: 14px 0;
+ margin: 0 auto 22px;
+ padding: 16px 0 4px;
  }
 
  body:not(.guest-mode) .assistant-message .message-wrapper,
  body:not(.guest-mode) .user-message .message-wrapper {
- gap: 14px;
+ gap: 16px;
  }
 
  body:not(.guest-mode) .assistant-message .message-content {
@@ -2979,7 +2982,7 @@ font-weight: 600;
  background: rgba(255, 255, 255, 0.045);
  border: 1px solid rgba(225, 204, 153, 0.12);
  border-radius: 8px;
- padding: 15px 17px;
+ padding: 16px 18px;
  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.22);
  }
 
@@ -2988,7 +2991,7 @@ font-weight: 600;
  color: #fff7e8;
  border: 1px solid rgba(225, 204, 153, 0.22);
  border-radius: 8px;
- padding: 13px 16px;
+ padding: 14px 17px;
  }
 
  body:not(.guest-mode) .message-content strong {
@@ -3132,6 +3135,16 @@ color: #f1dfad;
  body:not(.guest-mode) .user-message .message-wrapper,
  body:not(.guest-mode) .assistant-message .message-wrapper {
  max-width: 100%;
+ }
+
+ .message-actions {
+ opacity: 1;
+ margin-top: 12px;
+ }
+
+ .message-action-btn {
+ padding: 7px 10px;
+ font-size: 12px;
  }
  }
  </style>
@@ -3488,7 +3501,7 @@ color: #f1dfad;
  <select id="modelSelectSidebar" class="model-select-compact">
  <!-- Free Tier: Gemini + Llama 3.3 70B -->
  <optgroup label=" Free Tier">
- <option value="gemini-2.0-flash" selected data-tier="free">Gemini 2.0 Flash</option>
+ <option value="gemini-2.5-flash" selected data-tier="free">Gemini 2.5 Flash</option>
  <option value="gemini-1.5-pro" data-tier="free">Gemini 1.5 Pro</option>
  <option value="llama-3.3-70b" data-tier="free">Llama 3.3 70B</option>
  </optgroup>
@@ -3687,7 +3700,7 @@ color: #f1dfad;
  <select id="modelSelect" class="model-select">
  <!-- Free Tier: Gemini + Llama 3.3 70B -->
  <optgroup label=" Available on Your Plan">
- <option value="gemini-2.0-flash" selected data-tier="free">Gemini 2.0 Flash (FREE)</option>
+ <option value="gemini-2.5-flash" selected data-tier="free">Gemini 2.5 Flash (FREE)</option>
  <option value="gemini-1.5-pro" data-tier="free">Gemini 1.5 Pro (FREE)</option>
  <option value="llama-3.3-70b" data-tier="free">Llama 3.3 70B (FREE)</option>
  </optgroup>
@@ -4735,9 +4748,12 @@ oninput="autoResize(this)"
  const container = document.getElementById('chatContainer');
  const messageDiv = document.createElement('div');
  messageDiv.className = 'message user-message';
+ const messageId = 'user_msg_' + Date.now();
+ messageDiv.id = messageId;
 
  let content = '<div class="message-wrapper">';
  content += '<div class="avatar"></div>';
+ content += '<div style="flex: 1;">';
  content += '<div class="message-content">';
 
  // Handle multiple files
@@ -4770,6 +4786,18 @@ oninput="autoResize(this)"
  }
 
  content += message;
+ content += '</div>';
+ content += `<div class="message-actions">
+ <button class="message-action-btn" onclick="editMessage('${messageId}')" title="Edit">
+ Edit
+ </button>
+ <button class="message-action-btn" onclick="copyMessage('${messageId}')" title="Copy">
+ Copy
+ </button>
+ <button class="message-action-btn" onclick="downloadMessage('${messageId}')" title="Download">
+ Download
+ </button>
+ </div>`;
  content += '</div></div>';
  messageDiv.innerHTML = content;
 
@@ -6688,6 +6716,21 @@ oninput="autoResize(this)"
  });
  }
 
+ function editMessage(messageId) {
+ const messageDiv = document.getElementById(messageId);
+ if (!messageDiv) return;
+ const messageContent = messageDiv.querySelector('.message-content');
+ if (!messageContent) return;
+ const text = (messageContent.innerText || messageContent.textContent || '').trim();
+ const input = document.getElementById('messageInput');
+ if (!input) return;
+
+ input.value = text;
+ input.focus();
+ input.setSelectionRange(input.value.length, input.value.length);
+ showNotification(' Message loaded into input for editing');
+ }
+
  function regenerateResponse() {
  showNotification(' Regenerating response...');
  // Get the last user message and resend it
@@ -8148,6 +8191,7 @@ gap: 8px;
  </script>
 </body>
 </html>
+
 
 
 

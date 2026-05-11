@@ -132,13 +132,13 @@ STRIPE_ENTERPRISE_PRICE_ID = os.environ.get('STRIPE_ENTERPRISE_PRICE_ID')
 
 # Agent Type 1: PRIMARY AGENTS (Hardcoded - not in database)
 PRIMARY_AGENTS = [
-    'Ember',    # Creative Visionary - Ideas and innovation
-    'Luna',     # Research Specialist - Deep knowledge
-    'Nova',     # Technical Architect - System design
-    'Echo',     # Communication Expert - Clarity and persuasion
-    'Sage',     # Strategy Advisor - Planning and direction
-    'Pixel',    # Visual Designer - UI/UX and aesthetics
-    'Atlas'     # Data Analyst - Numbers and insights
+    'Luna',     # Evidence Researcher - research, comparison, synthesis
+    'Mila',     # Workflow Planner - tasks, SOPs, structure
+    'Sage',     # Copy & Content Writer - writing and messaging
+    'Ember',    # Creative Concept Designer - ideas and direction
+    'Sol',      # Business Strategist - positioning and growth decisions
+    'Nova',     # Tech Builder - code, systems, security
+    'Theo'      # Execution Lead - implementation and delivery
 ]
 
 # Agent Type 2: CUSTOM AGENTS
@@ -524,7 +524,7 @@ MODEL_COSTS = {
     'gpt-4o-mini': 0.00015,          # $0.15/1M tokens ≈ $0.00015/msg
 
     # Google Gemini Models (Free for now)
-    'gemini-2.0-flash': 0.0,
+    'gemini-2.5-flash': 0.0,
     'gemini-1.5-pro': 0.0,
     'gemini-1.5-flash': 0.0,
 
@@ -774,7 +774,7 @@ def init_database():
     The platform has FOUR distinct agent types. These must NEVER be merged or confused:
 
     1) PRIMARY AGENTS
-       - The 7 core system agents (Ember, Luna, Nova, Echo, Sage, Pixel, Atlas)
+       - The 7 core system agents (Luna, Mila, Sage, Ember, Sol, Nova, Theo)
        - Always present for all users
        - Hardcoded in application logic
        - NOT configurable or sold
@@ -3368,7 +3368,7 @@ CRITICAL FORMATTING RULES:
         # Get AI response (using Gemini for free tier)
         import google.generativeai as genai
         genai.configure(api_key=app.config.get('GOOGLE_AI_API_KEY'))
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
 
         response = model.generate_content(f"{{full_system_prompt}}\\n\\nUser: {{message}}")
         ai_response = response.text
@@ -3601,7 +3601,7 @@ Draft the post:"""
         # Generate post using Gemini
         import google.generativeai as genai
         genai.configure(api_key=app.config.get('GOOGLE_AI_API_KEY'))
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
 
         response = model.generate_content(full_prompt)
         drafted_post = response.text
@@ -6370,10 +6370,10 @@ MODELS = {
     },
     
     # Google Gemini Models
-    'gemini-2.0-flash': {
+    'gemini-2.5-flash': {
         'provider': 'google',
-        'model_id': 'gemini-2.0-flash',
-        'name': 'Gemini 2.0 Flash',
+        'model_id': 'gemini-2.5-flash',
+        'name': 'Gemini 2.5 Flash',
         'description': 'Newest - FREE tier available!',
         'max_tokens': 2000,
         'cost': 'FREE (15 req/min)'
@@ -6799,6 +6799,38 @@ Acknowledge what needs building in natural language. Provide step-by-step implem
 Remember: Build first, ask second. Build step-by-step, verify progress, keep momentum. Write like a human, not a document."""
     }
 }
+
+AGENT_FUNCTIONS = {
+    'Luna': 'Evidence Researcher',
+    'Mila': 'Workflow Planner',
+    'Sage': 'Copy & Content Writer',
+    'Ember': 'Creative Concept Designer',
+    'Sol': 'Business Strategist',
+    'Nova': 'Tech Builder',
+    'Theo': 'Execution Lead'
+}
+
+AGENT_SPECIALTIES = {
+    'Luna': ['Research', 'Comparison', 'Insight Synthesis', 'Assumption Testing'],
+    'Mila': ['Planning', 'Prioritization', 'Workflow Design', 'SOP Structuring'],
+    'Sage': ['Writing', 'Editing', 'Messaging', 'Tone Adaptation'],
+    'Ember': ['Concept Ideation', 'Creative Direction', 'Brand Themes', 'Campaign Concepts'],
+    'Sol': ['Strategy', 'Positioning', 'Growth Tradeoffs', 'Decision Frameworks'],
+    'Nova': ['Coding', 'Debugging', 'Architecture', 'Security Hardening'],
+    'Theo': ['Execution Planning', 'QA', 'Launch Readiness', 'Operational Follow-through']
+}
+
+def get_canonical_agent_profile(agent_name):
+    """Return canonical role + prompt for a primary agent, or None."""
+    if agent_name not in AGENT_PERSONALITIES:
+        return None
+    return {
+        'name': agent_name,
+        'role': AGENT_FUNCTIONS.get(agent_name, AGENT_PERSONALITIES[agent_name]['role']),
+        'description': AGENT_PERSONALITIES[agent_name]['role'],
+        'specialties': AGENT_SPECIALTIES.get(agent_name, []),
+        'system_prompt': AGENT_PERSONALITIES[agent_name]['system_prompt']
+    }
 
 # ============================================
 # WORKING MODE CONFIGURATION
@@ -7309,7 +7341,7 @@ def call_mistral_with_history(model_id, system_prompt, history, new_message, max
 
 # Strict one-way fallback order based on cost and quota reliability
 MODEL_FALLBACK_ORDER = [
-    'gemini-2.0-flash',      # Primary (free, default)
+    'gemini-2.5-flash',      # Primary (free, default)
     'gemini-1.5-pro',        # Fallback Tier 1 (same provider)
     'claude-sonnet-4.5',     # Fallback Tier 2 (cross-provider, high reliability)
     'gpt-4o',                # Fallback Tier 3 (final safety net)
@@ -7369,7 +7401,7 @@ def call_model_with_retry(model_key, system_prompt, history, new_message, retry_
         tried_models = []
 
     if model_key not in MODELS:
-        model_key = 'gemini-2.0-flash'
+        model_key = 'gemini-2.5-flash'
 
     config = MODELS[model_key]
     provider = config['provider']
@@ -7477,7 +7509,7 @@ def call_ai_with_image_internal(model_key, system_prompt, history, message, imag
     Used by call_ai_with_image_with_retry for retry/fallback logic.
     """
     if model_key not in MODELS:
-        model_key = 'gemini-2.0-flash'  # Default to free model
+        model_key = 'gemini-2.5-flash'  # Default to free model
 
     config = MODELS[model_key]
     provider = config['provider']
@@ -7599,7 +7631,7 @@ def call_ai_with_image(model_key, system_prompt, history, message, image_path):
     media_type = f"image/{ext}" if ext != 'jpg' else "image/jpeg"
 
     if model_key not in MODELS:
-        model_key = 'gemini-2.0-flash'
+        model_key = 'gemini-2.5-flash'
 
     tried_models = []
     retry_count = 0
@@ -7667,7 +7699,7 @@ def chat():
             data = request.json
             message = data.get('message')
             agent = data.get('agent', 'Ember')
-            model_key = data.get('model', 'gemini-2.0-flash')  # Default to Gemini (free)
+            model_key = data.get('model', 'gemini-2.5-flash')  # Default to Gemini (free)
             working_mode = data.get('working_mode', None)  # Get working_mode from request
             attached_file = data.get('file')
             # Support newer clients that send a list of uploaded file paths (from /api/upload)
@@ -7681,7 +7713,7 @@ def chat():
             # FormData request (new format with file upload)
             message = request.form.get('message', '')
             agent = request.form.get('agent', 'Luna')
-            model_key = request.form.get('model', 'gemini-2.0-flash')  # Default to Gemini (free)
+            model_key = request.form.get('model', 'gemini-2.5-flash')  # Default to Gemini (free)
             working_mode = request.form.get('working_mode', None)  # Get working_mode from request
             attached_file = None
 
@@ -7923,7 +7955,7 @@ def chat():
 
         # Define models by tier
         FREE_TIER_MODELS = [
-            'gemini-2.0-flash',      # FREE
+            'gemini-2.5-flash',      # FREE
             'gemini-1.5-pro',        # FREE
             'llama-3.3-70b'          # $0.18 - Cheap Llama model
         ]
@@ -8011,7 +8043,7 @@ def chat():
                 'error': f'⚠️ Daily cost limit reached (${thresholds["critical"]:.2f}). {model_key} is temporarily blocked. Please use Gemini, Haiku, or GPT-4o Mini instead. Resets at midnight UTC.',
                 'cost_limit_reached': True,
                 'blocked_model': model_key,
-                'allowed_models': ['gemini-2.0-flash', 'gemini-1.5-pro', 'claude-haiku-4.5', 'gpt-4o-mini'],
+                'allowed_models': ['gemini-2.5-flash', 'gemini-1.5-pro', 'claude-haiku-4.5', 'gpt-4o-mini'],
                 'resets_at': 'midnight UTC'
             }), 429  # 429 Too Many Requests
         # ============================================
@@ -11774,7 +11806,7 @@ def global_agent_chat():
         # Use Gemini for free tier (no API cost for public agents)
         import google.generativeai as genai
         genai.configure(api_key=app.config.get('GOOGLE_AI_API_KEY'))
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         # ---------- FILE CONTENT INJECTION ----------
         file_context_blocks = []
 
@@ -12913,10 +12945,10 @@ def api_chat():
         if not has_api_access(tier):
             conn.close()
             return jsonify({
-                'error': 'API access is only available for Pro ($49/mo) and Enterprise ($99/mo) subscribers.',
+                'error': 'API access is only available for Team ($79/mo) and Enterprise subscribers.',
                 'upgrade_required': True,
                 'current_tier': tier,
-                'required_tiers': ['pro', 'enterprise'],
+                'required_tiers': ['team', 'enterprise'],
                 'upgrade_url': '/pricing'
             }), 403  # 403 Forbidden
         # ============================================
@@ -12944,10 +12976,10 @@ def api_chat():
         if not is_paid_user(tier):
             conn.close()
             return jsonify({
-                'error': 'Claude AI API access is only available for paid subscribers (Starter or Pro plans).',
+                'error': 'Claude AI API access is only available for paid subscribers (Pro or Team plans).',
                 'upgrade_required': True,
                 'current_tier': tier,
-                'available_tiers': ['starter', 'pro']
+                'available_tiers': ['pro', 'team']
             }), 403  # 403 Forbidden
         # ============================================
         
@@ -12961,18 +12993,8 @@ def api_chat():
         
         conn.close()
         
-        # Get agent personality
-        agents_config = {
-            'Luna': "You are Luna, an AI data analyst. You excel at analyzing data, finding patterns, and providing insights.",
-            'Mila': "You are Mila, an AI organization expert. You help with planning, task management, and project organization.",
-            'Sage': "You are Sage, an AI content writer. You create engaging written content, from articles to marketing copy.",
-            'Ember': "You are Ember, an AI creative director. You provide creative ideas, artistic direction, and design suggestions.",
-            'Sol': "You are Sol, an AI strategic thinker. You help with business strategy, decision-making, and long-term planning.",
-            'Nova': "You are Nova, an AI technical expert. You assist with coding, debugging, and technical problem-solving.",
-            'Theo': "You are Theo, an AI implementation specialist. You help turn ideas into actionable plans and execute them."
-        }
-        
-        system_message = agents_config.get(agent, agents_config['Luna'])
+        profile = get_canonical_agent_profile(agent) or get_canonical_agent_profile('Luna')
+        system_message = profile['system_prompt']
         
         # Call Claude API
         client = anthropic.Anthropic(api_key=app.config['ANTHROPIC_API_KEY'])
@@ -13069,56 +13091,61 @@ def api_generate_image():
 @require_api_key
 def api_list_agents():
     """List all available AI agents"""
-    agents = [
-        {
-            'name': 'Luna',
-            'role': 'Data Analyst',
-            'description': 'Expert at analyzing data, finding patterns, and providing insights',
-            'specialties': ['Data Analysis', 'Pattern Recognition', 'Insights', 'Statistics']
-        },
-        {
-            'name': 'Mila',
-            'role': 'Organization & Planning',
-            'description': 'Helps with planning, task management, and project organization',
-            'specialties': ['Project Planning', 'Task Management', 'Organization', 'Scheduling']
-        },
-        {
-            'name': 'Sage',
-            'role': 'Writing & Content',
-            'description': 'Creates engaging written content, from articles to marketing copy',
-            'specialties': ['Content Writing', 'Copywriting', 'Articles', 'Marketing']
-        },
-        {
-            'name': 'Ember',
-            'role': 'Creative Direction',
-            'description': 'Provides creative ideas, artistic direction, and design suggestions',
-            'specialties': ['Creative Ideas', 'Design', 'Branding', 'Visual Concepts']
-        },
-        {
-            'name': 'Sol',
-            'role': 'Strategic Thinking',
-            'description': 'Helps with business strategy, decision-making, and long-term planning',
-            'specialties': ['Strategy', 'Business Planning', 'Decision Making', 'Analysis']
-        },
-        {
-            'name': 'Nova',
-            'role': 'Technical Solutions',
-            'description': 'Assists with coding, debugging, and technical problem-solving',
-            'specialties': ['Coding', 'Debugging', 'Technical Support', 'Development']
-        },
-        {
-            'name': 'Theo',
-            'role': 'Implementation',
-            'description': 'Helps turn ideas into actionable plans and execute them',
-            'specialties': ['Execution', 'Implementation', 'Action Plans', 'Delivery']
-        }
-    ]
+    agents = []
+    for agent_name in PRIMARY_AGENTS:
+        profile = get_canonical_agent_profile(agent_name)
+        if profile:
+            agents.append({
+                'name': profile['name'],
+                'role': profile['role'],
+                'description': profile['description'],
+                'specialties': profile['specialties']
+            })
     
     return jsonify({
         'success': True,
         'agents': agents,
         'total': len(agents)
     })
+
+@app.route('/api/agents/validate', methods=['GET'])
+@login_required
+def validate_agent_profiles():
+    """Validate primary agent profile consistency and role uniqueness."""
+    missing = []
+    duplicates = []
+    roles = {}
+    agents = []
+
+    for agent_name in PRIMARY_AGENTS:
+        profile = get_canonical_agent_profile(agent_name)
+        if not profile:
+            missing.append(agent_name)
+            continue
+
+        role_key = (profile.get('role') or '').strip().lower()
+        if role_key in roles:
+            duplicates.append({
+                'role': profile.get('role'),
+                'agents': [roles[role_key], agent_name]
+            })
+        else:
+            roles[role_key] = agent_name
+
+        agents.append({
+            'name': profile['name'],
+            'role': profile['role'],
+            'specialties': profile['specialties'],
+            'prompt_length': len(profile['system_prompt'])
+        })
+
+    return jsonify({
+        'success': True,
+        'is_consistent': len(missing) == 0 and len(duplicates) == 0,
+        'missing_profiles': missing,
+        'duplicate_roles': duplicates,
+        'agents': agents
+    }), 200
 
 # API Usage Quota Endpoint
 @app.route('/api/usage', methods=['GET'])
@@ -13518,6 +13545,7 @@ def list_routes():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
+
 
 
 

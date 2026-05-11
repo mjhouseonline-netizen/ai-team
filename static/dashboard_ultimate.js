@@ -1305,7 +1305,7 @@ function getModelName(key) {
  'gpt-4o': 'GPT-4o',
  'gpt-4-turbo': 'GPT-4 Turbo',
  'gpt-4o-mini': 'GPT-4o Mini',
- 'gemini-2.0-flash': 'Gemini 2.0',
+ 'gemini-2.5-flash': 'Gemini 2.5',
  'gemini-1.5-pro': 'Gemini 1.5 Pro'
  };
  return models[key] || key;
@@ -1529,6 +1529,7 @@ if (document.readyState === 'loading') {
 } else {
  initializeWorkingMode();
 }
+
 
 
 
