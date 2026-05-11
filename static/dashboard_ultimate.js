@@ -1546,9 +1546,10 @@ function selectWorkingMode(mode) {
 
  // Update the icon in the main button
  const modeIcons = {
- 'output_first': 'Mode',
- 'ask_then_output': '',
- 'coaching': ''
+ 'output_first': 'Tools',
+ 'ask_then_output': 'Tools',
+ 'coaching': 'Tools',
+ 'luna_chat': 'Luna'
  };
  const iconElement = document.getElementById('workingModeIcon');
  if (iconElement && modeIcons[mode]) {

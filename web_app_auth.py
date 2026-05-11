@@ -6990,6 +6990,23 @@ RESPONSE STRUCTURE:
 
 REMEMBER: Coaching means providing frameworks and structure FIRST, then guiding with questions."""
 
+    elif mode == 'luna_chat':
+        return f"""{critical_teach_first_rule}
+
+WORKING MODE: Luna Chat (Onboarding Conversation)
+1. You are in conversational onboarding mode with Luna.
+2. Explain how the platform and agents work in plain language.
+3. Keep responses short and practical.
+4. Ask at most one focused follow-up question when useful.
+5. Help the user pick the right next step or agent for their task.
+
+RESPONSE STRUCTURE:
+- Short direct explanation
+- Practical next step inside the app
+- Optional single question for clarification
+
+REMEMBER: Be warm and encouraging without hype. Keep it easy to follow."""
+
     else:
         # Fallback to output_first
         return get_working_mode_instructions('output_first', agent_name)
@@ -8134,7 +8151,7 @@ def chat():
 
             # CRITICAL: Check for Stand Alone Client Agents FIRST (highest priority)
             # Client agents take priority over all other agent types per architecture
-            if agent in ['Luna', 'Ember']:  # Only auto-assign if using default
+            if agent in ['Luna', 'Ember'] and working_mode != 'luna_chat':  # Only auto-assign if using default
                 try:
                     cursor.execute("""
                         SELECT name FROM client_agents
@@ -8309,6 +8326,10 @@ def chat():
         # If user hasn't explicitly selected an agent, or if the message clearly
         # indicates a different agent would be better, suggest/auto-route
 
+        luna_chat_mode = (working_mode == 'luna_chat')
+        if luna_chat_mode and not is_guest:
+            agent = 'Luna'
+
         # Check if this is the first message (no history) and agent is default
         is_first_message = True if (is_guest or not get_conversation_history(current_user.id if not is_guest else 0, agent, limit=1)) else False
 
@@ -8322,7 +8343,7 @@ def chat():
         # Auto-route on first message if confidence is high and different from current agent
         # BUT: Don't auto-route if current agent is a custom agent (user explicitly chose it)
         is_custom_agent = agent not in AGENT_PERSONALITIES
-        if suggested_agent and suggested_agent != agent and confidence >= 4 and is_first_message and not is_custom_agent:
+        if suggested_agent and suggested_agent != agent and confidence >= 4 and is_first_message and not is_custom_agent and not luna_chat_mode:
             print(f"🎯 Auto-routing: {agent} → {suggested_agent} (confidence: {confidence})")
             agent = suggested_agent  # Switch to the better agent
             was_auto_routed = True
@@ -8514,6 +8535,29 @@ Remember: You are {agent}. Teach first, then ask. Natural conversation only. No 
             if not is_guest:
                 conn.close()
             return jsonify({'error': f'Agent "{agent}" not found'}), 400
+
+        # Universal communication rules: warm + practical, no hype/fluff
+        universal_voice_rules = """
+
+VOICE RULES (APPLY TO EVERY RESPONSE):
+- Be warm, respectful, and encouraging.
+- Be practical and direct.
+- No hype language, no exaggerated praise, no fluff.
+- Keep answers grounded, specific, and useful.
+- If unsure, state assumptions briefly and proceed.
+"""
+
+        agent_voice_profiles = {
+            'Luna': "Luna voice: calm, clarifying, evidence-first guide.",
+            'Mila': "Mila voice: organized, structured, momentum-focused planner.",
+            'Sage': "Sage voice: clear, polished, concise communicator.",
+            'Ember': "Ember voice: creative but grounded, idea-forward without drama.",
+            'Sol': "Sol voice: strategic, measured, decision-oriented advisor.",
+            'Nova': "Nova voice: builder-focused, implementation-first technical partner.",
+            'Theo': "Theo voice: execution lead, accountability and completion focused."
+        }
+        voice_profile = agent_voice_profiles.get(agent, "Voice: practical specialist.")
+        system_prompt = f"{system_prompt}\n\n{universal_voice_rules}\n{voice_profile}"
 
         # Get conversation history (last 10 messages for context - optimized for speed)
         # Guests don't have history (not logged in)
