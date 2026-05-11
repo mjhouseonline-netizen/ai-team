@@ -19,7 +19,7 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: #0f0f0d;
             min-height: 100vh;
-            color: #374151;
+            color: #e9dfce;
             padding: 20px;
         }
 
@@ -31,9 +31,10 @@
         .admin-header {
             background: #141310;
             padding: 30px;
-            border-radius: 15px;
+            border-radius: 12px;
             margin-bottom: 30px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(225, 204, 153, 0.16);
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
         }
 
         .admin-header h1 {
@@ -46,13 +47,13 @@
         }
 
         .admin-header p {
-            color: #666;
+            color: #d2c7b4;
             font-size: 16px;
         }
 
         .back-btn {
             background: #c6a66a !important;
-            color: white !important;
+            color: #14110b !important;
             border: none !important;
             padding: 10px 20px;
             border-radius: 8px;
@@ -79,8 +80,9 @@
         .stat-card {
             background: #141310;
             padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 3px 15px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            border: 1px solid rgba(225, 204, 153, 0.14);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
             text-align: center;
             transition: transform 0.3s ease;
         }
@@ -102,7 +104,7 @@
         }
 
         .stat-label {
-            color: #666;
+            color: #d6ccbb;
             font-size: 14px;
             font-weight: 600;
             text-transform: uppercase;
@@ -118,8 +120,9 @@
         .admin-card {
             background: #141310;
             padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            border: 1px solid rgba(225, 204, 153, 0.14);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
             transition: all 0.3s ease;
             cursor: pointer;
         }
@@ -137,7 +140,18 @@
         }
 
         .card-icon {
-            font-size: 48px;
+            width: 42px;
+            height: 42px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+            color: #f4e9d0;
+            border: 1px solid rgba(225, 204, 153, 0.24);
+            background: linear-gradient(135deg, #2a2418, #c6a66a);
             flex-shrink: 0;
         }
 
@@ -148,7 +162,7 @@
         }
 
         .card-description {
-            color: #666;
+            color: #d8cebd;
             font-size: 14px;
             line-height: 1.6;
             margin-bottom: 20px;
@@ -160,7 +174,7 @@
         }
 
         .card-features li {
-            color: #444;
+            color: #e7ddcc;
             font-size: 13px;
             padding: 5px 0;
             padding-left: 20px;
@@ -177,7 +191,7 @@
 
         .card-button {
             background: linear-gradient(135deg, #c6a66a, #9f7b3f);
-            color: white !important;
+            color: #14110b !important;
             border: none !important;
             padding: 12px 24px;
             border-radius: 8px;
@@ -190,7 +204,7 @@
 
         .card-button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(144, 238, 144, 0.4);
+            box-shadow: 0 10px 24px rgba(168, 125, 56, 0.3);
         }
 
         .analytics-card {
@@ -238,9 +252,7 @@
     <div class="admin-container">
         <!-- Header -->
         <div class="admin-header">
-            <h1>
-                🎛️ Admin Portal
-            </h1>
+            <h1>Admin Portal</h1>
             <p>Central hub for all administrative functions and platform management</p>
             <a href="/dashboard" class="back-btn">← Back to Dashboard</a>
         </div>
@@ -277,7 +289,7 @@
             <!-- Main Dashboard -->
             <div class="admin-card dashboard-card" onclick="window.location.href='/dashboard'">
                 <div class="card-header">
-                    <div class="card-icon">🏠</div>
+                    <div class="card-icon">DB</div>
                     <div class="card-title">Main Dashboard</div>
                 </div>
                 <div class="card-description">
@@ -295,7 +307,7 @@
             <!-- Analytics -->
             <div class="admin-card analytics-card" onclick="window.location.href='/admin/analytics'">
                 <div class="card-header">
-                    <div class="card-icon">📊</div>
+                    <div class="card-icon">AN</div>
                     <div class="card-title">Analytics</div>
                 </div>
                 <div class="card-description">
@@ -314,7 +326,7 @@
             <!-- Promo Codes -->
             <div class="admin-card promo-card" onclick="window.location.href='/promo-codes'">
                 <div class="card-header">
-                    <div class="card-icon">🎫</div>
+                    <div class="card-icon">PC</div>
                     <div class="card-title">Promo Codes</div>
                 </div>
                 <div class="card-description">
@@ -333,7 +345,7 @@
             <!-- Stand Alone Client Agents -->
             <div class="admin-card" style="border-left: 4px solid #FFD700;" onclick="window.location.href='/admin/client-agents-manager'">
                 <div class="card-header">
-                    <div class="card-icon">💎</div>
+                    <div class="card-icon">CA</div>
                     <div class="card-title">Stand Alone Client Agents</div>
                 </div>
                 <div class="card-description">
@@ -352,7 +364,7 @@
             <!-- Global Agents -->
             <div class="admin-card" style="border-left: 4px solid #9C27B0;" onclick="window.location.href='/admin/global-agents-manager'">
                 <div class="card-header">
-                    <div class="card-icon">🤖</div>
+                    <div class="card-icon">GA</div>
                     <div class="card-title">Global Agents</div>
                 </div>
                 <div class="card-description">
@@ -371,7 +383,7 @@
             <!-- User Management -->
             <div class="admin-card users-card" onclick="window.location.href='/settings'">
                 <div class="card-header">
-                    <div class="card-icon">👤</div>
+                    <div class="card-icon">UM</div>
                     <div class="card-title">User Management</div>
                 </div>
                 <div class="card-description">
@@ -390,7 +402,7 @@
             <!-- Platform Settings -->
             <div class="admin-card settings-card" onclick="window.location.href='/settings'">
                 <div class="card-header">
-                    <div class="card-icon">⚙️</div>
+                    <div class="card-icon">PS</div>
                     <div class="card-title">Platform Settings</div>
                 </div>
                 <div class="card-description">
@@ -409,7 +421,7 @@
             <!-- Content Management -->
             <div class="admin-card" style="border-left: 4px solid #FF9800;" onclick="window.location.href='/profile'">
                 <div class="card-header">
-                    <div class="card-icon">📝</div>
+                    <div class="card-icon">CM</div>
                     <div class="card-title">Content Management</div>
                 </div>
                 <div class="card-description">
