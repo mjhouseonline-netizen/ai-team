@@ -3884,66 +3884,50 @@ oninput="autoResize(this)"
 
 <div id="agentRecommendationHint" class="agent-recommendation-hint"></div>
 
-<!-- Buttons row for mobile -->
+<!-- Composer controls -->
 <div class="input-buttons-row">
- <!-- Working Mode Dropdown (compact, secondary control) -->
- <div class="working-mode-container">
- <button class="working-mode-btn" id="workingModeBtn" onclick="toggleWorkingMode()" title="Response style">
- <span id="workingModeIcon">Mode</span>
- </button>
- <div class="working-mode-menu" id="workingModeMenu">
- <button onclick="selectWorkingMode('output_first')" class="mode-option active" data-mode="output_first">
- <span class="mode-icon">Mode</span>
- <div class="mode-details">
- <div class="mode-name">Output First</div>
- <div class="mode-desc">Quick results, questions later</div>
- </div>
- </button>
- <button onclick="selectWorkingMode('ask_then_output')" class="mode-option" data-mode="ask_then_output">
- <span class="mode-icon">Mode</span>
- <div class="mode-details">
- <div class="mode-name">Ask Then Output</div>
- <div class="mode-desc">Clarify first, then deliver</div>
- </div>
- </button>
- <button onclick="selectWorkingMode('coaching')" class="mode-option" data-mode="coaching">
- <span class="mode-icon">Mode</span>
- <div class="mode-details">
- <div class="mode-name">Coaching</div>
- <div class="mode-desc">Guided exploration</div>
- </div>
- </button>
- </div>
- </div>
-
- <!-- Combined Options Button -->
  <div class="input-options-container">
- <button class="input-options-btn" id="inputOptionsBtn" onclick="toggleInputOptions()" title="Input Options">
- <span>Options</span>
+ <button class="input-options-btn" id="inputOptionsBtn" onclick="toggleInputOptions()" title="Tools">
+ <span>Tools</span>
  </button>
  <div class="input-options-menu" id="inputOptionsMenu">
+ <button onclick="selectWorkingMode('output_first'); closeInputOptions();" class="option-item mode-option active" data-mode="output_first">
+ <span class="option-icon">Mode</span>
+ <span class="option-text">Output First</span>
+ </button>
+ <button onclick="selectWorkingMode('ask_then_output'); closeInputOptions();" class="option-item mode-option" data-mode="ask_then_output">
+ <span class="option-icon">Mode</span>
+ <span class="option-text">Ask Then Output</span>
+ </button>
+ <button onclick="selectWorkingMode('coaching'); closeInputOptions();" class="option-item mode-option" data-mode="coaching">
+ <span class="option-icon">Mode</span>
+ <span class="option-text">Coaching</span>
+ </button>
+ <button onclick="toggleVoice(); closeInputOptions();" class="option-item">
+ <span class="option-icon">Voice</span>
+ <span class="option-text">Voice Input</span>
+ </button>
+ <button onclick="toggleVoiceConversation(); closeInputOptions();" class="option-item">
+ <span class="option-icon">Mic</span>
+ <span class="option-text">Voice Conversation</span>
+ </button>
  <button onclick="document.getElementById('fileInput').click(); closeInputOptions();" class="option-item">
- <span class="option-icon">Item</span>
+ <span class="option-icon">File</span>
  <span class="option-text">Upload Files</span>
  </button>
  <button onclick="document.getElementById('folderInput').click(); closeInputOptions();" class="option-item">
- <span class="option-icon">Item</span>
+ <span class="option-icon">Folder</span>
  <span class="option-text">Upload Folder</span>
  </button>
- <button onclick="toggleVoice(); closeInputOptions();" class="option-item">
- <span class="option-icon">Item</span>
- <span class="option-text">Voice Input</span>
- </button>
  <button onclick="toggleImageMode(); closeInputOptions();" class="option-item">
- <span class="option-icon">Item</span>
+ <span class="option-icon">Image</span>
  <span class="option-text">AI Images</span>
  </button>
  </div>
  </div>
 
- <button type="button" class="voice-conversation-btn" id="voiceConversationBtn" onclick="toggleVoiceConversation()" title="Voice Conversation">Mic</button>
  <button type="button" class="send-btn" id="sendBtn" onclick="sendMessage()">Send</button>
- </div>
+</div>
  </div>
  <div class="file-preview" id="filePreview" style="display:none; flex-wrap: wrap; gap: 8px;">
  <!-- Multiple file previews will be added here dynamically -->
@@ -5168,12 +5152,16 @@ oninput="autoResize(this)"
  const btn = document.getElementById('voiceConversationBtn');
 
  if (voiceConversationMode) {
+ if (btn) {
  btn.classList.add('active');
  btn.title = 'Stop Voice Conversation';
+ }
  showNotification(' Voice conversation mode ON - I\'ll speak responses!');
  } else {
+ if (btn) {
  btn.classList.remove('active');
  btn.title = 'Voice Conversation';
+ }
  stopSpeaking();
  showNotification('Voice conversation mode OFF');
  }
