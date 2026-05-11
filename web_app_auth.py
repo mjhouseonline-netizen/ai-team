@@ -3368,7 +3368,7 @@ CRITICAL FORMATTING RULES:
         # Get AI response (using Gemini for free tier)
         import google.generativeai as genai
         genai.configure(api_key=app.config.get('GOOGLE_AI_API_KEY'))
-        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        model = genai.GenerativeModel('gemini-2.0-flash')
 
         response = model.generate_content(f"{{full_system_prompt}}\\n\\nUser: {{message}}")
         ai_response = response.text
@@ -3601,7 +3601,7 @@ Draft the post:"""
         # Generate post using Gemini
         import google.generativeai as genai
         genai.configure(api_key=app.config.get('GOOGLE_AI_API_KEY'))
-        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        model = genai.GenerativeModel('gemini-2.0-flash')
 
         response = model.generate_content(full_prompt)
         drafted_post = response.text
@@ -5161,9 +5161,13 @@ def connect_oauth_integration(service):
         callback_url = f"{request.host_url.rstrip('/')}/api/oauth/callback/{service}"
         scopes = ' '.join(oauth_config['scopes']) if isinstance(oauth_config['scopes'], list) else oauth_config['scopes']
 
-        # Note: client_id should be loaded from environment variables for each service
-        # This is a placeholder - you'll need to configure actual OAuth apps
-        auth_url = f"{oauth_config['auth_url']}?client_id=YOUR_{service.upper()}_CLIENT_ID&redirect_uri={callback_url}&state={state}&scope={scopes}&response_type=code&access_type=offline"
+        client_id = os.environ.get(f"{service.upper()}_CLIENT_ID")
+        if not client_id:
+            return jsonify({
+                'error': f'{oauth_config["name"]} OAuth is not configured yet. Missing {service.upper()}_CLIENT_ID.'
+            }), 503
+
+        auth_url = f"{oauth_config['auth_url']}?client_id={client_id}&redirect_uri={callback_url}&state={state}&scope={scopes}&response_type=code&access_type=offline"
 
         return jsonify({
             'auth_url': auth_url,
@@ -5208,41 +5212,24 @@ def oauth_callback(service):
             conn.close()
             return "<html><body><h2>Service mismatch</h2></body></html>", 400
 
-        # Delete used state
-        cursor.execute("DELETE FROM oauth_states WHERE state = ?", (state,))
-        conn.commit()
-
-        # Exchange authorization code for access token
-        # NOTE: This is a placeholder - actual OAuth token exchange requires:
-        # 1. Making POST request to oauth_config['token_url']
-        # 2. Including client_id, client_secret, code, redirect_uri
-        # 3. Parsing response to get access_token, refresh_token, expiry
-
-        # For now, store a placeholder (you'll need to implement actual OAuth exchange)
-        cursor.execute("""
-            INSERT OR REPLACE INTO user_integrations
-            (user_id, service, access_token, refresh_token, token_expiry, is_active)
-            VALUES (?, ?, ?, ?, datetime('now', '+3600 seconds'), 1)
-        """, (user_id, service, f'PLACEHOLDER_TOKEN_{service}', f'PLACEHOLDER_REFRESH_{service}'))
-
-        conn.commit()
+        # Token exchange is intentionally blocked until per-service secrets are configured.
         conn.close()
 
-        # Redirect to integrations page with success message
+        # Return setup instructions instead of storing fake integration tokens.
         return f"""
         <html>
-        <head><title>Connected Successfully</title></head>
+        <head><title>OAuth Setup Incomplete</title></head>
         <body style="font-family: system-ui; text-align: center; padding: 50px;">
-            <h1 style="color: #48bb78;">✓ Successfully Connected</h1>
-            <p>You've connected {OAUTH_CONFIG[service]['name']} to your AI Team account.</p>
-            <p><a href="/integrations" style="background: #667eea; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; display: inline-block; margin-top: 20px;">Back to Integrations</a></p>
+            <h1 style="color: #b45309;">Setup Not Complete</h1>
+            <p>{OAUTH_CONFIG[service]["name"]} callback received, but token exchange is not configured on this server yet.</p>
+            <p>Please finish OAuth app setup before connecting this integration.</p>
+            <p><a href="/integrations" style="background: #c6a66a; color: #111111; padding: 10px 20px; border-radius: 8px; text-decoration: none; display: inline-block; margin-top: 20px;">Back to Integrations</a></p>
             <script>
                 setTimeout(function() {{ window.location.href = '/integrations'; }}, 3000);
             </script>
         </body>
         </html>
         """, 200
-
     except Exception as e:
         print(f"❌ OAuth callback error: {str(e)}")
         return f"<html><body><h2>Error</h2><p>{str(e)}</p></body></html>", 500
@@ -5310,12 +5297,6 @@ def get_user_oauth_token(user_id, service):
 def send_email_via_integration(user_id, to_email, subject, body):
     """
     Send email via Gmail integration
-
-    NOTE: This is a placeholder. In production, this would:
-    1. Get user's Gmail OAuth token
-    2. Use Gmail API to send email
-    3. Handle token refresh if expired
-    4. Return success/failure status
     """
     token_info = get_user_oauth_token(user_id, 'gmail')
 
@@ -5325,33 +5306,16 @@ def send_email_via_integration(user_id, to_email, subject, body):
             'error': 'Gmail not connected. Please connect Gmail via Integrations page.'
         }
 
-    # PLACEHOLDER: Actual Gmail API call would go here
-    # Example:
-    # from googleapiclient.discovery import build
-    # from google.oauth2.credentials import Credentials
-    #
-    # creds = Credentials(token=token_info['access_token'])
-    # service = build('gmail', 'v1', credentials=creds)
-    # message = create_message('me', to_email, subject, body)
-    # result = service.users().messages().send(userId='me', body=message).execute()
-
-    print(f"[PLACEHOLDER] Would send email to {to_email} via Gmail")
-
     return {
-        'success': True,
-        'message': 'Email functionality requires OAuth app configuration',
-        'placeholder': True
+        'success': False,
+        'error': 'Gmail action is not enabled yet. Complete OAuth token exchange and Gmail API wiring first.'
     }
 
 def post_to_twitter(user_id, text):
     """
     Post to Twitter/X via integration
 
-    NOTE: This is a placeholder. In production, this would:
-    1. Get user's Twitter OAuth token
-    2. Use Twitter API v2 to create tweet
-    3. Handle token refresh if needed
-    4. Return tweet ID and URL
+    Requires OAuth token exchange + Twitter API wiring.
     """
     token_info = get_user_oauth_token(user_id, 'twitter')
 
@@ -5361,19 +5325,16 @@ def post_to_twitter(user_id, text):
             'error': 'Twitter not connected. Please connect Twitter via Integrations page.'
         }
 
-    print(f"[PLACEHOLDER] Would post to Twitter: {text}")
-
     return {
-        'success': True,
-        'message': 'Twitter posting requires OAuth app configuration',
-        'placeholder': True
+        'success': False,
+        'error': 'Twitter action is not enabled yet. Complete OAuth token exchange and Twitter API wiring first.'
     }
 
 def post_to_linkedin(user_id, text):
     """
     Post to LinkedIn via integration
 
-    NOTE: This is a placeholder for LinkedIn posting
+    Requires OAuth token exchange + LinkedIn API wiring.
     """
     token_info = get_user_oauth_token(user_id, 'linkedin')
 
@@ -5383,22 +5344,16 @@ def post_to_linkedin(user_id, text):
             'error': 'LinkedIn not connected'
         }
 
-    print(f"[PLACEHOLDER] Would post to LinkedIn: {text}")
-
     return {
-        'success': True,
-        'message': 'LinkedIn posting requires OAuth app configuration',
-        'placeholder': True
+        'success': False,
+        'error': 'LinkedIn action is not enabled yet. Complete OAuth token exchange and LinkedIn API wiring first.'
     }
 
 def create_calendar_event(user_id, title, start_time, end_time, description=None):
     """
     Create Google Calendar event via integration
 
-    NOTE: This is a placeholder. In production, this would:
-    1. Get user's Google Calendar OAuth token
-    2. Use Google Calendar API to create event
-    3. Return event ID and link
+    Requires OAuth token exchange + Google Calendar API wiring.
     """
     token_info = get_user_oauth_token(user_id, 'google_calendar')
 
@@ -5408,12 +5363,9 @@ def create_calendar_event(user_id, title, start_time, end_time, description=None
             'error': 'Google Calendar not connected'
         }
 
-    print(f"[PLACEHOLDER] Would create calendar event: {title}")
-
     return {
-        'success': True,
-        'message': 'Calendar integration requires OAuth app configuration',
-        'placeholder': True
+        'success': False,
+        'error': 'Google Calendar action is not enabled yet. Complete OAuth token exchange and Calendar API wiring first.'
     }
 
 def get_available_integration_actions(user_id):
@@ -5519,7 +5471,13 @@ def start_oauth_flow(integration_key):
         conn.close()
 
         # Build OAuth URL
-        auth_url = f"{oauth_config['auth_url']}?client_id=YOUR_CLIENT_ID&redirect_uri={request.host_url}api/integrations/oauth/callback&state={state}&scope={','.join(oauth_config['scopes'])}"
+        client_id = os.environ.get(f"{integration_key.upper()}_CLIENT_ID")
+        if not client_id:
+            return jsonify({
+                'error': f'OAuth is not configured for {integration_key}. Missing {integration_key.upper()}_CLIENT_ID.'
+            }), 503
+
+        auth_url = f"{oauth_config['auth_url']}?client_id={client_id}&redirect_uri={request.host_url}api/integrations/oauth/callback&state={state}&scope={','.join(oauth_config['scopes'])}"
 
         return jsonify({
             'auth_url': auth_url,
@@ -6414,7 +6372,7 @@ MODELS = {
     # Google Gemini Models
     'gemini-2.0-flash': {
         'provider': 'google',
-        'model_id': 'gemini-2.0-flash-exp',
+        'model_id': 'gemini-2.0-flash',
         'name': 'Gemini 2.0 Flash',
         'description': 'Newest - FREE tier available!',
         'max_tokens': 2000,
@@ -11816,7 +11774,7 @@ def global_agent_chat():
         # Use Gemini for free tier (no API cost for public agents)
         import google.generativeai as genai
         genai.configure(api_key=app.config.get('GOOGLE_AI_API_KEY'))
-        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        model = genai.GenerativeModel('gemini-2.0-flash')
         # ---------- FILE CONTENT INJECTION ----------
         file_context_blocks = []
 
@@ -13459,14 +13417,19 @@ def support_send_message():
 def get_support_messages():
     """Get all support messages (admin only)"""
     try:
-        # Check if user is admin (you can customize this check)
-        if not current_user.is_authenticated or current_user.email != 'admin@example.com':
-            # For now, just check if user is looking at their own messages
-            user_id = current_user.id
-            admin_mode = False
-        else:
+        admin_email = (os.environ.get('ADMIN_EMAIL') or '').strip().lower()
+        is_admin = bool(
+            current_user.is_authenticated and (
+                current_user.id == 1 or
+                (admin_email and current_user.email.lower() == admin_email)
+            )
+        )
+        if is_admin:
             user_id = None
             admin_mode = True
+        else:
+            user_id = current_user.id
+            admin_mode = False
 
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
@@ -13555,5 +13518,6 @@ def list_routes():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
+
 
 

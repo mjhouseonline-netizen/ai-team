@@ -234,7 +234,7 @@
  justify-content: center;
  font-size: clamp(16px, 2.5vw, 20px);
  flex-shrink: 0;
- background: linear-gradient(135deg, #667eea, #764ba2);
+ background: linear-gradient(135deg, #c6a66a, #9f7b3f);
  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
  }
 
@@ -243,9 +243,9 @@
  }
 
  /* Agent-specific gradients */
- .agent-luna .agent-avatar { background: linear-gradient(135deg, #667eea, #764ba2); }
- .agent-mila .agent-avatar { background: linear-gradient(135deg, #f093fb, #f5576c); }
- .agent-sage .agent-avatar { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+ .agent-luna .agent-avatar { background: linear-gradient(135deg, #c6a66a, #9f7b3f); }
+ .agent-mila .agent-avatar { background: linear-gradient(135deg, #d8bc7e, #b88b4a); }
+ .agent-sage .agent-avatar { background: linear-gradient(135deg, #d8bc7e, #b88b4a); }
  .agent-ember .agent-avatar { background: linear-gradient(135deg, #fa709a, #fee140); }
  .agent-sol .agent-avatar { background: linear-gradient(135deg, #ffecd2, #fcb69f); }
  .agent-nova .agent-avatar { background: linear-gradient(135deg, #a8edea, #fed6e3); }
@@ -292,7 +292,7 @@
  padding: 4px 10px;
  font-size: 18px;
  font-weight: bold;
- color: #667eea;
+ color: #c6a66a;
  cursor: pointer;
  opacity: 0.6;
  transition: all 0.2s;
@@ -376,7 +376,7 @@
  .new-agent-btn {
  width: 100%;
  padding: 10px;
- background: linear-gradient(135deg, #667eea, #764ba2);
+ background: linear-gradient(135deg, #c6a66a, #9f7b3f);
  border: none;
  border-radius: 8px;
  color: white;
@@ -1059,7 +1059,7 @@
  justify-content: center;
  font-size: 16px;
  flex-shrink: 0;
- background: linear-gradient(135deg, #667eea, #764ba2);
+ background: linear-gradient(135deg, #c6a66a, #9f7b3f);
  }
 
  .user-message .avatar {
@@ -3457,7 +3457,7 @@ color: #f1dfad;
 
  <div class="settings-tools-section" id="settingsToolsSection" style="display: none;">
  <a href="/integrations" class="agent-item" style="text-decoration: none; color: white;">
- <div class="agent-avatar" style="background: linear-gradient(135deg, #11998e, #38ef7d);"></div>
+ <div class="agent-avatar" style="background: linear-gradient(135deg, #b78f4f, #d6ba82);"></div>
  <div class="agent-info">
  <div class="agent-name">Integrations & API</div>
  <div class="agent-role">30+ Tools, Webhooks & Automations</div>
@@ -3465,7 +3465,7 @@ color: #f1dfad;
  </a>
 
  <a href="/admin" class="agent-item" id="adminSidebarLink" style="{% if current_user.id != 1 %}display: none;{% endif %} text-decoration: none; color: white;">
- <div class="agent-avatar" style="background: linear-gradient(135deg, #f093fb, #f5576c);"></div>
+ <div class="agent-avatar" style="background: linear-gradient(135deg, #d8bc7e, #b88b4a);"></div>
  <div class="agent-info">
  <div class="agent-name">Admin Portal</div>
  <div class="agent-role">Dashboard & Stats</div>
@@ -3475,7 +3475,7 @@ color: #f1dfad;
  <!-- Settings Button in Sidebar -->
  <div class="settings-menu-sidebar">
  <div class="agent-item" onclick="toggleSettingsMenu(event)" style="cursor: pointer;">
- <div class="agent-avatar" style="background: linear-gradient(135deg, #667eea, #764ba2);"></div>
+ <div class="agent-avatar" style="background: linear-gradient(135deg, #c6a66a, #9f7b3f);"></div>
  <div class="agent-info">
  <div class="agent-name">Settings</div>
  <div class="agent-role">Model & preferences</div>
@@ -3494,14 +3494,14 @@ color: #f1dfad;
  </optgroup>
 
  <!-- Starter Tier: $2-3 models -->
- <optgroup label=" Starter ($19/mo)">
+ <optgroup label=" Pro ($19/mo)">
  <option value="grok-2" data-tier="starter">Grok 2</option>
  <option value="grok-2-vision" data-tier="starter">Grok 2 Vision</option>
  <option value="mistral-large" data-tier="starter">Mistral Large</option>
  </optgroup>
 
  <!-- Pro Tier: $5-10 models -->
- <optgroup label=" Pro ($49/mo)">
+ <optgroup label=" Team ($79/mo)">
  <option value="gpt-4o" data-tier="pro">GPT-4o</option>
  <option value="gpt-4o-mini" data-tier="pro">GPT-4o Mini</option>
  <option value="claude-3.5-sonnet" data-tier="pro">Claude 3.5 Sonnet</option>
@@ -3509,7 +3509,7 @@ color: #f1dfad;
  </optgroup>
 
  <!-- Enterprise Tier: $15+ models -->
- <optgroup label=" Enterprise ($99/mo)">
+ <optgroup label=" Enterprise (Custom)">
  <option value="o1-preview" data-tier="enterprise">o1 Preview</option>
  <option value="o1-mini" data-tier="enterprise">o1 Mini</option>
  <option value="claude-opus-4" data-tier="enterprise">Claude Opus 4</option>
@@ -3528,7 +3528,7 @@ color: #f1dfad;
  </a>
 
  <a href="/promo-codes" class="agent-item" id="promoSidebarLink" style="{% if current_user.id != 1 %}display: none;{% endif %} text-decoration: none; color: white;">
- <div class="agent-avatar" style="background: linear-gradient(135deg, #4facfe, #00f2fe);"></div>
+ <div class="agent-avatar" style="background: linear-gradient(135deg, #d8bc7e, #b88b4a);"></div>
  <div class="agent-info">
  <div class="agent-name">Promo Codes</div>
  <div class="agent-role">Manage Codes</div>
@@ -3676,7 +3676,7 @@ color: #f1dfad;
  <div class="header" {% if is_guest %}style="grid-row: 1 !important; background: #ffffff !important; display: flex !important; position: relative !important; z-index: 20 !important; visibility: visible !important; opacity: 1 !important; padding: 12px 24px !important; border-bottom: 1px solid #e5e7eb !important;"{% endif %}>
  <div class="header-left">
  <div class="current-agent-info">
- <div class="current-agent-avatar" id="currentAgentAvatar" style="background: linear-gradient(135deg, {% if is_guest %}#c6a66a, #9f7b3f{% else %}#667eea, #764ba2{% endif %});">
+ <div class="current-agent-avatar" id="currentAgentAvatar" style="background: linear-gradient(135deg, {% if is_guest %}#c6a66a, #9f7b3f{% else %}#c6a66a, #9f7b3f{% endif %});">
  {% if is_guest %}AI{% else %}L{% endif %}
  </div>
  <div class="current-agent-name" id="currentAgentName">{% if is_guest and custom_agent_name %}{{ custom_agent_name }}{% else %}Luna{% endif %}</div>
@@ -3693,7 +3693,7 @@ color: #f1dfad;
  </optgroup>
 
  <!-- Starter Tier: $2-3 models -->
- <optgroup label=" Upgrade to Unlock - Starter ($19/mo)">
+ <optgroup label=" Upgrade to Unlock - Pro ($19/mo)">
  <option value="claude-sonnet-4.5" data-tier="starter"> Claude Sonnet 4.5</option>
  <option value="gpt-4o" data-tier="starter"> GPT-4o</option>
  <option value="grok-2" data-tier="starter"> Grok 2</option>
@@ -3704,7 +3704,7 @@ color: #f1dfad;
  </optgroup>
 
  <!-- Pro Tier: Everything else under $6 -->
- <optgroup label=" Upgrade to Unlock - Pro ($49/mo)">
+ <optgroup label=" Upgrade to Unlock - Team ($79/mo)">
  <option value="mistral-small" data-tier="pro"> Mistral Small</option>
  <option value="deepseek-v3" data-tier="pro"> DeepSeek V3</option>
  <option value="gpt-4o-mini" data-tier="pro"> GPT-4o Mini</option>
@@ -3714,7 +3714,7 @@ color: #f1dfad;
  </optgroup>
 
  <!-- Enterprise Only: $6+ models -->
- <optgroup label=" Upgrade to Unlock - Pro/Enterprise">
+ <optgroup label=" Upgrade to Unlock - Team/Enterprise">
  <option value="claude-opus-4" data-tier="enterprise"> Claude Opus 4</option>
  <option value="gpt-4-turbo" data-tier="enterprise"> GPT-4 Turbo</option>
  </optgroup>
@@ -3959,7 +3959,7 @@ oninput="autoResize(this)"
  <label class="form-label">Custom Icon Image (optional)</label>
  <input type="file" id="agentIconImage" class="form-input" accept="image/*" onchange="previewAgentIcon(event)">
  <div id="iconPreview" style="margin-top: 10px; display: none;">
- <img id="iconPreviewImg" src="" alt="Icon Preview" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #667eea;">
+ <img id="iconPreviewImg" src="" alt="Icon Preview" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #c6a66a;">
  <button type="button" onclick="clearAgentIcon()" style="margin-left: 10px; padding: 4px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer;">Remove</button>
  </div>
  <small style="color: #6b7280; font-size: 12px;">Upload a custom image for your agent. If no image is uploaded, the initials will be used.</small>
@@ -4869,7 +4869,7 @@ oninput="autoResize(this)"
  const messageDiv = document.createElement('div');
  messageDiv.className = 'message system-message';
  messageDiv.innerHTML = `
- <div class="message-content" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 16px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+ <div class="message-content" style="background: linear-gradient(135deg, #c6a66a 0%, #9f7b3f 100%); padding: 16px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
  <div style="color: white; font-weight: 500;">
  <span style="font-size: 20px;"></span> ${reason}<br>
  <button onclick="switchToAgent('${suggestedAgent}')" style="margin-top: 10px; background: white; color: #4f46e5; border: 0; border-radius: 8px; padding: 8px 12px; font-weight: 700; cursor: pointer;">Switch to ${suggestedAgent}</button>
@@ -5773,11 +5773,11 @@ oninput="autoResize(this)"
  // Add upgrade message
  let upgradeTier = '';
  if (requiredTier === 'starter') {
- upgradeTier = ' (Upgrade to Starter)';
+ upgradeTier = ' (Upgrade to Pro)';
  } else if (requiredTier === 'pro') {
  upgradeTier = ' (Upgrade to Pro)';
  } else if (requiredTier === 'enterprise') {
- upgradeTier = ' (Pro/Enterprise Only)';
+ upgradeTier = ' (Team/Enterprise Only)';
  }
 
  if (!option.textContent.includes('Upgrade')) {
@@ -5897,7 +5897,7 @@ oninput="autoResize(this)"
  ` : '';
 
  agentDiv.innerHTML = `
- <div class="agent-avatar" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+ <div class="agent-avatar" style="background: linear-gradient(135deg, #c6a66a, #9f7b3f);">
  ${avatarContent}
  </div>
  <div class="agent-info">
@@ -6810,7 +6810,7 @@ oninput="autoResize(this)"
  if (lastOpenTag > lastCloseTag) {
  return match;
  }
- return `<a href="#" onclick="event.preventDefault(); selectAgent('${agentName}', '${agent.emoji}', '${agent.role}'); closeSidebar();" style="color: #667eea; font-weight: 600; text-decoration: underline; cursor: pointer;">${match}</a>`;
+ return `<a href="#" onclick="event.preventDefault(); selectAgent('${agentName}', '${agent.emoji}', '${agent.role}'); closeSidebar();" style="color: #c6a66a; font-weight: 600; text-decoration: underline; cursor: pointer;">${match}</a>`;
  });
  });
 
@@ -7429,15 +7429,15 @@ Please provide your response following these guidelines.`;
  currentAgentAvatar.textContent = initial;
  // Update gradient color based on agent
  const gradients = {
- 'Luna': 'linear-gradient(135deg, #667eea, #764ba2)',
- 'Mila': 'linear-gradient(135deg, #f093fb, #f5576c)',
- 'Sage': 'linear-gradient(135deg, #4facfe, #00f2fe)',
+ 'Luna': 'linear-gradient(135deg, #c6a66a, #9f7b3f)',
+ 'Mila': 'linear-gradient(135deg, #d8bc7e, #b88b4a)',
+ 'Sage': 'linear-gradient(135deg, #d8bc7e, #b88b4a)',
  'Ember': 'linear-gradient(135deg, #fa709a, #fee140)',
  'Sol': 'linear-gradient(135deg, #ffecd2, #fcb69f)',
  'Nova': 'linear-gradient(135deg, #a8edea, #fed6e3)',
  'Theo': 'linear-gradient(135deg, #fbc2eb, #a6c1ee)'
  };
- currentAgentAvatar.style.background = gradients[agentName] || 'linear-gradient(135deg, #667eea, #764ba2)';
+ currentAgentAvatar.style.background = gradients[agentName] || 'linear-gradient(135deg, #c6a66a, #9f7b3f)';
  }
 
  // Update active state in sidebar
@@ -7560,7 +7560,7 @@ Please provide your response following these guidelines.`;
  width: 60px;
  height: 60px;
  border-radius: 50%;
- background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+ background: linear-gradient(135deg, #c6a66a 0%, #9f7b3f 100%);
  border: none;
  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
  cursor: pointer;
@@ -7592,7 +7592,7 @@ Please provide your response following these guidelines.`;
  }
 
  #supportChatHeader {
- background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+ background: linear-gradient(135deg, #c6a66a 0%, #9f7b3f 100%);
  color: white;
  padding: 15px 20px;
  font-weight: 600;
@@ -7618,7 +7618,7 @@ Please provide your response following these guidelines.`;
  }
 
  .support-message.user {
- background: #667eea;
+ background: #c6a66a;
  color: white;
  margin-left: 40px;
  text-align: right;
@@ -7658,7 +7658,7 @@ Please provide your response following these guidelines.`;
  #supportChatInput button {
  margin-left: 10px;
  padding: 10px 20px;
- background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+ background: linear-gradient(135deg, #c6a66a 0%, #9f7b3f 100%);
  color: white;
  border: none;
  border-radius: 20px;
@@ -7789,7 +7789,7 @@ Please provide your response following these guidelines.`;
 
  .upgrade-tier-badge {
  display: inline-block;
- background: linear-gradient(135deg, #667eea, #764ba2);
+ background: linear-gradient(135deg, #c6a66a, #9f7b3f);
  color: white;
  padding: 8px 16px;
  border-radius: 20px;
@@ -8148,6 +8148,8 @@ gap: 8px;
  </script>
 </body>
 </html>
+
+
 
 
 
