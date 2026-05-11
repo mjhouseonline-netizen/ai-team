@@ -4,218 +4,174 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ agent.name }} - Shared AI Agent</title>
-
-    <!-- Premium Design System -->
     <link rel="stylesheet" href="{{ url_for('static', filename='premium-design.css') }}">
-
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
             background: linear-gradient(135deg, #0f0f0d 0%, #1a1814 100%);
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
+            padding: 24px;
+            color: #efe4d0;
         }
-
         .container {
-            max-width: 800px;
-            width: 100%;
+            max-width: 920px;
+            margin: 0 auto;
             background: #141310;
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(225, 204, 153, 0.18);
+            border-radius: 14px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+            padding: 36px;
         }
-
         .agent-header {
             text-align: center;
-            margin-bottom: 30px;
-            padding-bottom: 30px;
-            border-bottom: 2px solid #e5e7eb;
+            border-bottom: 1px solid rgba(225, 204, 153, 0.2);
+            margin-bottom: 28px;
+            padding-bottom: 28px;
         }
-
-        .agent-emoji {
-            font-size: 5em;
-            margin-bottom: 20px;
-        }
-
-        .agent-name {
-            font-size: 2.5em;
+        .agent-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 999px;
+            margin: 0 auto 18px;
+            border: 1px solid rgba(225, 204, 153, 0.32);
+            background: linear-gradient(135deg, #2a2418, #c6a66a);
+            color: #14110b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
             font-weight: 700;
-            color: #1a202c;
-            margin-bottom: 10px;
         }
-
+        .agent-name {
+            font-size: clamp(30px, 3.8vw, 42px);
+            line-height: 1.1;
+            color: #c6a66a;
+            margin-bottom: 8px;
+        }
         .agent-description {
-            font-size: 1.2em;
-            color: #4a5568;
-            margin-bottom: 20px;
+            font-size: 16px;
+            color: #d8cebd;
+            margin-bottom: 16px;
         }
-
         .agent-meta {
             display: flex;
-            gap: 20px;
             justify-content: center;
             flex-wrap: wrap;
-            color: #718096;
-            font-size: 0.9em;
-        }
-
-        .meta-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .section {
-            margin: 30px 0;
-        }
-
-        .section-title {
-            font-size: 1.3em;
-            font-weight: 600;
-            color: #1a202c;
-            margin-bottom: 15px;
-        }
-
-        .system-prompt {
-            background: #12110f;
-            padding: 20px;
-            border-radius: 10px;
-            border-left: 4px solid #c6a66a;
-            white-space: pre-wrap;
-            font-family: 'Courier New', monospace;
-            font-size: 0.95em;
-            line-height: 1.6;
-            color: #2d3748;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .actions {
-            display: flex;
-            gap: 15px;
-            margin-top: 30px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            padding: 15px 30px;
-            border: none;
-            border-radius: 10px;
-            font-size: 1.1em;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
             gap: 10px;
         }
-
+        .meta-item {
+            font-size: 13px;
+            color: #d2c7b4;
+            background: #191712;
+            border: 1px solid rgba(225, 204, 153, 0.14);
+            border-radius: 999px;
+            padding: 6px 12px;
+        }
+        .section { margin: 26px 0; }
+        .section-title {
+            color: #c6a66a;
+            font-size: 19px;
+            margin-bottom: 12px;
+        }
+        .system-prompt {
+            background: #0f0f0d;
+            border: 1px solid rgba(225, 204, 153, 0.16);
+            border-left: 4px solid #c6a66a;
+            border-radius: 10px;
+            padding: 16px;
+            max-height: 420px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-family: Consolas, Monaco, "Courier New", monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #efe4d0;
+        }
+        .alert {
+            margin: 18px 0 8px;
+            padding: 14px 16px;
+            border-radius: 10px;
+            border: 1px solid rgba(225, 204, 153, 0.24);
+            background: #1a1814;
+            color: #d8cebd;
+            font-size: 14px;
+            line-height: 1.55;
+        }
+        .actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 18px;
+        }
+        .btn {
+            text-decoration: none;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 12px 16px;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
         .btn-primary {
             background: linear-gradient(135deg, #c6a66a, #9f7b3f);
-            color: white;
+            color: #14110b;
+            flex: 1;
         }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
-        }
-
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(198, 166, 106, 0.28); }
         .btn-secondary {
-            background: #e2e8f0;
-            color: #4a5568;
+            background: #191712;
+            color: #efe4d0;
+            border: 1px solid rgba(225, 204, 153, 0.24);
+            flex: 1;
         }
-
-        .btn-secondary:hover {
-            background: #cbd5e0;
-        }
-
-        .alert {
-            padding: 15px 20px;
+        .btn-secondary:hover { background: #211c13; border-color: rgba(225, 204, 153, 0.36); }
+        .success-box {
+            width: 100%;
+            text-align: center;
+            padding: 16px;
             border-radius: 10px;
-            margin: 20px 0;
-            border-left: 4px solid;
+            border: 1px solid rgba(225, 204, 153, 0.24);
+            background: #15130f;
+            color: #efe4d0;
         }
-
-        .alert-info {
-            background: #dbeafe;
-            border-color: #3b82f6;
-            color: #1e40af;
-        }
-
-        .alert-success {
-            background: #d1fae5;
-            border-color: #10b981;
-            color: #065f46;
-        }
-
         @media (max-width: 768px) {
-            .container {
-                padding: 20px;
-            }
-
-            .agent-name {
-                font-size: 2em;
-            }
-
-            .actions {
-                flex-direction: column;
-            }
-
-            .btn {
-                width: 100%;
-                justify-content: center;
-            }
+            body { padding: 14px; }
+            .container { padding: 20px; }
+            .actions { flex-direction: column; }
+            .btn { width: 100%; }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="agent-header">
-            <div class="agent-emoji">{{ agent.emoji }}</div>
+            <div class="agent-avatar">{{ (agent.name or "A")[0] }}</div>
             <h1 class="agent-name">{{ agent.name }}</h1>
             <p class="agent-description">{{ agent.description }}</p>
             <div class="agent-meta">
-                <div class="meta-item">
-                    <span>👤</span>
-                    <span>Created by {{ agent.created_by }}</span>
-                </div>
-                <div class="meta-item">
-                    <span>📅</span>
-                    <span>{{ agent.created_at }}</span>
-                </div>
+                <div class="meta-item">Created by {{ agent.created_by }}</div>
+                <div class="meta-item">{{ agent.created_at }}</div>
             </div>
         </div>
 
         <div class="section">
-            <h2 class="section-title">📝 System Instructions</h2>
+            <h2 class="section-title">System Instructions</h2>
             <div class="system-prompt">{{ agent.system_prompt }}</div>
         </div>
 
-        <div class="alert alert-info">
-            <strong>ℹ️ What is this?</strong><br>
-            This is a custom AI agent that someone created and shared with you. You can clone it to your AI Team account and start using it immediately.
+        <div class="alert">
+            <strong>What is this?</strong><br>
+            This is a custom AI agent shared with you. Clone it to your account and start using it immediately.
         </div>
 
         <div class="actions" id="actions">
-            <button class="btn btn-primary" onclick="cloneAgent()">
-                <span>✨</span>
-                <span>Clone to My Agents</span>
-            </button>
-            <a href="/signup" class="btn btn-secondary">
-                <span>🆕</span>
-                <span>Create Free Account</span>
-            </a>
+            <button class="btn btn-primary" onclick="cloneAgent()">Clone to My Agents</button>
+            <a href="/signup" class="btn btn-secondary">Create Free Account</a>
         </div>
     </div>
 
@@ -227,28 +183,24 @@
                     method: 'POST',
                     credentials: 'include'
                 });
-
                 const data = await response.json();
 
                 if (response.ok) {
-                    // Show success message
                     document.getElementById('actions').innerHTML = `
-                        <div class="alert alert-success" style="width: 100%; text-align: center;">
-                            <strong>✅ Success!</strong><br>
+                        <div class="success-box">
+                            <strong>Success</strong><br>
                             "${data.message}"<br><br>
-                            <a href="/dashboard" class="btn btn-primary">Go to Dashboard</a>
+                            <a href="/dashboard" class="btn btn-primary" style="max-width: 240px; margin: 0 auto;">Go to Dashboard</a>
                         </div>
                     `;
+                } else if (response.status === 401) {
+                    alert('Please log in to clone this agent');
+                    window.location.href = '/login';
+                } else if (response.status === 403) {
+                    alert(data.message || 'You have reached your custom agent limit. Please upgrade your plan.');
+                    window.location.href = '/pricing';
                 } else {
-                    if (response.status === 401) {
-                        alert('Please log in to clone this agent');
-                        window.location.href = '/login';
-                    } else if (response.status === 403) {
-                        alert(data.message || 'You have reached your custom agent limit. Please upgrade your plan.');
-                        window.location.href = '/pricing';
-                    } else {
-                        alert(data.error || 'Failed to clone agent');
-                    }
+                    alert(data.error || 'Failed to clone agent');
                 }
             } catch (error) {
                 console.error('Error cloning agent:', error);
@@ -258,5 +210,3 @@
     </script>
 </body>
 </html>
-
-
