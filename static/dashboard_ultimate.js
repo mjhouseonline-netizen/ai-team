@@ -1310,6 +1310,32 @@ function cleanAssistantOutput(text) {
  cleaned = cleaned.replace(/_(.*?)_/g, '$1');
  // Remove remaining stray markdown markers
  cleaned = cleaned.replace(/[*#]/g, '');
+
+ // Improve readability: split long blocks into shorter paragraphs
+ if (!cleaned.includes('\n')) {
+ const sentences = cleaned.split(/(?<=[.!?])\s+/);
+ if (sentences.length > 3) {
+ const chunks = [];
+ for (let i = 0; i < sentences.length; i += 2) {
+ chunks.push(sentences.slice(i, i + 2).join(' '));
+ }
+ cleaned = chunks.join('\n\n');
+ }
+ }
+
+ // If model output appears cut off, trim to last complete sentence
+ const endsClean = /[.!?]\s*$/.test(cleaned);
+ if (!endsClean && cleaned.length > 120) {
+ const lastPunct = Math.max(
+ cleaned.lastIndexOf('.'),
+ cleaned.lastIndexOf('!'),
+ cleaned.lastIndexOf('?')
+ );
+ if (lastPunct > 40) {
+ cleaned = cleaned.slice(0, lastPunct + 1);
+ }
+ }
+
  return cleaned;
 }
 

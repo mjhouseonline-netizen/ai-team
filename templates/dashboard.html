@@ -1045,8 +1045,8 @@
  .assistant-message .message-content {
  flex: 1;
  padding: 0;
- font-size: 15px;
- line-height: 1.7;
+ font-size: 14px;
+ line-height: 1.6;
  color: var(--text-primary);
  }
 
@@ -2994,7 +2994,7 @@ font-weight: 600;
  }
 
  body:not(.guest-mode) .message {
- max-width: 980px;
+ max-width: 920px;
  margin: 0 auto 22px;
  padding: 16px 0 4px;
  }
@@ -3881,6 +3881,7 @@ color: #f1dfad;
  <div class="input-area">
  <input type="file" id="fileInput" multiple style="display:none;" accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.txt,.md,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx">
  <input type="file" id="folderInput" webkitdirectory directory multiple style="display:none;">
+ <input type="file" id="dnaProfileInput" style="display:none;" accept=".txt,.md,.csv,.json,.pdf,.doc,.docx">
 
 <textarea
 id="messageInput"
@@ -3918,6 +3919,10 @@ oninput="autoResize(this)"
  <button onclick="toggleVoiceConversation(); closeInputOptions();" class="option-item">
  <span class="option-icon">Mic</span>
  <span class="option-text">Voice Conversation</span>
+ </button>
+ <button onclick="document.getElementById('dnaProfileInput').click(); closeInputOptions();" class="option-item">
+ <span class="option-icon">DNA</span>
+ <span class="option-text">Upload User Profile</span>
  </button>
  <button onclick="document.getElementById('fileInput').click(); closeInputOptions();" class="option-item">
  <span class="option-icon">File</span>
@@ -4421,6 +4426,38 @@ oninput="autoResize(this)"
 
  // File Upload System with Preview - Support Multiple Files
  let uploadedFiles = [];
+
+ // Upload account-scoped personalization profile ("DNA")
+ const dnaProfileInput = document.getElementById('dnaProfileInput');
+ if (dnaProfileInput) {
+ dnaProfileInput.addEventListener('change', async function(event) {
+ const file = event.target.files && event.target.files[0];
+ if (!file) return;
+
+ try {
+ const fd = new FormData();
+ fd.append('file', file);
+
+ showNotification('Uploading user profile...');
+ const res = await fetch('/api/user-dna/upload', {
+ method: 'POST',
+ body: fd
+ });
+ const data = await res.json();
+
+ if (!res.ok) {
+ throw new Error(data.error || 'Failed to upload profile');
+ }
+
+ showNotification('Profile uploaded. Agents will personalize to this account.');
+ } catch (err) {
+ console.error('DNA upload error:', err);
+ showNotification('Failed to upload profile: ' + (err.message || 'Unknown error'));
+ } finally {
+ dnaProfileInput.value = '';
+ }
+ });
+ }
 
  // Handle multiple file selection
  document.getElementById('fileInput').addEventListener('change', function(event) {
