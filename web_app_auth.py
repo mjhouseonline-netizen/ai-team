@@ -1006,6 +1006,30 @@ def init_database():
         )
     """)
 
+    # Per-user personalization profile (private to each account)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS user_personalization (
+            user_id INTEGER PRIMARY KEY,
+            dna_profile_text TEXT,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+    """)
+
+    # Per-user memory keys (private to each account)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS user_memory (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            memory_key TEXT NOT NULL,
+            memory_value TEXT NOT NULL,
+            source TEXT DEFAULT 'manual',
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id),
+            UNIQUE(user_id, memory_key)
+        )
+    """)
+
     # Add working_mode column if it doesn't exist (for existing tables)
     cursor.execute("PRAGMA table_info(conversations)")
     conv_columns = [col[1] for col in cursor.fetchall()]
@@ -6983,6 +7007,57 @@ def is_text_file(filename):
     ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
     return ext in {'txt', 'md', 'csv'}
 
+
+def extract_personal_context_text(filepath):
+    """Extract text from a user profile/DNA file."""
+    ext = os.path.splitext(filepath)[1].lower()
+
+    if ext in ['.txt', '.md', '.csv', '.json']:
+        with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+            return f.read()
+
+    if ext == '.pdf':
+        from PyPDF2 import PdfReader
+        reader = PdfReader(filepath)
+        return "\n".join([(p.extract_text() or "") for p in reader.pages])
+
+    if ext in ['.docx', '.doc']:
+        from docx import Document
+        doc = Document(filepath)
+        return "\n".join([p.text for p in doc.paragraphs if p.text.strip()])
+
+    return ""
+
+
+def upsert_user_memory(cursor, user_id, memory_key, memory_value, source='manual'):
+    """Insert/update user-scoped memory key/value."""
+    cursor.execute("""
+        INSERT INTO user_memory (user_id, memory_key, memory_value, source, updated_at)
+        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(user_id, memory_key)
+        DO UPDATE SET memory_value = excluded.memory_value,
+                      source = excluded.source,
+                      updated_at = CURRENT_TIMESTAMP
+    """, (user_id, memory_key, memory_value, source))
+
+
+def maybe_capture_current_work_memory(cursor, user_id, message):
+    """Heuristic: store current work focus only when user states it explicitly."""
+    if not message:
+        return
+    m = message.strip()
+    lower = m.lower()
+    triggers = [
+        "i am working on",
+        "i'm working on",
+        "my project is",
+        "current project",
+        "we are building",
+        "we're building"
+    ]
+    if any(t in lower for t in triggers):
+        upsert_user_memory(cursor, user_id, 'current_work', m[:1200], source='auto')
+
 # ============================================
 # FILE UPLOAD API
 # ============================================
@@ -7028,6 +7103,140 @@ def upload_file():
             'file_type': file_type
         }), 200
         
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/user-dna', methods=['GET'])
+@login_required
+def get_user_dna():
+    """Return the logged-in user's personalization profile."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT dna_profile_text, updated_at
+            FROM user_personalization
+            WHERE user_id = ?
+        """, (current_user.id,))
+        row = cursor.fetchone()
+        conn.close()
+
+        if not row:
+            return jsonify({'dna_profile_text': '', 'updated_at': None}), 200
+
+        return jsonify({
+            'dna_profile_text': row[0] or '',
+            'updated_at': row[1]
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/user-dna/upload', methods=['POST'])
+@login_required
+def upload_user_dna():
+    """Upload a personal profile file (DNA) for this specific user account."""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+
+        file = request.files['file']
+        if not file or file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+
+        ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+        if ext not in {'txt', 'md', 'csv', 'json', 'pdf', 'doc', 'docx'}:
+            return jsonify({'error': 'Unsupported DNA/profile file type'}), 400
+
+        user_folder = os.path.join(UPLOAD_FOLDER, str(current_user.id), 'profile')
+        os.makedirs(user_folder, exist_ok=True)
+
+        filename = secure_filename(file.filename)
+        ts = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+        stored = f"dna_{ts}_{filename}"
+        filepath = os.path.join(user_folder, stored)
+        file.save(filepath)
+
+        extracted = extract_personal_context_text(filepath).strip()
+        if not extracted:
+            return jsonify({'error': 'Could not extract text from file'}), 400
+
+        # Keep bounded profile text size to avoid prompt bloat
+        extracted = extracted[:30000]
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO user_personalization (user_id, dna_profile_text, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(user_id)
+            DO UPDATE SET dna_profile_text = excluded.dna_profile_text,
+                          updated_at = CURRENT_TIMESTAMP
+        """, (current_user.id, extracted))
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': 'Personal profile uploaded for this account',
+            'chars': len(extracted)
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/user-memory', methods=['GET'])
+@login_required
+def get_user_memory():
+    """Get user-scoped memory entries for current account only."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT memory_key, memory_value, source, updated_at
+            FROM user_memory
+            WHERE user_id = ?
+            ORDER BY updated_at DESC
+            LIMIT 50
+        """, (current_user.id,))
+        rows = cursor.fetchall()
+        conn.close()
+
+        return jsonify({
+            'memories': [
+                {
+                    'key': r[0],
+                    'value': r[1],
+                    'source': r[2],
+                    'updated_at': r[3]
+                } for r in rows
+            ]
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/user-memory', methods=['POST'])
+@login_required
+def set_user_memory():
+    """Set/update a memory key for current user account only."""
+    try:
+        data = request.get_json(silent=True) or {}
+        key = (data.get('key') or '').strip().lower()
+        value = (data.get('value') or '').strip()
+
+        if not key or not value:
+            return jsonify({'error': 'key and value are required'}), 400
+        if len(key) > 120:
+            return jsonify({'error': 'key too long'}), 400
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        upsert_user_memory(cursor, current_user.id, key, value[:3000], source='manual')
+        conn.commit()
+        conn.close()
+
+        return jsonify({'success': True}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -8289,6 +8498,43 @@ Remember: You are {agent}. Teach first, then ask. Natural conversation only. No 
         else:
             history = get_conversation_history(current_user.id, agent, limit=10)
 
+            # Load account-scoped personalization and memory (never cross-user)
+            cursor.execute("""
+                SELECT dna_profile_text
+                FROM user_personalization
+                WHERE user_id = ?
+            """, (current_user.id,))
+            dna_row = cursor.fetchone()
+            dna_profile_text = (dna_row[0] or '').strip() if dna_row else ''
+
+            cursor.execute("""
+                SELECT memory_key, memory_value
+                FROM user_memory
+                WHERE user_id = ?
+                ORDER BY updated_at DESC
+                LIMIT 12
+            """, (current_user.id,))
+            memory_rows = cursor.fetchall()
+
+            memory_context_lines = []
+            for mk, mv in memory_rows:
+                if mk and mv:
+                    memory_context_lines.append(f"- {mk}: {mv}")
+
+            if dna_profile_text or memory_context_lines:
+                personalization_context = "\n".join([
+                    "ACCOUNT-SCOPED USER CONTEXT (PRIVATE):",
+                    "Use this only for this authenticated account. Do not generalize to other users.",
+                    "",
+                    f"USER DNA PROFILE:\n{dna_profile_text[:5000]}" if dna_profile_text else "USER DNA PROFILE:\n[Not provided]",
+                    "",
+                    "USER MEMORY:",
+                    ("\n".join(memory_context_lines) if memory_context_lines else "- [No saved memories yet]"),
+                    "",
+                    "Behavior rule: personalize responses to this user context while keeping privacy boundaries strict."
+                ])
+                system_prompt = f"{system_prompt}\n\n{personalization_context}"
+
         # Handle file uploads from FormData (supports multiple files)
         file_info = None
         files_info = []
@@ -8562,6 +8808,19 @@ Remember: You are {agent}. Teach first, then ask. Natural conversation only. No 
         working_mode_instructions = get_working_mode_instructions(working_mode, agent)
         system_prompt = f"{system_prompt}\n\n{working_mode_instructions}"
 
+        # UI readability guardrail: keep default responses compact and scannable.
+        concise_ui_instruction = """
+
+RESPONSE LENGTH + READABILITY RULES (HIGH PRIORITY):
+- Keep replies concise by default: 3 to 6 short paragraphs.
+- Prefer practical direct output over long brainstorming.
+- Use plain conversational sentences with no markdown.
+- Avoid walls of text.
+- If the user asks for detailed/long/step-by-step output, then expand.
+- Otherwise, cap response length to roughly 120-180 words.
+"""
+        system_prompt = f"{system_prompt}\n\n{concise_ui_instruction}"
+
         # ============================================
         # AGGRESSIVE LOOP BREAKER LOGIC
         # ============================================
@@ -8631,6 +8890,12 @@ If you send another question-heavy response, you have FAILED the TEACH FIRST rul
             # Apply default working mode if not provided
             if not working_mode:
                 working_mode = get_default_working_mode(agent)
+
+            # Auto-capture explicit "I'm working on..." statements for this user only
+            try:
+                maybe_capture_current_work_memory(cursor, current_user.id, message)
+            except Exception as mem_e:
+                print(f"⚠️ Could not auto-capture user memory: {mem_e}")
 
             # Get or create conversation for this agent
             cursor.execute("""
