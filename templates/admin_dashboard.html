@@ -201,6 +201,21 @@
             font-size: 13px;
             color: var(--primary);
         }
+        .mini-chart-wrap {
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(225, 204, 153, 0.16);
+        }
+        .mini-chart-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+        #miniUsageChart {
+            width: 100%;
+            height: 42px !important;
+            display: block;
+        }
 
         /* Charts Section */
         .chart-card {
@@ -380,6 +395,10 @@
                     <div class="stat-label">Custom Agents</div>
                     <div class="stat-value" id="customAgents">0</div>
                     <div class="stat-change">+15 this month</div>
+                    <div class="mini-chart-wrap">
+                        <div class="mini-chart-label">Agent activity trend</div>
+                        <canvas id="miniUsageChart" height="42"></canvas>
+                    </div>
                 </div>
             </div>
 
@@ -415,6 +434,9 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
+        let usageChartInstance = null;
+        let miniUsageChartInstance = null;
+
         // Load stats
         async function loadStats() {
             try {
@@ -432,7 +454,11 @@
                     const agentNames = Object.keys(data.agent_usage);
                     const agentCounts = Object.values(data.agent_usage);
 
-                    new Chart(ctx, {
+                    if (usageChartInstance) {
+                        usageChartInstance.destroy();
+                    }
+
+                    usageChartInstance = new Chart(ctx, {
                         type: 'bar',
                         data: {
                             labels: agentNames,
@@ -456,6 +482,37 @@
                                 y: {
                                     beginAtZero: true
                                 }
+                            }
+                        }
+                    });
+
+                    // Compact sparkline-style chart for quick visual scan
+                    const miniCtx = document.getElementById('miniUsageChart').getContext('2d');
+                    if (miniUsageChartInstance) {
+                        miniUsageChartInstance.destroy();
+                    }
+
+                    miniUsageChartInstance = new Chart(miniCtx, {
+                        type: 'line',
+                        data: {
+                            labels: agentNames,
+                            datasets: [{
+                                data: agentCounts,
+                                borderColor: '#c6a66a',
+                                backgroundColor: 'rgba(198, 166, 106, 0.18)',
+                                borderWidth: 2,
+                                pointRadius: 0,
+                                tension: 0.35,
+                                fill: true
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                            scales: {
+                                x: { display: false, grid: { display: false } },
+                                y: { display: false, grid: { display: false }, beginAtZero: true }
                             }
                         }
                     });
