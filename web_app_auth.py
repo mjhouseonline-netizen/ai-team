@@ -53,6 +53,13 @@ app.config['ANTHROPIC_API_KEY'] = os.environ.get('ANTHROPIC_API_KEY')
 app.config['OPENAI_API_KEY'] = os.environ.get('OPENAI_API_KEY')
 app.config['GOOGLE_AI_API_KEY'] = os.environ.get('GOOGLE_AI_API_KEY')
 
+def get_public_base_url():
+    """Public app URL for OAuth callbacks (stable behind proxies)."""
+    explicit = os.environ.get('PUBLIC_BASE_URL') or os.environ.get('APP_BASE_URL')
+    if explicit:
+        return explicit.rstrip('/')
+    return request.host_url.rstrip('/')
+
 # ============================================
 # RATE LIMITING
 # ============================================
@@ -5237,7 +5244,7 @@ def connect_oauth_integration(service):
         conn.close()
 
         # Build OAuth authorization URL
-        callback_url = f"{request.host_url.rstrip('/')}/api/oauth/callback/{service}"
+        callback_url = f"{get_public_base_url()}/api/oauth/callback/{service}"
         scopes = ' '.join(oauth_config['scopes']) if isinstance(oauth_config['scopes'], list) else oauth_config['scopes']
 
         client_id = (
@@ -5318,7 +5325,7 @@ def oauth_callback(service):
             return "<html><body><h2>Service mismatch</h2></body></html>", 400
 
         oauth_config = OAUTH_CONFIG[service]
-        callback_url = f"{request.host_url.rstrip('/')}/api/oauth/callback/{service}"
+        callback_url = f"{get_public_base_url()}/api/oauth/callback/{service}"
         client_id = (
             os.environ.get(f"{service.upper()}_CLIENT_ID")
             or os.environ.get('GOOGLE_CLIENT_ID')
