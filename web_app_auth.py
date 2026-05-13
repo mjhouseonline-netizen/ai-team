@@ -3959,8 +3959,8 @@ INTEGRATIONS_CONFIG = {
         'category': 'productivity',
         'icon': 'N',
         'description': 'Workspace notes, databases, and page automation',
-        'auth_type': 'api_key',
-        'credentials': ['notion_token'],
+        'auth_type': 'oauth',
+        'credentials': [],
         'features': ['create_page', 'update_database', 'append_content', 'sync_notes']
     },
     'google_calendar': {
@@ -5023,6 +5023,13 @@ def log_integration_usage(user_id, integration_key, action, success, error_messa
 # ============================================
 
 OAUTH_CONFIG = {
+    'notion': {
+        'auth_url': 'https://api.notion.com/v1/oauth/authorize',
+        'token_url': 'https://api.notion.com/v1/oauth/token',
+        'scopes': [],
+        'name': 'Notion',
+        'icon': 'N'
+    },
     'github': {
         'auth_url': 'https://github.com/login/oauth/authorize',
         'token_url': 'https://github.com/login/oauth/access_token',
@@ -5112,7 +5119,7 @@ AVAILABLE_INTEGRATIONS = {
     'productivity': {
         'name': 'Productivity',
         'description': 'Connect to productivity tools',
-        'services': ['google_sheets', 'slack'],
+        'services': ['google_sheets', 'slack', 'notion'],
         'icon': '📊'
     }
 }
@@ -5242,16 +5249,25 @@ def connect_oauth_integration(service):
                 'error': f'{oauth_config["name"]} OAuth is not configured yet. Missing {service.upper()}_CLIENT_ID.'
             }), 503
 
-        auth_params = {
-            'client_id': client_id,
-            'redirect_uri': callback_url,
-            'state': state,
-            'scope': scopes,
-            'response_type': 'code',
-            'access_type': 'offline'
-        }
-        if service in ['gmail', 'google_calendar', 'google_sheets']:
-            auth_params['prompt'] = 'consent'
+        if service == 'notion':
+            auth_params = {
+                'owner': 'user',
+                'client_id': client_id,
+                'redirect_uri': callback_url,
+                'response_type': 'code',
+                'state': state
+            }
+        else:
+            auth_params = {
+                'client_id': client_id,
+                'redirect_uri': callback_url,
+                'state': state,
+                'scope': scopes,
+                'response_type': 'code',
+                'access_type': 'offline'
+            }
+            if service in ['gmail', 'google_calendar', 'google_sheets']:
+                auth_params['prompt'] = 'consent'
 
         auth_url = f"{oauth_config['auth_url']}?{urlencode(auth_params)}"
 
@@ -5273,7 +5289,7 @@ def oauth_callback(service):
         error = request.args.get('error')
 
         if error:
-            return f"<html><body><h2>Authorization failed</h2><p>{error}</p><a href='/integrations'>Back to Integrations</a></body></html>", 400
+            return f"<html><body><h2>Authorization failed</h2><p>{error}</p><a href='/connectors'>Back to Connectors</a></body></html>", 400
 
         if not code or not state:
             return "<html><body><h2>Invalid callback</h2><p>Missing code or state</p></body></html>", 400
@@ -5316,18 +5332,35 @@ def oauth_callback(service):
             conn.close()
             return "<html><body><h2>OAuth not configured</h2><p>Missing client credentials on server.</p></body></html>", 503
 
-        token_response = requests.post(
-            oauth_config['token_url'],
-            data={
-                'code': code,
-                'client_id': client_id,
-                'client_secret': client_secret,
-                'redirect_uri': callback_url,
-                'grant_type': 'authorization_code'
-            },
-            headers={'Accept': 'application/json'},
-            timeout=20
-        )
+        if service == 'notion':
+            basic_token = base64.b64encode(f"{client_id}:{client_secret}".encode('utf-8')).decode('utf-8')
+            token_response = requests.post(
+                oauth_config['token_url'],
+                json={
+                    'grant_type': 'authorization_code',
+                    'code': code,
+                    'redirect_uri': callback_url
+                },
+                headers={
+                    'Accept': 'application/json',
+                    'Authorization': f'Basic {basic_token}',
+                    'Content-Type': 'application/json'
+                },
+                timeout=20
+            )
+        else:
+            token_response = requests.post(
+                oauth_config['token_url'],
+                data={
+                    'code': code,
+                    'client_id': client_id,
+                    'client_secret': client_secret,
+                    'redirect_uri': callback_url,
+                    'grant_type': 'authorization_code'
+                },
+                headers={'Accept': 'application/json'},
+                timeout=20
+            )
 
         if token_response.status_code >= 400:
             conn.close()
@@ -5359,6 +5392,14 @@ def oauth_callback(service):
                 profile = profile_response.json()
                 service_email = profile.get('email')
                 service_user_id = profile.get('id')
+        elif service == 'notion':
+            owner_info = token_data.get('owner', {}) if isinstance(token_data, dict) else {}
+            service_user_id = token_data.get('workspace_id') or token_data.get('bot_id')
+            service_email = (
+                token_data.get('workspace_name')
+                or owner_info.get('user', {}).get('name')
+                or 'Notion Workspace'
+            )
 
         cursor.execute("""
             INSERT INTO user_integrations (
@@ -5390,9 +5431,9 @@ def oauth_callback(service):
         <body style="font-family: system-ui; text-align: center; padding: 50px;">
             <h1 style="color: #c6a66a;">Integration Connected</h1>
             <p>Your account is now connected successfully.</p>
-            <p><a href="/integrations" style="background: #c6a66a; color: #111111; padding: 10px 20px; border-radius: 8px; text-decoration: none; display: inline-block; margin-top: 20px;">Back to Integrations</a></p>
+            <p><a href="/connectors" style="background: #c6a66a; color: #111111; padding: 10px 20px; border-radius: 8px; text-decoration: none; display: inline-block; margin-top: 20px;">Back to Connectors</a></p>
             <script>
-                setTimeout(function() { window.location.href = '/integrations'; }, 2000);
+                setTimeout(function() { window.location.href = '/connectors'; }, 2000);
             </script>
         </body>
         </html>

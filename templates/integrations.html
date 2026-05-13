@@ -1040,9 +1040,10 @@ sendMessage();</code></pre>
  </div>
  </div>
 
- <script>
- let allIntegrations = [];
- let currentFilter = 'all';
+<script>
+let allIntegrations = [];
+let currentFilter = 'all';
+let oauthConnectedServices = new Set();
 
  // Main tab switching
  function switchMainTab(tabName) {
@@ -1056,12 +1057,28 @@ sendMessage();</code></pre>
  }
 
  // Load integrations on page load
- async function loadIntegrations() {
- try {
- const response = await fetch('/api/connectors');
- const data = await response.json();
+async function loadIntegrations() {
+try {
+ const [connectorsRes, oauthRes] = await Promise.all([
+ fetch('/api/connectors'),
+ fetch('/api/user-connectors')
+ ]);
+ const data = await connectorsRes.json();
+ const oauthData = await oauthRes.json();
 
  allIntegrations = data.integrations;
+ oauthConnectedServices = new Set(
+ ((oauthData && oauthData.available) ? oauthData.available : [])
+ .filter(item => item.is_connected)
+ .map(item => item.service)
+ );
+
+ allIntegrations = allIntegrations.map(integration => {
+ if (integration.auth_type === 'oauth' && oauthConnectedServices.has(integration.key)) {
+ return { ...integration, is_connected: true };
+ }
+ return integration;
+ });
 
  // Update stats
  document.getElementById('totalIntegrations').textContent = allIntegrations.length;
@@ -1078,10 +1095,10 @@ sendMessage();</code></pre>
  const grid = document.getElementById('integrationsGrid');
  grid.innerHTML = '';
 
- if (integrations.length === 0) {
- grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: white; font-size: 1.2em;">No integrations found</p>';
- return;
- }
+if (integrations.length === 0) {
+ grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: white; font-size: 1.2em;">No connectors found</p>';
+return;
+}
 
  integrations.forEach(integration => {
  const card = document.createElement('div');
@@ -1098,9 +1115,13 @@ sendMessage();</code></pre>
 
  const actionButtons = integration.is_connected ? `
  <button class="btn btn-success" style="flex: 0.5;" onclick="testIntegration('${integration.key}')">Test</button>
- <button class="btn btn-danger" onclick="disconnectIntegration('${integration.key}')">Disconnect</button>
+ ${integration.auth_type === 'oauth'
+ ? `<button class="btn btn-danger" onclick="disconnectOAuth('${integration.key}')">Disconnect</button>`
+ : `<button class="btn btn-danger" onclick="disconnectIntegration('${integration.key}')">Disconnect</button>`}
  ` : `
- <button class="btn btn-primary" onclick="openConnectionModal('${integration.key}')">Connect</button>
+ ${integration.auth_type === 'oauth'
+ ? `<button class="btn btn-primary" onclick="connectOAuth('${integration.key}')">Connect</button>`
+ : `<button class="btn btn-primary" onclick="openConnectionModal('${integration.key}')">Connect</button>`}
  `;
 
  card.innerHTML = `
