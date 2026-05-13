@@ -2874,7 +2874,9 @@ def agent_link(agent_name):
                          current_user=guest,
                          selected_agent=agent_name,
                          is_guest=True,
-                         guest_custom_js=guest_restrictions)
+                         custom_agent_id=0,
+                         custom_agent_name=agent_name,
+                         guest_restrictions=guest_restrictions)
 
 @app.route('/admin/test-custom-link/<share_code>')
 def test_custom_link(share_code):
@@ -3457,9 +3459,10 @@ def settings():
     return render_template('settings.html', user=current_user)
 
 @app.route('/integrations')
+@app.route('/connectors')
 @login_required
 def integrations_page():
-    """Comprehensive integrations management page"""
+    """Comprehensive connectors management page"""
     return render_template('integrations.html', user=current_user)
 
 @app.route('/faq')
@@ -4144,6 +4147,7 @@ INTEGRATIONS_CONFIG = {
 }
 
 @app.route('/api/integrations')
+@app.route('/api/connectors')
 @login_required
 def get_integrations():
     """Get all available integrations and user's connected status"""
@@ -4222,6 +4226,7 @@ def get_integrations():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/integrations/connect', methods=['POST'])
+@app.route('/api/connectors/connect', methods=['POST'])
 @login_required
 def connect_integration():
     """Connect a new integration"""
@@ -4275,6 +4280,7 @@ def connect_integration():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/integrations/<integration_key>/disconnect', methods=['POST'])
+@app.route('/api/connectors/<integration_key>/disconnect', methods=['POST'])
 @login_required
 def disconnect_integration(integration_key):
     """Disconnect an integration"""
@@ -4299,6 +4305,7 @@ def disconnect_integration(integration_key):
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/integrations/<integration_key>/toggle', methods=['POST'])
+@app.route('/api/connectors/<integration_key>/toggle', methods=['POST'])
 @login_required
 def toggle_integration(integration_key):
     """Toggle integration active status"""
@@ -4336,6 +4343,7 @@ def toggle_integration(integration_key):
 
 # Integration action handlers
 @app.route('/api/integrations/<integration_key>/action', methods=['POST'])
+@app.route('/api/connectors/<integration_key>/action', methods=['POST'])
 @login_required
 def execute_integration_action(integration_key):
     """Execute an action with a connected integration"""
@@ -4823,6 +4831,7 @@ INTEGRATION_TEMPLATES = [
 ]
 
 @app.route('/api/integrations/templates')
+@app.route('/api/connectors/templates')
 @login_required
 def get_integration_templates():
     """Get all available integration templates"""
@@ -4862,6 +4871,7 @@ def get_integration_templates():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/integrations/templates/<template_id>/enable', methods=['POST'])
+@app.route('/api/connectors/templates/<template_id>/enable', methods=['POST'])
 @login_required
 def enable_integration_template(template_id):
     """Enable an integration template"""
@@ -4908,6 +4918,7 @@ def enable_integration_template(template_id):
 # ============================================
 
 @app.route('/api/integrations/analytics')
+@app.route('/api/connectors/analytics')
 @login_required
 def get_integration_analytics():
     """Get usage analytics for integrations"""
@@ -5102,6 +5113,7 @@ AVAILABLE_INTEGRATIONS = {
 # ============================================
 
 @app.route('/api/user-integrations', methods=['GET'])
+@app.route('/api/user-connectors', methods=['GET'])
 @login_required
 def get_user_integrations():
     """Get user's OAuth integration connections"""
@@ -5174,6 +5186,7 @@ def get_user_integrations():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/user-integrations/connect/<service>', methods=['POST'])
+@app.route('/api/user-connectors/connect/<service>', methods=['POST'])
 @login_required
 def connect_oauth_integration(service):
     """Start OAuth flow for a service"""
@@ -5380,6 +5393,7 @@ def oauth_callback(service):
         return f"<html><body><h2>Error</h2><p>{str(e)}</p></body></html>", 500
 
 @app.route('/api/user-integrations/<service>', methods=['DELETE'])
+@app.route('/api/user-connectors/<service>', methods=['DELETE'])
 @login_required
 def disconnect_oauth_integration(service):
     """Disconnect an OAuth integration"""
@@ -5718,6 +5732,7 @@ def get_available_integration_actions(user_id):
         return {}
 
 @app.route('/api/integrations/oauth/<integration_key>/start')
+@app.route('/api/connectors/oauth/<integration_key>/start')
 @login_required
 def start_oauth_flow(integration_key):
     """Start OAuth flow for an integration"""

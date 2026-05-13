@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Integrations & Automations - AI Team</title>
+    <title>Connectors & Automations - AI Team</title>
 
     <!-- Premium Design System -->
     <link rel="stylesheet" href="{{ url_for('static', filename='premium-design.css') }}">
@@ -690,17 +690,17 @@
             </div>
         </div>
         <a href="/dashboard" class="back-button">
-            ← Back to Dashboard
+            â† Back to Dashboard
         </a>
 
         <div class="header">
-            <h1>🔌 Integrations & Automations</h1>
-            <p>Connect your favorite tools, automate workflows, and extend AI Team with powerful integrations</p>
+            <h1>ðŸ”Œ Connectors & Automations</h1>
+            <p>Connect your favorite tools, automate workflows, and extend AI Team with powerful connectors</p>
 
             <div class="stats-bar">
                 <div class="stat-item">
                     <div class="stat-number" id="totalIntegrations">0</div>
-                    <div class="stat-label">Available Integrations</div>
+                    <div class="stat-label">Available Connectors</div>
                 </div>
                 <div class="stat-item">
                     <div class="stat-number" id="connectedIntegrations">0</div>
@@ -716,39 +716,39 @@
         <!-- Tab Navigation -->
         <div class="tab-navigation">
             <button class="tab-btn active" onclick="switchMainTab('agents')">
-                🤖 Agent Integrations
+                ðŸ¤– Agent Connectors
             </button>
             <button class="tab-btn" onclick="switchMainTab('services')">
-                🔌 Service Integrations
+                ðŸ”Œ Service Connectors
             </button>
             <button class="tab-btn" onclick="switchMainTab('api')">
-                🔑 API & Automation
+                ðŸ”‘ API & Automation
             </button>
             <button class="tab-btn" onclick="switchMainTab('webhooks')">
-                🔗 Webhooks
+                ðŸ”— Webhooks
             </button>
         </div>
 
-        <!-- AGENT INTEGRATIONS TAB -->
+        <!-- Agent Connectors TAB -->
         <div id="agents-tab" class="tab-content active">
             <div style="background: #141310; border-radius: 12px; padding: 25px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);">
-                <h2 style="margin: 0 0 10px 0; color: #1a202c; font-size: 1.5em;">🔐 OAuth Account Connections</h2>
+                <h2 style="margin: 0 0 10px 0; color: #1a202c; font-size: 1.5em;">ðŸ” OAuth Account Connections</h2>
                 <p style="color: #718096; margin: 0 0 20px 0;">Connect your accounts to enable your AI agents to access external services like email, social media, and calendars.</p>
 
                 <div id="neededIntegrationsAlert" style="display: none; background: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
-                    <strong style="color: #92400e;">⚠️ Your agents need these connections:</strong>
+                    <strong style="color: #92400e;">âš ï¸ Your agents need these connections:</strong>
                     <div id="neededCategories" style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;"></div>
                 </div>
             </div>
 
             <div class="integrations-grid" id="agentIntegrationsGrid">
                 <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #718096;">
-                    <p>⏳ Loading integrations...</p>
+                    <p>â³ Loading connectors...</p>
                 </div>
             </div>
         </div>
 
-        <!-- SERVICE INTEGRATIONS TAB -->
+        <!-- Service Connectors TAB -->
         <div id="services-tab" class="tab-content">
             <div class="category-filter">
                 <div class="filter-buttons">
@@ -776,28 +776,28 @@
         <div id="api-tab" class="tab-content">
             <!-- API Key Section -->
             <div class="section">
-                <h2>🔑 Your API Key</h2>
+                <h2>ðŸ”‘ Your API Key</h2>
                 <p>Use this key to authenticate API requests and integrate with external services.</p>
 
                 <div class="api-key-container">
                     <strong>API Key:</strong>
-                    <div class="api-key" id="apiKey" data-hidden="true">••••••••••••••••••••••••••••••••</div>
+                    <div class="api-key" id="apiKey" data-hidden="true">â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢</div>
                     <div style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
-                        <button class="btn btn-secondary" onclick="toggleApiKeyVisibility()" id="toggleApiKeyBtn">👁️ Show Key</button>
-                        <button class="btn btn-copy" onclick="copyApiKey()">📋 Copy Key</button>
-                        <button class="btn btn-danger" onclick="regenerateApiKey()">🔄 Regenerate Key</button>
+                        <button class="btn btn-secondary" onclick="toggleApiKeyVisibility()" id="toggleApiKeyBtn">ðŸ‘ï¸ Show Key</button>
+                        <button class="btn btn-copy" onclick="copyApiKey()">ðŸ“‹ Copy Key</button>
+                        <button class="btn btn-danger" onclick="regenerateApiKey()">ðŸ”„ Regenerate Key</button>
                     </div>
                 </div>
 
                 <div class="alert alert-warning">
-                    <strong>⚠️ Keep Your API Key Secret!</strong><br>
+                    <strong>âš ï¸ Keep Your API Key Secret!</strong><br>
                     Don't share your API key publicly or commit it to version control. Anyone with your key can use your AI Team quota.
                 </div>
             </div>
 
             <!-- API Documentation -->
             <div class="section">
-                <h2>📚 API Documentation</h2>
+                <h2>ðŸ“š API Documentation</h2>
 
                 <div class="code-tabs">
                     <div class="code-tab active" onclick="showCodeTab('curl')">cURL</div>
@@ -923,9 +923,9 @@ sendMessage();</code></pre>
 
             <!-- Rate Limits -->
             <div class="section">
-                <h2>⏱️ Rate Limits & Quotas</h2>
+                <h2>â±ï¸ Rate Limits & Quotas</h2>
                 <div class="alert alert-warning" style="margin-bottom: 20px;">
-                    <strong>🔑 API Access Required:</strong> API and automation features are only available for <strong>Team ($79/mo)</strong> and <strong>Enterprise (Custom)</strong> subscribers.
+                    <strong>ðŸ”‘ API Access Required:</strong> API and automation features are only available for <strong>Team ($79/mo)</strong> and <strong>Enterprise (Custom)</strong> subscribers.
                 </div>
 
                 <p>API usage follows your subscription tier limits:</p>
@@ -942,19 +942,19 @@ sendMessage();</code></pre>
                         <p style="margin-top: 10px; opacity: 0.8; color: #9ca3af;">No API Access</p>
                     </div>
                     <div class="stat-item" style="border: 2px solid #c6a66a;">
-                        <div class="stat-label">Team Tier ⭐</div>
+                        <div class="stat-label">Team Tier â­</div>
                         <div class="stat-number" style="font-size: 1.5em;">10,000/mo</div>
-                        <p style="margin-top: 5px; color: #c6a66a; font-weight: 600;">✅ API Access</p>
+                        <p style="margin-top: 5px; color: #c6a66a; font-weight: 600;">âœ… API Access</p>
                     </div>
                     <div class="stat-item" style="border: 2px solid #c6a66a;">
-                        <div class="stat-label">Enterprise Tier 🚀</div>
+                        <div class="stat-label">Enterprise Tier ðŸš€</div>
                         <div class="stat-number" style="font-size: 1.5em;">Custom</div>
-                        <p style="margin-top: 5px; color: #c6a66a; font-weight: 600;">✅ Full API Access</p>
+                        <p style="margin-top: 5px; color: #c6a66a; font-weight: 600;">âœ… Full API Access</p>
                     </div>
                 </div>
 
                 <div class="alert alert-info" style="margin-top: 20px;">
-                    <strong>💡 Note:</strong> API requests count toward your message allowance. Upgrade to Team or Enterprise for API access and higher limits.
+                    <strong>ðŸ’¡ Note:</strong> API requests count toward your message allowance. Upgrade to Team or Enterprise for API access and higher limits.
                 </div>
             </div>
         </div>
@@ -962,25 +962,25 @@ sendMessage();</code></pre>
         <!-- WEBHOOKS TAB -->
         <div id="webhooks-tab" class="tab-content">
             <div class="section">
-                <h2>🔗 Webhook Management</h2>
+                <h2>ðŸ”— Webhook Management</h2>
                 <p>Webhooks notify your external services (like Make.com or Zapier) when events occur in AI Team.</p>
 
                 <button class="btn btn-primary" onclick="showAddWebhook()" style="margin: 20px 0;">
-                    ➕ Add Webhook
+                    âž• Add Webhook
                 </button>
 
                 <div id="webhooksList" style="margin-top: 20px;">
                     <p style="opacity: 0.8;">Loading webhooks...</p>
                 </div>
 
-                <h3 style="margin-top: 30px;">📋 Available Events:</h3>
+                <h3 style="margin-top: 30px;">ðŸ“‹ Available Events:</h3>
                 <ul style="list-style: none; padding: 0;">
                     <li style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><code>message.completed</code> - When an AI agent responds to a message</li>
                     <li style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><code>image.generated</code> - When an AI image is created</li>
                     <li style="padding: 10px 0;"><code>agent.response</code> - Any agent response event</li>
                 </ul>
 
-                <h3>📄 Webhook Payload Example:</h3>
+                <h3>ðŸ“„ Webhook Payload Example:</h3>
                 <div class="code-block">
                     <pre><code>{
   "event": "message.completed",
@@ -1017,7 +1017,7 @@ sendMessage();</code></pre>
     <!-- Add Webhook Modal -->
     <div id="addWebhookModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99999; padding: 20px; overflow-y: auto;">
         <div style="max-width: 600px; margin: 100px auto; background: #141310; padding: 40px; border-radius: 15px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
-            <h2 style="color: #c6a66a; margin-bottom: 20px;">➕ Add Webhook</h2>
+            <h2 style="color: #c6a66a; margin-bottom: 20px;">âž• Add Webhook</h2>
 
             <div style="margin: 20px 0;">
                 <label style="display: block; margin-bottom: 10px; font-weight: 600; color: #374151;">Webhook URL:</label>
@@ -1058,7 +1058,7 @@ sendMessage();</code></pre>
         // Load integrations on page load
         async function loadIntegrations() {
             try {
-                const response = await fetch('/api/integrations');
+                const response = await fetch('/api/connectors');
                 const data = await response.json();
 
                 allIntegrations = data.integrations;
@@ -1067,7 +1067,7 @@ sendMessage();</code></pre>
                 allIntegrations.unshift({
                     key: 'notion',
                     name: 'Notion',
-                    icon: '📝',
+                    icon: 'ðŸ“',
                     category: 'productivity',
                     description: 'Connect your Notion workspace to save conversations, create pages, and sync data automatically.',
                     features: ['Save Conversations', 'Create Pages', 'Update Databases', 'Sync Data'],
@@ -1083,7 +1083,7 @@ sendMessage();</code></pre>
                 // Render integrations
                 renderIntegrations(allIntegrations);
             } catch (error) {
-                console.error('Error loading integrations:', error);
+                console.error('Error Loading connectors:', error);
             }
         }
 
@@ -1106,8 +1106,8 @@ sendMessage();</code></pre>
                 ).join('');
 
                 const badge = integration.featured ?
-                    '<div class="featured-badge">⭐ Featured</div>' :
-                    (integration.is_connected ? '<div class="connected-badge">✓ Connected</div>' : '');
+                    '<div class="featured-badge">â­ Featured</div>' :
+                    (integration.is_connected ? '<div class="connected-badge">âœ“ Connected</div>' : '');
 
                 const actionButtons = integration.is_connected ? `
                     <button class="btn btn-success" style="flex: 0.5;" onclick="testIntegration('${integration.key}')">Test</button>
@@ -1216,7 +1216,7 @@ sendMessage();</code></pre>
             }
 
             try {
-                const response = await fetch('/api/integrations/connect', {
+                const response = await fetch('/api/connectors/connect', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
@@ -1228,14 +1228,14 @@ sendMessage();</code></pre>
                 const result = await response.json();
 
                 if (response.ok) {
-                    alert(`✅ ${result.message}`);
+                    alert(`âœ… ${result.message}`);
                     closeModal();
                     loadIntegrations(); // Reload to show updated status
                 } else {
-                    alert(`❌ Error: ${result.error}`);
+                    alert(`âŒ Error: ${result.error}`);
                 }
             } catch (error) {
-                alert('❌ Connection failed: ' + error.message);
+                alert('âŒ Connection failed: ' + error.message);
             }
         }
 
@@ -1243,20 +1243,20 @@ sendMessage();</code></pre>
             if (!confirm('Are you sure you want to disconnect this integration?')) return;
 
             try {
-                const response = await fetch(`/api/integrations/${integrationKey}/disconnect`, {
+                const response = await fetch(`/api/connectors/${integrationKey}/disconnect`, {
                     method: 'POST'
                 });
 
                 const result = await response.json();
 
                 if (response.ok) {
-                    alert('✅ Integration disconnected');
+                    alert('âœ… Integration disconnected');
                     loadIntegrations();
                 } else {
-                    alert('❌ Error: ' + result.error);
+                    alert('âŒ Error: ' + result.error);
                 }
             } catch (error) {
-                alert('❌ Disconnection failed: ' + error.message);
+                alert('âŒ Disconnection failed: ' + error.message);
             }
         }
 
@@ -1265,7 +1265,7 @@ sendMessage();</code></pre>
             const action = integration.features[0]; // Use first available feature for testing
 
             try {
-                const response = await fetch(`/api/integrations/${integrationKey}/action`, {
+                const response = await fetch(`/api/connectors/${integrationKey}/action`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
@@ -1281,12 +1281,12 @@ sendMessage();</code></pre>
                 const result = await response.json();
 
                 if (response.ok) {
-                    alert(`✅ Integration test successful!\n\n${result.message || JSON.stringify(result, null, 2)}`);
+                    alert(`âœ… Integration test successful!\n\n${result.message || JSON.stringify(result, null, 2)}`);
                 } else {
-                    alert(`❌ Test failed: ${result.error}`);
+                    alert(`âŒ Test failed: ${result.error}`);
                 }
             } catch (error) {
-                alert('❌ Test failed: ' + error.message);
+                alert('âŒ Test failed: ' + error.message);
             }
         }
 
@@ -1302,7 +1302,7 @@ sendMessage();</code></pre>
                     actualApiKey = data.api_key;
                     // Keep it hidden by default
                     document.getElementById('apiKey').setAttribute('data-hidden', 'true');
-                    document.getElementById('apiKey').textContent = '••••••••••••••••••••••••••••••••';
+                    document.getElementById('apiKey').textContent = 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢';
                 } else {
                     await regenerateApiKey();
                 }
@@ -1321,12 +1321,12 @@ sendMessage();</code></pre>
                 // Show the key
                 apiKeyElement.textContent = actualApiKey;
                 apiKeyElement.setAttribute('data-hidden', 'false');
-                toggleBtn.textContent = '🙈 Hide Key';
+                toggleBtn.textContent = 'ðŸ™ˆ Hide Key';
             } else {
                 // Hide the key
-                apiKeyElement.textContent = '••••••••••••••••••••••••••••••••';
+                apiKeyElement.textContent = 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢';
                 apiKeyElement.setAttribute('data-hidden', 'true');
-                toggleBtn.textContent = '👁️ Show Key';
+                toggleBtn.textContent = 'ðŸ‘ï¸ Show Key';
             }
         }
 
@@ -1355,7 +1355,7 @@ sendMessage();</code></pre>
                     // Show the new key after regeneration
                     document.getElementById('apiKey').textContent = actualApiKey;
                     document.getElementById('apiKey').setAttribute('data-hidden', 'false');
-                    document.getElementById('toggleApiKeyBtn').textContent = '🙈 Hide Key';
+                    document.getElementById('toggleApiKeyBtn').textContent = 'ðŸ™ˆ Hide Key';
                     alert('API key regenerated successfully!');
                 } else {
                     alert('Error regenerating API key');
@@ -1405,7 +1405,7 @@ sendMessage();</code></pre>
 
                     data.webhooks.forEach(webhook => {
                         const statusColor = webhook.is_active ? '#48bb78' : '#f56565';
-                        const statusText = webhook.is_active ? '✅ Active' : '⏸️ Inactive';
+                        const statusText = webhook.is_active ? 'âœ… Active' : 'â¸ï¸ Inactive';
 
                         html += `
                             <div style="background: #0f0f0d; padding: 20px; border-radius: 10px; border: 2px solid #e5e7eb;">
@@ -1422,10 +1422,10 @@ sendMessage();</code></pre>
                                 </div>
                                 <div style="display: flex; gap: 10px;">
                                     <button onclick="toggleWebhook(${webhook.id})" class="btn btn-primary" style="flex: 1;">
-                                        ${webhook.is_active ? '⏸️ Deactivate' : '▶️ Activate'}
+                                        ${webhook.is_active ? 'â¸ï¸ Deactivate' : 'â–¶ï¸ Activate'}
                                     </button>
                                     <button onclick="deleteWebhook(${webhook.id})" class="btn btn-danger" style="flex: 1;">
-                                        🗑️ Delete
+                                        ðŸ—‘ï¸ Delete
                                     </button>
                                 </div>
                             </div>
@@ -1535,7 +1535,7 @@ sendMessage();</code></pre>
             }
         }
 
-        // Agent Integrations (OAuth) Management
+        // Agent Connectors (OAuth) Management
         async function loadAgentIntegrations() {
             try {
                 const response = await fetch('/api/user-integrations');
@@ -1549,10 +1549,10 @@ sendMessage();</code></pre>
                     neededAlert.style.display = 'block';
                     neededCategoriesDiv.innerHTML = data.needed_categories.map(cat => {
                         const categoryNames = {
-                            'email': '📧 Email',
-                            'social_media': '📱 Social Media',
-                            'meetings': '🎥 Meetings',
-                            'productivity': '📊 Productivity'
+                            'email': 'ðŸ“§ Email',
+                            'social_media': 'ðŸ“± Social Media',
+                            'meetings': 'ðŸŽ¥ Meetings',
+                            'productivity': 'ðŸ“Š Productivity'
                         };
                         return `<span style="background: #141310; padding: 8px 15px; border-radius: 6px; font-weight: 600; color: #c6a66a;">${categoryNames[cat] || cat}</span>`;
                     }).join('');
@@ -1563,11 +1563,11 @@ sendMessage();</code></pre>
                 if (data.available && data.available.length > 0) {
                     grid.innerHTML = data.available.map(integration => {
                         const badge = integration.is_connected
-                            ? '<div class="connected-badge">✓ Connected</div>'
-                            : (integration.is_needed ? '<div class="featured-badge">⚠️ Required</div>' : '');
+                            ? '<div class="connected-badge">âœ“ Connected</div>'
+                            : (integration.is_needed ? '<div class="featured-badge">âš ï¸ Required</div>' : '');
 
                         const actionButtons = integration.is_connected ? `
-                            <button class="btn btn-success" style="flex: 0.5;" disabled>✓ Connected</button>
+                            <button class="btn btn-success" style="flex: 0.5;" disabled>âœ“ Connected</button>
                             <button class="btn btn-danger" onclick="disconnectOAuth('${integration.service}')">Disconnect</button>
                         ` : `
                             <button class="btn btn-primary" onclick="connectOAuth('${integration.service}')">Connect ${integration.name}</button>
@@ -1575,7 +1575,7 @@ sendMessage();</code></pre>
 
                         const connectionInfo = integration.is_connected && integration.connection_info
                             ? `<div style="font-size: 0.85em; color: #d8cebd; margin-top: 10px;">
-                                   ${integration.connection_info.email ? `<div>📧 ${integration.connection_info.email}</div>` : ''}
+                                   ${integration.connection_info.email ? `<div>ðŸ“§ ${integration.connection_info.email}</div>` : ''}
                                    <div>Connected: ${new Date(integration.connection_info.connected_at).toLocaleDateString()}</div>
                                </div>`
                             : '';
@@ -1602,12 +1602,12 @@ sendMessage();</code></pre>
                         `;
                     }).join('');
                 } else {
-                    grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #d8cebd;"><p>No OAuth integrations available</p></div>';
+                    grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #d8cebd;"><p>No OAuth connectors available</p></div>';
                 }
 
             } catch (error) {
-                console.error('Error loading agent integrations:', error);
-                document.getElementById('agentIntegrationsGrid').innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #f56565;"><p>Error loading integrations</p></div>';
+                console.error('Error loading Agent Connectors:', error);
+                document.getElementById('agentIntegrationsGrid').innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #f56565;"><p>Error Loading connectors</p></div>';
             }
         }
 
@@ -1682,6 +1682,7 @@ sendMessage();</code></pre>
     <script src="{{ url_for('static', filename='onboarding-guide.js') }}"></script>
 </body>
 </html>
+
 
 
 

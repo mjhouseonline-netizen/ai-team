@@ -435,11 +435,20 @@
  min-width: clamp(300px, 50vw, 500px) !important;
  }
 
- /* Guest mode with collapsed sidebar - MUST come after default to override */
- body.guest-mode .sidebar.collapsed ~ .main-content {
- left: var(--sidebar-collapsed-width) !important;
- width: calc(100vw - var(--sidebar-collapsed-width)) !important;
- min-width: 300px !important;
+/* Guest mode with collapsed sidebar - MUST come after default to override */
+body.guest-mode .sidebar.collapsed ~ .main-content {
+left: var(--sidebar-collapsed-width) !important;
+width: calc(100vw - var(--sidebar-collapsed-width)) !important;
+min-width: 300px !important;
+}
+
+ body.guest-mode {
+ --bg-main: #0f0f0d;
+ --bg-secondary: #141310;
+ --bg-hover: #1c1a15;
+ --text-primary: #efe4d0;
+ --text-secondary: #d8cebd;
+ --border: rgba(225, 204, 153, 0.2);
  }
  
  body.guest-mode .header {
@@ -459,23 +468,23 @@
  grid-row: 1;
  }
 
- body.guest-mode .chat-container {
- grid-row: 2;
- overflow-y: auto;
- min-height: 400px; /* Ensure it has some height */
- background: #141310 !important;
- display: block !important;
- position: relative !important;
- z-index: 2 !important;
- visibility: visible !important;
+body.guest-mode .chat-container {
+grid-row: 2;
+overflow-y: auto;
+min-height: 400px; /* Ensure it has some height */
+background: #0f0f0d !important;
+display: block !important;
+position: relative !important;
+z-index: 2 !important;
+visibility: visible !important;
  opacity: 1 !important;
  width: 100% !important;
  box-sizing: border-box !important;
  }
  
- body.guest-mode .input-container {
- grid-row: 3;
- background: #141310 !important;
+body.guest-mode .input-container {
+grid-row: 3;
+background: #141310 !important;
  display: block !important;
  position: relative !important;
  z-index: 2 !important;
@@ -484,6 +493,7 @@
  min-height: 80px !important;
  width: 100% !important;
  box-sizing: border-box !important;
+ border-top: 1px solid rgba(225, 204, 153, 0.2) !important;
  }
 
  /* Header */
@@ -1001,15 +1011,15 @@
  margin: 0 auto;
  }
 
- .welcome h2 {
+.welcome h2 {
  font-size: 28px;
- color: var(--text-primary);
+ color: #c6a66a;
  margin-bottom: 8px;
  }
 
- .welcome p {
+.welcome p {
  font-size: 16px;
- color: var(--text-secondary);
+ color: #d8cebd;
  }
 
  /* Messages - ChatGPT Style */
@@ -3392,22 +3402,21 @@ color: #f1dfad;
  visibility: visible !important;
  opacity: 1 !important;
  padding: 12px 24px !important;
- border-bottom: 1px solid #e5e7eb !important;
+ border-bottom: 1px solid rgba(225, 204, 153, 0.2) !important;
  `;
- // Force all children visible with color
+ // Force all children visible
  header.querySelectorAll('*').forEach(el => {
  el.style.visibility = 'visible';
  el.style.opacity = '1';
- el.style.color = '#000000';
  });
  console.log(' Header forced visible in grid row 1');
  }
  
  if (chat) {
- console.log(' Chat container found, forcing visible with blue bg...');
+ console.log(' Chat container found, forcing dark luxury styling...');
  chat.style.cssText = `
  grid-row: 2 !important;
- background: #e0f0ff !important;
+ background: #0f0f0d !important;
  display: block !important;
  position: relative !important;
  z-index: 15 !important;
@@ -3416,11 +3425,10 @@ color: #f1dfad;
  overflow-y: auto !important;
  padding: 20px !important;
  `;
- // Force all children visible with dark text
+ // Force all children visible
  chat.querySelectorAll('*').forEach(el => {
  el.style.visibility = 'visible';
  el.style.opacity = '1';
- el.style.color = '#000000';
  });
  console.log(' Chat forced visible in grid row 2');
  }
@@ -3436,7 +3444,7 @@ color: #f1dfad;
  visibility: visible !important;
  opacity: 1 !important;
  padding: 16px 24px !important;
- border-top: 1px solid #e5e7eb !important;
+ border-top: 1px solid rgba(225, 204, 153, 0.2) !important;
  `;
  // Force all children visible
  input.querySelectorAll('*').forEach(el => {
@@ -3451,12 +3459,10 @@ color: #f1dfad;
  welcome.style.visibility = 'visible';
  welcome.style.opacity = '1';
  welcome.style.display = 'block';
- welcome.querySelectorAll('*').forEach(el => {
- el.style.visibility = 'visible';
- el.style.opacity = '1';
- el.style.color = '#000000';
- el.style.display = 'block';
- });
+ const h2 = welcome.querySelector('h2');
+ const p = welcome.querySelector('p');
+ if (h2) h2.style.color = '#c6a66a';
+ if (p) p.style.color = '#d8cebd';
  }
 
  console.log(' Guest mode force complete - all elements styled');
