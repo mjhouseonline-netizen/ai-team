@@ -7,6 +7,7 @@
 
     <!-- Premium Design System -->
     <link rel="stylesheet" href="{{ url_for('static', filename='premium-design.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='onboarding-guide.css') }}">
 
     <style>
         * {
@@ -643,10 +644,51 @@
             border-color: rgba(225, 204, 153, 0.24) !important;
             background: #0f0f0d !important;
         }
+        .page-guide {
+            background: #141310;
+            border: 1px solid rgba(225, 204, 153, 0.22);
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin-bottom: 16px;
+        }
+        .page-guide h3 {
+            color: #c6a66a !important;
+            font-size: 15px;
+            margin-bottom: 8px;
+        }
+        .page-guide p {
+            color: #d8cebd !important;
+            font-size: 13px;
+            margin: 0 0 10px 0;
+        }
+        .page-guide-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .page-guide-btn {
+            border: 1px solid rgba(225, 204, 153, 0.24);
+            background: #1b1711;
+            color: #efe4d0;
+            border-radius: 7px;
+            padding: 7px 10px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .page-guide-btn.primary {
+            background: #c6a66a;
+            border-color: #c6a66a;
+            color: #14110b;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
     <div class="container">
+        <div class="onboarding-guide" data-guide-key="integrations">
+            <h3>How To Use This Page</h3>
+            <p>Start by connecting the tools your agents need, then add webhooks and API automation when you are ready.</p>
+            <div class="onboarding-guide-actions">
+                <button class="onboarding-guide-btn primary" data-guide-action="dismiss">Got it</button>
+                <button class="onboarding-guide-btn" data-guide-action="hide">Don't show again</button>
+            </div>
+        </div>
         <a href="/dashboard" class="back-button">
             ← Back to Dashboard
         </a>
@@ -1637,6 +1679,7 @@ sendMessage();</code></pre>
             await loadWebhooks();
         });
     </script>
+    <script src="{{ url_for('static', filename='onboarding-guide.js') }}"></script>
 </body>
 </html>
 
