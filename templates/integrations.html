@@ -1063,19 +1063,6 @@ sendMessage();</code></pre>
 
  allIntegrations = data.integrations;
 
- // Add Notion as featured integration
- allIntegrations.unshift({
- key: 'notion',
- name: 'Notion',
- icon: '',
- category: 'productivity',
- description: 'Connect your Notion workspace to save conversations, create pages, and sync data automatically.',
- features: ['Save Conversations', 'Create Pages', 'Update Databases', 'Sync Data'],
- credentials_required: ['notion_token'],
- is_connected: false,
- featured: true
- });
-
  // Update stats
  document.getElementById('totalIntegrations').textContent = allIntegrations.length;
  document.getElementById('connectedIntegrations').textContent = data.connected;

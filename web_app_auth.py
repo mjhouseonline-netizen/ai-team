@@ -3954,6 +3954,15 @@ INTEGRATIONS_CONFIG = {
         'credentials': ['access_token', 'refresh_token'],
         'features': ['create_document', 'append_text', 'get_content']
     },
+    'notion': {
+        'name': 'Notion',
+        'category': 'productivity',
+        'icon': 'N',
+        'description': 'Workspace notes, databases, and page automation',
+        'auth_type': 'api_key',
+        'credentials': ['notion_token'],
+        'features': ['create_page', 'update_database', 'append_content', 'sync_notes']
+    },
     'google_calendar': {
         'name': 'Google Calendar',
         'category': 'productivity',
