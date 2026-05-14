@@ -4409,15 +4409,39 @@ def execute_integration_action(integration_key):
         """, (current_user.id, integration_key))
 
         result = cursor.fetchone()
+
+        credentials = {}
+        is_active = False
+
+        if result:
+            credentials = json.loads(result[0]) if result[0] else {}
+            is_active = bool(result[1])
+        else:
+            # Fallback for OAuth connectors persisted in user_integrations
+            cursor.execute("""
+                SELECT access_token, refresh_token, token_expiry, is_active
+                FROM user_integrations
+                WHERE user_id = ? AND service = ?
+                ORDER BY connected_at DESC
+                LIMIT 1
+            """, (current_user.id, integration_key))
+            oauth_row = cursor.fetchone()
+            if oauth_row:
+                credentials = {
+                    'access_token': oauth_row[0],
+                    'refresh_token': oauth_row[1],
+                    'token_expiry': oauth_row[2]
+                }
+                is_active = bool(oauth_row[3])
+
         conn.close()
 
-        if not result:
+        if not credentials:
             return jsonify({'error': 'Integration not connected'}), 404
 
-        if not result[1]:
+        if not is_active:
             return jsonify({'error': 'Integration is disabled'}), 403
 
-        credentials = json.loads(result[0])
         data = request.json
         action = data.get('action')
         params = data.get('params', {})
@@ -4674,6 +4698,106 @@ def execute_integration_handler(integration_key, action, credentials, params):
         if action == 'append_row':
             # This would use Google Sheets API
             return {'success': True, 'message': 'Row appended (demo mode)'}
+
+    # Notion
+    elif integration_key == 'notion':
+        if action in ['create_page', 'append_content', 'sync_notes', 'update_database']:
+            access_token = credentials.get('access_token')
+            if not access_token:
+                return {'success': False, 'error': 'Missing Notion access token'}
+
+            database_id = (
+                params.get('database_id')
+                or credentials.get('database_id')
+                or os.environ.get('NOTION_DATABASE_ID')
+            )
+
+            title_text = params.get('title') or f"AI Team Note - {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}"
+            body_text = params.get('body') or params.get('message') or 'Saved from AI Team connector test.'
+
+            headers = {
+                'Authorization': f'Bearer {access_token}',
+                'Notion-Version': '2022-06-28',
+                'Content-Type': 'application/json'
+            }
+
+            payload = {
+                "parent": {"type": "workspace", "workspace": True},
+                "properties": {
+                    "title": {
+                        "title": [{"type": "text", "text": {"content": title_text}}]
+                    }
+                },
+                "children": [
+                    {
+                        "object": "block",
+                        "type": "paragraph",
+                        "paragraph": {"rich_text": [{"type": "text", "text": {"content": body_text}}]}
+                    }
+                ]
+            }
+
+            if database_id:
+                payload = {
+                    "parent": {"database_id": database_id},
+                    "properties": {
+                        "Name": {
+                            "title": [{"type": "text", "text": {"content": title_text}}]
+                        }
+                    },
+                    "children": [
+                        {
+                            "object": "block",
+                            "type": "paragraph",
+                            "paragraph": {"rich_text": [{"type": "text", "text": {"content": body_text}}]}
+                        }
+                    ]
+                }
+
+            response = requests.post(
+                'https://api.notion.com/v1/pages',
+                headers=headers,
+                json=payload,
+                timeout=30
+            )
+
+            # Fallback: if database payload fails (schema/property mismatch), save to workspace page.
+            if response.status_code not in (200, 201) and database_id:
+                workspace_payload = {
+                    "parent": {"type": "workspace", "workspace": True},
+                    "properties": {
+                        "title": {
+                            "title": [{"type": "text", "text": {"content": title_text}}]
+                        }
+                    },
+                    "children": [
+                        {
+                            "object": "block",
+                            "type": "paragraph",
+                            "paragraph": {"rich_text": [{"type": "text", "text": {"content": body_text}}]}
+                        }
+                    ]
+                }
+                response = requests.post(
+                    'https://api.notion.com/v1/pages',
+                    headers=headers,
+                    json=workspace_payload,
+                    timeout=30
+                )
+
+            if response.status_code not in (200, 201):
+                return {
+                    'success': False,
+                    'error': f"Notion API error ({response.status_code})",
+                    'details': response.text[:300]
+                }
+
+            page = response.json()
+            return {
+                'success': True,
+                'message': 'Notion test successful',
+                'page_url': page.get('url')
+            }
 
     # Gmail
     elif integration_key == 'gmail':
