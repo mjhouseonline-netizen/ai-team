@@ -8,7 +8,7 @@ import sys
 import secrets
 import string
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
 from email.message import EmailMessage
 from flask import Flask, request, jsonify, session, redirect, url_for, render_template, send_from_directory, flash
@@ -4204,17 +4204,31 @@ def get_integrations():
 
         # Merge in OAuth-based connector connections (stored in user_integrations)
         cursor.execute("""
-            SELECT service, is_active, connected_at
+            SELECT service, is_active, connected_at, token_expiry
             FROM user_integrations
             WHERE user_id = ?
         """, (current_user.id,))
 
+        now_utc = datetime.utcnow()
         for row in cursor.fetchall():
-            service, is_active, connected_at = row
+            service, is_active, connected_at, token_expiry = row
+            needs_reconnect = False
+            if token_expiry:
+                try:
+                    expires_at = datetime.fromisoformat(str(token_expiry).replace('Z', '+00:00'))
+                    # Normalize any timezone-aware value to naive UTC for comparison
+                    if expires_at.tzinfo is not None:
+                        expires_at = expires_at.astimezone(timezone.utc).replace(tzinfo=None)
+                    needs_reconnect = expires_at <= now_utc
+                except Exception:
+                    needs_reconnect = False
+
             connected_integrations[service] = {
                 'credentials': {},
                 'is_active': bool(is_active),
-                'connected_at': connected_at
+                'connected_at': connected_at,
+                'token_expiry': token_expiry,
+                'needs_reconnect': needs_reconnect
             }
 
         conn.close()
@@ -4231,9 +4245,12 @@ def get_integrations():
                 'auth_type': config['auth_type'],
                 'credentials_required': config['credentials'],
                 'features': config['features'],
-                'is_connected': key in connected_integrations,
+                # "Connected" persists until user explicitly disconnects.
+                'is_connected': key in connected_integrations and bool(connected_integrations.get(key, {}).get('is_active', False)),
                 'is_active': connected_integrations.get(key, {}).get('is_active', False),
-                'connected_at': connected_integrations.get(key, {}).get('connected_at')
+                'connected_at': connected_integrations.get(key, {}).get('connected_at'),
+                'token_expiry': connected_integrations.get(key, {}).get('token_expiry'),
+                'needs_reconnect': connected_integrations.get(key, {}).get('needs_reconnect', False)
             }
             integrations_list.append(integration_info)
 
@@ -5167,17 +5184,31 @@ def get_user_integrations():
             WHERE user_id = ?
         """, (current_user.id,))
 
+        now_utc = datetime.utcnow()
         connected = {}
         for row in cursor.fetchall():
-            service, email, user_id, expiry, connected, last_used, is_active = row
+            service, email, user_id, expiry, connected_at, last_used, is_active = row
+            active = bool(is_active)
+            needs_reconnect = False
+            if expiry:
+                try:
+                    expires_at = datetime.fromisoformat(str(expiry).replace('Z', '+00:00'))
+                    if expires_at.tzinfo is not None:
+                        expires_at = expires_at.astimezone(timezone.utc).replace(tzinfo=None)
+                    needs_reconnect = expires_at <= now_utc
+                except Exception:
+                    needs_reconnect = False
+
             connected[service] = {
                 'service': service,
                 'email': email,
                 'user_id': user_id,
                 'expiry': expiry,
-                'connected_at': connected,
+                'connected_at': connected_at,
                 'last_used_at': last_used,
-                'is_active': bool(is_active)
+                'is_active': active,
+                'is_connected': active,
+                'needs_reconnect': needs_reconnect
             }
 
         # Get integrations needed by user's global agents
@@ -5207,7 +5238,7 @@ def get_user_integrations():
                         'icon': oauth_info['icon'],
                         'category': category,
                         'status': 'live' if service in live_services else 'coming_soon',
-                        'is_connected': service in connected,
+                        'is_connected': service in connected and bool(connected.get(service, {}).get('is_active', False)),
                         'is_needed': category in needed_categories,
                         'connection_info': connected.get(service)
                     })
