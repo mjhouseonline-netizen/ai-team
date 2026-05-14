@@ -4614,7 +4614,6 @@ def execute_integration_handler(integration_key, action, credentials, params):
     # Slack Integration
     if integration_key == 'slack':
         if action == 'send_message':
-            import requests
             webhook_url = credentials.get('webhook_url')
             response = requests.post(webhook_url, json={
                 'text': params.get('message', ''),
@@ -4626,7 +4625,6 @@ def execute_integration_handler(integration_key, action, credentials, params):
     # Discord Integration
     elif integration_key == 'discord':
         if action == 'send_message':
-            import requests
             webhook_url = credentials.get('webhook_url')
             response = requests.post(webhook_url, json={
                 'content': params.get('message', ''),
@@ -4637,7 +4635,6 @@ def execute_integration_handler(integration_key, action, credentials, params):
     # Microsoft Teams
     elif integration_key == 'teams':
         if action == 'send_message':
-            import requests
             webhook_url = credentials.get('webhook_url')
             response = requests.post(webhook_url, json={
                 '@type': 'MessageCard',
@@ -4649,7 +4646,6 @@ def execute_integration_handler(integration_key, action, credentials, params):
     # Telegram
     elif integration_key == 'telegram':
         if action == 'send_message':
-            import requests
             bot_token = credentials.get('bot_token')
             chat_id = credentials.get('chat_id')
             url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
@@ -4662,7 +4658,6 @@ def execute_integration_handler(integration_key, action, credentials, params):
     # GitHub
     elif integration_key == 'github':
         if action == 'create_issue':
-            import requests
             token = credentials.get('access_token')
             repo = params.get('repo')  # owner/repo format
             response = requests.post(
@@ -4679,7 +4674,6 @@ def execute_integration_handler(integration_key, action, credentials, params):
     # Trello
     elif integration_key == 'trello':
         if action == 'create_card':
-            import requests
             api_key = credentials.get('api_key')
             token = credentials.get('token')
             list_id = params.get('list_id')
