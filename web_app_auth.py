@@ -5440,7 +5440,15 @@ def oauth_callback(service):
             <p>Your account is now connected successfully.</p>
             <p><a href="/connectors" style="background: #c6a66a; color: #111111; padding: 10px 20px; border-radius: 8px; text-decoration: none; display: inline-block; margin-top: 20px;">Back to Connectors</a></p>
             <script>
-                setTimeout(function() { window.location.href = '/connectors'; }, 2000);
+                try {
+                    if (window.opener && !window.opener.closed) {
+                        window.opener.postMessage({ type: 'oauth_connected', status: 'success' }, '*');
+                    }
+                } catch (e) {}
+                setTimeout(function() {
+                    try { window.close(); } catch (e) {}
+                    window.location.href = '/connectors';
+                }, 400);
             </script>
         </body>
         </html>

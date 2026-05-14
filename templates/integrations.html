@@ -1619,9 +1619,9 @@ return;
  }
  }
 
- async function connectOAuth(service) {
- try {
- const response = await fetch(`/api/user-integrations/connect/${service}`, {
+async function connectOAuth(service) {
+try {
+ const response = await fetch(`/api/user-connectors/connect/${service}`, {
  method: 'POST',
  headers: {'Content-Type': 'application/json'}
  });
@@ -1635,16 +1635,20 @@ return;
  const left = (screen.width - width) / 2;
  const top = (screen.height - height) / 2;
 
- window.open(
+ const popup = window.open(
  data.auth_url,
  'oauth',
  `width=${width},height=${height},left=${left},top=${top},toolbar=no,location=no,status=no,menubar=no`
  );
 
- // Poll for completion (in real app, use postMessage)
- setTimeout(() => {
+ // Fallback refresh if popup closes without postMessage
+ const popupPoll = setInterval(() => {
+ if (!popup || popup.closed) {
+ clearInterval(popupPoll);
  loadAgentIntegrations();
- }, 5000);
+ loadIntegrations();
+ }
+ }, 700);
  } else {
  alert('Error starting OAuth flow: ' + (data.error || 'Unknown error'));
  }
@@ -1679,14 +1683,27 @@ return;
  }
 
  // Load data on page load
- window.addEventListener('load', async () => {
+window.addEventListener('load', async () => {
  await loadAgentIntegrations();
  await loadIntegrations();
  await loadApiKey();
  await loadUsageStats();
  await loadWebhooks();
+});
+
+ // OAuth popup callback signal
+ window.addEventListener('message', async (event) => {
+ try {
+ if (!event || !event.data) return;
+ if (event.data.type === 'oauth_connected' && event.data.status === 'success') {
+ await loadAgentIntegrations();
+ await loadIntegrations();
+ }
+ } catch (e) {
+ console.error('OAuth message handling error:', e);
+ }
  });
- </script>
+</script>
  <script src="{{ url_for('static', filename='onboarding-guide.js') }}"></script>
 </body>
 </html>
