@@ -948,3 +948,73 @@ button:hover,
 .button:hover {
     background: linear-gradient(135deg, #e2c982, #b78b44) !important;
 }
+
+/* ============================================
+   9. Compact Dropdown + Select Polish
+   ============================================ */
+/* Keep dropdown surfaces dark with high-contrast text */
+.dropdown-menu,
+.user-dropdown,
+.settings-dropdown,
+.agent-actions-dropdown,
+.input-options-menu,
+.working-mode-menu,
+.history-dropdown {
+    background: #141310 !important;
+    color: #f4efe4 !important;
+    border: 1px solid rgba(225, 204, 153, 0.2) !important;
+}
+
+/* Compact dropdown rows */
+.dropdown-menu a,
+.dropdown-item,
+.dropdown-user-item,
+.mode-option,
+.option-item {
+    min-height: 34px !important;
+    padding: 7px 10px !important;
+    font-size: 12px !important;
+    line-height: 1.3 !important;
+    color: #f4efe4 !important;
+    background: transparent !important;
+    border-color: rgba(225, 204, 153, 0.16) !important;
+}
+
+.dropdown-menu a:hover,
+.dropdown-item:hover,
+.dropdown-user-item:hover,
+.mode-option:hover,
+.option-item:hover {
+    background: rgba(198, 166, 106, 0.12) !important;
+    color: #fff2cf !important;
+}
+
+/* Prevent global gold button styles from inflating dropdown/menu controls */
+.working-mode-menu button,
+.input-options-menu button,
+.settings-dropdown button,
+.agent-actions-dropdown button,
+.agent-actions-dropdown .dropdown-item,
+.dropdown-menu button {
+    background: transparent !important;
+    color: #f4efe4 !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 6px !important;
+}
+
+/* Selects and native option list colors for dark UI */
+select,
+select option,
+select optgroup {
+    background-color: #141310 !important;
+    color: #f4efe4 !important;
+}
+
+select {
+    min-height: 34px !important;
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+    font-size: 12px !important;
+    border-radius: 8px !important;
+}
