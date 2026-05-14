@@ -4431,6 +4431,159 @@ def execute_integration_action(integration_key):
         print(f"Error executing integration action: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+
+@app.route('/api/connectors/notion/save-message', methods=['POST'])
+@login_required
+def save_message_to_notion():
+    """Save a chat exchange into Notion for the current authenticated user."""
+    try:
+        data = request.json or {}
+        assistant_message = (data.get('assistant_message') or '').strip()
+        user_message = (data.get('user_message') or '').strip()
+        agent_name = (data.get('agent') or 'Agent').strip()
+        requested_database_id = (data.get('database_id') or '').strip()
+
+        if not assistant_message:
+            return jsonify({'error': 'assistant_message is required'}), 400
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT access_token
+            FROM user_integrations
+            WHERE user_id = ? AND service = 'notion' AND is_active = 1
+            ORDER BY connected_at DESC
+            LIMIT 1
+        """, (current_user.id,))
+        row = cursor.fetchone()
+        if not row or not row[0]:
+            conn.close()
+            return jsonify({'error': 'Notion is not connected for this account'}), 400
+        notion_token = row[0]
+
+        cursor.execute("""
+            SELECT credentials
+            FROM integrations
+            WHERE user_id = ? AND integration_key = 'notion'
+            ORDER BY updated_at DESC
+            LIMIT 1
+        """, (current_user.id,))
+        cred_row = cursor.fetchone()
+        saved_database_id = ''
+        if cred_row and cred_row[0]:
+            try:
+                creds = json.loads(cred_row[0])
+                saved_database_id = (creds.get('database_id') or '').strip()
+            except Exception:
+                saved_database_id = ''
+
+        conn.close()
+
+        database_id = requested_database_id or saved_database_id or (os.environ.get('NOTION_DATABASE_ID') or '').strip()
+        notion_headers = {
+            'Authorization': f'Bearer {notion_token}',
+            'Notion-Version': '2022-06-28',
+            'Content-Type': 'application/json'
+        }
+
+        title_text = f"{agent_name} - {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}"
+        page_payload = {
+            "parent": {"type": "workspace", "workspace": True},
+            "properties": {
+                "title": {
+                    "title": [{"type": "text", "text": {"content": title_text}}]
+                }
+            },
+            "children": [
+                {
+                    "object": "block",
+                    "type": "paragraph",
+                    "paragraph": {"rich_text": [{"type": "text", "text": {"content": f"Agent: {agent_name}"}}]}
+                },
+                {
+                    "object": "block",
+                    "type": "paragraph",
+                    "paragraph": {"rich_text": [{"type": "text", "text": {"content": f"User: {user_message or '[No user message captured]'}"}}]}
+                },
+                {
+                    "object": "block",
+                    "type": "paragraph",
+                    "paragraph": {"rich_text": [{"type": "text", "text": {"content": f"Assistant: {assistant_message}"}}]}
+                }
+            ]
+        }
+
+        # If a database id is configured, prefer saving into that database.
+        if database_id:
+            db_meta_resp = requests.get(
+                f"https://api.notion.com/v1/databases/{database_id}",
+                headers=notion_headers,
+                timeout=20
+            )
+            if db_meta_resp.status_code == 200:
+                db_meta = db_meta_resp.json()
+                props = db_meta.get('properties', {}) or {}
+                title_prop = None
+                for prop_name, prop_cfg in props.items():
+                    if isinstance(prop_cfg, dict) and prop_cfg.get('type') == 'title':
+                        title_prop = prop_name
+                        break
+
+                if title_prop:
+                    db_properties = {
+                        title_prop: {
+                            "title": [{"type": "text", "text": {"content": title_text}}]
+                        }
+                    }
+                    if 'Agent' in props and props['Agent'].get('type') == 'rich_text':
+                        db_properties['Agent'] = {"rich_text": [{"type": "text", "text": {"content": agent_name}}]}
+                    if 'User Message' in props and props['User Message'].get('type') == 'rich_text':
+                        db_properties['User Message'] = {"rich_text": [{"type": "text", "text": {"content": user_message or ''}}]}
+                    if 'Assistant Message' in props and props['Assistant Message'].get('type') == 'rich_text':
+                        db_properties['Assistant Message'] = {"rich_text": [{"type": "text", "text": {"content": assistant_message}}]}
+
+                    page_payload = {
+                        "parent": {"database_id": database_id},
+                        "properties": db_properties,
+                        "children": [
+                            {
+                                "object": "block",
+                                "type": "paragraph",
+                                "paragraph": {"rich_text": [{"type": "text", "text": {"content": f"User: {user_message or '[No user message captured]'}"}}]}
+                            },
+                            {
+                                "object": "block",
+                                "type": "paragraph",
+                                "paragraph": {"rich_text": [{"type": "text", "text": {"content": f"Assistant: {assistant_message}"}}]}
+                            }
+                        ]
+                    }
+
+        create_resp = requests.post(
+            "https://api.notion.com/v1/pages",
+            headers=notion_headers,
+            json=page_payload,
+            timeout=30
+        )
+        if create_resp.status_code not in (200, 201):
+            return jsonify({
+                'error': 'Failed to save to Notion',
+                'details': create_resp.text[:500]
+            }), 400
+
+        created_page = create_resp.json()
+        return jsonify({
+            'success': True,
+            'message': 'Saved to Notion',
+            'page_id': created_page.get('id'),
+            'page_url': created_page.get('url')
+        }), 200
+
+    except Exception as e:
+        print(f"Error saving to Notion: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 def execute_integration_handler(integration_key, action, credentials, params):
     """Execute specific integration actions"""
 

@@ -542,6 +542,7 @@ function addMessage(text, type, imageUrl = null, modelBadge = '', attachments = 
  <button class="message-action-btn" data-action="edit" onclick="editMessageText(\`${safeText}\`)">Edit</button>
  <button class="message-action-btn" data-action="copy" onclick="copyToClipboard(\`${safeText}\`)">Copy</button>
  <button class="message-action-btn" data-action="download" onclick="downloadText(\`${safeText}\`)">Download</button>
+ <button class="message-action-btn" data-action="notion" onclick="saveMessageToNotion(this, \`${safeText}\`)">Save</button>
  <button class="message-action-btn voice-btn" data-action="listen" onclick="speakText(\`${safeText}\`)">Listen</button>
  </div>
  `
@@ -1477,6 +1478,58 @@ function copyToClipboard(text) {
  }
  document.body.removeChild(textArea);
  });
+}
+
+async function saveMessageToNotion(buttonEl, assistantText) {
+ try {
+ const originalLabel = buttonEl.textContent;
+ buttonEl.disabled = true;
+ buttonEl.textContent = 'Saving...';
+
+ const messageNode = buttonEl.closest('.message');
+ let userMessageText = '';
+ if (messageNode) {
+ let prev = messageNode.previousElementSibling;
+ while (prev) {
+ if (prev.classList && prev.classList.contains('message') && prev.classList.contains('user')) {
+ const contentNode = prev.querySelector('.message-content');
+ if (contentNode) {
+ userMessageText = (contentNode.childNodes[0]?.textContent || contentNode.textContent || '').trim();
+ }
+ break;
+ }
+ prev = prev.previousElementSibling;
+ }
+ }
+
+ const response = await fetch('/api/connectors/notion/save-message', {
+ method: 'POST',
+ headers: { 'Content-Type': 'application/json' },
+ credentials: 'include',
+ body: JSON.stringify({
+ agent: currentAgent,
+ user_message: userMessageText,
+ assistant_message: assistantText
+ })
+ });
+
+ const result = await response.json();
+ if (!response.ok || !result.success) {
+ throw new Error(result.error || 'Failed to save to Notion');
+ }
+
+ showNotification('Saved to Notion');
+ buttonEl.textContent = 'Saved';
+ setTimeout(() => {
+ buttonEl.textContent = originalLabel;
+ buttonEl.disabled = false;
+ }, 1500);
+ } catch (err) {
+ console.error('Notion save failed:', err);
+ showNotification(err.message || 'Notion save failed', 'error');
+ buttonEl.textContent = 'Save';
+ buttonEl.disabled = false;
+ }
 }
 
 // ================================================
