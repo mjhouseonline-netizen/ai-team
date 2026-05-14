@@ -4187,7 +4187,7 @@ def get_integrations():
             )
         """)
 
-        # Get user's connected integrations
+        # Get user's connected API-key integrations
         cursor.execute("""
             SELECT integration_key, credentials, is_active, created_at
             FROM integrations
@@ -4200,6 +4200,21 @@ def get_integrations():
                 'credentials': json.loads(row[1]),
                 'is_active': bool(row[2]),
                 'connected_at': row[3]
+            }
+
+        # Merge in OAuth-based connector connections (stored in user_integrations)
+        cursor.execute("""
+            SELECT service, is_active, connected_at
+            FROM user_integrations
+            WHERE user_id = ?
+        """, (current_user.id,))
+
+        for row in cursor.fetchall():
+            service, is_active, connected_at = row
+            connected_integrations[service] = {
+                'credentials': {},
+                'is_active': bool(is_active),
+                'connected_at': connected_at
             }
 
         conn.close()
@@ -4234,7 +4249,7 @@ def get_integrations():
             'integrations': integrations_list,
             'categorized': categorized,
             'total': len(integrations_list),
-            'connected': len(connected_integrations)
+            'connected': sum(1 for item in integrations_list if item.get('is_connected'))
         }), 200
 
     except Exception as e:
